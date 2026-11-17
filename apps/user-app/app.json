@@ -1,0 +1,72 @@
+{
+  "expo": {
+    "name": "Machine Parts",
+    "slug": "machine-parts-user-app",
+    "version": "0.1.0",
+    "icon": "./assets/icon.png",
+    "orientation": "portrait",
+    "scheme": "machineparts",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.machineparts.app",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "com.machineparts.app",
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ],
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#4F46E5"
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "backgroundColor": "#FFFFFF",
+          "imageWidth": 200,
+          "dark": {
+            "image": "./assets/splash-icon.png",
+            "backgroundColor": "#0E0E14"
+          }
+        }
+      ],
+      [
+        "expo-secure-store",
+        {
+          "faceIDPermission": false
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Machine Parts uses your location to show parts, machinery and sellers near you.",
+          "locationAlwaysPermission": false,
+          "locationAlwaysAndWhenInUsePermission": false
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Machine Parts uses your photos when you add pictures of a part or machine you are listing.",
+          "cameraPermission": "Machine Parts uses the camera to photograph a part or machine, its nameplate and its condition.",
+          "microphonePermission": false
+        }
+      ],
+      "expo-localization"
+    ]
+  }
+}

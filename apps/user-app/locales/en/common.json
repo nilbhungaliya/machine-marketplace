@@ -1,0 +1,18 @@
+{
+  "cancel": "Cancel",
+  "save": "Save",
+  "retry": "Try again",
+  "done": "Done",
+  "back": "Back",
+  "continue": "Continue",
+  "error": "Error",
+  "pleaseTryAgain": "Please try again",
+  "comingSoon": "Coming soon",
+  "today": "Today",
+  "yesterday": "Yesterday",
+  "tomorrow": "Tomorrow",
+  "am": "am",
+  "pm": "pm",
+  "listingCount_one": "{{count}} listing",
+  "listingCount_other": "{{count}} listings"
+}

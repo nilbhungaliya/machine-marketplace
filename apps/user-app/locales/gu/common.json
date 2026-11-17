@@ -1,0 +1,18 @@
+{
+  "cancel": "રદ કરો",
+  "save": "સેવ કરો",
+  "retry": "ફરી પ્રયાસ કરો",
+  "done": "થઈ ગયું",
+  "back": "પાછા",
+  "continue": "આગળ વધો",
+  "error": "ભૂલ",
+  "pleaseTryAgain": "કૃપા કરીને ફરી પ્રયાસ કરો",
+  "comingSoon": "ટૂંક સમયમાં આવી રહ્યું છે",
+  "today": "આજે",
+  "yesterday": "ગઈકાલે",
+  "tomorrow": "આવતીકાલે",
+  "am": "AM",
+  "pm": "PM",
+  "listingCount_one": "{{count}} લિસ્ટિંગ",
+  "listingCount_other": "{{count}} લિસ્ટિંગ"
+}

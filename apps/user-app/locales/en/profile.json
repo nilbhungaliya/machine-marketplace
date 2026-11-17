@@ -1,0 +1,11 @@
+{
+  "title": "Profile",
+  "language": "Language",
+  "theme": "Appearance",
+  "themeLight": "Light",
+  "themeDark": "Dark",
+  "themeSystem": "System",
+  "logout": "Log out",
+  "logoutConfirmTitle": "Log out?",
+  "logoutConfirmMessage": "You will need an OTP to sign in again."
+}

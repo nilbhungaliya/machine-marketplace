@@ -1,0 +1,16 @@
+import React from 'react';
+import { useTranslation } from 'react-i18next';
+import ScreenWrapper from '@/components/ScreenWrapper';
+import Header from '@/components/Header';
+import EmptyState from '@/components/EmptyState';
+import { Search } from '@/lib/icons';
+
+export default function SearchScreen() {
+  const { t } = useTranslation();
+  return (
+    <ScreenWrapper edges={['top']}>
+      <Header title={t('search.title')} showBack={false} />
+      <EmptyState icon={Search} title={t('search.emptyTitle')} subtitle={t('search.emptySubtitle')} />
+    </ScreenWrapper>
+  );
+}

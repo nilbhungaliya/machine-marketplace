@@ -1,0 +1,17 @@
+{
+  "title": "आपके पास के पार्ट्स और मशीनरी",
+  "allIndia": "पूरा भारत",
+  "searchPlaceholder": "पार्ट, मशीन, ब्रांड या मॉडल खोजें…",
+  "categories": {
+    "spare_parts": "स्पेयर पार्ट्स",
+    "machinery": "मशीनरी",
+    "machine_rental": "मशीन किराए पर",
+    "tools": "टूल्स",
+    "electrical": "इलेक्ट्रिकल",
+    "hydraulics": "हाइड्रोलिक्स",
+    "bearings_transmission": "बेयरिंग और ट्रांसमिशन"
+  },
+  "emptyTitle": "अभी कोई लिस्टिंग नहीं",
+  "emptySubtitle": "आपके इलाके के लाइव पार्ट्स और मशीनरी यहाँ दिखेंगे।",
+  "sellCta": "पार्ट बेचें"
+}

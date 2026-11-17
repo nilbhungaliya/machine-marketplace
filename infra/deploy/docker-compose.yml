@@ -1,0 +1,56 @@
+# Production stack for one app server: API + Redis + Caddy (auto-HTTPS).
+# PostgreSQL+PostGIS runs separately (its own box or a managed service); point
+# DATABASE_URL in ./.env at it. Run from this directory: docker compose up -d
+name: mpm-prod
+services:
+  redis:
+    image: redis:7-alpine
+    # Keyspace expiry events (offer expiry timers) + persistence.
+    command: ["redis-server", "--notify-keyspace-events", "Ex", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    networks: [internal]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  api:
+    build:
+      context: ../..              # repo root
+      dockerfile: apps/api/Dockerfile
+    image: mpm-api:latest
+    env_file: ./.env
+    environment:
+      # Always the compose network's redis, even if .env says localhost.
+      REDIS_URL: redis://redis:6379
+      PORT: "3000"
+      NODE_ENV: production
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks: [internal]
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on: [api]
+    networks: [internal]
+    restart: unless-stopped
+
+networks:
+  internal:
+
+volumes:
+  redis-data:
+  caddy-data:
+  caddy-config:

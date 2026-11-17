@@ -1,0 +1,18 @@
+{
+  "cancel": "रद्द करें",
+  "save": "सेव करें",
+  "retry": "फिर से कोशिश करें",
+  "done": "हो गया",
+  "back": "वापस",
+  "continue": "आगे बढ़ें",
+  "error": "गड़बड़ी",
+  "pleaseTryAgain": "कृपया फिर से कोशिश करें",
+  "comingSoon": "जल्द आ रहा है",
+  "today": "आज",
+  "yesterday": "कल",
+  "tomorrow": "कल",
+  "am": "AM",
+  "pm": "PM",
+  "listingCount_one": "{{count}} लिस्टिंग",
+  "listingCount_other": "{{count}} लिस्टिंग"
+}

@@ -1,0 +1,31 @@
+node_modules
+dist
+.env
+*.local
+.next/
+.expo/
+ios/
+android/
+apps/admin/out/
+
+# Firebase / signing secrets
+firebase-service-account.json
+credentials.json
+*.jks
+*.keystore
+*.p8
+*.p12
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Local Claude Code settings (per-user). Shared .claude/settings.json,
+# .claude/commands/* and .claude/skills/* stay tracked.
+**/.claude/settings.local.json
+
+# TypeScript incremental build cache
+*.tsbuildinfo
+next-env.d.ts

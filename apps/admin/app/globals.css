@@ -1,0 +1,35 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply bg-gray-50 text-gray-900 antialiased font-sans;
+}
+
+@layer base {
+  /* Keyboard focus: one brand ring on anything without its own. focus-visible,
+     so a mouse click shows none. */
+  :focus-visible {
+    outline: 2px solid theme('colors.brand.400');
+    outline-offset: 2px;
+  }
+  /* The page area takes focus after a menu click; it is a start point, not a control. */
+  [data-nav-main]:focus-visible {
+    outline: none;
+  }
+  /* Fields keep the forms plugin's ring, in brand rather than its blue. */
+  :is([type='text'], input:where(:not([type])), [type='email'], [type='url'], [type='password'], [type='number'],
+    [type='date'], [type='datetime-local'], [type='month'], [type='search'], [type='tel'], [type='time'],
+    [type='week'], [multiple], textarea, select):focus {
+    --tw-ring-color: theme('colors.brand.400');
+    border-color: theme('colors.brand.400');
+  }
+  :is([type='checkbox'], [type='radio']):focus {
+    --tw-ring-color: theme('colors.brand.400');
+  }
+}
+
+@layer utilities {
+  /* Equal-width digits so money and counts line up in columns. */
+  .tnum { font-variant-numeric: tabular-nums; }
+}

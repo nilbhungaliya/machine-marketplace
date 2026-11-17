@@ -1,0 +1,13 @@
+{
+  "network": "Could not reach the server. Check your connection.",
+  "generic": "Something went wrong",
+  "genericRetry": "Something went wrong. Please try again.",
+  "auth": {
+    "wrongCode": "That code is incorrect. Check the SMS and try again.",
+    "codeExpired": "This code has expired. Request a new OTP.",
+    "tooManyWrongCodes": "Too many wrong codes. Request a new OTP.",
+    "tooManyAttempts": "Too many attempts. Please wait a few minutes and try again.",
+    "busy": "We could not send the OTP right now. Please try again shortly.",
+    "suspended": "This account is suspended. Please contact support."
+  }
+}

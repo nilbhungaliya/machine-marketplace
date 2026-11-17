@@ -1,0 +1,11 @@
+{
+  "title": "प्रोफ़ाइल",
+  "language": "भाषा",
+  "theme": "दिखावट",
+  "themeLight": "लाइट",
+  "themeDark": "डार्क",
+  "themeSystem": "सिस्टम",
+  "logout": "लॉग आउट",
+  "logoutConfirmTitle": "लॉग आउट करें?",
+  "logoutConfirmMessage": "फिर से साइन इन करने के लिए OTP चाहिए होगा।"
+}

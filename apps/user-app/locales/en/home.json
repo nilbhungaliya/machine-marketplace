@@ -1,0 +1,17 @@
+{
+  "title": "Parts and machinery near you",
+  "allIndia": "All India",
+  "searchPlaceholder": "Search part, machine, brand or model…",
+  "categories": {
+    "spare_parts": "Spare parts",
+    "machinery": "Machinery",
+    "machine_rental": "Machine rental",
+    "tools": "Tools",
+    "electrical": "Electrical",
+    "hydraulics": "Hydraulics",
+    "bearings_transmission": "Bearings & transmission"
+  },
+  "emptyTitle": "No listings yet",
+  "emptySubtitle": "Live parts and machinery in your area will show up here.",
+  "sellCta": "Sell a part"
+}

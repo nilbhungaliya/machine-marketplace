@@ -1,0 +1,18 @@
+packages:
+  - 'apps/*'
+  - 'packages/*'
+
+# admin is Next 14 on React 18; user-app is Expo 54 on React 19. Without this,
+# pnpm hoists one @types/react into the shared store and tsc mixes v18 and v19
+# ReactNode types (see .npmrc).
+dedupePeerDependents: false
+
+overrides:
+  react-native-safe-area-context: 5.6.2
+
+# Packages allowed to run install scripts (pnpm 10+ blocks them by default).
+# Add more with `pnpm approve-builds <pkg>`.
+allowBuilds:
+  '@sentry/cli': true
+  esbuild: true
+  unrs-resolver: true

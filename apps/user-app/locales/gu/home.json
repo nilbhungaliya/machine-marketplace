@@ -1,0 +1,17 @@
+{
+  "title": "તમારી નજીકના પાર્ટ્સ અને મશીનરી",
+  "allIndia": "આખું ભારત",
+  "searchPlaceholder": "પાર્ટ, મશીન, બ્રાન્ડ કે મૉડલ શોધો…",
+  "categories": {
+    "spare_parts": "સ્પેર પાર્ટ્સ",
+    "machinery": "મશીનરી",
+    "machine_rental": "મશીન ભાડે",
+    "tools": "ટૂલ્સ",
+    "electrical": "ઇલેક્ટ્રિકલ",
+    "hydraulics": "હાઇડ્રોલિક્સ",
+    "bearings_transmission": "બેરિંગ અને ટ્રાન્સમિશન"
+  },
+  "emptyTitle": "હજુ કોઈ લિસ્ટિંગ નથી",
+  "emptySubtitle": "તમારા વિસ્તારના લાઇવ પાર્ટ્સ અને મશીનરી અહીં દેખાશે.",
+  "sellCta": "પાર્ટ વેચો"
+}

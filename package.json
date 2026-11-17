@@ -1,0 +1,28 @@
+{
+  "name": "machine-parts-marketplace",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@11.22.0",
+  "scripts": {
+    "dev": "pnpm --parallel --filter \"./apps/*\" dev",
+    "dev:api": "pnpm --filter @mpm/api dev",
+    "dev:admin": "pnpm --filter admin dev",
+    "start:user": "pnpm --filter user-app start",
+    "android": "pnpm --filter user-app android",
+    "ios": "pnpm --filter user-app ios",
+    "build": "pnpm --recursive build",
+    "lint": "pnpm --recursive lint",
+    "typecheck": "pnpm --recursive typecheck",
+    "test": "pnpm --recursive test",
+    "postinstall": "pnpm --filter @mpm/shared-types build",
+    "infra:up": "docker compose -f infra/docker-compose.yml up -d",
+    "infra:down": "docker compose -f infra/docker-compose.yml down"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  },
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=11.0.0"
+  }
+}

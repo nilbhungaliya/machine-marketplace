@@ -1,0 +1,40 @@
+# Dependencies (rebuilt inside the image)
+node_modules
+**/node_modules
+
+# Version control
+.git
+.gitignore
+
+# Build outputs (the Dockerfile rebuilds from source)
+dist
+**/dist
+apps/admin/.next
+apps/admin/out
+**/*.tsbuildinfo
+
+# Mobile (not deployed here)
+apps/user-app
+.expo
+**/.expo
+
+# Secrets — NEVER ship in an image
+.env
+.env.*
+infra/deploy/.env
+firebase-service-account.json
+
+# Tooling / IDE
+.claude
+.idea
+.vscode
+**/.vscode
+
+# Logs / OS
+*.log
+.DS_Store
+Thumbs.db
+
+# Docs (not needed at runtime)
+docs
+*.md

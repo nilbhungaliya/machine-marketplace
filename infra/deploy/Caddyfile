@@ -1,0 +1,13 @@
+# Replace api.example.com with the real API domain once its DNS A record points
+# at this server; Caddy then issues the Let's Encrypt certificate itself.
+api.example.com {
+    encode gzip
+
+    # Caddy v2 proxies WebSockets (Socket.IO) and sets X-Forwarded-* headers.
+    reverse_proxy api:3000
+
+    log {
+        output stdout
+        format console
+    }
+}

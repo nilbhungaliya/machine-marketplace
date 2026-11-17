@@ -1,0 +1,29 @@
+# LOCAL dev: Postgres 18 + PostGIS and Redis 7.
+# Host ports 5434 / 6381: 5432 / 6379 may be taken by a native or WSL Postgres/Redis, and 5433 / 6380 by the textile
+# marketplace's containers, so both projects can run at once. The `mpm` DB is for dev, `mpm_test` for tests (see CLAUDE.md).
+name: mpm
+services:
+  postgres:
+    image: postgis/postgis:18-3.6
+    environment:
+      POSTGRES_USER: mpm
+      POSTGRES_PASSWORD: mpm
+      POSTGRES_DB: mpm
+    ports:
+      - '5434:5432'
+    volumes:
+      # Postgres 18 images keep data under /var/lib/postgresql/<major>/, so mount the parent.
+      - pgdata:/var/lib/postgresql
+      # Creates mpm_test on the first start (empty volume only).
+      - ./postgres-init:/docker-entrypoint-initdb.d:ro
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - '6381:6379'
+    volumes:
+      - redisdata:/data
+
+volumes:
+  pgdata:
+  redisdata:

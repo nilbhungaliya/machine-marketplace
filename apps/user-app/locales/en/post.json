@@ -1,0 +1,19 @@
+{
+  "title": "What do you want to do?",
+  "sellPart": {
+    "title": "Sell a part",
+    "subtitle": "List a spare part with specs, condition, side and photos"
+  },
+  "sellMachine": {
+    "title": "Sell a machine",
+    "subtitle": "List new or used machinery for sale"
+  },
+  "rentMachine": {
+    "title": "Rent out a machine",
+    "subtitle": "Let businesses in your region hire your machine"
+  },
+  "partRequest": {
+    "title": "Request a part",
+    "subtitle": "Get an alert when the part you need becomes available"
+  }
+}

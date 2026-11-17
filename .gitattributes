@@ -1,0 +1,15 @@
+# Normalise line endings in the repo; check out natively per OS...
+* text=auto
+
+# ...except files that run on Linux or are parsed strictly: CRLF breaks them.
+*.sh text eol=lf
+Dockerfile text eol=lf
+Caddyfile text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+
+# Binary
+*.png binary
+*.jpg binary
+*.pdf binary
+*.ttf binary

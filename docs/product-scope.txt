@@ -1,0 +1,201 @@
+MACHINE PARTS & MACHINERY MARKETPLACE — PRODUCT SCOPE (text extract)
+Source: docs/Machine Parts Marketplace Product Scope.pdf (5 pages). Module IDs (U1–U4, F1–F9, A1–A6) were added for
+reference in plans, code comments and commits; the PDF numbers them 1–4, 01–09 and 01–06 within each section.
+
+A B2B marketplace to buy, sell and source machine parts and machinery — with left/right part matching and
+availability alerts.
+
+==================================================================================================================
+01 USER FLOW SCRIPT
+==================================================================================================================
+
+U1  Business User — Seller Flow
+    Login / Register → Business Profile → Seller Dashboard → Sell Machine Part / Spare Part →
+    Choose Machine Category / Subcategory → Enter Part Name and Specifications → Enter Quantity / Unit →
+    Select Condition (New / Used / Unused / Excess) → Enter Brand / Model / Compatible Machine →
+    Select Left / Right / Pair if applicable → Upload Photos / Video → Set Price Model → Add Location → Preview →
+    Publish → Receive Enquiries / Offers → Chat / Counteroffer →
+    Coordinate Additional Photos / Video or Other Details if required → Deal Agreed → Mark Sold / Closed →
+    Review & Deal History
+
+U2  Business User — Buyer Flow
+    Login / Register → Marketplace Home → Search / Browse Machine Parts & Machinery →
+    Apply Machine / Part-Specific Filters → Open Listing →
+    Review Media, Specifications, Compatibility, Condition, Quantity, Price, Location and Seller Trust →
+    Save / Enquire / Make Offer → Chat / Counteroffer → Request Additional Details if required → Deal Agreed →
+    Complete Deal → Review Seller and Transaction
+
+U3  Buyer Part Request / Availability Alert Flow
+    Post Part Request → Select Machine / Part Category → Enter Required Part Name & Specifications →
+    Select Left / Right / Pair if applicable → Enter Required Quantity → Add Machine Brand / Model / Compatibility Details →
+    Add Preferred Location → Submit Request → Request Becomes Active → System Checks New Matching Listings →
+    Relevant Seller / Businesses Can Respond → Buyer Receives Notification When Matching Part Becomes Available →
+    View Matching Listing → Enquire / Make Offer → Chat / Negotiate → Deal Agreed → Complete Purchase →
+    Close Part Request
+
+U4  Admin / Marketplace Operations
+    Login → Marketplace Dashboard → Review Users / Businesses → Verify Businesses →
+    Moderate Machine Part / Machinery Listings → Manage Machine Categories / Subcategories →
+    Manage Part Specifications / Dynamic Fields → Manage Brands / Models / Compatibility Options →
+    Manage Condition Types → Configure Left / Right / Pair Options → Review Enquiries / Offers / Deals / Rental Requests →
+    Manage Reports / Flags → Review Marketplace KPIs →
+    Manage Featured / Promotional Controls later if monetization is enabled
+
+==================================================================================================================
+02 APP FEATURES
+==================================================================================================================
+
+F1  Business Registration & Profile
+    - Business/user registration and login
+    - OTP/mobile verification
+    - Business profile
+    - GST/business verification
+    - One account can Buy + Sell
+    - Business location and industrial area
+    - Seller/buyer activity and deal history
+
+F2  Sell Machine Parts / Machinery
+    - Create and publish machine-part listings
+    - Select machine/part category and subcategory
+    - Add part name and detailed specifications
+    - Add quantity and unit
+    - New / Used / Excess / Unused condition
+    - Add part photos and videos
+    - Add brand, model and compatible machine details
+    - Add location
+    - Set price: Fixed Price | Negotiable | Price on Request
+    - Preview before publishing
+    - Edit, pause or remove listings
+    - Mark item as sold/unavailable
+
+F3  Special Left/Right Part Matching
+    - Seller can specify whether a part is Left / Right / Pair
+    - Buyers can search specifically for the required side
+    - System can help identify matching left/right parts
+    - Show complementary parts when available
+    - Useful for businesses that have only one side of a machine part and need the other side
+
+F4  Marketplace / Buy Parts & Machinery
+    - Browse machine parts and machinery
+    - Category/subcategory browsing
+    - Search by part name, machine name, brand or model
+    - Search by location
+    - Filter by: Part type | Machine compatibility | New/Used | Left/Right | Price | Quantity | Location | Availability
+    - View detailed listing
+    - View seller/business profile
+    - View seller verification
+    - Save/favourite listings
+
+F5  Location-Based Discovery
+    - Find available parts near the buyer
+    - Search by city/industrial area/state
+    - Show nearby stock
+    - Useful when urgent replacement parts are required
+    - For machinery rental, find machines available in the required region
+
+F6  Enquiry, Chat & Negotiation
+    - Send enquiry to seller
+    - Quick enquiry options
+    - In-app chat
+    - Ask for additional photos/videos
+    - Ask for specifications
+    - Discuss availability
+    - Negotiate price
+    - Make an offer
+    - Seller can: Accept | Reject | Counteroffer
+    - Track offer status
+    - Confirm deal
+
+F7  Deal & Transaction Management
+    - Enquiry → Offer → Negotiation → Deal
+    - Record agreed price and quantity
+    - Track deal status
+    - Mark item as sold
+    - Mark machinery as rented
+    - Deal history for both parties
+    - Buyer/seller reviews after completion
+    - Capture transaction even if actual payment happens outside the platform
+
+F8  Part Request & Availability Alerts
+    - Buyers can request a specific machine part that is currently unavailable
+    - Add part name, specifications, machine/model, required quantity and location
+    - Option to specify Left / Right / Pair
+    - Request remains active until fulfilled or closed
+    - System checks newly added listings for matching parts
+    - Buyer receives a notification when the requested part becomes available
+    - Buyer can directly open the matching listing and contact the seller
+    - Buyer can manage, edit or close active part requests
+
+F9  Notifications
+    - New enquiry
+    - New chat/message
+    - New offer
+    - Counteroffer
+    - Offer accepted/rejected
+    - New matching part
+    - Booking updates
+    - Listing status updates
+    - Deal completion notifications
+
+==================================================================================================================
+03 ADMIN PANEL — MAIN FEATURES
+==================================================================================================================
+
+A1  Dashboard
+    - Total businesses/users
+    - Active listings
+    - Parts available
+    - Machinery available for rental
+    - New enquiries
+    - Offers
+    - Deals
+    - Rental bookings
+    - Sold/closed listings
+    - Marketplace activity/KPIs
+
+A2  User & Business Management
+    - View businesses/users
+    - Business verification
+    - GST/business details
+    - Approve/reject verification
+    - Suspend/block users
+    - View user activity
+    - Manage reported users
+
+A3  Parts & Machinery Listing Management
+    - View all listings
+    - Approve/reject listings
+    - Edit/hide/remove listings
+    - Manage reported listings
+    - Monitor sold/unavailable listings
+    - Check inappropriate/fraudulent listings
+
+A4  Categories & Machine Configuration
+    - Machine categories
+    - Machine types
+    - Parts/subcategories
+    - Brands
+    - Models
+    - Compatibility information
+    - Left/Right/Pair options
+    - Units
+    - Condition types
+    - Listing fields
+    - Rental-related fields
+    Lets the marketplace be updated without changing the application code.
+
+A5  Enquiries, Offers & Deals
+    - View enquiries
+    - Monitor offers/counteroffers
+    - View deal status
+    - Monitor completed/sold transactions
+    - Handle disputes/reported conversations when required
+
+A6  Reports & Controls
+    - User/business reports
+    - Listing reports
+    - Fraud/abuse flags
+    - Activity reports
+    - Marketplace performance
+    - Featured/promotional listings
+    - Admin controls and configurations

@@ -1,0 +1,18 @@
+{
+  // Typecheck-only config. The `react` path mapping below cannot live in
+  // tsconfig.json: Expo's Metro config reads `compilerOptions.paths` and turns
+  // every entry into a runtime resolver alias, so mapping `react` there makes
+  // Metro bundle @types/react — a types-only package — and every build fails.
+  //
+  // tsc still needs it: admin is Next 14 on React 18, so pnpm parks @types/react
+  // 18 in the hoisted fallback dir; packages that don't declare @types/react
+  // themselves resolve upward to it while this app uses 19.1, giving two
+  // ReactNode identities in one program.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["./*"],
+      "react": ["./node_modules/@types/react"]
+    }
+  }
+}
