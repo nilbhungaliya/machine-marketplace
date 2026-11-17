@@ -1,0 +1,348 @@
+<title>Machine Parts Theme Options</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Teko:wght@500;600&family=Hind:wght@400;500;600;700&family=Hind+Vadodara:wght@500;600&family=Familjen+Grotesk:wght@500;600;700&family=Atkinson+Hyperlegible:wght@400;700&family=B612:wght@400;700&family=B612+Mono:wght@400;700&family=Chivo:wght@400;500;600;700&family=Anek+Latin:wdth,wght@75..125,400..800&family=Anek+Devanagari:wght@500;600&family=Anek+Gujarati:wght@500;600&family=Courier+Prime:wght@400;700&family=Yatra+One&family=Mukta+Vaani:wght@400;500;600;700;800&family=Baloo+Bhai+2:wght@500;600&family=Michroma&family=Instrument+Sans:wght@400;500;600;700&family=Noto+Sans+Gujarati:wght@500;600&family=Noto+Sans+Devanagari:wght@500;600&display=swap">
+<style>
+/* Layout: a neutral review sheet. Compare strip on top, then one section per theme:
+   where the colours come from, its signature details, specimen and swatches, and the same Home screen in light and dark. */
+:root{
+  --pg-bg:#EDEDEA; --pg-surface:#FAFAF8; --pg-ink:#1B1C1A; --pg-ink2:#5A5C57; --pg-line:#D9D9D4; --pg-bezel:#151614;
+  --f-ui:"Instrument Sans","Noto Sans",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --pg-bg:#121312; --pg-surface:#1B1C1B; --pg-ink:#ECECE8; --pg-ink2:#A4A6A0; --pg-line:#2D2F2C; --pg-bezel:#000000; color-scheme:dark}}
+:root[data-theme="dark"]{--pg-bg:#121312; --pg-surface:#1B1C1B; --pg-ink:#ECECE8; --pg-ink2:#A4A6A0; --pg-line:#2D2F2C; --pg-bezel:#000000; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--pg-bg);color:var(--pg-ink);font-family:var(--f-ui);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1240px;margin:0 auto;padding-block:40px 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1{font-size:clamp(28px,4vw,40px);font-weight:700;letter-spacing:-.02em;margin:0;text-wrap:balance}
+.lede{color:var(--pg-ink2);max-width:70ch;margin:10px 0 0}
+.eyebrow{font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--pg-ink2)}
+
+.compare{margin-top:28px;display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
+.cmp{display:flex;flex-direction:column;gap:8px;padding:12px;border:1px solid var(--pg-line);border-radius:10px;background:var(--pg-surface);text-decoration:none;color:inherit}
+.cmp:hover,.cmp:focus-visible{border-color:var(--pg-ink2);outline:none}
+.cmp b{font-size:15px}
+.cmp .bar{display:flex;height:30px;border-radius:5px;overflow:hidden}
+.cmp .bar i{flex:1}
+.cmp .bar i:first-child{flex:2.2}
+.cmp small{color:var(--pg-ink2);font-size:12.5px;line-height:1.35}
+
+.theme{margin-top:56px;padding-top:28px;border-top:1px solid var(--pg-line);display:grid;grid-template-columns:minmax(0,1fr) auto;gap:32px;align-items:start}
+@media (max-width:1060px){.theme{grid-template-columns:minmax(0,1fr)}}
+.theme h2{font-size:32px;margin:4px 0 0;line-height:1.1}
+.theme .src{margin:10px 0 0;max-width:62ch}
+.sig{margin:12px 0 0;padding:0;list-style:none;display:grid;gap:5px;max-width:62ch}
+.sig li{color:var(--pg-ink2);font-size:14px;padding-left:16px;position:relative}
+.sig li::before{content:"";position:absolute;left:2px;top:.6em;width:6px;height:6px;border-radius:1px;background:var(--pg-ink2)}
+.spec{margin-top:18px;border:1px solid var(--pg-line);border-radius:10px;background:var(--pg-surface);padding:16px 18px;display:grid;gap:12px}
+.spec .lbl{font-size:11.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--pg-ink2)}
+.spec .big{font-size:30px;line-height:1.15}
+.spec .body{font-size:15px;max-width:58ch}
+.spec .indic{display:flex;gap:18px;flex-wrap:wrap;font-size:19px}
+.spec .row{display:grid;gap:2px}
+.swatches{margin-top:16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:8px}
+.sw{border:1px solid var(--pg-line);border-radius:8px;overflow:hidden;background:var(--pg-surface)}
+.sw .chip{height:56px;display:flex}
+.sw .chip i{flex:3}
+.sw .chip i + i{flex:1}
+.sw .meta{padding:6px 8px 8px;display:grid}
+.sw .meta b{font-size:12.5px}
+.sw .meta code{font-size:11.5px;color:var(--pg-ink2);font-family:ui-monospace,Consolas,monospace}
+.note{font-size:12.5px;color:var(--pg-ink2);margin-top:6px}
+.contrast{margin-top:12px;display:flex;flex-wrap:wrap;gap:6px}
+.contrast span{font-size:12.5px;border-radius:5px;padding:3px 8px;border:1px solid var(--pg-line);background:var(--pg-surface);font-variant-numeric:tabular-nums}
+.contrast .ok{color:#1E7A46}.contrast .mid{color:#9A6400}.contrast .low{color:#B42318}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .contrast .ok{color:#5CCB8C}:root:not([data-theme="light"]) .contrast .mid{color:#E9B354}:root:not([data-theme="light"]) .contrast .low{color:#FF8A7A}}
+:root[data-theme="dark"] .contrast .ok{color:#5CCB8C}:root[data-theme="dark"] .contrast .mid{color:#E9B354}:root[data-theme="dark"] .contrast .low{color:#FF8A7A}
+.phones{display:flex;gap:18px;flex-wrap:wrap;justify-content:center}
+.phwrap{display:grid;gap:8px;justify-items:center}
+.phwrap > span{font-size:12px;font-weight:600;color:var(--pg-ink2);letter-spacing:.06em;text-transform:uppercase}
+
+/* ---------- phone: every colour from the theme's own tokens ---------- */
+.ph{--r:12px;--br:10px;width:300px;max-width:100%;border:8px solid var(--pg-bezel);border-radius:34px;overflow:hidden;background:var(--bg);color:var(--ink);font-family:var(--bf);font-size:13px;line-height:1.4}
+.ph .ico{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.ph .hdr{background:var(--hdr);color:var(--onHdr)}
+.ph .sb{display:flex;justify-content:space-between;padding:8px 18px 2px;font-size:11px;font-weight:600;opacity:.85}
+.ph .top{padding:6px 14px 12px}
+.ph .brand{display:flex;align-items:center;justify-content:space-between}
+.ph .brand .nm{display:flex;align-items:center;gap:8px;font-family:var(--hf);font-size:var(--logoSize,18px);line-height:1}
+.ph .lamps{display:none}
+.ph .loc{display:flex;align-items:center;gap:4px;margin-top:7px;font-size:12px;color:var(--onHdr2)}
+.ph .loc .ico{width:14px;height:14px}
+.ph .loc b{color:var(--onHdr);font-weight:600}
+.ph .search{margin-top:10px;display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:var(--br);padding:9px 10px;color:var(--ink3);font-size:12.5px}
+.ph .search .ico{width:16px;height:16px}
+.ph .band{display:none}
+.ph .chips{display:flex;gap:6px;padding:12px 14px 4px;overflow:hidden}
+.ph .chips span{white-space:nowrap;font-size:12px;font-weight:600;border:1px solid var(--line2);background:var(--surface);color:var(--ink2);border-radius:999px;padding:5px 10px}
+.ph .chips span.on{background:var(--primary);border-color:var(--primary);color:var(--onPrimary)}
+.ph .match{margin:10px 14px 0;background:var(--matchBg);border-radius:var(--br);padding:9px 10px;display:flex;gap:9px;align-items:center;font-size:12px;color:var(--ink)}
+.ph .match b{font-weight:700}
+.ph .sec{display:flex;justify-content:space-between;align-items:baseline;padding:14px 14px 6px}
+.ph .sec h4{margin:0;font-family:var(--hf);font-size:var(--secSize,15px);font-weight:var(--hw,700);line-height:1.1}
+.ph .sec a{font-size:12px;font-weight:600;color:var(--primaryText)}
+
+.side{display:inline-flex;border-radius:5px;overflow:hidden;font-family:var(--bf);font-weight:700;font-size:11px;line-height:1;flex:none}
+.side i{font-style:normal;width:19px;height:20px;display:grid;place-items:center}
+.side i.have{background:var(--ink);color:var(--surface)}
+.side i.need{border:1.5px dashed var(--needInk);color:var(--needInk);border-radius:0 5px 5px 0}
+.side i.none{background:var(--surface2);color:var(--ink3)}
+.side.logo i.have{background:var(--logoL);color:var(--logoLInk)}
+.side.logo i.alt{background:var(--logoR);color:var(--logoRInk)}
+
+.ph .card{position:relative;margin:0 14px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.ph .slip{display:none}
+.ph .img{position:relative;height:118px;background:var(--surface2);display:grid;place-items:center}
+.ph .img svg{width:190px;height:90px}
+.ph .img .tl{position:absolute;left:8px;top:8px;display:flex;gap:6px;align-items:center}
+.ph .img .cond{font-size:11px;font-weight:600;background:var(--surface);color:var(--ink);border-radius:5px;padding:2px 7px}
+.ph .img .save{position:absolute;right:8px;top:8px;width:28px;height:28px;border-radius:50%;background:var(--surface);display:grid;place-items:center;color:var(--ink2)}
+.ph .img .save .ico{width:15px;height:15px}
+.ph .stamp{display:none}
+.ph .cb{padding:10px 11px 11px;display:grid;gap:4px}
+.ph .cb .t{font-weight:600;font-size:14px}
+.ph .cb .fit{font-size:12px;color:var(--ink2)}
+.ph .cb .fit b{color:var(--ink);font-weight:600}
+.ph .cb .pr{display:flex;align-items:baseline;gap:6px;margin-top:2px}
+.ph .cb .pr b{font-family:var(--nf);font-size:var(--priceSize,19px);font-weight:var(--nw,700);font-variant-numeric:tabular-nums;line-height:1.1}
+.ph .cb .pr span{font-size:11.5px;color:var(--ink3)}
+.ph .cb .pr .neg{margin-left:auto;font-size:11px;font-weight:600;color:var(--primaryText);background:var(--primarySoft);border-radius:4px;padding:2px 6px}
+.ph .mt{display:flex;justify-content:space-between;align-items:center;font-size:11.5px;color:var(--ink3);margin-top:3px}
+.ph .ver{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:600;color:var(--okText);background:var(--okSoft);border-radius:4px;padding:2px 6px}
+.ph .ver .ico{width:12px;height:12px;stroke-width:2.4}
+.ph .acts{display:flex;gap:8px;padding:10px 11px 12px;border-top:1px solid var(--line)}
+.ph .btn{flex:1;text-align:center;font-weight:700;font-size:13px;border-radius:var(--br);padding:9px 0}
+.ph .btn.o{border:1.5px solid var(--line2);color:var(--ink);background:var(--surface)}
+.ph .btn.p{background:var(--primary);color:var(--onPrimary)}
+.ph .stat{display:flex;flex-wrap:wrap;gap:6px;padding:12px 14px 2px}
+.ph .stat span{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;border-radius:999px;padding:3px 9px}
+.ph .stat span::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.ph .s-ok{background:var(--okSoft);color:var(--okText)}
+.ph .s-warn{background:var(--warnSoft);color:var(--warnText)}
+.ph .s-info{background:var(--infoSoft);color:var(--infoText)}
+.ph .s-bad{background:var(--dangerSoft);color:var(--dangerText)}
+.ph .tabs{margin-top:14px;display:grid;grid-template-columns:repeat(5,1fr);align-items:end;background:var(--surface);border-top:1px solid var(--line);padding:6px 4px 10px}
+.ph .tabs div{display:grid;justify-items:center;gap:2px;font-size:10.5px;font-weight:600;color:var(--ink3)}
+.ph .tabs div.on{color:var(--primaryText)}
+.ph .tabs .sell span{width:44px;height:44px;border-radius:12px;background:var(--sell);color:var(--onSell);display:grid;place-items:center;margin-top:-18px;box-shadow:0 4px 10px rgba(0,0,0,.2)}
+.ph .tabs .sell span .ico{width:22px;height:22px;stroke-width:2.6}
+
+/* ===== signature details per theme ===== */
+/* Red Oxide: sharp corners, a primer-hatch stripe under the header, cut-corner Sell plate */
+.t-oxide{--r:3px;--br:3px}
+.t-oxide .band{display:block;height:7px;background:repeating-linear-gradient(-45deg,var(--accent) 0 7px,var(--hdr) 7px 14px)}
+.t-oxide .brand .nm,.t-oxide .sec h4{text-transform:uppercase;letter-spacing:.02em}
+.t-oxide .tabs .sell span{border-radius:0;clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px)}
+.t-oxide .chips span{border-radius:3px}
+
+/* Lathe Shop: hammertone texture, round red E-stop Sell button with a yellow collar */
+.t-lathe .hdr{background-image:radial-gradient(var(--hammer) 1px,transparent 1.6px),radial-gradient(var(--hammer) 1px,transparent 1.6px);background-size:7px 7px,11px 11px;background-position:0 0,3px 4px}
+.t-lathe .tabs .sell span{border-radius:50%;box-shadow:0 0 0 4px var(--warn),0 5px 12px rgba(0,0,0,.28)}
+
+/* Panel Board: R-Y-B phase lamps, engraved label plates, lamp status chips, yellow push button */
+.t-panel{--r:6px;--br:6px}
+.t-panel .lamps{display:flex;gap:6px}
+.t-panel .lamps i{width:9px;height:9px;border-radius:50%}
+.t-panel .lamps i:nth-child(1){background:var(--phR);box-shadow:0 0 6px 1px var(--phR)}
+.t-panel .lamps i:nth-child(2){background:var(--phY);box-shadow:0 0 6px 1px var(--phY)}
+.t-panel .lamps i:nth-child(3){background:var(--phB);box-shadow:0 0 6px 1px var(--phB)}
+.t-panel .stat span{border-radius:3px;background:var(--hdr);color:var(--onHdr);font-family:var(--nf);font-size:10px;letter-spacing:.06em;text-transform:uppercase}
+.t-panel .stat span::before{width:7px;height:7px}
+.t-panel .s-ok::before{background:var(--ok);box-shadow:0 0 5px 1px var(--ok)}
+.t-panel .s-warn::before{background:var(--phY);box-shadow:0 0 5px 1px var(--phY)}
+.t-panel .s-info::before{background:var(--phB);box-shadow:0 0 5px 1px var(--phB)}
+.t-panel .s-bad::before{background:var(--phR);box-shadow:0 0 5px 1px var(--phR)}
+.t-panel .img .cond,.t-panel .chips span{font-family:var(--nf);text-transform:uppercase;font-size:10px;letter-spacing:.05em}
+.t-panel .chips span{border-radius:4px}
+.t-panel .tabs .sell span{border-radius:8px;box-shadow:0 0 0 3px var(--hdr),0 5px 12px rgba(0,0,0,.28)}
+
+/* Challan Book: tear-off slip number, rubber stamp, typed amounts, carbon-copy tints */
+.t-challan .card{border-top:2px dashed var(--line2);border-radius:2px 2px var(--r) var(--r)}
+.t-challan .slip{display:flex;justify-content:space-between;padding:6px 11px;font-family:var(--nf);font-size:11px;color:var(--ink2);background:var(--copy);border-bottom:1px solid var(--line)}
+.t-challan .stamp{display:block;position:absolute;right:10px;bottom:10px;transform:rotate(-8deg);border:2px solid var(--stamp);outline:1px solid var(--stamp);outline-offset:2px;color:var(--stamp);font-family:var(--hf);font-weight:700;font-size:10px;letter-spacing:.12em;padding:2px 6px;border-radius:3px;opacity:.9}
+.t-challan .ver{display:none}
+
+/* Horn OK Please: bunting under the header, rounded truck-art shapes, ringed Sell button */
+.t-lorry{--r:16px;--br:999px}
+.t-lorry .band{display:block;height:12px;background:var(--hdr)}
+.t-lorry .band svg{display:block;width:100%;height:12px}
+.t-lorry .tabs .sell span{border-radius:50%;box-shadow:0 0 0 3px var(--warn),0 5px 12px rgba(0,0,0,.25)}
+.t-lorry .match{border:1.5px dashed var(--accent)}
+
+/* Brass & Verdigris: engraved brass seller plate with screws, verdigris actions */
+.t-brass{--r:8px;--br:6px}
+.t-brass .mt{margin:8px -11px -11px;padding:9px 18px;position:relative;background:linear-gradient(180deg,var(--plateHi),var(--plate) 60%,var(--plateLo));color:var(--plateInk);font-family:var(--hf);font-size:9.5px;letter-spacing:.06em;text-transform:uppercase}
+.t-brass .mt::before,.t-brass .mt::after{content:"";position:absolute;top:50%;width:6px;height:6px;margin-top:-3px;border-radius:50%;background:var(--plateLo);box-shadow:inset 0 1px 1px rgba(0,0,0,.35)}
+.t-brass .mt::before{left:6px}.t-brass .mt::after{right:6px}
+.t-brass .mt .ver{background:transparent;color:var(--plateInk);padding:0;font-family:var(--hf);font-size:9px}
+.t-brass .cb{padding-bottom:11px}
+
+.foot{margin-top:64px;padding-top:24px;border-top:1px solid var(--pg-line);display:grid;gap:8px;max-width:72ch}
+.foot h3{margin:0;font-size:20px}
+.foot p{margin:0;color:var(--pg-ink2)}
+a:focus-visible{outline:2px solid var(--pg-ink);outline-offset:2px}
+</style>
+
+<div class="wrap">
+  <div class="eyebrow">Machine Parts Marketplace · design step 1 of 3 · round 2</div>
+  <h1>Six looks taken from the shop floor</h1>
+  <p class="lede">Each palette comes from a real material that the app's users handle every day: primer paint, old lathes, electrical panels, challan books, goods-truck art and Jamnagar brass. Each one also brings its own details, so the themes differ in more than colour. Every theme shows the same Home screen in light and dark mode.</p>
+  <nav class="compare" id="compare" aria-label="Themes at a glance"></nav>
+  <div id="themes"></div>
+  <div class="foot">
+    <h3>How to reply</h3>
+    <p>Send the theme's name, or mix them, for example "Panel Board colours with the Challan stamp". The colour roles are the same in every theme, so swapping one part between themes is easy.</p>
+    <p>Next, the chosen theme becomes the token set for 4–5 sample screens: Home, Search results, Listing page, Sell wizard, and Chat with an offer.</p>
+  </div>
+</div>
+
+<script>
+const T = [
+ {id:"oxide", name:"Red Oxide", head:"Teko", hw:600, body:"Hind", num:"Teko", nw:600, hi:"Teko", gu:"Hind Vadodara",
+  logoSize:"22px", secSize:"19px", priceSize:"24px",
+  src:"Every fabricator in Rajkot coats steel in red-oxide primer before it is painted, and the yellow-green zinc-chromate primer is the coat that comes before that. The neutrals are galvanised sheet, not white.",
+  sig:["Red-oxide header with a hatched primer stripe under it","Square corners everywhere, and a cut-corner Sell plate in zinc chromate","Teko, a condensed Indian typeface that reads like stencilled crate lettering, for headings and prices"],
+  fonts:"Teko + Hind",
+  light:{bg:"#E3E6E4",surface:"#F7F8F7",surface2:"#D6DBD9",ink:"#1F1A18",ink2:"#554C48",ink3:"#776D68",line:"#CBD0CE",line2:"#B3B9B6",hdr:"#8C2F1F",onHdr:"#FFF1EB",onHdr2:"#E9BBAE",primary:"#8C2F1F",onPrimary:"#FFF4EF",primarySoft:"#EFDAD3",primaryText:"#7A2617",accent:"#C9C13C",sell:"#C9C13C",onSell:"#1F1E05",matchBg:"#ECEAC2",needInk:"#6E6A0E",logoL:"#FFF1EB",logoLInk:"#8C2F1F",logoR:"#C9C13C",logoRInk:"#1F1E05",ok:"#2F6E4A",okSoft:"#DDEDE3",okText:"#235538",warn:"#A86A00",warnSoft:"#F6E8CC",warnText:"#714800",danger:"#C4162A",dangerSoft:"#F8DCDF",dangerText:"#951020",info:"#3C5A78",infoSoft:"#DDE5EE",infoText:"#2D4560"},
+  dark:{bg:"#161413",surface:"#201C1A",surface2:"#2A2523",ink:"#EEE9E6",ink2:"#C2B8B3",ink3:"#968B86",line:"#36302D",line2:"#463E3A",hdr:"#4A1A10",onHdr:"#F7E7E1",onHdr2:"#D99F8F",primary:"#D86A51",onPrimary:"#1C0904",primarySoft:"#3D2019",primaryText:"#F09A84",accent:"#D6CE4E",sell:"#D6CE4E",onSell:"#1F1E05",matchBg:"#2F2E16",needInk:"#D6CE4E",logoL:"#F7E7E1",logoLInk:"#4A1A10",logoR:"#D6CE4E",logoRInk:"#1F1E05",ok:"#5DBB86",okSoft:"#15301F",okText:"#8ED6AC",warn:"#E6A94A",warnSoft:"#36290F",warnText:"#F2C885",danger:"#FF6B7A",dangerSoft:"#3A1519",dangerText:"#FF9EA8",info:"#8FAACB",infoSoft:"#1B2633",infoText:"#B3C7DE"}},
+
+ {id:"lathe", name:"Lathe Shop", head:"Familjen Grotesk", hw:700, body:"Atkinson Hyperlegible", num:"Familjen Grotesk", nw:700, hi:"Noto Sans Devanagari", gu:"Noto Sans Gujarati",
+  src:"The hammertone grey-green of old Indian lathes, drill presses and shapers, with the red mushroom emergency-stop button and the yellow oil-cup caps found on every one of them.",
+  sig:["Pale machine-green surfaces in place of white, and a header with a hammered-paint texture","The Sell button is a red E-stop with a yellow collar","Atkinson Hyperlegible for text, designed for low vision, which suits first-time app users"],
+  fonts:"Familjen Grotesk + Atkinson Hyperlegible",
+  light:{bg:"#D9E1DB",surface:"#F1F4F1",surface2:"#C6D2CA",ink:"#17221C",ink2:"#43544A",ink3:"#5F6F65",line:"#BAC7BF",line2:"#A0B0A6",hdr:"#4E6E5D",onHdr:"#F2F7F3",onHdr2:"#C6D6CC",hammer:"rgba(255,255,255,.07)",primary:"#3F5E4E",onPrimary:"#F2F7F3",primarySoft:"#C7D8CE",primaryText:"#2E4A3B",accent:"#D2302A",sell:"#D2302A",onSell:"#FFFFFF",matchBg:"#F3DDB0",needInk:"#B3261F",logoL:"#F2F7F3",logoLInk:"#3F5E4E",logoR:"#E7B416",logoRInk:"#2A2000",ok:"#2D7A3E",okSoft:"#D6EBD9",okText:"#215C2E",warn:"#E7B416",warnSoft:"#F6E7B4",warnText:"#664A00",danger:"#A3221C",dangerSoft:"#F2D5D2",dangerText:"#801A15",info:"#2F5F8A",infoSoft:"#D6E2EE",infoText:"#234868"},
+  dark:{bg:"#111714",surface:"#18201B",surface2:"#212B25",ink:"#E3EBE5",ink2:"#AFC0B5",ink3:"#839489",line:"#2A362F",line2:"#37453C",hdr:"#24332B",onHdr:"#E3EBE5",onHdr2:"#9FB6A8",hammer:"rgba(255,255,255,.05)",primary:"#8FB8A2",onPrimary:"#0E1712",primarySoft:"#23342A",primaryText:"#B4D6C3",accent:"#F0544B",sell:"#E2443B",onSell:"#FFFFFF",matchBg:"#3A3015",needInk:"#F2C94C",logoL:"#E3EBE5",logoLInk:"#24332B",logoR:"#F2C94C",logoRInk:"#2A2000",ok:"#5EC27A",okSoft:"#173020",okText:"#93DBA6",warn:"#F2C94C",warnSoft:"#3A3015",warnText:"#F6DB8A",danger:"#FF7A70",dangerSoft:"#3A1A17",dangerText:"#FFA9A1",info:"#82AEDA",infoSoft:"#18283A",infoText:"#ABC8E8"}},
+
+ {id:"panel", name:"Panel Board", head:"B612", hw:700, body:"Chivo", num:"B612 Mono", nw:700, hi:"Noto Sans Devanagari", gu:"Noto Sans Gujarati",
+  src:"The light-grey enclosure of an Indian electrical panel (RAL 7035), with its red, yellow and blue phase lamps, black label plates and the yellow push button. Every factory has one.",
+  sig:["R-Y-B phase lamps next to the logo; statuses are lit lamps on black label plates","B612, a typeface made for aircraft cockpit displays, for headings; B612 Mono for prices and part numbers","Phase blue is the main colour, phase yellow is Sell, and phase red is danger"],
+  fonts:"B612 + Chivo + B612 Mono",
+  light:{bg:"#D3D6D1",surface:"#EEEFEB",surface2:"#C4C8C2",ink:"#222527",ink2:"#4D5255",ink3:"#666B6E",line:"#BCBFB9",line2:"#A4A8A2",hdr:"#2A2E30",onHdr:"#ECEDE9",onHdr2:"#9DA3A5",primary:"#1F4E96",onPrimary:"#FFFFFF",primarySoft:"#CCD7E8",primaryText:"#1A437F",accent:"#F2B705",sell:"#F2B705",onSell:"#1E1A05",matchBg:"#EFE1A8",needInk:"#8A6800",logoL:"#ECEDE9",logoLInk:"#2A2E30",logoR:"#F2B705",logoRInk:"#1E1A05",phR:"#E0352B",phY:"#F2B705",phB:"#2E6BD1",ok:"#2E8B3E",okSoft:"#D5E8D6",okText:"#21662D",warn:"#B88A00",warnSoft:"#F0E3B4",warnText:"#6B5000",danger:"#C8261F",dangerSoft:"#F2D3D0",dangerText:"#931B16",info:"#1F4E96",infoSoft:"#CCD7E8",infoText:"#1A437F"},
+  dark:{bg:"#0F1112",surface:"#1A1D1F",surface2:"#23272A",ink:"#E6E8E4",ink2:"#B1B6B4",ink3:"#868C8A",line:"#2D3134",line2:"#3A3F42",hdr:"#08090A",onHdr:"#E6E8E4",onHdr2:"#8C9294",primary:"#7AA8F2",onPrimary:"#08142A",primarySoft:"#1A2B47",primaryText:"#A8C6F6",accent:"#FFCB2E",sell:"#FFCB2E",onSell:"#1E1A05",matchBg:"#33290A",needInk:"#FFCB2E",logoL:"#E6E8E4",logoLInk:"#08090A",logoR:"#FFCB2E",logoRInk:"#1E1A05",phR:"#FF5247",phY:"#FFCB2E",phB:"#4D8BFF",ok:"#4FD06A",okSoft:"#133020",okText:"#8FE3A1",warn:"#FFCB2E",warnSoft:"#33290A",warnText:"#FFDF80",danger:"#FF5247",dangerSoft:"#3A1715",dangerText:"#FF9C94",info:"#7AA8F2",infoSoft:"#1A2B47",infoText:"#A8C6F6"}},
+
+ {id:"challan", name:"Challan Book", head:"Anek Latin", hw:700, body:"Anek Latin", num:"Courier Prime", nw:700, hi:"Anek Devanagari", gu:"Anek Gujarati",
+  src:"The delivery challan and bill book on every trader's counter: a violet rubber stamp, carbon-blue writing, and white, pink and yellow copies. Most parts deals in Gujarat end with a stamped challan.",
+  sig:["Listings look like tear-off slips: a perforated top edge and a listing number on a pink copy strip","Verified sellers get a slanted violet rubber stamp in place of a badge","Prices are in Courier Prime, like a typed bill. Anek has Gujarati and Hindi versions made to match"],
+  fonts:"Anek (Latin, Gujarati, Devanagari) + Courier Prime",
+  light:{bg:"#F1F1F5",surface:"#FFFFFF",surface2:"#E8E7F0",ink:"#1D1B2B",ink2:"#4A475E",ink3:"#66637A",line:"#DCDAE6",line2:"#C4C1D3",hdr:"#FFFFFF",onHdr:"#1D1B2B",onHdr2:"#5A5770",primary:"#27408B",onPrimary:"#FFFFFF",primarySoft:"#DFE4F4",primaryText:"#27408B",accent:"#5B3C9E",sell:"#5B3C9E",onSell:"#FFFFFF",matchBg:"#FADCE4",needInk:"#5B3C9E",stamp:"#5B3C9E",copy:"#FCE6EC",logoL:"#27408B",logoLInk:"#FFFFFF",logoR:"#F2CF4A",logoRInk:"#2A2200",ok:"#2C7A4B",okSoft:"#DDEFE3",okText:"#205C38",warn:"#A86500",warnSoft:"#FBF0C6",warnText:"#714400",danger:"#C0283E",dangerSoft:"#FBDDE2",dangerText:"#911D2E",info:"#27408B",infoSoft:"#DFE4F4",infoText:"#27408B"},
+  dark:{bg:"#121019",surface:"#1B1826",surface2:"#252134",ink:"#ECEAF4",ink2:"#BAB5CE",ink3:"#8E89A6",line:"#2E2A40",line2:"#3C3752",hdr:"#1B1826",onHdr:"#ECEAF4",onHdr2:"#A9A4BF",primary:"#8EA6F0",onPrimary:"#0B1330",primarySoft:"#1E2748",primaryText:"#B3C4F5",accent:"#A88BEB",sell:"#A88BEB",onSell:"#140B26",matchBg:"#3A1E2A",needInk:"#C9B5F5",stamp:"#B79CF0",copy:"#2D1C26",logoL:"#8EA6F0",logoLInk:"#0B1330",logoR:"#F5D35C",logoRInk:"#2A2200",ok:"#55C489",okSoft:"#14301F",okText:"#8EDCB0",warn:"#E8B04A",warnSoft:"#33290F",warnText:"#F2CB85",danger:"#FF7A8C",dangerSoft:"#3A1820",dangerText:"#FFA8B4",info:"#8EA6F0",infoSoft:"#1E2748",infoText:"#B3C4F5"}},
+
+ {id:"lorry", name:"Horn OK Please", head:"Yatra One", hw:400, body:"Mukta Vaani", num:"Mukta Vaani", nw:800, hi:"Yatra One", gu:"Baloo Bhai 2",
+  src:"Indian goods-truck art: turquoise cabs, magenta and marigold scrollwork, parrot green and a strip of bunting along the top. Parts, machines and trucks all move by lorry, and this look is impossible to mistake for another app.",
+  sig:["A bunting strip of marigold, magenta and parrot green under the header","Yatra One, an Indian display face drawn like hand-painted lettering, for headings","Rounded, playful shapes with a magenta Sell button in a marigold ring. Loud on purpose"],
+  fonts:"Yatra One + Mukta Vaani (has Gujarati)",
+  logoSize:"20px", secSize:"17px", hwOverride:400,
+  light:{bg:"#EAF4F3",surface:"#FFFFFF",surface2:"#D9EEEB",ink:"#2A0F2E",ink2:"#5B4560",ink3:"#77627C",line:"#D0E3E0",line2:"#B5D1CD",hdr:"#00787F",onHdr:"#FFFFFF",onHdr2:"#BFE9EA",primary:"#00787F",onPrimary:"#FFFFFF",primarySoft:"#CDEDEE",primaryText:"#005E64",accent:"#D6246E",sell:"#D6246E",onSell:"#FFFFFF",matchBg:"#FDE7F0",needInk:"#C01F62",logoL:"#F4A300",logoLInk:"#2A0F2E",logoR:"#D6246E",logoRInk:"#FFFFFF",ok:"#3E8E2E",okSoft:"#E0F1D9",okText:"#2E6A22",warn:"#F4A300",warnSoft:"#FDEFC9",warnText:"#7A5100",danger:"#C8202F",dangerSoft:"#FADADD",dangerText:"#981824",info:"#00787F",infoSoft:"#CDEDEE",infoText:"#005E64"},
+  dark:{bg:"#120A14",surface:"#1C1220",surface2:"#261A2B",ink:"#F5EAF4",ink2:"#CDB8CF",ink3:"#A08BA3",line:"#34243A",line2:"#45304C",hdr:"#07474C",onHdr:"#F0FBFB",onHdr2:"#9FD9DB",primary:"#2EC4C9",onPrimary:"#021A1C",primarySoft:"#0F3436",primaryText:"#7FE0E3",accent:"#FF5C9A",sell:"#FF4F91",onSell:"#24000F",matchBg:"#3A1428",needInk:"#FF7DB0",logoL:"#FFB627",logoLInk:"#2A0F2E",logoR:"#FF5C9A",logoRInk:"#24000F",ok:"#6FCB55",okSoft:"#1A3014",okText:"#A5E393",warn:"#FFB627",warnSoft:"#3A2A0C",warnText:"#FFD27A",danger:"#FF6B78",dangerSoft:"#3A1519",dangerText:"#FFA0A8",info:"#2EC4C9",infoSoft:"#0F3436",infoText:"#7FE0E3"}},
+
+ {id:"brass", name:"Brass & Verdigris", head:"Michroma", hw:400, body:"Instrument Sans", num:"Instrument Sans", nw:700, hi:"Noto Sans Devanagari", gu:"Noto Sans Gujarati",
+  src:"Jamnagar makes most of India's brass parts. Fresh brass, the green patina it grows (verdigris) and dark bronze give a quiet, premium palette with a real origin in the launch region.",
+  sig:["The seller line on each card is an engraved brass nameplate held by two screws","Verdigris green for actions, brass for Sell, and a bronze-black header","Michroma, a wide face like machine nameplates, used only for the logo, section titles and plates"],
+  fonts:"Michroma + Instrument Sans",
+  logoSize:"14px", secSize:"12.5px", priceSize:"19px",
+  light:{bg:"#E5EBE8",surface:"#F8FAF9",surface2:"#D6E0DB",ink:"#241D14",ink2:"#574D40",ink3:"#706657",line:"#CAD4CF",line2:"#B1BFB8",hdr:"#241D14",onHdr:"#EBD8A8",onHdr2:"#A99B80",primary:"#2C7869",onPrimary:"#F3FBF8",primarySoft:"#CBE4DD",primaryText:"#22665A",accent:"#B8862B",sell:"#C2923A",onSell:"#1E1503",matchBg:"#EFE2C2",needInk:"#8A6114",plate:"#C2923A",plateHi:"#E6C77E",plateLo:"#9C7124",plateInk:"#2A1E08",logoL:"#C2923A",logoLInk:"#1E1503",logoR:"#5FAE9C",logoRInk:"#06201B",ok:"#2C7869",okSoft:"#D6EBE5",okText:"#1F5B4F",warn:"#A8700F",warnSoft:"#F4E6C6",warnText:"#6E4A08",danger:"#B03A2E",dangerSoft:"#F5DCD8",dangerText:"#862C23",info:"#3C5F7D",infoSoft:"#DAE4EC",infoText:"#2C4760"},
+  dark:{bg:"#0F1311",surface:"#171D1A",surface2:"#202825",ink:"#ECEFE9",ink2:"#BAC4BE",ink3:"#8C9892",line:"#29322E",line2:"#36413C",hdr:"#0A0D0C",onHdr:"#E2C47F",onHdr2:"#8F8670",primary:"#5FC0AD",onPrimary:"#06201B",primarySoft:"#173731",primaryText:"#93DCCD",accent:"#D9A848",sell:"#D9A848",onSell:"#1E1503",matchBg:"#2E2715",needInk:"#E2C47F",plate:"#B8862B",plateHi:"#D9B66A",plateLo:"#86621F",plateInk:"#1E1503",logoL:"#D9A848",logoLInk:"#1E1503",logoR:"#5FC0AD",logoRInk:"#06201B",ok:"#5FC0AD",okSoft:"#173731",okText:"#93DCCD",warn:"#E8B04A",warnSoft:"#33290F",warnText:"#F2CB85",danger:"#FF7F70",dangerSoft:"#3A1A17",dangerText:"#FFAA9F",info:"#8FB2D3",infoSoft:"#1A2633",infoText:"#B6CDE3"}}
+];
+
+function lum(h){h=h.replace("#","");const c=[0,2,4].map(i=>parseInt(h.substr(i,2),16)/255).map(v=>v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4));return .2126*c[0]+.7152*c[1]+.0722*c[2]}
+function ratio(a,b){const x=lum(a),y=lum(b);return (Math.max(x,y)+.05)/(Math.min(x,y)+.05)}
+function grade(r){return r>=4.5?["ok","AA"]:r>=3?["mid","AA large"]:["low","low"]}
+
+const I={pin:'<path d="M12 21s-6-5.3-6-10a6 6 0 1 1 12 0c0 4.7-6 10-6 10z"/><circle cx="12" cy="11" r="2.2"/>',
+ bell:'<path d="M6 16v-5a6 6 0 1 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/>',
+ search:'<circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/>',
+ heart:'<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>',
+ check:'<path d="m5 12.5 4.5 4.5L19 7.5"/>',
+ home:'<path d="M4 11 12 4l8 7v9h-5v-6H9v6H4z"/>',
+ grid:'<path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/>',
+ plus:'<path d="M12 5v14M5 12h14"/>',
+ chat:'<path d="M4 5h16v11H9l-5 4z"/>',
+ deal:'<path d="M3 12l4-4 4 3 3-3 7 6-4 4-6-4-4 2z"/>'};
+const ico=n=>`<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">${I[n]}</svg>`;
+
+const part=`<svg viewBox="0 0 190 90" aria-hidden="true">
+ <rect x="8" y="40" width="112" height="10" rx="5" fill="var(--ink3)"/>
+ <rect x="96" y="36" width="20" height="18" rx="3" fill="var(--ink2)"/>
+ <circle cx="140" cy="45" r="24" fill="var(--ink2)"/><circle cx="140" cy="45" r="15" fill="var(--surface2)"/>
+ <circle cx="140" cy="45" r="9" fill="var(--ink3)"/>
+ <path d="M136 21v-12h8v12z" fill="var(--ink3)"/><rect x="130" y="4" width="20" height="7" rx="2" fill="var(--ink2)"/></svg>`;
+
+/* bunting for the truck-art theme */
+const bunting=(()=>{const cols=["var(--warn)","var(--accent)","var(--ok)","var(--onHdr)"];let s="";for(let i=0;i<20;i++){const x=i*15;s+=`<path d="M${x} 0h15l-7.5 12z" fill="${cols[i%4]}"/>`}return `<svg viewBox="0 0 300 12" preserveAspectRatio="none" aria-hidden="true">${s}</svg>`})();
+
+function phone(t,mode){
+ const p=t[mode];
+ const fam=f=>`'${f}','Noto Sans Devanagari',sans-serif`;
+ const vars=Object.entries(p).map(([k,v])=>`--${k}:${v}`).join(";")
+  +`;--hf:${fam(t.head)};--bf:${fam(t.body)};--nf:${fam(t.num)};--hw:${t.hw};--nw:${t.nw}`
+  +(t.logoSize?`;--logoSize:${t.logoSize}`:"")+(t.secSize?`;--secSize:${t.secSize}`:"")+(t.priceSize?`;--priceSize:${t.priceSize}`:"");
+ return `<div class="ph t-${t.id}" style="${vars}" role="img" aria-label="${t.name} Home screen, ${mode} mode">
+  <div class="hdr">
+   <div class="sb"><span>9:41</span><span>4G ▮▮▮</span></div>
+   <div class="top">
+    <div class="brand"><span class="nm" style="font-weight:${t.hw}"><span class="side logo"><i class="have">L</i><i class="alt">R</i></span>Machine Parts</span>
+     <span style="display:flex;gap:10px;align-items:center"><span class="lamps"><i></i><i></i><i></i></span>${ico("bell")}</span></div>
+    <div class="loc">${ico("pin")}<b>Shapar-Veraval</b> · within 25 km</div>
+    <div class="search">${ico("search")}Part, machine, brand or part no.</div>
+   </div>
+  </div>
+  <div class="band">${t.id==="lorry"?bunting:""}</div>
+  <div class="chips"><span class="on">Spare parts</span><span>For rent</span><span>Left side</span><span>JCB 3DX</span></div>
+  <div class="match"><span class="side"><i class="have">L</i><i class="need">R</i></span><span><b>2 right-side matches</b> for your left tie rod end</span></div>
+  <div class="sec"><h4>Near you</h4><a>See all</a></div>
+  <div class="card">
+   <div class="slip"><span>Listing No. MP-24817</span><span>17-11-2026</span></div>
+   <div class="img">${part}<div class="tl"><span class="side"><i class="have">L</i><i class="none">R</i></span><span class="cond">Used</span></div><span class="save">${ico("heart")}</span></div>
+   <div class="cb">
+    <div class="t">Tie rod end, steering, left</div>
+    <div class="fit">Fits <b>JCB 3DX</b> · 2015–2022</div>
+    <div class="pr"><b>₹1,150</b><span>/pc · 8 pcs</span><span class="neg">Negotiable</span></div>
+    <div class="mt"><span>Om Agro Spares · Gondal · 6 km</span><span class="ver">${ico("check")}GST</span></div>
+   </div>
+   <span class="stamp">GST VERIFIED</span>
+   <div class="acts"><span class="btn o">Enquire</span><span class="btn p">Make offer</span></div>
+  </div>
+  <div class="stat"><span class="s-ok">Live</span><span class="s-warn">In review</span><span class="s-info">Reserved</span><span class="s-bad">Rejected</span></div>
+  <div class="tabs">
+   <div class="on">${ico("home")}Home</div><div>${ico("grid")}Browse</div>
+   <div class="sell"><span>${ico("plus")}</span>Sell</div>
+   <div>${ico("chat")}Chats</div><div>${ico("deal")}Deals</div>
+  </div></div>`;
+}
+
+const roles=[["hdr","Header"],["primary","Primary"],["sell","Sell / accent"],["ink","Ink"],["bg","Background"],["surface2","Surface 2"],["ok","Success"],["warn","Warning"],["danger","Danger"],["info","Info"]];
+
+document.getElementById("compare").innerHTML=T.map(t=>`<a class="cmp" href="#${t.id}">
+ <b>${t.name}</b>
+ <span class="bar">${["hdr","primary","sell","bg","ok"].map(k=>`<i style="background:${t.light[k]}"></i>`).join("")}</span>
+ <small>${t.src.split(/[.:]/)[0]}.</small></a>`).join("");
+
+document.getElementById("themes").innerHTML=T.map(t=>{
+ const L=t.light,D=t.dark;
+ const checks=[["Button text",L.onPrimary,L.primary],["Body text",L.ink,L.bg],["Header text",L.onHdr,L.hdr],["Sell button",L.onSell,L.sell],["Dark button",D.onPrimary,D.primary],["Dark text",D.ink,D.bg]]
+  .map(([n,a,b])=>{const r=ratio(a,b),[c,g]=grade(r);return `<span class="${c}">${n} ${r.toFixed(1)}:1 · ${g}</span>`}).join("");
+ return `<section class="theme" id="${t.id}">
+ <div style="min-width:0">
+  <div class="eyebrow">Theme · ${t.fonts}</div>
+  <h2 style="font-family:'${t.head}',sans-serif;font-weight:${t.hw}">${t.name}</h2>
+  <p class="src">${t.src}</p>
+  <ul class="sig">${t.sig.map(s=>`<li>${s}</li>`).join("")}</ul>
+  <div class="spec">
+   <div class="row"><span class="lbl">Headings · ${t.head}</span><span class="big" style="font-family:'${t.head}',sans-serif;font-weight:${t.hw}">Tie rod end, JCB 3DX</span></div>
+   <div class="row"><span class="lbl">Prices and numbers · ${t.num}</span><span class="big" style="font-family:'${t.num}',sans-serif;font-weight:${t.nw};font-variant-numeric:tabular-nums">₹1,150 /pc · ₹12,40,000</span></div>
+   <div class="row"><span class="lbl">Text · ${t.body}</span><span class="body" style="font-family:'${t.body}',sans-serif">Fits JCB 3DX 2015–2022. Left side, used, 8 pieces in stock at Shapar-Veraval. Part no. 126/01234.</span></div>
+   <div class="row"><span class="lbl">Hindi · ${t.hi} &nbsp; Gujarati · ${t.gu}</span><span class="indic"><span style="font-family:'${t.hi}','Noto Sans Devanagari',sans-serif">टाई रॉड एंड · बायाँ</span><span style="font-family:'${t.gu}','Noto Sans Gujarati',sans-serif">ટાઈ રોડ એન્ડ · ડાબી બાજુ</span></span></div>
+  </div>
+  <div class="swatches">${roles.map(([k,n])=>`<div class="sw"><div class="chip"><i style="background:${L[k]}"></i><i style="background:${D[k]}"></i></div><div class="meta"><b>${n}</b><code>${L[k]} · ${D[k]}</code></div></div>`).join("")}</div>
+  <div class="note">Each swatch: light-mode colour, with the dark-mode colour in the narrow strip.</div>
+  <div class="contrast">${checks}</div>
+ </div>
+ <div class="phones">
+  <div class="phwrap"><span>Light</span>${phone(t,"light")}</div>
+  <div class="phwrap"><span>Dark</span>${phone(t,"dark")}</div>
+ </div></section>`;
+}).join("");
+</script>

@@ -2,9 +2,16 @@
 
 | File | What |
 |---|---|
+| **`user-app-mockup-periwinkle.html`** | **The approved design (D2, 2026-11-17).** Every app and admin screen in the Periwinkle direction: 11 flows, 56 phone screens and 4 admin screens, light and dark. Same `?only=<flow id>` and `&theme=dark` parameters as below. |
+| `user-app-mockup-periwinkle-v2.html` | **Periwinkle v2, refined**: the same 60 screens with parts rendered in real materials, a neutral board (lavender only in the hero), filled controls and segmented tabs, hairline cards, part numbers in JetBrains Mono, a side-convention diagram, and no tab bar under bottom action bars. Waiting for the user to pick v1 or v2. |
+| `src/build-periwinkle-v2.mjs` | Generates v2 (`node docs/mockups/src/build-periwinkle-v2.mjs`). Made from `build-periwinkle.mjs`; screen content is shared by copy, so a content change goes in both. |
+| `src/build-periwinkle.mjs` | Generates it: `node docs/mockups/src/build-periwinkle.mjs`. Screen content was copied from `build.mjs` and extended, so content changes now go here. |
 | `user-app-mockup.html` | The app and admin design for client review: 11 flows, 51 phone screens and 4 admin screens, light and dark themes, ending with the decisions needed from the client. Open it in a browser (needs internet for Google Fonts). |
 | `src/build.mjs` | Generates `user-app-mockup.html`. Edit this, then run `node docs/mockups/src/build.mjs` from the repo root. |
 | `user-app-mockup-b.html` | **Direction B**, a second visual direction with the same 11 flows, 51 phone and 4 admin screens and the same content, so the client can compare like for like (decision D2). |
+| `theme-options.html` | Step 1 of the new design pass, round 2: six colour and font themes taken from shop-floor materials (Red Oxide, Lathe Shop, Panel Board, Challan Book, Horn OK Please, Brass & Verdigris), each with a palette, fonts in English, Hindi and Gujarati, contrast checks, and a Home screen in light and dark. Waiting for the user's pick. |
+| `theme-periwinkle.html` | A lavender and violet theme from the user's reference shot (white rounded cards, outlined price pills, yellow badges), with palette, type, components and four sample screens. Waiting for the user's verdict. |
+| `theme-clean-bench.html` | **Clean Bench**: the user's two references combined (the Mealio food app and its motion video, and the Periwinkle shop UI). Warm neutral screens, charcoal buttons, light Mulish headings, peach / sage / lavender cards for parts / machines / rentals, violet for selection and side; an exploded wheel-hub welcome screen, word-reveal headlines, staggered cards and a bottom-sheet details screen. Five phones plus palette, type, components and motion. Waiting for the user's verdict. |
 | `src/build-b.mjs` | Generates `user-app-mockup-b.html`: `node docs/mockups/src/build-b.mjs`. The screen content was copied from `build.mjs`, so a content change has to be made in both files. |
 
 **Viewing one flow:** add `?only=<flow id>` (and optionally `&theme=dark`), e.g.

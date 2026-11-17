@@ -1,0 +1,368 @@
+<title>Periwinkle Theme</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<script>(function(){var t="light";try{t=localStorage.getItem("mp-theme")||"light"}catch(e){}document.documentElement.setAttribute("data-theme",t)})();</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Noto+Sans+Devanagari:wght@500;600;700&family=Noto+Sans+Gujarati:wght@500;600;700&display=swap">
+<style>
+/* Layout: a mosaic of rounded lavender tiles, like the reference shot. Tile 1 = intro + product cards,
+   then palette, type, component kit, and the theme applied to four Machine Parts screens. */
+:root{
+  --pg-a:#DAD4FB; --pg-b:#A497F3; --pg-c:#7B6BEE;          /* tile gradient */
+  --page:#EFEDF6;                                            /* page behind the tiles */
+  --canvas:#F5F4FA; --surface:#FFFFFF; --photo:#ECEBF1;
+  --ink:#1C1A27; --ink2:#5E5B6E; --ink3:#8E8B9E;
+  --line:#E7E5EF; --line2:#D5D2E3;
+  --primary:#5B41E6; --primary-ink:#4A31D4; --on-primary:#FFFFFF;
+  --soft:#E1DBFF; --soft2:#F1EEFF;
+  --sun:#FFD52E; --on-sun:#1C1A27;
+  --ok:#14915F; --ok-soft:#DFF4EA; --warn:#B26F00; --warn-soft:#FFF1D2; --danger:#D93A44; --danger-soft:#FDE6E7;
+  --bezel:#E4E3EA; --shadow:rgba(52,36,140,.14);
+  --f:"Manrope","Noto Sans Devanagari","Noto Sans Gujarati",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --pg-a:#2B2463; --pg-b:#1F1949; --pg-c:#140F31; --page:#0C0A18;
+  --canvas:#110F1F; --surface:#1B1830; --photo:#26223F;
+  --ink:#F1EFFA; --ink2:#B8B4CC; --ink3:#8A86A0; --line:#2C2846; --line2:#3B365C;
+  --primary:#8B78FF; --primary-ink:#B3A6FF; --on-primary:#0E0B22; --soft:#2D2660; --soft2:#221D45;
+  --sun:#FFD84A; --on-sun:#1C1A27;
+  --ok:#4CCB93; --ok-soft:#123326; --warn:#F0B44C; --warn-soft:#3A2B10; --danger:#FF7A80; --danger-soft:#3D1A1E;
+  --bezel:#000000; --shadow:rgba(0,0,0,.4); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --pg-a:#2B2463; --pg-b:#1F1949; --pg-c:#140F31; --page:#0C0A18;
+  --canvas:#110F1F; --surface:#1B1830; --photo:#26223F;
+  --ink:#F1EFFA; --ink2:#B8B4CC; --ink3:#8A86A0; --line:#2C2846; --line2:#3B365C;
+  --primary:#8B78FF; --primary-ink:#B3A6FF; --on-primary:#0E0B22; --soft:#2D2660; --soft2:#221D45;
+  --sun:#FFD84A; --on-sun:#1C1A27;
+  --ok:#4CCB93; --ok-soft:#123326; --warn:#F0B44C; --warn-soft:#3A2B10; --danger:#FF7A80; --danger-soft:#3D1A1E;
+  --bezel:#000000; --shadow:rgba(0,0,0,.4); color-scheme:dark}
+/* a phone forced into dark mode, whatever the page theme */
+.dk{--canvas:#110F1F; --surface:#1B1830; --photo:#26223F; --ink:#F1EFFA; --ink2:#B8B4CC; --ink3:#8A86A0; --line:#2C2846; --line2:#3B365C;
+  --primary:#8B78FF; --primary-ink:#B3A6FF; --on-primary:#0E0B22; --soft:#2D2660; --soft2:#221D45; --sun:#FFD84A;
+  --ok:#4CCB93; --ok-soft:#123326; --warn:#F0B44C; --warn-soft:#3A2B10; --danger:#FF7A80; --danger-soft:#3D1A1E; --bezel:#000000}
+
+*{box-sizing:border-box}
+body{background:var(--page);color:var(--ink);font-family:var(--f);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1240px;margin:0 auto;padding-block:28px 72px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:14px}
+.tile{border-radius:28px;padding:28px;background:radial-gradient(120% 90% at 0% 0%,var(--pg-a) 0%,var(--pg-b) 55%,var(--pg-c) 100%);min-width:0}
+.tile.plain{background:var(--surface)}
+.row2{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:14px}
+@media (max-width:900px){.row2{grid-template-columns:minmax(0,1fr)}.tile{padding:20px}}
+h1{font-size:clamp(30px,4.4vw,46px);font-weight:800;letter-spacing:-.03em;line-height:1.05;margin:0;text-wrap:balance;color:var(--ink)}
+h2{font-size:22px;font-weight:800;letter-spacing:-.02em;margin:0 0 4px}
+.kicker{display:inline-block;font-size:12px;font-weight:700;background:var(--sun);color:var(--on-sun);padding:4px 10px;border-radius:999px}
+.lede{max-width:56ch;margin:12px 0 0;color:var(--ink);opacity:.82;font-weight:500}
+.sub{color:var(--ink2);margin:0 0 18px;max-width:64ch}
+.tgl{display:inline-flex;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:3px}
+.tgl button{border:0;background:transparent;font:inherit;font-size:13px;font-weight:700;padding:6px 16px;border-radius:999px;color:var(--ink2);cursor:pointer}
+.tgl button[aria-pressed="true"]{background:var(--primary);color:var(--on-primary)}
+.tgl button:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+
+/* ===== components ===== */
+.card{background:var(--surface);border-radius:20px;padding:8px 8px 14px;display:grid;gap:10px;justify-items:center;text-align:center;box-shadow:0 10px 30px var(--shadow)}
+.photo{position:relative;width:100%;aspect-ratio:1.15;background:var(--photo);border-radius:14px;display:grid;place-items:center;overflow:hidden}
+.photo svg{width:78%;height:auto}
+.badge{position:absolute;left:50%;bottom:-1px;transform:translate(-50%,50%);background:var(--sun);color:var(--on-sun);font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;white-space:nowrap}
+.badge.tl{left:10px;top:10px;bottom:auto;transform:none}
+.heart{position:absolute;right:10px;top:10px;width:32px;height:32px;border-radius:50%;background:var(--surface);display:grid;place-items:center;color:var(--primary)}
+.heart.on{background:var(--primary);color:var(--on-primary)}
+.ttl{font-weight:700;font-size:15px;line-height:1.25;padding:0 6px;color:var(--ink)}
+.pp{display:inline-flex;align-items:center;justify-content:center;gap:7px;border:2px solid var(--primary);color:var(--primary-ink);font-weight:800;border-radius:999px;padding:8px 18px;font-size:15px;font-variant-numeric:tabular-nums;background:var(--surface)}
+.pp.sm{padding:3px 9px;font-size:12.5px;border-width:1.5px;gap:4px}
+.pp.full{width:calc(100% - 12px)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--primary);color:var(--on-primary);font-weight:800;border-radius:999px;padding:12px 22px;font-size:15px;border:0}
+.btn.soft{background:var(--soft);color:var(--primary-ink)}
+.btn.ghost{background:var(--surface);color:var(--ink);border:1.5px solid var(--line2)}
+.ico{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.heart.on .ico{fill:currentColor}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tab{border:1.5px solid var(--line);border-radius:999px;padding:6px 13px;font-size:13px;font-weight:700;color:var(--ink);background:var(--surface)}
+.tab small{color:var(--ink3);font-weight:600;margin-left:3px;font-size:12px}
+.tab.on{border-color:var(--ink);}
+.sizes{display:flex;gap:6px;flex-wrap:wrap}
+.size{min-width:44px;text-align:center;border:1.5px solid var(--line);border-radius:999px;padding:6px 10px;font-weight:700;font-size:13.5px;background:var(--surface);color:var(--ink);font-variant-numeric:tabular-nums}
+.size.on{background:var(--soft);border-color:var(--soft);color:var(--primary-ink)}
+.opts{display:flex;gap:8px}
+.opt{flex:1;border:1.5px solid var(--line);border-radius:14px;padding:6px 4px 5px;display:grid;justify-items:center;gap:2px;background:var(--surface);font-size:11.5px;font-weight:700;color:var(--ink2)}
+.opt svg{width:100%;height:34px}
+.opt.on{background:var(--soft2);border-color:var(--primary);color:var(--primary-ink)}
+.qty{display:inline-flex;align-items:center;gap:4px;background:var(--canvas);border:1px solid var(--line);border-radius:999px;padding:4px 10px;font-weight:700;font-size:13px;color:var(--ink)}
+.qty .ico{width:14px;height:14px}
+.circ{width:34px;height:34px;border-radius:50%;background:var(--canvas);border:1px solid var(--line);display:grid;place-items:center;color:var(--ink2)}
+.circ .ico{width:16px;height:16px}
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;border-radius:999px;padding:3px 10px}
+.chip::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.c-ok{background:var(--ok-soft);color:var(--ok)}.c-warn{background:var(--warn-soft);color:var(--warn)}.c-info{background:var(--soft);color:var(--primary-ink)}.c-bad{background:var(--danger-soft);color:var(--danger)}
+.side{display:inline-flex;gap:2px;font-weight:800;font-size:11px;line-height:1}
+.side i{font-style:normal;width:20px;height:20px;display:grid;place-items:center;background:var(--primary);color:var(--on-primary)}
+.side i:first-child{border-radius:999px 4px 4px 999px}.side i:last-child{border-radius:4px 999px 999px 4px}
+.side i.need{background:transparent;color:var(--primary-ink);box-shadow:inset 0 0 0 1.5px var(--primary);background-image:repeating-linear-gradient(-45deg,transparent 0 3px,var(--soft) 3px 5px)}
+.side i.none{background:var(--photo);color:var(--ink3)}
+
+/* intro tile */
+.intro{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:24px;align-items:center}
+@media (max-width:900px){.intro{grid-template-columns:minmax(0,1fr)}}
+.duo{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+/* palette */
+.pal{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.sw{border-radius:18px;overflow:hidden;background:var(--canvas);border:1px solid var(--line)}
+.sw .c{height:70px;display:flex}
+.sw .c i{flex:3}.sw .c i+i{flex:1}
+.sw .m{padding:8px 12px 11px;display:grid}
+.sw b{font-size:13.5px}
+.sw span{font-size:12px;color:var(--ink2)}
+.sw code{font-family:ui-monospace,Consolas,monospace;font-size:11.5px;color:var(--ink2)}
+
+/* type */
+.type{display:grid;gap:14px}
+.type .r{display:grid;grid-template-columns:150px minmax(0,1fr);gap:14px;align-items:baseline;border-bottom:1px solid var(--line);padding-bottom:12px}
+.type .r:last-child{border-bottom:0}
+@media (max-width:600px){.type .r{grid-template-columns:minmax(0,1fr);gap:2px}}
+.type small{color:var(--ink3);font-size:12px;font-weight:600}
+
+/* kit */
+.kit{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.kit > div{background:var(--canvas);border:1px solid var(--line);border-radius:20px;padding:16px;display:grid;gap:12px;align-content:start}
+.kit h3{margin:0;font-size:13px;font-weight:700;color:var(--ink2)}
+.kit .flex{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+
+/* phones */
+.phones{display:flex;gap:22px;flex-wrap:wrap;justify-content:center;padding-top:6px}
+.pw{display:grid;gap:10px;justify-items:center}
+.pw > span{font-size:12.5px;font-weight:700;color:var(--ink);background:var(--surface);padding:4px 12px;border-radius:999px}
+.ph{width:300px;max-width:100%;border:9px solid var(--bezel);border-radius:44px;overflow:hidden;background:var(--canvas);color:var(--ink);font-size:13px;line-height:1.4;box-shadow:0 24px 50px rgba(30,16,110,.28);display:flex;flex-direction:column;min-height:610px}
+.ph .sb{display:flex;justify-content:space-between;align-items:center;padding:10px 22px 4px;font-size:12px;font-weight:700}
+.ph .sb .isl{width:78px;height:22px;border-radius:999px;background:#000}
+.ph .pad{padding:6px 14px;display:grid;gap:10px}
+.ph .hbar{display:flex;justify-content:space-between;align-items:center}
+.ph .hi b{display:block;font-size:17px;font-weight:800;letter-spacing:-.01em}
+.ph .hi span{font-size:12px;color:var(--ink2);display:flex;align-items:center;gap:3px}
+.ph .hi span .ico{width:13px;height:13px;color:var(--primary-ink)}
+.ph .srch{display:flex;align-items:center;gap:8px;background:var(--surface);border-radius:999px;padding:10px 14px;color:var(--ink3);font-size:12.5px;box-shadow:0 2px 10px var(--shadow)}
+.ph .srch .ico{width:16px;height:16px}
+.ph .cats{display:flex;gap:6px;overflow:hidden}
+.ph .cats span{white-space:nowrap;font-size:12px;font-weight:700;border-radius:999px;padding:6px 12px;background:var(--surface);color:var(--ink2)}
+.ph .cats span.on{background:var(--ink);color:var(--canvas)}
+.ph .hd{display:flex;justify-content:space-between;align-items:baseline}
+.ph .hd b{font-size:15px;font-weight:800}
+.ph .hd a{font-size:12px;font-weight:700;color:var(--primary-ink)}
+.ph .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ph .card{border-radius:16px;padding:5px 5px 10px;gap:9px;box-shadow:0 4px 14px var(--shadow)}
+.ph .card .photo{border-radius:12px}
+.ph .card .ttl{font-size:12.5px}
+.ph .card .heart{width:26px;height:26px;right:6px;top:6px}
+.ph .card .heart .ico{width:14px;height:14px}
+.ph .card .badge{font-size:10px;padding:2px 8px}
+.ph .card .pp{font-size:13px;padding:5px 10px;border-width:1.5px;gap:5px}
+.ph .card .pp .ico{width:14px;height:14px}
+.ph .match{display:flex;gap:10px;align-items:center;background:var(--primary);color:var(--on-primary);border-radius:18px;padding:10px 12px;font-size:12px}
+.ph .match b{font-weight:800}
+.ph .match .side i{background:var(--on-primary);color:var(--primary)}
+.ph .match .side i.need{background:transparent;color:var(--on-primary);box-shadow:inset 0 0 0 1.5px var(--on-primary);background-image:none}
+.ph .grow{flex:1}
+.ph .nav{margin:10px 12px 12px;background:var(--surface);border-radius:999px;display:flex;justify-content:space-around;align-items:center;padding:8px 6px;box-shadow:0 6px 18px var(--shadow)}
+.ph .nav span{display:grid;place-items:center;width:38px;height:38px;border-radius:50%;color:var(--ink3)}
+.ph .nav span.on{color:var(--primary-ink);background:var(--soft2)}
+.ph .nav span.sell{background:var(--primary);color:var(--on-primary);width:46px;height:46px}
+.ph .nav .ico{width:20px;height:20px}
+.ph .top{display:flex;justify-content:space-between;align-items:center}
+.ph .top .heart{position:static}
+.ph .bigph{position:relative;background:var(--surface);border-radius:20px;padding:6px}
+.ph .bigph .photo{aspect-ratio:1.35}
+.ph .dots{display:flex;gap:4px;justify-content:center;padding-top:6px}
+.ph .dots i{width:5px;height:5px;border-radius:50%;background:var(--line2)}
+.ph .dots i.on{width:14px;border-radius:3px;background:var(--primary)}
+.ph .info{background:var(--surface);border-radius:20px;padding:12px;display:grid;gap:9px}
+.ph .info h4{margin:0;font-size:16px;font-weight:800;letter-spacing:-.01em}
+.ph .info p{margin:0;font-size:12px;color:var(--ink2)}
+.ph .lab{font-size:12.5px;font-weight:700}
+.ph .lab span{color:var(--ink3);font-weight:600;margin-left:4px}
+.ph .opt svg{height:28px}
+.ph .size{min-width:38px;padding:5px 8px;font-size:12.5px}
+.ph .seller{display:flex;align-items:center;gap:8px;font-size:12px}
+.ph .av{width:28px;height:28px;border-radius:50%;background:var(--soft);color:var(--primary-ink);display:grid;place-items:center;font-weight:800;font-size:11px}
+.ph .seller b{display:block;font-size:12.5px}
+.ph .seller span{color:var(--ink3)}
+.ph .seller .rt{margin-left:auto;font-weight:800}
+.ph .buy{margin:0 12px 12px;display:flex;align-items:center;gap:8px;background:var(--surface);border-radius:999px;padding:6px 6px 6px 16px;box-shadow:0 8px 22px var(--shadow)}
+.ph .buy s{color:var(--ink3);font-weight:700;font-size:13px}
+.ph .buy .btn{margin-left:auto;padding:10px 16px;font-size:14px}
+.ph .lrow{display:grid;grid-template-columns:72px minmax(0,1fr);gap:10px;background:var(--surface);border-radius:18px;padding:6px}
+.ph .lrow .photo{aspect-ratio:1;border-radius:13px}
+.ph .lrow .photo svg{width:88%}
+.ph .lrow .t{font-weight:700;font-size:13px;line-height:1.25}
+.ph .lrow .m{display:flex;align-items:center;gap:6px;margin-top:5px;font-size:11.5px;color:var(--ink3)}
+.ph .lrow .a{display:flex;justify-content:flex-end;gap:6px;margin-top:6px}
+.ph .lrow .circ{width:30px;height:30px}
+.ph .sum{background:var(--surface);border-radius:18px;padding:12px;display:grid;gap:8px}
+.ph .sum .l{display:flex;justify-content:space-between;font-size:12.5px;color:var(--ink2)}
+.ph .sum .l b{color:var(--ink)}
+.ph h3{margin:0;font-size:20px;font-weight:800;letter-spacing:-.02em}
+.ph h3 small{font-size:13px;color:var(--ink3);font-weight:700;margin-left:4px}
+.ph .bubble{max-width:82%;padding:8px 11px;border-radius:16px;font-size:12.5px}
+.ph .bubble.me{justify-self:end;background:var(--primary);color:var(--on-primary);border-bottom-right-radius:5px}
+.ph .bubble.them{background:var(--surface);border-bottom-left-radius:5px}
+.ph .offer{background:var(--surface);border-radius:18px;padding:12px;display:grid;gap:8px;border:1.5px solid var(--soft)}
+.ph .offer .big{font-size:24px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.ph .offer .big small{font-size:12px;color:var(--ink3);font-weight:700}
+.ph .offer .two{display:flex;gap:6px}
+.ph .offer .two .btn{flex:1;padding:9px 0;font-size:13px}
+.foot{color:var(--ink);font-weight:500}
+.foot p{margin:6px 0 0;max-width:72ch;opacity:.85}
+</style>
+
+<div class="wrap">
+
+ <!-- 1 · intro -->
+ <section class="tile intro">
+  <div>
+   <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><span class="kicker">Theme from your reference</span><div class="tgl" role="group" aria-label="Colour mode"><button type="button" data-t="light">Light</button><button type="button" data-t="dark">Dark</button></div></div>
+   <h1 style="margin-top:14px">Periwinkle</h1>
+   <p class="lede">Taken from the reference shot: soft lavender backgrounds, one strong violet for actions, white cards with large rounded corners, photos on a light grey studio background, outlined price pills, and one sunny yellow for badges. Here it is applied to machine parts.</p>
+  </div>
+  <div class="duo" id="introCards"></div>
+ </section>
+
+ <!-- 2 · palette + type -->
+ <div class="row2">
+  <section class="tile plain">
+   <h2>Palette</h2>
+   <p class="sub">Large swatch: light mode. Narrow strip: dark mode. Violet is the only colour for actions; yellow is only for badges.</p>
+   <div class="pal" id="pal"></div>
+  </section>
+  <section class="tile plain">
+   <h2>Type</h2>
+   <p class="sub">Manrope throughout, as in the reference: heavy for prices and titles, medium for text. Hindi and Gujarati fall back to Noto Sans.</p>
+   <div class="type">
+    <div class="r"><small>Screen title · 800 · 22</small><span style="font-size:22px;font-weight:800;letter-spacing:-.02em">Tie rod end, steering</span></div>
+    <div class="r"><small>Price · 800 · 24</small><span style="font-size:24px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums">₹1,150 <span style="font-size:14px;color:var(--ink3)">/pc</span> · ₹12,40,000</span></div>
+    <div class="r"><small>Card title · 700 · 15</small><span style="font-size:15px;font-weight:700">Hydraulic gear pump, 3DX</span></div>
+    <div class="r"><small>Body · 500 · 13</small><span style="font-size:13px;font-weight:500;color:var(--ink2)">Genuine part, used for one season. Fits JCB 3DX 2015–2022. 8 pieces in stock at Shapar-Veraval.</span></div>
+    <div class="r"><small>Hindi · Gujarati</small><span style="font-size:17px;font-weight:700">टाई रॉड एंड · ટાઈ રોડ એન્ડ</span></div>
+   </div>
+  </section>
+ </div>
+
+ <!-- 3 · component kit -->
+ <section class="tile plain">
+  <h2>Components</h2>
+  <p class="sub">The pieces every screen is built from.</p>
+  <div class="kit" id="kit"></div>
+ </section>
+
+ <!-- 4 · screens -->
+ <section class="tile">
+  <h2>On Machine Parts screens</h2>
+  <p class="sub" style="color:var(--ink);opacity:.8">Home, a listing page (laid out like the sneaker screen), saved parts (like the cart list), and the listing page in dark mode.</p>
+  <div class="phones" id="phones"></div>
+ </section>
+
+ <section class="tile foot">
+  <h2>If you like this</h2>
+  <p>Say so (with any changes, for example "deeper violet" or "yellow buttons"), and the next step is 4–5 full screens in this theme: Home, Search results, Listing page, Sell wizard and Chat with an offer. Send a screenshot of the Mealio Dribbble shot and I'll make a second theme from it to compare. Dribbble blocks automated access, so I couldn't open the link.</p>
+ </section>
+</div>
+
+<script>
+const I={
+ heart:'<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>',
+ tag:'<path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.4"/>',
+ chat:'<path d="M4 5h16v11H9l-5 4z"/>',
+ search:'<circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/>',
+ pin:'<path d="M12 21s-6-5.3-6-10a6 6 0 1 1 12 0c0 4.7-6 10-6 10z"/><circle cx="12" cy="11" r="2.2"/>',
+ bell:'<path d="M6 16v-5a6 6 0 1 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/>',
+ home:'<path d="M4 11 12 4l8 7v9h-5v-6H9v6H4z"/>',
+ grid:'<path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/>',
+ plus:'<path d="M12 5v14M5 12h14"/>',
+ deal:'<path d="M3 12l4-4 4 3 3-3 7 6-4 4-6-4-4 2z"/>',
+ back:'<path d="M15 5l-7 7 7 7"/>',
+ trash:'<path d="M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13"/>',
+ down:'<path d="m7 10 5 5 5-5"/>',
+ star:'<path d="m12 4 2.4 5 5.4.6-4 3.7 1.1 5.4L12 16l-4.9 2.7 1.1-5.4-4-3.7 5.4-.6z"/>',
+ check:'<path d="m5 12.5 4.5 4.5L19 7.5"/>',
+ send:'<path d="M4 12 20 4l-6 16-3-7z"/>'
+};
+const ico=(n,cls="")=>`<svg class="ico ${cls}" viewBox="0 0 24 24" aria-hidden="true">${I[n]}</svg>`;
+
+/* studio-lit part drawings (grey metal on the photo background) */
+const metal=`<defs><linearGradient id="m1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#C9CBD3"/><stop offset=".5" stop-color="#8E919C"/><stop offset="1" stop-color="#5D606B"/></linearGradient><linearGradient id="m2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#E4E5EA"/><stop offset="1" stop-color="#7C7F8A"/></linearGradient><radialGradient id="sh" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#000" stop-opacity=".22"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient></defs>`;
+const P={
+ tierod:(flip)=>`<svg viewBox="0 0 200 120" aria-hidden="true">${metal}<g ${flip?'transform="translate(200 0) scale(-1 1)"':''}><ellipse cx="100" cy="100" rx="80" ry="7" fill="url(#sh)"/><rect x="14" y="56" width="110" height="12" rx="6" fill="url(#m1)"/><rect x="104" y="51" width="22" height="22" rx="4" fill="url(#m1)"/><circle cx="148" cy="62" r="26" fill="url(#m2)"/><circle cx="148" cy="62" r="15" fill="#6E717C"/><circle cx="148" cy="62" r="8" fill="url(#m2)"/><rect x="143" y="18" width="10" height="20" fill="url(#m1)"/><rect x="137" y="12" width="22" height="9" rx="2" fill="#5D606B"/></g></svg>`,
+ pump:`<svg viewBox="0 0 200 120" aria-hidden="true">${metal}<ellipse cx="100" cy="104" rx="70" ry="7" fill="url(#sh)"/><rect x="48" y="32" width="96" height="62" rx="10" fill="url(#m1)"/><rect x="40" y="26" width="16" height="74" rx="4" fill="url(#m2)"/><rect x="136" y="26" width="16" height="74" rx="4" fill="url(#m2)"/><rect x="152" y="54" width="26" height="16" rx="3" fill="url(#m1)"/><circle cx="96" cy="63" r="14" fill="#6E717C"/><circle cx="96" cy="63" r="7" fill="url(#m2)"/><rect x="84" y="14" width="24" height="14" rx="3" fill="#5D606B"/></svg>`,
+ bearing:`<svg viewBox="0 0 200 120" aria-hidden="true">${metal}<ellipse cx="100" cy="106" rx="56" ry="6" fill="url(#sh)"/><circle cx="100" cy="58" r="46" fill="url(#m2)"/><circle cx="100" cy="58" r="36" fill="#8E919C"/>${Array.from({length:10},(_,i)=>{const a=i*Math.PI/5;return `<circle cx="${(100+30*Math.cos(a)).toFixed(1)}" cy="${(58+30*Math.sin(a)).toFixed(1)}" r="5.5" fill="url(#m2)"/>`}).join("")}<circle cx="100" cy="58" r="24" fill="url(#m1)"/><circle cx="100" cy="58" r="16" fill="#ECEBF1" opacity=".9"/></svg>`,
+ gear:`<svg viewBox="0 0 200 120" aria-hidden="true">${metal}<ellipse cx="100" cy="108" rx="54" ry="6" fill="url(#sh)"/><path fill="url(#m2)" d="${(()=>{let d="";const n=18;for(let i=0;i<n*2;i++){const r=i%2?40:48;const a=i*Math.PI/n;d+=(i?"L":"M")+(100+r*Math.cos(a)).toFixed(1)+" "+(58+r*Math.sin(a)).toFixed(1)}return d+"Z"})()}"/><circle cx="100" cy="58" r="30" fill="url(#m1)"/><circle cx="100" cy="58" r="12" fill="#ECEBF1"/><rect x="96" y="44" width="8" height="6" fill="#ECEBF1"/></svg>`
+};
+const sideTok=(a,b)=>`<span class="side"><i class="${a}">L</i><i class="${b}">R</i></span>`;
+
+/* intro product cards */
+function prodCard({img,badge,title,price,saved}){
+ return `<div class="card"><div class="photo">${img}<span class="heart ${saved?'on':''}">${ico("heart")}</span>${badge?`<span class="badge">${badge}</span>`:""}</div>
+  <div class="ttl">${title}</div><span class="pp full">${ico("tag")}${price}</span></div>`;
+}
+document.getElementById("introCards").innerHTML=
+ prodCard({img:P.pump,badge:"Top item",title:"Hydraulic gear pump, JCB 3DX",price:"₹18,500"})+
+ prodCard({img:P.tierod(false),title:"Tie rod end, left side",price:"₹1,150",saved:true});
+
+/* palette */
+const pal=[["Violet","Actions, links, selected","#5B41E6","#8B78FF"],["Violet text","Text on white","#4A31D4","#B3A6FF"],["Lavender","Selected chips, soft fills","#E1DBFF","#2D2660"],["Mist","Selected option bg","#F1EEFF","#221D45"],["Sun","Badges only","#FFD52E","#FFD84A"],["Ink","Titles, prices","#1C1A27","#F1EFFA"],["Ink 2","Body text","#5E5B6E","#B8B4CC"],["Ink 3","Hints, counts","#8E8B9E","#8A86A0"],["Canvas","Screen background","#F5F4FA","#110F1F"],["Studio","Photo background","#ECEBF1","#26223F"],["Line","Borders","#E7E5EF","#2C2846"],["Gradient","Hero tiles, splash","#A497F3","#1F1949"],["Success","Live, verified","#14915F","#4CCB93"],["Warning","In review, expiring","#B26F00","#F0B44C"],["Danger","Rejected, delete","#D93A44","#FF7A80"]];
+document.getElementById("pal").innerHTML=pal.map(([n,u,l,d])=>`<div class="sw"><div class="c"><i style="background:${n==="Gradient"?"linear-gradient(135deg,#DAD4FB,#A497F3,#7B6BEE)":l}"></i><i style="background:${n==="Gradient"?"linear-gradient(135deg,#2B2463,#140F31)":d}"></i></div><div class="m"><b>${n}</b><span>${u}</span><code>${l} · ${d}</code></div></div>`).join("");
+
+/* kit */
+document.getElementById("kit").innerHTML=[
+ ["Buttons",`<div class="flex"><span class="btn">${ico("deal")}Make offer</span><span class="btn soft">Enquire</span><span class="btn ghost">Share</span></div>`],
+ ["Price pills",`<div class="flex"><span class="pp">${ico("tag")}₹1,150</span><span class="pp sm">₹18,500</span><s style="color:var(--ink3);font-weight:700">₹1,250</s></div>`],
+ ["Badges and status",`<div class="flex"><span class="badge" style="position:static;transform:none">Top item</span><span class="badge" style="position:static;transform:none">Pair available</span></div><div class="flex"><span class="chip c-ok">Live</span><span class="chip c-warn">In review</span><span class="chip c-info">Reserved</span><span class="chip c-bad">Rejected</span></div>`],
+ ["Side token: has L, needs R / pair / L only",`<div class="flex">${sideTok("","need")}${sideTok("","")}${sideTok("","none")}<span style="font-size:12.5px;color:var(--ink2)">Filled = has it, hatched = wanted</span></div>`],
+ ["Tabs with counts",`<div class="tabs"><span class="tab on">Details</span><span class="tab">Fits<small>12</small></span><span class="tab">Reviews<small>84</small></span><span class="tab">Questions<small>6</small></span></div>`],
+ ["Quantity selector (like sizes)",`<div class="sizes"><span class="size">1</span><span class="size">2</span><span class="size on">4</span><span class="size">8</span><span class="size">All 12</span></div>`],
+ ["Side picker (like colours)",`<div class="opts"><span class="opt on">${P.tierod(false)}Left</span><span class="opt">${P.tierod(true)}Right</span><span class="opt">${P.bearing}Pair</span></div>`],
+ ["Icon buttons and quantity",`<div class="flex"><span class="heart" style="position:static;border:1px solid var(--line)">${ico("heart")}</span><span class="heart on" style="position:static">${ico("heart")}</span><span class="qty">2 ${ico("down")}</span><span class="circ">${ico("trash")}</span></div>`]
+].map(([h,b])=>`<div><h3>${h}</h3>${b}</div>`).join("");
+
+/* phones */
+const sb=`<div class="sb"><span>9:41</span><span class="isl"></span><span>4G</span></div>`;
+const nav=(on)=>`<div class="nav">${[["home","home"],["grid","browse"],["plus","sell"],["chat","chat"],["deal","deals"]].map(([i,k])=>`<span class="${k==="sell"?"sell":""} ${k===on?"on":""}">${ico(i)}</span>`).join("")}</div>`;
+
+const home=`<div class="ph">${sb}<div class="pad">
+ <div class="hbar"><div class="hi"><b>Hi, Patel Engineering</b><span>${ico("pin")}Shapar-Veraval · 25 km</span></div><span class="heart" style="position:static;box-shadow:0 2px 10px var(--shadow)">${ico("bell")}</span></div>
+ <div class="srch">${ico("search")}Part, machine, brand or part no.</div>
+ <div class="cats"><span class="on">Spare parts</span><span>Machines</span><span>For rent</span><span>Hydraulics</span></div>
+ <div class="match">${sideTok("","need")}<span><b>2 right-side matches</b> for your left tie rod end</span></div>
+ <div class="hd"><b>Top items near you</b><a>See all</a></div>
+ <div class="grid">
+  <div class="card"><div class="photo">${P.pump}<span class="heart">${ico("heart")}</span><span class="badge">Top item</span></div><div class="ttl">Gear pump, 3DX</div><span class="pp">${ico("tag")}₹18,500</span></div>
+  <div class="card"><div class="photo">${P.tierod(true)}<span class="heart on">${ico("heart")}</span><span class="badge">Pair available</span></div><div class="ttl">Tie rod end, right</div><span class="pp">${ico("tag")}₹1,190</span></div>
+ </div></div><div class="grow"></div>${nav("home")}</div>`;
+
+const listing=(dk)=>`<div class="ph ${dk?"dk":""}">${sb}<div class="pad">
+ <div class="top"><span class="circ" style="background:var(--surface)">${ico("back")}</span><span class="heart on">${ico("heart")}</span></div>
+ <div class="tabs"><span class="tab on">Details</span><span class="tab">Fits<small>4</small></span><span class="tab">Reviews<small>84</small></span></div>
+ <div class="bigph"><div class="photo">${P.tierod(false)}<span class="badge tl">Top seller</span></div><div class="dots"><i class="on"></i><i></i><i></i><i></i></div></div>
+ <div class="info">
+  <h4>Tie rod end, steering</h4>
+  <p>Genuine part, used one season. Fits JCB 3DX 2015–2022. Part no. 126/01234.</p>
+  <div class="lab">Side<span>Left</span></div>
+  <div class="opts"><span class="opt on">${P.tierod(false)}Left</span><span class="opt">${P.tierod(true)}Right</span><span class="opt">${P.bearing}Pair</span></div>
+  <div class="lab">Quantity<span>2 of 8</span></div>
+  <div class="sizes"><span class="size">1</span><span class="size on">2</span><span class="size">4</span><span class="size">8</span></div>
+  <div class="seller"><span class="av">OA</span><div><b>Om Agro Spares</b><span>Gondal · 6 km · GST verified</span></div><span class="rt">4.8 ★</span></div>
+ </div></div><div class="grow"></div>
+ <div class="buy"><s>₹1,250</s><span class="btn">${ico("deal")}₹1,150 · Offer</span></div></div>`;
+
+const saved=`<div class="ph">${sb}<div class="pad">
+ <div class="top"><span class="circ" style="background:var(--surface)">${ico("back")}</span><span class="heart">${ico("bell")}</span></div>
+ <h3>Saved parts<small>3</small></h3>
+ ${[[P.bearing,"Ball bearing 6205, sealed","₹240","25 × 52 mm · New","10"],[P.gear,"Spur gear, 36 teeth, gearbox","₹3,400","Used · Mahindra 575","1"],[P.tierod(false),"Tie rod end, steering, left","₹1,150","Left · Used · 3DX","2"]].map(([img,t,p,m,q])=>`
+ <div class="lrow"><div class="photo">${img}</div><div style="min-width:0"><div class="t">${t}</div><div class="m"><span class="pp sm">${p}</span>${m}</div><div class="a"><span class="qty">${q} ${ico("down")}</span><span class="circ">${ico("trash")}</span></div></div></div>`).join("")}
+ <div class="sum"><div class="l"><span>3 parts from 3 sellers</span><b>₹8,180</b></div><span class="btn" style="width:100%">${ico("send")}Enquire all sellers</span></div>
+ </div><div class="grow"></div>${nav("")}</div>`;
+
+document.getElementById("phones").innerHTML=
+ `<div class="pw"><span>Home</span>${home}</div><div class="pw"><span>Listing page</span>${listing(false)}</div><div class="pw"><span>Saved parts</span>${saved}</div><div class="pw"><span>Listing · dark</span>${listing(true)}</div>`;
+
+/* light / dark switch */
+function markMode(){const t=document.documentElement.getAttribute("data-theme")||"light";document.querySelectorAll(".tgl button").forEach(x=>x.setAttribute("aria-pressed",String(x.dataset.t===t)))}
+document.querySelectorAll(".tgl button").forEach(b=>b.addEventListener("click",()=>{document.documentElement.setAttribute("data-theme",b.dataset.t);try{localStorage.setItem("mp-theme",b.dataset.t)}catch(e){}markMode()}));
+markMode();
+</script>
