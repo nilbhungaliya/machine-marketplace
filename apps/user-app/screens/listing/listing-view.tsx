@@ -31,8 +31,9 @@ import StatusChip from '@/components/StatusChip';
  * Contract (lanes L5 and L6):
  * - `listing`: a `ListingDetail` or `ListingOwnerView` (it extends it). Private owner fields (serial number, godown
  *   address, pincode) are never drawn here, so Preview shows what a buyer sees.
- * - `template`: the node's effective template (`useTemplate(listing.categoryId, listing.kind)`) for the Specifications
- *   labels and order; without it the template fields are left out (part number, brand, machine rows still show).
+ * - `template`: the node's template with retired fields and options (`useListingTemplate(listing)`, `includeRetired=1`)
+ *   for the Specifications labels and order, so values for retired fields keep their labels; without it the template
+ *   fields are left out (part number, brand, machine rows still show).
  * - `header`: drawn first, above the gallery (Preview's "This is how buyers will see it", score and warnings).
  * - `otherSide`: block 5 (parts with `left` / `right`; L6 builds it from `GET …/other-side`). Not drawn when absent.
  * - `moreFromSeller`: block 9 (L6). Not drawn when absent.

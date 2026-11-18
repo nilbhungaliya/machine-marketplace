@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import type { MyListingsGroup } from '@mpm/shared-types';
 import { fetchMyListings } from '@/lib/listing-api';
 import { listingKeys } from './use-listing';
@@ -19,4 +19,19 @@ export function useMyListings(group: MyListingsGroup, page = 1, enabled = true) 
 /** The drafts list (Post tab's "Drafts (n)", the drafts screen). */
 export function useDrafts(enabled = true) {
   return useMyListings('drafts', 1, enabled);
+}
+
+/**
+ * Every page of a group so far, for a list that grows with "Show more" (My listings, Removed by our team). Under
+ * `listingKeys.mine`, so a seller action's invalidation refetches it.
+ */
+export function useMyListingsPages(group: MyListingsGroup, enabled = true) {
+  return useInfiniteQuery({
+    queryKey: [...listingKeys.mine, group, 'pages'] as const,
+    queryFn: ({ pageParam }) => fetchMyListings(group, pageParam),
+    initialPageParam: 1,
+    getNextPageParam: (last) => (last.page * last.pageSize < last.total ? last.page + 1 : undefined),
+    enabled,
+    refetchOnMount: 'always',
+  });
 }

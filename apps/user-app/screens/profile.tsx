@@ -13,13 +13,14 @@ import StatusChip from '@/components/StatusChip';
 import { useConfirm } from '@/components/ConfirmSheet';
 import { useAuth } from '@/hooks/useAuth';
 import { gstStateQuery, useBusiness, useGstState } from '@/hooks/use-business';
+import { useMyListings } from '@/hooks/use-my-listings';
 import { useType } from '@/hooks/use-type';
 import { track } from '@/lib/analytics';
 import { SETTINGS_EVENTS } from '@/lib/analytics-events';
 import { completionSegments, gstChip, profileRowTarget, type ProfileRow } from '@/lib/gst-flow';
 import { setLanguage, useLanguage } from '@/lib/i18n/language';
 import { LANGUAGE_OPTIONS } from '@/lib/i18n/language-names';
-import { Building2, ChevronRight, Globe, MapPin, ShieldCheck, Sun, User, type LucideIcon } from '@/lib/icons';
+import { Building2, ChevronRight, ClipboardList, Globe, MapPin, ShieldCheck, Sun, User, type LucideIcon } from '@/lib/icons';
 import { queryClient } from '@/lib/queryClient';
 import { fonts, radius, spacing, useTheme, type ThemeMode } from '@/lib/theme';
 import { openTarget } from '@/navigation/go';
@@ -39,6 +40,9 @@ export default function ProfileScreen({ navigation }: RootStackScreenProps<'Prof
   const business = useBusiness();
   const profile = business.data ?? null;
   const gst = useGstState(!!profile);
+  // The "My listings" row's live count (F2 spec §10).
+  const myListings = useMyListings('live', 1, !!profile);
+  const liveCount = myListings.data?.counts.live;
   const [opening, setOpening] = useState<ProfileRow | null>(null);
 
   const confirmLogout = async () => {
@@ -167,6 +171,15 @@ export default function ProfileScreen({ navigation }: RootStackScreenProps<'Prof
             </Card>
 
             <Card flush>
+              <ListRow
+                icon={ClipboardList}
+                label={t('profile.rows.listings')}
+                hint={liveCount !== undefined ? t('profile.rows.listingsLive', { count: liveCount }) : undefined}
+                chevron
+                onPress={() => navigation.navigate('MyListings')}
+                testID="Profile-row-listings"
+                accessibilityRole="button"
+              />
               {rows.map((r, i) => (
                 <ListRow
                   key={r.row}

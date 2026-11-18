@@ -1,5 +1,11 @@
-import type { ListingStatus, MyListingsGroup } from '@mpm/shared-types';
+import type {
+  CategoryNode, ListingKind, ListingProblem, ListingStatus, MyListingCard, MyListingsGroup, PartSide, SellerListingAction,
+} from '@mpm/shared-types';
+import { CATEGORY_EDITABLE_STATUSES, EDITABLE_LISTING_STATUSES, sellerActions } from '@mpm/shared-types';
 import type { StatusTone } from '@/components/StatusChip';
+import { incompleteProblems } from './listing-errors';
+import { expiresText, updatedAgo } from './listing-format';
+import { stepForProblem, wizardSteps, type EditStep } from './sell-wizard';
 
 // My listings (F2 spec §10): which segment a status sits in, and how its StatusChip reads. Pure.
 
@@ -44,4 +50,119 @@ const TONE: Record<ListingStatus, StatusTone> = {
 /** The StatusChip of a status: its i18n key (`listing.status.<status>`) and tone. */
 export function statusChip(status: ListingStatus): { key: string; tone: StatusTone } {
   return { key: `listing.status.${status}`, tone: TONE[status] };
+}
+
+// ─── The manage sheet, the edit menu and the cards (§10; plan Task 27) ───
+
+/** A manage-sheet row: Edit, Update quantity, Find the other side, View listing, or a seller action (§7.2). */
+export type ManageItem = 'edit' | 'quantity' | 'other_side' | 'view' | SellerListingAction;
+
+const isEditable = (status: ListingStatus): boolean => (EDITABLE_LISTING_STATUSES as readonly ListingStatus[]).includes(status);
+
+/**
+ * The manage sheet's rows (§10, mockup "Manage a listing"): Edit and Update quantity while editable, the actions
+ * `sellerActions` allows (no Duplicate, decision 8), Find the other side for a left / right part, View listing when
+ * asked for (My listings), and Remove last. A removed listing has none.
+ */
+export function manageItems(
+  l: { status: ListingStatus; kind: ListingKind; side: PartSide | null },
+  opts: { view?: boolean } = {},
+): ManageItem[] {
+  if (l.status === 'removed') return [];
+  const actions = sellerActions(l.status, l.kind);
+  const items: ManageItem[] = [];
+  if (isEditable(l.status)) items.push('edit', 'quantity');
+  items.push(...actions.filter((a) => a !== 'remove'));
+  if (l.kind === 'part' && (l.side === 'left' || l.side === 'right')) items.push('other_side');
+  if (opts.view) items.push('view');
+  if (actions.includes('remove')) items.push('remove');
+  return items;
+}
+
+/** Destructive actions confirm first (§10). */
+export function needsConfirm(action: SellerListingAction): boolean {
+  return action === 'remove' || action === 'mark_sold';
+}
+
+/** The toast after an action: a go-live action the gate sent to review says "Sent to our team for a quick check". */
+export function actionToastKey(action: SellerListingAction, outcome: ListingStatus): string {
+  return outcome === 'pending_review' ? 'listing.manage.sentForReview' : `listing.manage.done.${action}`;
+}
+
+/** A gate refusal (`400 LISTING_INCOMPLETE`) → the step that fixes its first problem; null for anything else. */
+export function gateStep(err: unknown, kind: ListingKind): EditStep | null {
+  for (const p of incompleteProblems(err)) {
+    const step = stepForProblem(p.field, kind);
+    if (step) return step;
+  }
+  return null;
+}
+
+/**
+ * Where Edit goes (§10, R43): a draft or rejected listing re-runs the wizard (category can change there); another
+ * editable status opens the Edit listing menu; hidden, removed and reserved can't be edited.
+ */
+export function editEntry(status: ListingStatus): 'wizard' | 'menu' | null {
+  if ((CATEGORY_EDITABLE_STATUSES as readonly ListingStatus[]).includes(status)) return 'wizard';
+  return isEditable(status) ? 'menu' : null;
+}
+
+/**
+ * The Edit listing menu's sections: the kind's steps, without Category on a published listing (R43), with `side` when
+ * the node has sides (`nodeHasSides`; unknown node → when the listing has a side or a nudge asks for one), each
+ * marked when a `needsAttention` problem points at it.
+ */
+export function editSections(
+  l: { kind: ListingKind; status: ListingStatus; side: PartSide | null; needsAttention: readonly ListingProblem[] },
+  nodeSides: boolean | null,
+): { step: EditStep; attention: boolean }[] {
+  const hasSides = nodeSides ?? (l.side === 'left' || l.side === 'right' || l.side === 'pair' || l.needsAttention.some((p) => p.field === 'side'));
+  const flagged = new Set(l.needsAttention.map((p) => stepForProblem(p.field, l.kind)).filter((s) => s !== null));
+  return wizardSteps(l.kind, hasSides)
+    .filter((step) => step !== 'category' || editEntry(l.status) === 'wizard')
+    .map((step) => ({ step, attention: flagged.has(step) }));
+}
+
+/** Whether the category `id` has sides (`effectiveHasSides`), from the active tree; null when it isn't there. */
+export function nodeHasSides(tree: readonly CategoryNode[] | null | undefined, id: string | null | undefined): boolean | null {
+  if (!tree || !id) return null;
+  const stack = [...tree];
+  while (stack.length > 0) {
+    const n = stack.pop()!;
+    if (n.id === id) return n.effectiveHasSides;
+    stack.push(...n.children);
+  }
+  return null;
+}
+
+/** The card's chip: "Expiring soon" (warn) inside the reminder window, else the status. */
+export function myCardChip(c: Pick<MyListingCard, 'status' | 'expiringSoon'>): { key: string; tone: StatusTone } {
+  return c.expiringSoon ? { key: 'listing.mine.expiringSoon', tone: 'warn' } : statusChip(c.status);
+}
+
+/** "Expires in 5 days" inside the reminder window, else "Updated 3 days ago". */
+export function myCardSubtitle(c: Pick<MyListingCard, 'expiringSoon' | 'expiresAt' | 'refreshedAt' | 'updatedAt'>, now: number = Date.now()): string {
+  if (c.expiringSoon && c.expiresAt) return expiresText(c.expiresAt, now);
+  return updatedAgo(c.refreshedAt ?? c.updatedAt, now);
+}
+
+/** The "Still available?" banner with one-tap Renew (§7.4). */
+export function showRenew(c: Pick<MyListingCard, 'expiringSoon' | 'status' | 'kind'>): boolean {
+  return c.expiringSoon && sellerActions(c.status, c.kind).includes('renew');
+}
+
+/**
+ * The card's one-line message: the moderator's on a rejected listing, the hide reason, "In review", a needs-attention
+ * nudge, then the first missing score item (not on sold listings).
+ */
+export function myCardNudge(c: MyListingCard): { key: string; values?: Record<string, string> } | null {
+  if (c.status === 'rejected') {
+    return c.moderation?.note ? { key: 'listing.mine.moderatorSays', values: { note: c.moderation.note } } : { key: 'listing.mine.changesRequested' };
+  }
+  if (c.status === 'hidden') return c.statusReason ? { key: 'listing.mine.hiddenReason', values: { reason: c.statusReason } } : null;
+  if (c.status === 'pending_review') return { key: 'listing.mine.inReview' };
+  if (c.needsAttention.length > 0) return { key: 'listing.mine.needsAttention' };
+  if (c.status === 'sold') return null;
+  const first = c.scoreMissing[0];
+  return first ? { key: `listing.score.${first}` } : null;
 }
