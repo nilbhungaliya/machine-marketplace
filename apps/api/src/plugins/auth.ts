@@ -1,7 +1,10 @@
 import fp from 'fastify-plugin';
 import jwt from 'jsonwebtoken';
+import { eq } from 'drizzle-orm';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import type { AdminRole } from '@mpm/shared-types';
+import type { Db } from '../db/index.js';
+import { users } from '../db/schema.js';
 import { ForbiddenError, UnauthorizedError } from '../lib/errors.js';
 
 export interface AdminTokenPayload {
@@ -64,6 +67,25 @@ export function verifyUserToken(token: string): UserTokenPayload {
   return { userId: p.userId, businessId: p.businessId };
 }
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * The signed-in user as the database says right now (F1 + A2 spec §8.2; ruling R5): one primary-key lookup per request
+ * and per socket handshake. A user that no longer exists is `401`; a suspended or blocked one is
+ * `403 ACCOUNT_SUSPENDED`, so a suspension takes effect on the very next request. The business id comes from the row,
+ * not the token, so a business created after sign-in resolves on the old token.
+ */
+export async function loadActiveUser(db: Db, userId: string): Promise<UserTokenPayload> {
+  if (!UUID.test(userId)) throw new UnauthorizedError();
+  const [row] = await db
+    .select({ status: users.status, businessId: users.businessId })
+    .from(users)
+    .where(eq(users.id, userId));
+  if (!row) throw new UnauthorizedError();
+  if (row.status !== 'active') throw new ForbiddenError('This account is suspended. Contact support.', 'ACCOUNT_SUSPENDED');
+  return { userId, businessId: row.businessId };
+}
+
 export default fp(async (fastify) => {
   const verifyAdmin = (request: FastifyRequest) => {
     try {
@@ -84,11 +106,14 @@ export default fp(async (fastify) => {
     if (role !== 'super_admin' && !roles.includes(role)) throw new ForbiddenError();
   });
 
+  // Needs the db plugin (registered later in buildApp, so read at request time); every user route has it.
   fastify.decorate('requireUser', async (request: FastifyRequest) => {
+    let payload: UserTokenPayload;
     try {
-      request.user = verifyUserToken(bearer(request));
+      payload = verifyUserToken(bearer(request));
     } catch {
       throw new UnauthorizedError();
     }
+    request.user = await loadActiveUser(fastify.db, payload.userId);
   });
 });

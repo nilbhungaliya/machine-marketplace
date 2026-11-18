@@ -20,6 +20,7 @@ import adminCatalogBrandRoutes from './routes/admin/catalog-brands.js';
 import adminCatalogMasterRoutes from './routes/admin/catalog-master.js';
 import adminCatalogExportRoutes from './routes/admin/catalog-export.js';
 import adminIndustrialAreaRoutes from './routes/admin/industrial-areas.js';
+import adminUserRoutes from './routes/admin/users.js';
 
 export interface BuildAppOptions {
   /** false in unit tests that must not touch Postgres/Redis. */
@@ -61,6 +62,7 @@ export async function buildApp({ infra = true, logger = true }: BuildAppOptions 
     await app.register(adminCatalogMasterRoutes);
     await app.register(adminCatalogExportRoutes);
     await app.register(adminIndustrialAreaRoutes);
+    await app.register(adminUserRoutes);
   }
 
   return app;

@@ -316,9 +316,10 @@ describe('business profile API', () => {
     });
   });
 
-  it('a token for a deleted user is 404, not a 500', async () => {
+  // requireUser reads the user's row on every request (Task 6, spec §8.2): a user that no longer exists is 401.
+  it('a token for a deleted user is 401, not a 500', async () => {
     const ghost = signUserToken({ userId: '00000000-0000-4000-8000-000000000000', businessId: null });
     const res = await call('GET', '/businesses/me', undefined, ghost);
-    expect(res.statusCode).toBe(404);
+    expect(res.statusCode).toBe(401);
   });
 });
