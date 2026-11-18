@@ -34,7 +34,12 @@ const nonEmpty = (patch: object) => Object.keys(patch).length > 0;
 const createUnitBody = z.object({ key, label, decimals: decimals.default(0) }).strict();
 // No `key` on updates: keys are fixed once created (.strict() rejects them).
 const updateUnitBody = z
-  .object({ label: label.optional(), decimals: decimals.optional(), isActive: z.boolean().optional() })
+  .object({
+    label: label.optional(),
+    decimals: decimals.optional(),
+    isActive: z.boolean().optional(),
+    isMachineUnit: z.boolean().optional(),
+  })
   .strict()
   .refine(nonEmpty, 'Nothing to update');
 

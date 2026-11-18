@@ -7,6 +7,14 @@ import { db } from '../src/db/index.js';
 import { auditLog, categories, machineModels, brands, templateFields } from '../src/db/schema.js';
 import { createTestAdmin, deleteTestAdmins } from './_helpers/test-admins.js';
 import { createTestCatalog, deleteTestCatalog } from './_helpers/test-catalog.js';
+import { deleteTestBusinesses } from './_helpers/test-businesses.js';
+import {
+  createTestSeller,
+  deleteTestListings,
+  deleteTestSellerExtras,
+  insertTestListing,
+  type TestSeller,
+} from './_helpers/test-listings.js';
 
 describe('admin category nodes API', () => {
   let app: FastifyInstance;
@@ -15,6 +23,7 @@ describe('admin category nodes API', () => {
   /** Every root this suite created (through the API or the fixture): deleted with its whole subtree. */
   const rootIds: string[] = [];
   const brandIds: string[] = [];
+  const sellers: TestSeller[] = [];
   let seq = 0;
 
   beforeAll(async () => {
@@ -24,7 +33,9 @@ describe('admin category nodes API', () => {
   });
 
   afterAll(async () => {
-    // Before app.close(): closing the app ends the shared pg pool.
+    // Before app.close(): closing the app ends the shared pg pool. Listings first: they reference the nodes.
+    await deleteTestBusinesses(sellers.map((s) => s.businessId));
+    await deleteTestSellerExtras(sellers);
     for (const id of rootIds) await deleteTestCatalog(id); // also deletes machine models of its types
     for (const id of brandIds) await db.delete(brands).where(eq(brands.id, id));
     await deleteTestAdmins([manager?.id, moderator?.id].filter((id): id is string => !!id));
@@ -360,6 +371,47 @@ describe('admin category nodes API', () => {
     expect(del.statusCode, del.body).toBe(200);
     expect((await db.select().from(categories).where(eq(categories.id, group.id))).length).toBe(0);
     expect((await call('DELETE', `/admin/categories/${group.id}`)).statusCode).toBe(404);
+  });
+
+  /** A draft listing (no status beyond draft needed: drafts count too) of a fresh seller on `categoryId`. */
+  async function listingOn(categoryId: string, kind: 'part' | 'machine' = 'part'): Promise<string> {
+    const seller = await createTestSeller();
+    sellers.push(seller);
+    const { id } = await insertTestListing(db, { businessId: seller.businessId, userId: seller.userId, kind, status: 'draft', categoryId });
+    return id;
+  }
+
+  it('M5 guard: delete a node a listing (even a draft) sits on → 409 NODE_IN_USE with listings in the uses; passes once it is gone', async () => {
+    const root = await createRoot();
+    const type = await create({ parentId: root.id, name: 'Loom' });
+    const group = await create({ parentId: type.id, name: 'Temples' });
+    const listingId = await listingOn(group.id);
+
+    const res = await call('DELETE', `/admin/categories/${group.id}`);
+    expect(res.statusCode, res.body).toBe(409);
+    expect(res.json()).toMatchObject({ code: 'NODE_IN_USE', details: { uses: ['listings'] } });
+
+    await deleteTestListings(db, [listingId]);
+    expect((await call('DELETE', `/admin/categories/${group.id}`)).statusCode).toBe(200);
+  });
+
+  it('M5 guard: move a node with a listing in its subtree → 400 MOVE_NOT_ALLOWED; passes once it is gone', async () => {
+    const root = await createRoot();
+    const other = await createRoot();
+    const type = await create({ parentId: root.id, name: 'Loom' });
+    const group = await create({ parentId: type.id, name: 'Temples' });
+    const target = await create({ parentId: other.id, name: 'Other Loom' });
+    const listingId = await listingOn(group.id);
+
+    const moveGroup = await call('POST', `/admin/categories/${group.id}/move`, { parentId: target.id });
+    expect(moveGroup.statusCode, moveGroup.body).toBe(400);
+    expect(moveGroup.json().code).toBe('MOVE_NOT_ALLOWED');
+    const moveType = await call('POST', `/admin/categories/${type.id}/move`, { parentId: other.id });
+    expect(moveType.statusCode, moveType.body).toBe(400);
+    expect(moveType.json().code).toBe('MOVE_NOT_ALLOWED');
+
+    await deleteTestListings(db, [listingId]);
+    expect((await call('POST', `/admin/categories/${type.id}/move`, { parentId: other.id })).statusCode).toBe(200);
   });
 
   it('every mutation writes an audit row', async () => {

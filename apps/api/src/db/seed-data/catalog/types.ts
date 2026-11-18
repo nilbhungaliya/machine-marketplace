@@ -71,7 +71,8 @@ export interface SeedBrand {
 
 export interface SeedMaster {
   /** `decimals`: fraction digits a quantity may have, 0–3. */
-  units: { key: string; label: string; decimals: number }[];
+  /** `isMachineUnit`: machines and rentals use the first active flagged unit (F2 spec §4.2, R48). */
+  units: { key: string; label: string; decimals: number; isMachineUnit?: boolean }[];
   conditions: { key: string; label: string; description: string }[];
 }
 

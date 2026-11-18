@@ -40,8 +40,9 @@ export class NotFoundError extends AppError {
 }
 
 export class ConflictError extends AppError {
-  constructor(message: string, code = 'CONFLICT') {
-    super(message, 409, code);
+  /** `details` for codes clients branch on (`LISTING_TRANSITION_NOT_ALLOWED` → `{ from, action }`, `UNVERIFIED_LISTING_CAP` → `{ cap }`). */
+  constructor(message: string, code = 'CONFLICT', details?: Record<string, unknown>) {
+    super(message, 409, code, details);
   }
 }
 

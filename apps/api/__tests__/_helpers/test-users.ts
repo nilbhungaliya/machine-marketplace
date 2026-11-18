@@ -1,6 +1,16 @@
-import { eq, inArray } from 'drizzle-orm';
-import { db } from '../../src/db/index.js';
-import { businesses, users } from '../../src/db/schema.js';
+import { and, eq, inArray, or } from 'drizzle-orm';
+import { db, type Db, type Tx } from '../../src/db/index.js';
+import {
+  businesses,
+  listingFitments,
+  listingMachines,
+  listingMedia,
+  listingRentals,
+  listingStatusHistory,
+  listings,
+  reports,
+  users,
+} from '../../src/db/schema.js';
 
 /**
  * Integration tests share one test database (TEST_DATABASE_URL), so every suite must delete what it
@@ -15,14 +25,50 @@ export function uniqueTestPhone(): string {
 }
 
 /**
- * Removes test users and the businesses they created, deepest foreign key first.
- * Extend this as tables that reference users are added (listings, enquiries, offers, deals…).
+ * Deletes the listings of the given businesses and everything that hangs off them (F2 plan Task 2), deepest foreign
+ * key first: reports targeting those listings or made by the given businesses / users, status history, media,
+ * fitments, rental and machine rows, then the listings. No-op when both lists are empty.
+ */
+export async function deleteListingsOf(conn: Db | Tx, opts: { businessIds: string[]; userIds?: string[] }): Promise<void> {
+  const businessIds = opts.businessIds;
+  const userIds = opts.userIds ?? [];
+  if (businessIds.length === 0 && userIds.length === 0) return;
+  const ids = businessIds.length
+    ? (await conn.select({ id: listings.id }).from(listings).where(inArray(listings.businessId, businessIds))).map((r) => r.id)
+    : [];
+  const reportWhere = [
+    ...(ids.length ? [and(eq(reports.targetType, 'listing'), inArray(reports.targetId, ids))] : []),
+    ...(businessIds.length ? [inArray(reports.reporterBusinessId, businessIds)] : []),
+    ...(userIds.length ? [inArray(reports.reporterUserId, userIds)] : []),
+  ];
+  if (reportWhere.length) await conn.delete(reports).where(or(...reportWhere));
+  // History rows a user wrote on another business's listing (none today) would block deleting the user.
+  if (userIds.length) await conn.delete(listingStatusHistory).where(inArray(listingStatusHistory.userId, userIds));
+  await deleteTestListings(conn, ids);
+}
+
+/** Deletes the given listings and their children (reports on them, history, media, fitments, rental, machine). */
+export async function deleteTestListings(conn: Db | Tx, ids: string[]): Promise<void> {
+  if (ids.length === 0) return;
+  await conn.delete(reports).where(and(eq(reports.targetType, 'listing'), inArray(reports.targetId, ids)));
+  await conn.delete(listingStatusHistory).where(inArray(listingStatusHistory.listingId, ids));
+  await conn.delete(listingMedia).where(inArray(listingMedia.listingId, ids));
+  await conn.delete(listingFitments).where(inArray(listingFitments.listingId, ids));
+  await conn.delete(listingRentals).where(inArray(listingRentals.listingId, ids));
+  await conn.delete(listingMachines).where(inArray(listingMachines.listingId, ids));
+  await conn.delete(listings).where(inArray(listings.id, ids));
+}
+
+/**
+ * Removes test users and the businesses they created, deepest foreign key first: the businesses' listings (and their
+ * children, `deleteListingsOf`), the users, then the businesses.
+ * Extend this as tables that reference users are added (enquiries, offers, deals…).
  */
 export async function deleteTestUsers(userIds: string[]): Promise<void> {
   if (userIds.length === 0) return;
   const rows = await db.select({ businessId: users.businessId }).from(users).where(inArray(users.id, userIds));
+  const businessIds = rows.flatMap((r) => (r.businessId ? [r.businessId] : []));
+  await db.transaction((tx) => deleteListingsOf(tx, { businessIds, userIds }));
   await db.delete(users).where(inArray(users.id, userIds));
-  for (const { businessId } of rows) {
-    if (businessId) await db.delete(businesses).where(eq(businesses.id, businessId));
-  }
+  for (const businessId of businessIds) await db.delete(businesses).where(eq(businesses.id, businessId));
 }

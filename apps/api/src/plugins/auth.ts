@@ -5,7 +5,7 @@ import type { FastifyReply, FastifyRequest } from 'fastify';
 import type { AdminRole } from '@mpm/shared-types';
 import type { Db } from '../db/index.js';
 import { users } from '../db/schema.js';
-import { ForbiddenError, UnauthorizedError } from '../lib/errors.js';
+import { AppError, ForbiddenError, UnauthorizedError } from '../lib/errors.js';
 
 export interface AdminTokenPayload {
   adminId: string;
@@ -26,6 +26,8 @@ declare module 'fastify' {
     requireAdmin: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
     requireAdminRole: (...roles: AdminRole[]) => (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
     requireUser: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
+    /** Public routes: sets `request.user` for a valid token of an active user, else leaves it unset (never throws). */
+    optionalUser: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
   }
 }
 
@@ -115,5 +117,26 @@ export default fp(async (fastify) => {
       throw new UnauthorizedError();
     }
     request.user = await loadActiveUser(fastify.db, payload.userId);
+  });
+
+  // F2 spec §14, R55: a public page never fails because of a stale session. No header, a malformed, expired or
+  // wrongly-signed token, an admin token, an unknown user and a suspended or blocked one are all a guest. Only the
+  // auth outcomes are swallowed: a database failure still surfaces as a 500.
+  fastify.decorate('optionalUser', async (request: FastifyRequest) => {
+    request.user = undefined;
+    const header = request.headers.authorization;
+    if (!header?.startsWith('Bearer ')) return;
+    let payload: UserTokenPayload;
+    try {
+      payload = verifyUserToken(header.slice(7));
+    } catch {
+      return;
+    }
+    try {
+      request.user = await loadActiveUser(fastify.db, payload.userId);
+    } catch (err) {
+      if (err instanceof AppError) return;
+      throw err;
+    }
   });
 });

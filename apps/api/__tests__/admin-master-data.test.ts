@@ -7,6 +7,14 @@ import { db } from '../src/db/index.js';
 import { auditLog, conditions, units } from '../src/db/schema.js';
 import { createUnit as createUnitService, updateUnit as updateUnitService } from '../src/services/catalog/master-admin.service.js';
 import { createTestAdmin, deleteTestAdmins } from './_helpers/test-admins.js';
+import { deleteTestBusinesses } from './_helpers/test-businesses.js';
+import {
+  createTestSeller,
+  deleteTestListings,
+  deleteTestSellerExtras,
+  insertTestListing,
+  type TestSeller,
+} from './_helpers/test-listings.js';
 
 describe('admin master data API (units, conditions)', () => {
   let app: FastifyInstance;
@@ -14,6 +22,7 @@ describe('admin master data API (units, conditions)', () => {
   let moderator: { id: string; token: string };
   const unitIds: string[] = [];
   const conditionIds: string[] = [];
+  const sellers: TestSeller[] = [];
   let seq = 0;
 
   /** Unique per call; every key created here carries it. */
@@ -26,7 +35,9 @@ describe('admin master data API (units, conditions)', () => {
   });
 
   afterAll(async () => {
-    // Before app.close(): closing the app ends the shared pg pool.
+    // Before app.close(): closing the app ends the shared pg pool. Listings first: they reference the units.
+    await deleteTestBusinesses(sellers.map((s) => s.businessId));
+    await deleteTestSellerExtras(sellers);
     if (unitIds.length) await db.delete(units).where(inArray(units.id, unitIds));
     if (conditionIds.length) await db.delete(conditions).where(inArray(conditions.id, conditionIds));
     await deleteTestAdmins([manager?.id, moderator?.id].filter((id): id is string => !!id));
@@ -98,6 +109,46 @@ describe('admin master data API (units, conditions)', () => {
       expect(updates).toHaveLength(2);
       expect(updates[0]!.before).toMatchObject({ label: 'Test unit', decimals: 2 });
       expect(updates[0]!.after).toMatchObject({ label: 'Renamed unit', decimals: 3 });
+    });
+
+    it('M5 guard: lowering decimals while a listing uses the unit → 409 UNIT_IN_USE; raising and deactivating pass', async () => {
+      const unit = await createUnit({ key: `test_unit_${stamp()}`, label: 'Used unit', decimals: 2 });
+      const seller = await createTestSeller();
+      sellers.push(seller);
+      const listing = await insertTestListing(db, {
+        businessId: seller.businessId, userId: seller.userId, kind: 'part', status: 'draft', categoryId: null, unitId: unit.id,
+      });
+
+      const lower = await call('PATCH', `/admin/master-data/units/${unit.id}`, { decimals: 1 });
+      expect(lower.statusCode, lower.body).toBe(409);
+      expect(lower.json().code).toBe('UNIT_IN_USE');
+      expect((await db.select().from(units).where(eq(units.id, unit.id)))[0]!.decimals).toBe(2);
+
+      const raise = await call('PATCH', `/admin/master-data/units/${unit.id}`, { decimals: 3, label: 'Used unit 2' });
+      expect(raise.statusCode, raise.body).toBe(200);
+      const off = await call('PATCH', `/admin/master-data/units/${unit.id}`, { isActive: false, decimals: 3 });
+      expect(off.statusCode, off.body).toBe(200);
+
+      await deleteTestListings(db, [listing.id]);
+      const lowerAfter = await call('PATCH', `/admin/master-data/units/${unit.id}`, { decimals: 0 });
+      expect(lowerAfter.statusCode, lowerAfter.body).toBe(200);
+    });
+
+    it('isMachineUnit is editable, audited, and shown in public and admin master data', async () => {
+      const unit = await createUnit({ key: `test_unit_${stamp()}`, label: 'Machines here' });
+      expect(unit.isMachineUnit).toBe(false);
+      const on = await call('PATCH', `/admin/master-data/units/${unit.id}`, { isMachineUnit: true });
+      expect(on.statusCode, on.body).toBe(200);
+      expect(on.json().data).toMatchObject({ id: unit.id, isMachineUnit: true });
+      expect((await publicMasterData()).units.find((u) => u.id === unit.id)).toMatchObject({ isMachineUnit: true });
+      expect((await adminMasterData()).units.find((u) => u.id === unit.id)).toMatchObject({ isMachineUnit: true });
+      const [update] = await audit('unit.update', unit.id);
+      expect(update!.before).toMatchObject({ isMachineUnit: false });
+      expect(update!.after).toMatchObject({ isMachineUnit: true });
+
+      const off = await call('PATCH', `/admin/master-data/units/${unit.id}`, { isMachineUnit: false });
+      expect(off.json().data).toMatchObject({ isMachineUnit: false });
+      expect((await call('PATCH', `/admin/master-data/units/${unit.id}`, { isMachineUnit: 'yes' })).statusCode).toBe(400);
     });
 
     it('decimals defaults to 0; the new unit goes last', async () => {

@@ -34,6 +34,14 @@ export default defineConfig({
       GST_IP_RATE_MAX: '1000000',
       // No proxy in tests, whatever a developer's .env says: request.ip (and the per-IP limits) must be the client's.
       TRUST_PROXY_HOPS: '0',
+      // F2 (plan rev 3, I5): a developer's .env must not leak listing media settings into tests. Photos are required
+      // to publish, media URLs are null and no CDN purge can be configured; tests that need values set them per test
+      // and restore them.
+      LISTING_MEDIA_OPTIONAL: 'false',
+      MEDIA_PUBLIC_BASE_URL: '',
+      AWS_S3_PUBLIC_BUCKET: '',
+      CLOUDFLARE_ZONE_ID: '',
+      CLOUDFLARE_API_TOKEN: '',
     },
     // Integration tests share ONE Postgres + Redis; parallel files trample each
     // other's fixtures. Every suite must delete what it inserts in afterAll.

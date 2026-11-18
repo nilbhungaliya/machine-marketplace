@@ -14,6 +14,14 @@ import {
   type TestBrand,
   type TestCatalog,
 } from './_helpers/test-catalog.js';
+import { deleteTestBusinesses } from './_helpers/test-businesses.js';
+import {
+  createTestSeller,
+  deleteTestListings,
+  deleteTestSellerExtras,
+  insertTestListing,
+  type TestSeller,
+} from './_helpers/test-listings.js';
 
 describe('brands and machine models API', () => {
   let app: FastifyInstance;
@@ -22,6 +30,7 @@ describe('brands and machine models API', () => {
   /** Every root and brand this suite created (fixtures and through the API). */
   const rootIds: string[] = [];
   const brandIds: string[] = [];
+  const sellers: TestSeller[] = [];
   let seq = 0;
 
   /** Unique per call: brand keys and slugs made through the API carry it. */
@@ -34,7 +43,10 @@ describe('brands and machine models API', () => {
   });
 
   afterAll(async () => {
-    // Before app.close(): closing the app ends the shared pg pool. Brands (and their models) first: models reference the types.
+    // Before app.close(): closing the app ends the shared pg pool. Listings first (they reference brands, models and
+    // nodes), then brands (and their models): models reference the types.
+    await deleteTestBusinesses(sellers.map((s) => s.businessId));
+    await deleteTestSellerExtras(sellers);
     await deleteTestBrands(brandIds);
     for (const id of rootIds) await deleteTestCatalog(id);
     await deleteTestAdmins([manager?.id, moderator?.id].filter((id): id is string => !!id));
@@ -274,6 +286,68 @@ describe('brands and machine models API', () => {
     expect(flagOff.json().data).toMatchObject({ makesMachines: false, makesParts: true });
     expect((await call('DELETE', `/admin/brands/${brand.id}`)).statusCode).toBe(200);
     expect((await call('PATCH', `/admin/brands/${brand.id}`, { name: 'Gone' })).statusCode).toBe(404);
+  });
+
+  async function seller(): Promise<TestSeller> {
+    const s = await createTestSeller();
+    sellers.push(s);
+    return s;
+  }
+
+  it('M5 guard: delete a brand used as part brand, machine make or fitment brand → 409 BRAND_IN_USE; passes once unused', async () => {
+    const cat = await fixture();
+    const s = await seller();
+    const base = { businessId: s.businessId, userId: s.userId, status: 'draft' as const };
+    const partBrand = await brandFixture({ makesMachines: false, makesParts: true });
+    const make = await brandFixture();
+    const fitBrand = await brandFixture();
+    const uses = [
+      await insertTestListing(db, { ...base, kind: 'part', categoryId: cat.partGroupId, partBrandId: partBrand.id }),
+      await insertTestListing(db, { ...base, kind: 'machine', categoryId: cat.machineTypeId, machine: { brandId: make.id } }),
+      await insertTestListing(db, { ...base, kind: 'part', categoryId: cat.partGroupId, fitments: [{ brandId: fitBrand.id }] }),
+    ];
+
+    for (const brand of [partBrand, make, fitBrand]) {
+      const res = await call('DELETE', `/admin/brands/${brand.id}`);
+      expect(res.statusCode, res.body).toBe(409);
+      expect(res.json().code).toBe('BRAND_IN_USE');
+    }
+
+    await deleteTestListings(db, uses.map((u) => u.id));
+    for (const brand of [partBrand, make, fitBrand]) {
+      expect((await call('DELETE', `/admin/brands/${brand.id}`)).statusCode).toBe(200);
+    }
+  });
+
+  it('M5 guard: move or delete a model used by a listing machine or a fitment row → 409 MODEL_IN_USE; passes once unused', async () => {
+    const cat = await fixture();
+    const s = await seller();
+    const base = { businessId: s.businessId, userId: s.userId, status: 'live' as const };
+    const brand = await brandFixture();
+    const other = await brandFixture();
+    const machineModel = await createModel({ brandId: brand.id, machineTypeId: cat.machineTypeId, key: 'mach_1', name: 'Mach 1' });
+    const fitModel = await createModel({ brandId: brand.id, machineTypeId: cat.machineTypeId, key: 'fit_1', name: 'Fit 1' });
+    const uses = [
+      await insertTestListing(db, {
+        ...base, kind: 'machine', categoryId: cat.machineTypeId, machine: { brandId: brand.id, modelId: machineModel.id },
+      }),
+      await insertTestListing(db, {
+        ...base, kind: 'part', categoryId: cat.partGroupId, fitments: [{ brandId: brand.id, modelId: fitModel.id }],
+      }),
+    ];
+
+    for (const model of [machineModel, fitModel]) {
+      const move = await call('POST', `/admin/models/${model.id}/move`, { brandId: other.id });
+      expect(move.statusCode, move.body).toBe(409);
+      expect(move.json().code).toBe('MODEL_IN_USE');
+      const del = await call('DELETE', `/admin/models/${model.id}`);
+      expect(del.statusCode, del.body).toBe(409);
+      expect(del.json().code).toBe('MODEL_IN_USE');
+    }
+
+    await deleteTestListings(db, uses.map((u) => u.id));
+    expect((await call('POST', `/admin/models/${machineModel.id}/move`, { brandId: other.id })).statusCode).toBe(200);
+    expect((await call('DELETE', `/admin/models/${fitModel.id}`)).statusCode).toBe(200);
   });
 
   it('reorder models with a stale list → 409 STALE_ORDER and order unchanged (Review Focus 5); brands too', async () => {

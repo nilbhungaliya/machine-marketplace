@@ -5,6 +5,7 @@ import { conditions, units } from '../../db/schema.js';
 import { ConflictError, NotFoundError, ValidationError } from '../../lib/errors.js';
 import { isCheckViolation, isUniqueViolation } from '../../lib/pg-errors.js';
 import { writeAudit } from '../audit.service.js';
+import { listingsUseUnit } from './listing-uses.js';
 import { assertExactSet } from './reorder.js';
 
 // Admin writes on master data (spec §7): units and conditions. Keys never change; rows are deactivated, never deleted.
@@ -46,7 +47,15 @@ function nextOrder(last: { value: number | null } | undefined): number {
 // ---- Units ----
 
 function toUnit(row: UnitRow): Unit {
-  return { id: row.id, key: row.key, label: row.label, decimals: row.decimals, sortOrder: row.sortOrder, isActive: row.isActive };
+  return {
+    id: row.id,
+    key: row.key,
+    label: row.label,
+    decimals: row.decimals,
+    sortOrder: row.sortOrder,
+    isActive: row.isActive,
+    isMachineUnit: row.isMachineUnit,
+  };
 }
 
 async function lockUnit(tx: Tx, id: string): Promise<UnitRow> {
@@ -82,16 +91,28 @@ export interface UpdateUnitPatch {
   label?: string;
   decimals?: UnitDecimals;
   isActive?: boolean;
+  /** Machines and rentals use the first active unit with this flag (F2 spec §4.2, R48). */
+  isMachineUnit?: boolean;
 }
 
 export async function updateUnit(db: Db, adminId: string, id: string, patch: UpdateUnitPatch): Promise<Unit> {
   return mapConstraintErrors(UNIT_KEY_CONSTRAINT, () =>
     db.transaction(async (tx) => {
       const before = await lockUnit(tx, id);
-      // M5: refuse lowering decimals when listings reference this unit (textile's UNIT_IN_USE); deactivating stays allowed (spec §7)
+      // M5 (F2 spec §16): lowering decimals would leave listed quantities with more decimals than the unit allows;
+      // deactivating stays allowed (A4 spec §7). The unit row is locked above, so a listing write waits for us.
+      if (patch.decimals !== undefined && patch.decimals < before.decimals && (await listingsUseUnit(tx, id))) {
+        throw new ConflictError('Listings use this unit; its decimals cannot be lowered', 'UNIT_IN_USE');
+      }
       const [after] = await tx
         .update(units)
-        .set({ label: patch.label, decimals: patch.decimals, isActive: patch.isActive, updatedAt: new Date() })
+        .set({
+          label: patch.label,
+          decimals: patch.decimals,
+          isActive: patch.isActive,
+          isMachineUnit: patch.isMachineUnit,
+          updatedAt: new Date(),
+        })
         .where(eq(units.id, id))
         .returning();
       await writeAudit(tx, { adminId, action: 'unit.update', entityType: 'unit', entityId: id, before: toUnit(before), after: toUnit(after!) });

@@ -1,10 +1,12 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { asc, eq } from 'drizzle-orm';
 import { db, type Tx } from '../src/db/index.js';
-import { brands, categories, conditions, machineModels, templateFieldOptions, templateFields, units } from '../src/db/schema.js';
+import { brands, businesses, categories, conditions, machineModels, templateFieldOptions, templateFields, units, users } from '../src/db/schema.js';
 import { ALREADY_LOADED, clearCatalog, loadCatalog } from '../src/db/seed-catalog/load.js';
 import { catalogSeed } from '../src/db/seed-data/catalog/index.js';
 import type { CatalogSeed } from '../src/db/seed-data/catalog/types.js';
+import { insertTestListing } from './_helpers/test-listings.js';
+import { uniqueTestPhone } from './_helpers/test-users.js';
 
 // Every case runs inside a transaction that is always rolled back, so nothing it writes or deletes is ever committed.
 // Safe only because API test files never run in parallel (`fileParallelism: false` in vitest.config.ts): a case
@@ -197,6 +199,42 @@ describe('loadCatalog (rolled back)', () => {
       const models = await tx.select().from(machineModels);
       expect(models.every((m) => m.needsReview)).toBe(true);
       expect((await tx.select().from(brands)).find((b) => b.key === 'lasser')).toMatchObject({ slug: 'lasser', needsReview: true });
+    });
+  });
+
+  it('writes isMachineUnit for a flagged unit; the real seed flags machines', async () => {
+    await inRolledBackTx(async (tx) => {
+      await clearCatalog(tx);
+      const seed = makeFixture();
+      seed.master.units.push({ key: 'machines', label: 'Machines', decimals: 0, isMachineUnit: true });
+      await loadCatalog(tx, seed, { reset: false });
+      const rows = await tx.select({ key: units.key, flag: units.isMachineUnit }).from(units).orderBy(asc(units.sortOrder));
+      expect(rows).toEqual([
+        { key: 'pcs', flag: false },
+        { key: 'kg', flag: false },
+        { key: 'machines', flag: true },
+      ]);
+    });
+    await inRolledBackTx(async (tx) => {
+      await loadCatalog(tx, catalogSeed, { reset: true });
+      const flagged = await tx.select({ key: units.key }).from(units).where(eq(units.isMachineUnit, true));
+      expect(flagged).toEqual([{ key: 'machines' }]);
+    });
+  });
+
+  it('M5 guard: clearCatalog refuses while any listing exists, naming the count', async () => {
+    await inRolledBackTx(async (tx) => {
+      // Everything here is written inside the rolled-back transaction: never reset data this test didn't create.
+      const [business] = await tx.insert(businesses).values({ tradeName: 'Reset Guard Works' }).returning({ id: businesses.id });
+      const [user] = await tx
+        .insert(users)
+        .values({ phone: uniqueTestPhone(), businessId: business!.id })
+        .returning({ id: users.id });
+      const base = { businessId: business!.id, userId: user!.id, status: 'draft' as const, categoryId: null };
+      await insertTestListing(tx, { ...base, kind: 'part' });
+      await insertTestListing(tx, { ...base, kind: 'part' });
+      await expect(clearCatalog(tx)).rejects.toThrow(/Catalogue reset refused: 2 listings exist/);
+      await expect(loadCatalog(tx, makeReplacement(), { reset: true })).rejects.toThrow(/Catalogue reset refused/);
     });
   });
 

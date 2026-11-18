@@ -11,7 +11,8 @@ export const MASTER: SeedMaster = {
     { key: 'metres', label: 'Metres', decimals: 2 },
     { key: 'litres', label: 'Litres', decimals: 2 },
     { key: 'boxes', label: 'Boxes', decimals: 0 },
-    { key: 'machines', label: 'Machines', decimals: 0 },
+    // Machines and rentals are listed in this unit (F2 spec §4.2, R48).
+    { key: 'machines', label: 'Machines', decimals: 0, isMachineUnit: true },
   ],
   conditions: [
     { key: 'new', label: 'New', description: 'Never used, in original packing' },

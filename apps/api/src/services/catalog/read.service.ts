@@ -193,7 +193,15 @@ export async function getMasterData(db: Db, opts: { includeInactive: boolean }):
   return {
     units: unitRows
       .filter((u) => visible(u.isActive))
-      .map((u) => ({ id: u.id, key: u.key, label: u.label, decimals: u.decimals, sortOrder: u.sortOrder, isActive: u.isActive })),
+      .map((u) => ({
+        id: u.id,
+        key: u.key,
+        label: u.label,
+        decimals: u.decimals,
+        sortOrder: u.sortOrder,
+        isActive: u.isActive,
+        isMachineUnit: u.isMachineUnit,
+      })),
     conditions: conditionRows
       .filter((c) => visible(c.isActive))
       .map((c) => ({

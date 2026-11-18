@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm';
 import { CATALOG_KEY_REGEX, MAX_HIGHLIGHT_RANK, type FieldAppliesTo } from '@mpm/shared-types';
 import { slugify } from '../../lib/slug.js';
+import { countListings } from '../../services/catalog/listing-uses.js';
 import { appliesToOverlap } from '../../services/catalog/template-clash.js';
 import type { Tx } from '../index.js';
 import { brands, categories, conditions, machineModels, templateFieldOptions, templateFields, units } from '../schema.js';
@@ -195,7 +196,9 @@ export interface LoadCounts {
  * rolled-back loader tests.
  */
 export async function clearCatalog(tx: Tx): Promise<void> {
-  // M5: refuse --reset when listings exist (listings will reference categories, models, units and conditions).
+  // M5 (F2 spec §16): listings reference categories, brands, models, units and conditions; a reset would break them.
+  const listingCount = await countListings(tx);
+  if (listingCount > 0) throw new Error(`Catalogue reset refused: ${listingCount} listings exist`);
   await tx.delete(templateFieldOptions);
   await tx.delete(templateFields);
   await tx.delete(machineModels);
@@ -364,7 +367,15 @@ export async function loadCatalog(tx: Tx, seed: CatalogSeed, opts: { reset: bool
 
   // Master data.
   if (seed.master.units.length) {
-    await tx.insert(units).values(seed.master.units.map((u, n) => ({ key: u.key, label: u.label, decimals: u.decimals, sortOrder: n })));
+    await tx.insert(units).values(
+      seed.master.units.map((u, n) => ({
+        key: u.key,
+        label: u.label,
+        decimals: u.decimals,
+        isMachineUnit: u.isMachineUnit ?? false,
+        sortOrder: n,
+      })),
+    );
   }
   if (seed.master.conditions.length) {
     await tx

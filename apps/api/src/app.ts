@@ -23,6 +23,7 @@ import adminIndustrialAreaRoutes from './routes/admin/industrial-areas.js';
 import adminUserRoutes from './routes/admin/users.js';
 import adminVerificationRoutes from './routes/admin/verification.js';
 import adminBusinessRoutes from './routes/admin/businesses.js';
+import adminSettingsRoutes from './routes/admin/settings.js';
 
 export interface BuildAppOptions {
   /** false in unit tests that must not touch Postgres/Redis. */
@@ -83,6 +84,7 @@ export async function buildApp({ infra = true, logger = true }: BuildAppOptions 
     await app.register(adminUserRoutes);
     await app.register(adminVerificationRoutes);
     await app.register(adminBusinessRoutes);
+    await app.register(adminSettingsRoutes);
   }
 
   return app;

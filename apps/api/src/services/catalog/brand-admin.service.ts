@@ -7,6 +7,7 @@ import { isForeignKeyViolation, isUniqueViolation } from '../../lib/pg-errors.js
 import { slugify } from '../../lib/slug.js';
 import { writeAudit } from '../audit.service.js';
 import { toBrand, toModel } from './brand-read.service.js';
+import { listingsUseBrand, listingsUseModel } from './listing-uses.js';
 import { assertExactSet } from './reorder.js';
 
 // Admin writes on brands and machine models (spec §6). Keys never change. A model's name is unique per brand and machine
@@ -33,6 +34,7 @@ const brandKeyTaken = () => new ConflictError('Another brand already uses this k
 const modelKeyTaken = () => new ConflictError('This brand already has a model with this key', 'KEY_TAKEN');
 const nameTaken = () => new ConflictError('This brand already has a model with this name for this machine type', 'NAME_TAKEN');
 const brandInUse = (message: string) => new ConflictError(message, 'BRAND_IN_USE');
+const modelInUse = (message: string) => new ConflictError(message, 'MODEL_IN_USE');
 
 /** The unique indexes are the race backstop for keys, slugs and model names. */
 async function mapUniqueViolations<T>(work: () => Promise<T>): Promise<T> {
@@ -214,7 +216,8 @@ export async function deleteBrand(db: Db, adminId: string, id: string): Promise<
   await db.transaction(async (tx) => {
     const before = await lockBrand(tx, id, 'update');
     if (await hasModels(tx, id)) throw brandInUse('This brand has machine models; deactivate it instead');
-    // M5: refuse when listings reference this brand (fitment or part brand)
+    // M5 (F2 spec §16): part brand, machine make or fitment brand of any listing.
+    if (await listingsUseBrand(tx, id)) throw brandInUse('Listings use this brand; deactivate it instead');
     try {
       await tx.delete(brands).where(eq(brands.id, id));
     } catch (err) {
@@ -303,7 +306,8 @@ export async function moveModel(db: Db, adminId: string, id: string, input: Move
       const brandId = input.brandId ?? before.brandId;
       const machineTypeId = input.machineTypeId ?? before.machineTypeId;
       if (brandId === before.brandId && machineTypeId === before.machineTypeId) return toModel(before);
-      // M5: refuse when listings reference this model
+      // M5 (F2 spec §16): a listing's machine model or a fitment row.
+      if (await listingsUseModel(tx, id)) throw modelInUse('Listings use this model; it cannot be moved');
 
       const brand = await lockBrand(tx, brandId, 'share');
       assertMachineMaker(brand);
@@ -363,8 +367,15 @@ export async function reorderModels(db: Db, adminId: string, brandId: string, or
 export async function deleteModel(db: Db, adminId: string, id: string): Promise<void> {
   await db.transaction(async (tx) => {
     const before = await lockModel(tx, id);
-    // M5: refuse when listings reference this model
-    await tx.delete(machineModels).where(eq(machineModels.id, id));
+    // M5 (F2 spec §16): a listing's machine model or a fitment row.
+    if (await listingsUseModel(tx, id)) throw modelInUse('Listings use this model; deactivate it instead');
+    try {
+      await tx.delete(machineModels).where(eq(machineModels.id, id));
+    } catch (err) {
+      // A reference committed after the check above.
+      if (isForeignKeyViolation(err)) throw modelInUse('This model is in use; deactivate it instead');
+      throw err;
+    }
     await writeAudit(tx, { adminId, action: 'model.delete', entityType: 'model', entityId: id, before: toModel(before), after: null });
   });
 }

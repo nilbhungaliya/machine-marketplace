@@ -76,9 +76,13 @@ export type Language = (typeof LANGUAGES)[number];
 export const LISTING_KINDS = ['part', 'machine', 'machine_rental'] as const;
 export type ListingKind = (typeof LISTING_KINDS)[number];
 
-/** Listing lifecycle (scope F2, A3). Every listing has exactly one status. */
+/**
+ * Listing lifecycle (scope F2, A3; F2 spec §7.1). Every listing has exactly one status. `hidden`: taken down by a
+ * moderator (reversible); `expired`: not refreshed in time.
+ */
 export const LISTING_STATUSES = [
-  'draft', 'pending_review', 'rejected', 'live', 'paused', 'reserved', 'sold', 'rented', 'unavailable', 'removed',
+  'draft', 'pending_review', 'rejected', 'live', 'paused', 'reserved', 'sold', 'rented', 'unavailable', 'expired',
+  'hidden', 'removed',
 ] as const;
 export type ListingStatus = (typeof LISTING_STATUSES)[number];
 
@@ -294,6 +298,11 @@ export interface Unit {
   decimals: number;
   sortOrder: number;
   isActive: boolean;
+  /**
+   * Machines and rentals use the first active unit with this flag, set by the server (F2 spec §4.2, R48). Optional
+   * until the admin edits it (F2 plan Task 19).
+   */
+  isMachineUnit?: boolean;
 }
 
 export interface Condition {
@@ -678,4 +687,788 @@ export interface AdminBusinessDetail {
   reviewOpen: boolean;
   history: AdminGstHistory;
   audit: AdminAuditEntry[];
+}
+
+// ─── Listings (F2 + F3 + A3; spec 2026-11-18-f2-f3-listings-design) ───
+
+/** Served to anyone (spec §7.1, R20); every other status is owner and admins only. */
+export const PUBLIC_LISTING_STATUSES = ['live', 'reserved', 'rented'] as const satisfies readonly ListingStatus[];
+
+/** A seller may PATCH a listing in these (§7.3); not `hidden`, `removed`, `reserved` (`409 LISTING_NOT_EDITABLE`). */
+export const EDITABLE_LISTING_STATUSES = [
+  'draft', 'pending_review', 'rejected', 'live', 'paused', 'expired', 'unavailable', 'sold', 'rented',
+] as const satisfies readonly ListingStatus[];
+
+/** Counted for the unverified open-listing cap: every status except `draft`, `sold`, `removed` (R36). */
+export const OPEN_LISTING_STATUSES = [
+  'pending_review', 'rejected', 'live', 'paused', 'reserved', 'rented', 'unavailable', 'expired', 'hidden',
+] as const satisfies readonly ListingStatus[];
+
+/** A seller may change the category only in these (R43, `409 CATEGORY_LOCKED`); admins always can. */
+export const CATEGORY_EDITABLE_STATUSES = ['draft', 'rejected'] as const satisfies readonly ListingStatus[];
+
+/** Buyer picks up · I can ship · Local delivery (§4.2). */
+export const DELIVERY_OPTIONS = ['pickup', 'ship', 'local_delivery'] as const;
+export type DeliveryOption = (typeof DELIVERY_OPTIONS)[number];
+
+/** Whether the price includes GST (§4.6). */
+export const GST_PRICE_MODES = ['included', 'extra'] as const;
+export type GstPriceMode = (typeof GST_PRICE_MODES)[number];
+
+/** Rental terms (§4.5, M14). */
+export const RENTAL_OPERATOR_OPTIONS = ['included', 'optional', 'not_available', 'mandatory'] as const;
+export type RentalOperator = (typeof RENTAL_OPERATOR_OPTIONS)[number];
+export const RENTAL_FUEL_OPTIONS = ['client', 'included', 'per_litre'] as const;
+export type RentalFuel = (typeof RENTAL_FUEL_OPTIONS)[number];
+export const RENTAL_TRANSPORT_OPTIONS = ['owner_delivers', 'renter_picks_up', 'either'] as const;
+export type RentalTransport = (typeof RENTAL_TRANSPORT_OPTIONS)[number];
+
+/** Where the stock is: the business's address or another godown (§4.7). */
+export const LISTING_LOCATION_SOURCES = ['business', 'godown'] as const;
+export type ListingLocationSource = (typeof LISTING_LOCATION_SOURCES)[number];
+
+export const MEDIA_TYPES = ['photo', 'video'] as const;
+export type MediaType = (typeof MEDIA_TYPES)[number];
+
+/** A photo uploads `full` + `thumb`, a video `video` + `poster` (§6.2, §6.3). */
+export const MEDIA_ROLES = ['full', 'thumb', 'video', 'poster'] as const;
+export type MediaRole = (typeof MEDIA_ROLES)[number];
+
+/**
+ * Allowed major brands of an MP4 / QuickTime `ftyp` box (§6.3): 4-character strings, trailing spaces kept. HEIC
+ * (`heic`, `mif1`) and AVIF (`avif`) also use `ftyp` and are refused by this list. `qt  ` → `video/quicktime`.
+ */
+export const VIDEO_FTYP_BRANDS = [
+  'isom', 'iso2', 'iso4', 'iso5', 'iso6', 'mp41', 'mp42', 'avc1', 'M4V ', 'qt  ', '3gp4', '3gp5', '3gp6', '3g2a',
+] as const;
+
+/** Sanity flags (§5.4); a flag a moderator hasn't accepted sends the listing to review. */
+export const LISTING_FLAGS = ['price_check', 'unit_check', 'quantity_check'] as const;
+export type ListingFlag = (typeof LISTING_FLAGS)[number];
+
+/** Why a listing waits in the moderation queue (§5.5, §7.3, §11.1). */
+export const REVIEW_REASONS = [
+  'unverified_seller', 'first_listings', 'resubmitted', 'price_check', 'unit_check', 'quantity_check',
+  'edited_after_report', 'edit_flagged',
+] as const;
+export type ReviewReason = (typeof REVIEW_REASONS)[number];
+
+/** A moderator's last decision (§7.2). Ask for changes and Reject both lead to `rejected` (R13). */
+export const MODERATION_OUTCOMES = ['approved', 'changes_requested', 'rejected'] as const;
+export type ModerationOutcome = (typeof MODERATION_OUTCOMES)[number];
+
+/** Report listing reasons (§8.4). `something_else` needs details. */
+export const LISTING_REPORT_REASONS = [
+  'stock_photos', 'wrong_side_or_fit', 'wrong_price_or_quantity', 'already_sold', 'advance_payment', 'something_else',
+] as const;
+export type ListingReportReason = (typeof LISTING_REPORT_REASONS)[number];
+
+/**
+ * Who changed a status (`listing_status_history.actor`, the `history_actor` enum, §7.5, §13.1). The §7.2 table's
+ * "moderator" actor is `admin` here.
+ */
+export const LISTING_ACTORS = ['seller', 'admin', 'system'] as const;
+export type ListingActor = (typeof LISTING_ACTORS)[number];
+
+/** Where a fitment row came from: the seller, or an admin edit (§4.3, R33). */
+export const FITMENT_SOURCES = ['seller', 'admin'] as const;
+export type FitmentSource = (typeof FITMENT_SOURCES)[number];
+
+/**
+ * What `POST /listings/:id/actions` takes and the manage sheet offers (§7.2, §10). Publish has its own endpoint.
+ * There is no `duplicate` (owner decision 8).
+ */
+export const SELLER_LISTING_ACTIONS = [
+  'pause', 'resume', 'renew', 'mark_sold', 'mark_unavailable', 'relist', 'mark_rented', 'end_rental', 'remove',
+] as const;
+export type SellerListingAction = (typeof SELLER_LISTING_ACTIONS)[number];
+
+/** Moderator status actions (§11.3). Admin edit and media delete aren't status transitions. */
+export const ADMIN_LISTING_ACTIONS = ['approve', 'ask_for_changes', 'reject', 'hide', 'unhide', 'remove'] as const;
+export type AdminListingAction = (typeof ADMIN_LISTING_ACTIONS)[number];
+
+/** Transitions the system makes (§7.2): the expiry job, edits back to review, admin's last-photo delete, F7 reservations. */
+export const SYSTEM_LISTING_ACTIONS = ['expire', 'back_to_review', 'photos_removed', 'reserve', 'unreserve'] as const;
+export type SystemListingAction = (typeof SYSTEM_LISTING_ACTIONS)[number];
+
+export type ListingAction = 'publish' | SellerListingAction | AdminListingAction | SystemListingAction;
+
+/**
+ * Where a transition lands: a status; `'gate'` = `live` or `pending_review` as the go-live gate decides (§5.5; a
+ * resubmission from `rejected` always lands in `pending_review`, reason `resubmitted`); `'return_status'` = the
+ * listing's stored `return_status` (approve: else `live`; unhide).
+ */
+export type ListingTransitionTarget = ListingStatus | 'gate' | 'return_status';
+
+export interface ListingTransition {
+  action: ListingAction;
+  actor: ListingActor;
+  from: readonly ListingStatus[];
+  to: ListingTransitionTarget;
+  /** Only these kinds; every kind when absent. */
+  kinds?: readonly ListingKind[];
+}
+
+const ALL_BUT_DRAFT_REMOVED: readonly ListingStatus[] = LISTING_STATUSES.filter((s) => s !== 'draft' && s !== 'removed');
+const HIDEABLE: readonly ListingStatus[] = ['live', 'paused', 'expired', 'unavailable', 'sold', 'rented'];
+
+/** The only ways a status changes (§7.2). `listing-lifecycle.service.ts` is the only writer of `status`. */
+export const LISTING_TRANSITIONS: readonly ListingTransition[] = [
+  { action: 'publish', actor: 'seller', from: ['draft'], to: 'gate' },
+  { action: 'publish', actor: 'seller', from: ['rejected'], to: 'gate' },
+  { action: 'approve', actor: 'admin', from: ['pending_review'], to: 'return_status' },
+  { action: 'ask_for_changes', actor: 'admin', from: ['pending_review'], to: 'rejected' },
+  { action: 'reject', actor: 'admin', from: ['pending_review'], to: 'rejected' },
+  { action: 'pause', actor: 'seller', from: ['live'], to: 'paused' },
+  { action: 'resume', actor: 'seller', from: ['paused'], to: 'gate' },
+  { action: 'renew', actor: 'seller', from: ['live', 'expired'], to: 'gate' },
+  { action: 'mark_sold', actor: 'seller', from: ['live', 'paused', 'expired', 'unavailable'], to: 'sold' },
+  { action: 'mark_unavailable', actor: 'seller', from: ['live', 'paused', 'expired'], to: 'unavailable' },
+  { action: 'relist', actor: 'seller', from: ['sold', 'unavailable'], to: 'gate' },
+  { action: 'mark_rented', actor: 'seller', from: ['live'], to: 'rented', kinds: ['machine_rental'] },
+  { action: 'end_rental', actor: 'seller', from: ['rented'], to: 'gate', kinds: ['machine_rental'] },
+  { action: 'remove', actor: 'seller', from: ALL_BUT_DRAFT_REMOVED, to: 'removed' },
+  { action: 'expire', actor: 'system', from: ['live', 'rented'], to: 'expired' },
+  { action: 'back_to_review', actor: 'system', from: ['live', 'rented'], to: 'pending_review' },
+  { action: 'hide', actor: 'admin', from: HIDEABLE, to: 'hidden' },
+  { action: 'unhide', actor: 'admin', from: ['hidden'], to: 'return_status' },
+  { action: 'remove', actor: 'admin', from: ALL_BUT_DRAFT_REMOVED, to: 'removed' },
+  { action: 'photos_removed', actor: 'system', from: HIDEABLE, to: 'rejected' },
+  { action: 'reserve', actor: 'system', from: ['live'], to: 'reserved' },
+  { action: 'unreserve', actor: 'system', from: ['reserved'], to: 'live' },
+];
+
+/**
+ * The transition for `action` from `from` on a listing of `kind`, or null (`409 LISTING_TRANSITION_NOT_ALLOWED`).
+ * `remove` exists for the seller and for an admin with the same statuses: pass `actor` to pick one.
+ */
+export function listingTransition(
+  from: ListingStatus,
+  action: ListingAction,
+  kind: ListingKind,
+  actor?: ListingActor,
+): ListingTransition | null {
+  return (
+    LISTING_TRANSITIONS.find(
+      (t) =>
+        t.action === action &&
+        (actor === undefined || t.actor === actor) &&
+        t.from.includes(from) &&
+        (t.kinds === undefined || t.kinds.includes(kind)),
+    ) ?? null
+  );
+}
+
+/** The seller actions allowed on a listing now, in `SELLER_LISTING_ACTIONS` order (the manage sheet's buttons). */
+export function sellerActions(status: ListingStatus, kind: ListingKind): SellerListingAction[] {
+  return SELLER_LISTING_ACTIONS.filter((a) => listingTransition(status, a, kind, 'seller') !== null);
+}
+
+// Limits (spec §4, §6.3, §9.1, §10, §11.1).
+export const LISTING_TITLE_MIN = 3;
+export const LISTING_TITLE_MAX = 100;
+export const LISTING_DESCRIPTION_MAX = 1500;
+export const LISTING_PHOTOS_MAX = 10;
+export const LISTING_VIDEOS_MAX = 2;
+/** 60 s plus half a second of encoder slack (§6.3, `400 VIDEO_TOO_LONG`). */
+export const LISTING_VIDEO_MAX_MS = 60_500;
+export const MEDIA_MAX_BYTES: Readonly<Record<MediaRole, number>> = {
+  full: 4_194_304,
+  thumb: 1_048_576,
+  video: 52_428_800,
+  poster: 1_048_576,
+};
+export const LISTING_FITMENTS_MAX = 20;
+export const LISTING_DRAFTS_MAX = 20;
+/** A listing an admin removed stays visible to its seller this long (R50). */
+export const REMOVED_BY_TEAM_DAYS = 30;
+/** The moderation queue's Decided tab looks back this far (§11.1). */
+export const MODERATION_DECIDED_DAYS = 90;
+export const PART_NUMBER_MAX = 40;
+export const OTHER_SIDE_LIMIT = 20;
+/** `pg_trgm` similarity of normalised part names for tiers 2 and 3 (§9.1). */
+export const OTHER_SIDE_MIN_SIMILARITY = 0.5;
+
+/**
+ * Sanity thresholds (§5.4, R17), in paise. Prices are per unit; rentals are checked on their day-equivalent rate
+ * (`rentalDayEquivalent`). A value strictly below `min` or above `max` is flagged.
+ */
+export const SANITY_LIMITS = {
+  /** ₹5 … ₹50 lakh per unit. */
+  partPricePaise: { min: 500, max: 500_000_000 },
+  /** ₹10 000 … ₹50 crore. */
+  machinePricePaise: { min: 1_000_000, max: 50_000_000_000 },
+  /** ₹200 … ₹5 lakh a day. */
+  rentalDayPaise: { min: 20_000, max: 50_000_000 },
+  /** More than this many parts is flagged. */
+  partQuantityMax: 100_000,
+  /** More than this many machines (sale or rent) is flagged. */
+  machineQuantityMax: 50,
+} as const;
+
+// ─── Part numbers and part names (§4.3, §9.1) ───
+
+/** Upper-case with every character outside `A-Z0-9` removed: ` tp-200 L ` → `TP200L`. */
+export function normalizePartNumber(raw: string): string {
+  return raw.toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
+const SIDE_SUFFIXES: Partial<Record<PartSide, readonly string[]>> = {
+  left: ['LEFT', 'LH', 'L'],
+  right: ['RIGHT', 'RH', 'R'],
+};
+
+/**
+ * The side-stripped base of a normalised part number (§4.3): for a `left` listing a trailing `LEFT`, `LH` or `L` is
+ * removed (longest first), for a `right` listing `RIGHT`, `RH` or `R`. Only the suffix agreeing with the listing's own
+ * side; other sides keep the number. A base shorter than 3 is stored but never matched.
+ */
+export function partNumberBase(norm: string, side: PartSide | null | undefined): string {
+  const suffixes = side ? SIDE_SUFFIXES[side] : undefined;
+  if (!suffixes) return norm;
+  for (const suffix of suffixes) {
+    if (norm.length > suffix.length && norm.endsWith(suffix)) return norm.slice(0, -suffix.length);
+  }
+  return norm;
+}
+
+/** Side words removed from part names (§9.1, R38), lower-case, NFC. `l h` / `r h` (from `l/h`, `r/h`) are pairs. */
+const SIDE_WORDS = new Set(
+  ['left', 'right', 'lh', 'rh', 'लेफ्ट', 'राइट', 'बायाँ', 'दायाँ', 'ડાબું', 'જમણું', 'લેફ્ટ', 'રાઇટ'].map((w) => w.normalize('NFC')),
+);
+
+/**
+ * A part name for matching (§9.1): lower-case, punctuation to spaces, side words (English, Hindi, Gujarati) removed,
+ * spaces collapsed. `Temple Roller – Left (LH)` → `temple roller`.
+ */
+export function normalizePartName(title: string): string {
+  const tokens = title
+    .normalize('NFC')
+    .toLowerCase()
+    .replace(/[^\p{L}\p{M}\p{N}]+/gu, ' ')
+    .trim()
+    .split(' ')
+    .filter((t) => t !== '');
+  const kept: string[] = [];
+  for (let i = 0; i < tokens.length; i++) {
+    const t = tokens[i]!;
+    if (SIDE_WORDS.has(t)) continue;
+    if ((t === 'l' || t === 'r') && tokens[i + 1] === 'h') {
+      i++;
+      continue;
+    }
+    kept.push(t);
+  }
+  return kept.join(' ');
+}
+
+// ─── Rentals, sanity flags, score, fit (§5.4, §8.3) ───
+
+export interface RentalRates {
+  rateHourPaise: number | null;
+  rateDayPaise: number | null;
+  rateWeekPaise: number | null;
+  rateMonthPaise: number | null;
+  /** A day = this many hours (default 8). */
+  shiftHours: number;
+  /** A month = this many working days (default 26). */
+  monthDays: number;
+}
+
+/**
+ * A rental's day-equivalent rate in paise (§5.4): the day rate, else hour rate × shift hours, else week rate ÷ 6,
+ * else month rate ÷ `monthDays`; null without any rate.
+ */
+export function rentalDayEquivalent(rental: RentalRates): number | null {
+  if (rental.rateDayPaise != null) return rental.rateDayPaise;
+  if (rental.rateHourPaise != null) return rental.rateHourPaise * rental.shiftHours;
+  if (rental.rateWeekPaise != null) return rental.rateWeekPaise / 6;
+  if (rental.rateMonthPaise != null) return rental.rateMonthPaise / rental.monthDays;
+  return null;
+}
+
+/** What `sanityFlags` reads from a listing. */
+export interface SanityInput {
+  kind: ListingKind;
+  priceModel?: PriceModel | null;
+  pricePaise?: number | null;
+  /** Decimal string (or number). */
+  quantity?: string | number | null;
+  /** Whether the listing's unit is flagged `is_machine_unit` (parts only). */
+  unitIsMachineUnit?: boolean;
+  rental?: RentalRates | null;
+}
+
+const outside = (v: number, r: { min: number; max: number }): boolean => v < r.min || v > r.max;
+
+/** The sanity flags of a listing (§5.4), in `LISTING_FLAGS` order. */
+export function sanityFlags(listing: SanityInput): ListingFlag[] {
+  const flags: ListingFlag[] = [];
+  if (listing.kind === 'machine_rental') {
+    const day = listing.rental ? rentalDayEquivalent(listing.rental) : null;
+    if (day != null && outside(day, SANITY_LIMITS.rentalDayPaise)) flags.push('price_check');
+  } else if (listing.priceModel !== 'on_request' && listing.pricePaise != null) {
+    const range = listing.kind === 'part' ? SANITY_LIMITS.partPricePaise : SANITY_LIMITS.machinePricePaise;
+    if (outside(listing.pricePaise, range)) flags.push('price_check');
+  }
+  if (listing.kind === 'part' && listing.unitIsMachineUnit) flags.push('unit_check');
+  const qty = listing.quantity == null || listing.quantity === '' ? null : Number(listing.quantity);
+  if (qty != null && Number.isFinite(qty)) {
+    const max = listing.kind === 'part' ? SANITY_LIMITS.partQuantityMax : SANITY_LIMITS.machineQuantityMax;
+    if (qty > max) flags.push('quantity_check');
+  }
+  return flags;
+}
+
+/** Items of the listing score, in the table's order (§5.4). */
+export const LISTING_SCORE_ITEMS = [
+  'photos', 'video', 'part_number', 'fitment', 'year', 'hours_run', 'optional_specs', 'description',
+] as const;
+export type ListingScoreItem = (typeof LISTING_SCORE_ITEMS)[number];
+
+const SCORE_POINTS: Readonly<Record<'part' | 'machine', Partial<Record<ListingScoreItem, number>>>> = {
+  part: { photos: 20, video: 15, part_number: 15, fitment: 20, optional_specs: 15, description: 15 },
+  machine: { photos: 20, video: 20, year: 15, hours_run: 10, optional_specs: 15, description: 20 },
+};
+
+/** What `listingScore` reads from a listing. */
+export interface ScoreInput {
+  kind: ListingKind;
+  photoCount: number;
+  videoCount: number;
+  partNumber?: string | null;
+  fitmentCount?: number;
+  year?: number | null;
+  hoursRun?: number | null;
+  specs?: Specs | null;
+  /** Keys of the template's active, optional fields for the listing's node and kind (none = the item is met). */
+  optionalSpecKeys?: readonly string[];
+  description?: string | null;
+}
+
+const specFilled = (v: SpecValue | undefined): boolean =>
+  v !== undefined && v !== null && (Array.isArray(v) ? v.length > 0 : typeof v === 'string' ? v.trim() !== '' : true);
+
+/** Listing score 0–100 with the missing items as nudges, in table order (§5.4). */
+export function listingScore(listing: ScoreInput): { score: number; missing: ListingScoreItem[] } {
+  const points = SCORE_POINTS[listing.kind === 'part' ? 'part' : 'machine'];
+  const specs = listing.specs ?? {};
+  const has: Record<ListingScoreItem, boolean> = {
+    photos: listing.photoCount >= 3,
+    video: listing.videoCount >= 1,
+    part_number: !!listing.partNumber && listing.partNumber.trim() !== '',
+    fitment: (listing.fitmentCount ?? 0) >= 1,
+    year: listing.year != null,
+    hours_run: listing.hoursRun != null,
+    optional_specs: (listing.optionalSpecKeys ?? []).every((k) => specFilled(specs[k])),
+    description: (listing.description ?? '').trim().length >= 40,
+  };
+  let score = 0;
+  const missing: ListingScoreItem[] = [];
+  for (const item of LISTING_SCORE_ITEMS) {
+    const p = points[item];
+    if (p === undefined) continue;
+    if (has[item]) score += p;
+    else missing.push(item);
+  }
+  return { score, missing };
+}
+
+/** One "fits" row (§4.3): a machine brand, a catalogue model or "Other" text or neither (= all models), years, note. */
+export interface Fitment {
+  id?: string;
+  brandId: string;
+  brandName?: string;
+  modelId: string | null;
+  modelName?: string | null;
+  modelOther: string | null;
+  yearFrom: number | null;
+  yearTo: number | null;
+  note: string | null;
+  source?: FitmentSource;
+}
+
+/**
+ * "Check my machine" (§8.3, R21): `fits` when a row has the brand and either the same catalogue model or no model
+ * (all models of the brand), and — when a year is given — the year inside the row's range (open ends unbounded). A
+ * row with an "Other" model text never confirms a catalogue model.
+ */
+export function checkFit(
+  fitments: readonly Pick<Fitment, 'brandId' | 'modelId' | 'modelOther' | 'yearFrom' | 'yearTo'>[],
+  machine: { brandId: string; modelId: string | null; year: number | null },
+): 'fits' | 'not_listed' {
+  const fits = fitments.some((f) => {
+    if (f.brandId !== machine.brandId) return false;
+    const allModels = f.modelId == null && (f.modelOther == null || f.modelOther.trim() === '');
+    if (!allModels && (f.modelId == null || f.modelId !== machine.modelId)) return false;
+    if (machine.year != null) {
+      if (f.yearFrom != null && machine.year < f.yearFrom) return false;
+      if (f.yearTo != null && machine.year > f.yearTo) return false;
+    }
+    return true;
+  });
+  return fits ? 'fits' : 'not_listed';
+}
+
+// ─── Settings (`app_settings`, §12) ───
+
+export interface AppSettingDef {
+  key: string;
+  type: 'int';
+  default: number;
+  min: number;
+  max: number;
+  label: string;
+  help: string;
+}
+
+/** The registry: a missing row means the default, so nothing needs seeding (R10). */
+export const APP_SETTINGS = [
+  {
+    key: 'listing_expiry_days', type: 'int', default: 60, min: 7, max: 365,
+    label: 'Listing expiry (days)',
+    help: 'A live or rented listing expires this many days after its last update.',
+  },
+  {
+    key: 'listing_expiry_reminder_days', type: 'int', default: 7, min: 1, max: 30,
+    label: 'Expiry reminder (days)',
+    help: 'Sellers see "Still available?" this many days before expiry. Must be less than the expiry.',
+  },
+  {
+    key: 'listing_review_first_n', type: 'int', default: 3, min: 0, max: 50,
+    label: 'Review first listings',
+    help: "A GST-verified business's first N listings are reviewed (0 = none).",
+  },
+  {
+    key: 'unverified_listing_cap', type: 'int', default: 3, min: 1, max: 1000,
+    label: 'Unverified listing cap',
+    help: 'Open listings a business without GST verification may hold.',
+  },
+] as const satisfies readonly AppSettingDef[];
+
+export type AppSettingKey = (typeof APP_SETTINGS)[number]['key'];
+export type AppSettingsValues = Record<AppSettingKey, number>;
+
+/** Every setting at its default. */
+export function appSettingDefaults(): AppSettingsValues {
+  return Object.fromEntries(APP_SETTINGS.map((s) => [s.key, s.default])) as AppSettingsValues;
+}
+
+/** The first problem of a full settings map (whole number, range, reminder < expiry), or null. */
+export function validateSettings(values: AppSettingsValues): { key: AppSettingKey; message: string } | null {
+  for (const def of APP_SETTINGS) {
+    const v: unknown = values[def.key];
+    if (typeof v !== 'number' || !Number.isInteger(v)) return { key: def.key, message: `${def.label} must be a whole number` };
+    if (v < def.min || v > def.max) return { key: def.key, message: `${def.label} must be between ${def.min} and ${def.max}` };
+  }
+  if (values.listing_expiry_reminder_days >= values.listing_expiry_days) {
+    return { key: 'listing_expiry_reminder_days', message: 'The reminder must be shorter than the expiry' };
+  }
+  return null;
+}
+
+/** GET /admin/settings. */
+export interface AppSettingsView {
+  values: AppSettingsValues;
+  registry: readonly AppSettingDef[];
+}
+
+// ─── Listing payloads (§13.4). Later tasks may refine these as the endpoints are built. ───
+
+/** A photo (`url` = full, `thumbUrl` = thumb) or a video (`url` = video, `thumbUrl` = poster). URLs are null without `MEDIA_PUBLIC_BASE_URL`. */
+export interface ListingMediaItem {
+  id: string;
+  type: MediaType;
+  url: string | null;
+  thumbUrl: string | null;
+  contentType: string;
+  sizeBytes: number;
+  durationMs: number | null;
+  sortOrder: number;
+}
+
+/** Machine fields (§4.4). `serialNumber` only in owner and admin payloads. */
+export interface MachineDetails {
+  brandId: string | null;
+  brandName: string | null;
+  brandOther: string | null;
+  modelId: string | null;
+  modelName: string | null;
+  modelOther: string | null;
+  year: number | null;
+  hoursRun: number | null;
+  underPower: boolean;
+  inspectionByAppointment: boolean;
+  reasonForSale: string | null;
+  serialNumber?: string | null;
+}
+
+/** Rental fields (§4.5). Money in paise; `availableFrom` is `YYYY-MM-DD`. */
+export interface RentalTerms extends RentalRates {
+  overtimeRateHourPaise: number | null;
+  minDuration: number | null;
+  minDurationPeriod: RentalPeriod | null;
+  operator: RentalOperator | null;
+  operatorRateDayPaise: number | null;
+  fuel: RentalFuel;
+  transport: RentalTransport | null;
+  transportChargePaise: number | null;
+  serviceRadiusKm: number | null;
+  depositPaise: number | null;
+  availableFrom: string | null;
+  availabilityNote: string | null;
+}
+
+/** A listing in a list (cards, More from this seller, Other side, My listings). Never a pincode, address or point. */
+export interface ListingCard {
+  id: string;
+  ref: number;
+  kind: ListingKind;
+  status: ListingStatus;
+  title: string;
+  side: PartSide | null;
+  condition: { key: string; label: string } | null;
+  quantity: string | null;
+  unit: { key: string; label: string; decimals: number } | null;
+  priceModel: PriceModel | null;
+  pricePaise: number | null;
+  gstMode: GstPriceMode | null;
+  /** Rentals: the headline rate (the first set of day, hour, week, month). */
+  rate: { period: RentalPeriod; paise: number } | null;
+  thumbUrl: string | null;
+  city: string | null;
+  industrialAreaName: string | null;
+  /** Whole km from the viewer, when known. */
+  distanceKm: number | null;
+  refreshedAt: string | null;
+  businessId: string;
+}
+
+/** The public listing page (§8.1). */
+export interface ListingDetail extends ListingCard {
+  description: string | null;
+  categoryId: string | null;
+  /** Machine category › machine type › part group names. */
+  categoryPath: string[];
+  specs: Specs;
+  partNumber: string | null;
+  partBrand: { id: string; name: string } | null;
+  minOrderQty: string | null;
+  conditionNote: string | null;
+  delivery: DeliveryOption[];
+  state: string | null;
+  media: ListingMediaItem[];
+  fitments: Fitment[];
+  machine: MachineDetails | null;
+  rental: RentalTerms | null;
+  seller: {
+    businessId: string;
+    displayName: string;
+    industrialAreaName: string | null;
+    city: string | null;
+    gstVerified: boolean;
+    memberSince: string;
+    liveListings: number;
+  };
+  isOwner: boolean;
+  publishedAt: string | null;
+}
+
+/** A field today's rules would ask for (§7.3 nudges, `LISTING_INCOMPLETE` problems): `side` / `SIDE_REQUIRED`, `specs.<key>` / `required`… */
+export interface ListingProblem {
+  field: string;
+  code: string;
+}
+
+/** The owner's view of their listing, any status (`GET /listings/:id/owner`, §7.3–§7.5). */
+export interface ListingOwnerView extends ListingDetail {
+  version: number;
+  unitId: string | null;
+  conditionId: string | null;
+  partBrandId: string | null;
+  flags: ListingFlag[];
+  acceptedFlags: ListingFlag[];
+  reviewReasons: ReviewReason[];
+  needsAttention: ListingProblem[];
+  /** An open report: side / fit edits go to review (the app warns without naming the report). */
+  reviewOnEdit: boolean;
+  expiresAt: string | null;
+  expiringSoon: boolean;
+  moderation: { outcome: ModerationOutcome; note: string | null; at: string } | null;
+  /** The hide / remove reason, or the seller's own note. */
+  statusReason: string | null;
+  score: { score: number; missing: ListingScoreItem[] };
+  location: {
+    source: ListingLocationSource;
+    pincode: string | null;
+    city: string | null;
+    state: string | null;
+    industrialAreaId: string | null;
+    industrialAreaName: string | null;
+    industrialAreaOther: string | null;
+    addressLine: string | null;
+    lat: number | null;
+    lng: number | null;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** `PATCH /listings/:id`: only the fields sent change (§7.3). Money in paise; quantities as decimal strings. */
+export interface ListingPatch {
+  categoryId?: string;
+  title?: string;
+  description?: string | null;
+  specs?: Specs;
+  partNumber?: string | null;
+  partBrandId?: string | null;
+  side?: PartSide;
+  quantity?: string;
+  unitId?: string;
+  minOrderQty?: string | null;
+  conditionId?: string;
+  conditionNote?: string | null;
+  priceModel?: PriceModel;
+  pricePaise?: number | null;
+  gstMode?: GstPriceMode | null;
+  delivery?: DeliveryOption[];
+  location?:
+    | { source: 'business' }
+    | {
+        source: 'godown';
+        pincode: string;
+        city: string;
+        state: string;
+        industrialAreaId?: string | null;
+        industrialAreaOther?: string | null;
+        addressLine?: string | null;
+        lat?: number | null;
+        lng?: number | null;
+      };
+  fitments?: Array<Pick<Fitment, 'brandId' | 'modelId' | 'modelOther' | 'yearFrom' | 'yearTo' | 'note'>>;
+  machine?: Partial<Omit<MachineDetails, 'brandName' | 'modelName'>>;
+  rental?: Partial<RentalTerms>;
+}
+
+/** One card of the Other side result (§9.1): tier 1 part number, 2 name and fit, 3 "possibly". */
+export interface OtherSideCard extends ListingCard {
+  tier: 1 | 2 | 3;
+  possible: boolean;
+}
+
+/** `GET /listings/:id/other-side` (§9.1). `best` and `counts` are keyed by the wanted side and `pair`. */
+export interface OtherSideResult {
+  complement: PartSide | null;
+  best: Partial<Record<'left' | 'right' | 'pair', OtherSideCard | null>>;
+  counts: Partial<Record<'left' | 'right' | 'pair', number>>;
+  items: OtherSideCard[];
+}
+
+/** My listings groups (§10, R29). */
+export const MY_LISTINGS_GROUPS = ['live', 'review', 'paused', 'sold', 'drafts', 'removed_by_team'] as const;
+export type MyListingsGroup = (typeof MY_LISTINGS_GROUPS)[number];
+
+/** A card on My listings: the card plus what the seller acts on. */
+export interface MyListingCard extends ListingCard {
+  updatedAt: string;
+  expiresAt: string | null;
+  expiringSoon: boolean;
+  moderation: { outcome: ModerationOutcome; note: string | null; at: string } | null;
+  statusReason: string | null;
+  scoreMissing: ListingScoreItem[];
+  needsAttention: ListingProblem[];
+}
+
+/** `GET /listings/mine?group=`: counts per group plus one page of the group. */
+export interface MyListingsView {
+  counts: Record<MyListingsGroup, number>;
+  group: MyListingsGroup;
+  items: MyListingCard[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+/** `GET /admin/listings` row (§11.4). */
+export interface AdminListingRow {
+  id: string;
+  ref: number;
+  thumbUrl: string | null;
+  title: string;
+  kind: ListingKind;
+  status: ListingStatus;
+  categoryPath: string[];
+  city: string | null;
+  side: PartSide | null;
+  business: { id: string; name: string };
+  priceModel: PriceModel | null;
+  pricePaise: number | null;
+  rate: { period: RentalPeriod; paise: number } | null;
+  flags: ListingFlag[];
+  openReports: number;
+  updatedAt: string;
+}
+
+/** The moderation queue's tabs (§11.1). */
+export const MODERATION_TABS = ['review', 'reported', 'decided'] as const;
+export type ModerationTab = (typeof MODERATION_TABS)[number];
+
+/** `GET /admin/moderation/queue` row (§11.1). */
+export interface AdminModerationRow {
+  id: string;
+  ref: number;
+  thumbUrl: string | null;
+  title: string;
+  kind: ListingKind;
+  status: ListingStatus;
+  side: PartSide | null;
+  business: { id: string; name: string; gstVerified: boolean };
+  reviewReasons: ReviewReason[];
+  statusChangedAt: string | null;
+  openReports: number;
+  lastReportAt: string | null;
+  /** Decided tab: the last moderation action and when. */
+  decision: { action: AdminListingAction; at: string } | null;
+}
+
+/** A report in the admin review screen. */
+export interface AdminListingReport {
+  id: string;
+  reason: ListingReportReason;
+  details: string | null;
+  status: ReportStatus;
+  reporter: { businessId: string | null; businessName: string | null };
+  createdAt: string;
+  resolvedAt: string | null;
+  resolutionNote: string | null;
+}
+
+/** One status change (§7.5). */
+export interface ListingHistoryEntry {
+  id: string;
+  fromStatus: ListingStatus | null;
+  toStatus: ListingStatus;
+  action: string;
+  actor: ListingActor;
+  adminName: string | null;
+  reason: string | null;
+  createdAt: string;
+}
+
+/** `GET /admin/listings/:id` (§11.2): everything, private fields included. */
+export interface AdminListingDetail {
+  listing: ListingOwnerView & { returnStatus: ListingStatus | null; firstLiveAt: string | null; statusChangedAt: string | null };
+  /** The node's effective side convention, for the specs table. */
+  sideConvention: string | null;
+  seller: {
+    businessId: string;
+    name: string;
+    gstVerified: boolean;
+    ownerStatus: AccountStatus | null;
+    memberSince: string;
+    listingsByStatus: Partial<Record<ListingStatus, number>>;
+    everLive: number;
+  };
+  reports: AdminListingReport[];
+  history: ListingHistoryEntry[];
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { AppError, PayloadTooLargeError, ServiceUnavailableError, TooManyRequestsError } from './errors.js';
+import { AppError, ConflictError, PayloadTooLargeError, ServiceUnavailableError, TooManyRequestsError } from './errors.js';
 
 describe('error classes added for F1 + A2', () => {
   it('TooManyRequestsError is a 429 with the given code', () => {
@@ -31,5 +31,17 @@ describe('error classes added for F1 + A2', () => {
     expect(err.code).toBe('DOCUMENT_TOO_LARGE');
     expect(err.details).toEqual({ maxBytes: 10_485_760 });
     expect(new PayloadTooLargeError('x', 'Y').details).toBeUndefined();
+  });
+});
+
+describe('ConflictError details (F2 spec §14)', () => {
+  it('carries optional details with a 409', () => {
+    const err = new ConflictError('x', 'C', { a: 1 });
+    expect(err).toBeInstanceOf(AppError);
+    expect(err.statusCode).toBe(409);
+    expect(err.code).toBe('C');
+    expect(err.details).toEqual({ a: 1 });
+    expect(new ConflictError('y').details).toBeUndefined();
+    expect(new ConflictError('y').code).toBe('CONFLICT');
   });
 });

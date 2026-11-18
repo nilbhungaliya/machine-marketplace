@@ -6,6 +6,7 @@ import { ConflictError, NotFoundError, ValidationError } from '../../lib/errors.
 import { isForeignKeyViolation, isUniqueViolation } from '../../lib/pg-errors.js';
 import { slugify } from '../../lib/slug.js';
 import { writeAudit } from '../audit.service.js';
+import { listingsUseNodes } from './listing-uses.js';
 import { lockCatalogRoots } from './locks.js';
 import { loadFieldsFor, toNode } from './read.service.js';
 import { assertExactSet } from './reorder.js';
@@ -88,11 +89,12 @@ async function nextSortOrder(tx: Tx, parentId: string | null): Promise<number> {
 }
 
 /** Ids of the node at `path` and of all its descendants. */
-async function subtreeIds(tx: Tx, path: string): Promise<string[]> {
-  const rows = await tx
+async function subtreeIds(tx: Tx, path: string, opts: { lock?: boolean } = {}): Promise<string[]> {
+  const query = tx
     .select({ id: categories.id })
     .from(categories)
     .where(sql`${categories.path} = ${path}::text OR starts_with(${categories.path}, ${path}::text || '/')`);
+  const rows = opts.lock ? await query.for('update') : await query;
   return rows.map((r) => r.id);
 }
 
@@ -245,11 +247,16 @@ export async function moveCategory(db: Db, adminId: string, id: string, newParen
         );
       }
       if (target.id === before.parentId) return nodeOf(tx, before);
-      // M5: refuse when listings reference this node or its subtree
+      // M5 (F2 spec §16): refused while any listing (drafts too) sits in the subtree. The subtree rows are locked first,
+      // so a listing write referencing one of them waits for this transaction.
+      const movedIds = await subtreeIds(tx, before.path, { lock: true });
+      if (await listingsUseNodes(tx, movedIds)) {
+        throw moveNotAllowed('Listings use this node or a node under it; it cannot be moved');
+      }
 
       // Keys (any status) and active highlight ranks stay unique across the new effective templates.
       const ancestorIds = [...(await ancestorsOf(tx, target)).map((a) => a.id), target.id];
-      await assertNoClash(tx, { ancestorIds, subtreeIds: await subtreeIds(tx, before.path) });
+      await assertNoClash(tx, { ancestorIds, subtreeIds: movedIds });
 
       await tx
         .update(categories)
@@ -319,8 +326,11 @@ export async function deleteCategory(db: Db, adminId: string, id: string): Promi
         uses.push('machine_models');
       }
     }
-    // M5: refuse when listings reference this node or its subtree
-    if (uses.length) throw new ConflictError(`Category is in use (${uses.join(', ')}); deactivate it instead`, 'NODE_IN_USE');
+    // M5 (F2 spec §16): any listing in the subtree, drafts included.
+    if (await listingsUseNodes(tx, await subtreeIds(tx, row.path, { lock: true }))) uses.push('listings');
+    if (uses.length) {
+      throw new ConflictError(`Category is in use (${uses.join(', ')}); deactivate it instead`, 'NODE_IN_USE', { uses });
+    }
 
     const before = await snapshot(tx, row);
     try {

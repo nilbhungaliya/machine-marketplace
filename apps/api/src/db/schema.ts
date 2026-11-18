@@ -1,12 +1,15 @@
 import {
   pgTable, uuid, text, timestamp, pgEnum, boolean, jsonb, customType, index, uniqueIndex, unique, integer, smallint,
-  numeric, date, type AnyPgColumn,
+  numeric, date, bigint, bigserial, type AnyPgColumn,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import {
   ACCOUNT_STATUSES, ADMIN_ROLES, CATALOG_LEVELS, CATALOG_STATUSES, EMPLOYEE_RANGES, FIELD_APPLIES_TO, FIELD_TYPES,
-  GST_CHECK_RESULTS, GST_PROOF_STATUSES, GST_STATUSES, LANGUAGES, MEMBER_ROLES, VERIFICATION_LEVELS,
-  VERIFICATION_STATUSES, type BusinessActivity, type GstDetails, type GstDocumentType, type GstEnteredDetails,
+  FITMENT_SOURCES, GST_CHECK_RESULTS, GST_PRICE_MODES, GST_PROOF_STATUSES, GST_STATUSES, LANGUAGES, LISTING_ACTORS,
+  LISTING_KINDS, LISTING_LOCATION_SOURCES, LISTING_STATUSES, MEDIA_TYPES, MEMBER_ROLES, MODERATION_OUTCOMES, PART_SIDES,
+  PRICE_MODELS, RENTAL_FUEL_OPTIONS, RENTAL_OPERATOR_OPTIONS, RENTAL_PERIODS, RENTAL_TRANSPORT_OPTIONS, REPORT_STATUSES,
+  REPORT_TARGETS, VERIFICATION_LEVELS, VERIFICATION_STATUSES, type BusinessActivity, type DeliveryOption,
+  type GstDetails, type GstDocumentType, type GstEnteredDetails, type ListingFlag, type ReviewReason, type Specs,
 } from '@mpm/shared-types';
 
 // Starting schema only: admin auth, the business/user core (scope F1, A2) and the audit log. Listings, enquiries,
@@ -115,18 +118,23 @@ export const businesses = pgTable(
   }),
 );
 
-export const users = pgTable('users', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  businessId: uuid('business_id').references(() => businesses.id),
-  phone: text('phone').notNull().unique(),
-  name: text('name'),
-  memberRole: memberRole('member_role').notNull().default('owner'),
-  language: language('language').notNull().default('en'),
-  /** Suspend / block (scope A2). */
-  status: accountStatus('status').notNull().default('active'),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-});
+export const users = pgTable(
+  'users',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    businessId: uuid('business_id').references(() => businesses.id),
+    phone: text('phone').notNull().unique(),
+    name: text('name'),
+    memberRole: memberRole('member_role').notNull().default('owner'),
+    language: language('language').notNull().default('en'),
+    /** Suspend / block (scope A2). */
+    status: accountStatus('status').notNull().default('active'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  // Keeps the "owner not suspended" EXISTS of `publicListingWhere` cheap (F2 spec §7.1, R49).
+  (t) => ({ businessIdIdx: index('users_business_id_idx').on(t.businessId) }),
+);
 
 /** Every admin action: who, what, when, before/after. */
 export const auditLog = pgTable('audit_log', {
@@ -151,6 +159,8 @@ export const units = pgTable('units', {
   decimals: smallint('decimals').notNull().default(0),
   sortOrder: integer('sort_order').notNull().default(0),
   isActive: boolean('is_active').notNull().default(true),
+  /** Machines and rentals use the first active unit with this flag (F2 spec §4.2, R48). */
+  isMachineUnit: boolean('is_machine_unit').notNull().default(false),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
@@ -405,3 +415,251 @@ export const businessVerifications = pgTable(
     activeUq: uniqueIndex('business_verifications_active_uq').on(t.businessId, t.level).where(sql`${t.status} = 'active'`),
   }),
 );
+
+// ─── F2 + F3 + A3: listings (spec 2026-11-18-f2-f3 §13) ───
+// No ON DELETE CASCADE: draft deletion and test cleanup delete children first. CHECKs, the `ref` sequence restart and
+// the `is_machine_unit` data update are in the custom migration that follows the generated one.
+
+export const listingKind = pgEnum('listing_kind', LISTING_KINDS);
+export const listingStatus = pgEnum('listing_status', LISTING_STATUSES);
+export const partSide = pgEnum('part_side', PART_SIDES);
+export const priceModel = pgEnum('price_model', PRICE_MODELS);
+export const gstPriceMode = pgEnum('gst_price_mode', GST_PRICE_MODES);
+export const rentalPeriod = pgEnum('rental_period', RENTAL_PERIODS);
+export const rentalOperator = pgEnum('rental_operator', RENTAL_OPERATOR_OPTIONS);
+export const rentalFuel = pgEnum('rental_fuel', RENTAL_FUEL_OPTIONS);
+export const rentalTransport = pgEnum('rental_transport', RENTAL_TRANSPORT_OPTIONS);
+export const listingLocationSource = pgEnum('listing_location_source', LISTING_LOCATION_SOURCES);
+export const mediaType = pgEnum('media_type', MEDIA_TYPES);
+export const moderationOutcome = pgEnum('moderation_outcome', MODERATION_OUTCOMES);
+export const historyActor = pgEnum('history_actor', LISTING_ACTORS);
+export const fitmentSource = pgEnum('fitment_source', FITMENT_SOURCES);
+export const reportTarget = pgEnum('report_target', REPORT_TARGETS);
+export const reportStatus = pgEnum('report_status', REPORT_STATUSES);
+
+/**
+ * A part, a machine for sale or a machine for rent (§4). `status` is written only by `listing-lifecycle.service.ts`.
+ * Location columns are copied from the business (source `business`) or a godown; `address_line` (godown only),
+ * `pincode` and `point` are private.
+ */
+export const listings = pgTable(
+  'listings',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    /** Shown as #100001 (the custom migration restarts the sequence at 100001, R35). */
+    ref: bigserial('ref', { mode: 'number' }).notNull().unique(),
+    businessId: uuid('business_id')
+      .notNull()
+      .references(() => businesses.id),
+    createdByUserId: uuid('created_by_user_id')
+      .notNull()
+      .references(() => users.id),
+    kind: listingKind('kind').notNull(),
+    status: listingStatus('status').notNull().default('draft'),
+    /** Part group (parts) or machine type (machines, rentals); null in a fresh draft. */
+    categoryId: uuid('category_id').references(() => categories.id),
+    title: text('title'),
+    /** `normalizePartName(title)`, for Other-side matching (§9.1). */
+    titleNorm: text('title_norm'),
+    description: text('description'),
+    partNumber: text('part_number'),
+    partNumberNorm: text('part_number_norm'),
+    partNumberBase: text('part_number_base'),
+    partBrandId: uuid('part_brand_id').references(() => brands.id),
+    side: partSide('side'),
+    specs: jsonb('specs').$type<Specs>().notNull().default({}),
+    quantity: numeric('quantity', { precision: 14, scale: 3 }),
+    unitId: uuid('unit_id').references(() => units.id),
+    minOrderQty: numeric('min_order_qty', { precision: 14, scale: 3 }),
+    conditionId: uuid('condition_id').references(() => conditions.id),
+    conditionNote: text('condition_note'),
+    priceModel: priceModel('price_model'),
+    pricePaise: bigint('price_paise', { mode: 'number' }),
+    gstMode: gstPriceMode('gst_mode'),
+    locationSource: listingLocationSource('location_source').notNull().default('business'),
+    pincode: text('pincode'),
+    city: text('city'),
+    state: text('state'),
+    industrialAreaId: uuid('industrial_area_id').references(() => industrialAreas.id),
+    industrialAreaOther: text('industrial_area_other'),
+    addressLine: text('address_line'),
+    point: geography('point'),
+    delivery: text('delivery').array().$type<DeliveryOption[]>().notNull().default(sql`'{}'::text[]`),
+    flags: text('flags').array().$type<ListingFlag[]>().notNull().default(sql`'{}'::text[]`),
+    acceptedFlags: text('accepted_flags').array().$type<ListingFlag[]>().notNull().default(sql`'{}'::text[]`),
+    reviewReasons: text('review_reasons').array().$type<ReviewReason[]>().notNull().default(sql`'{}'::text[]`),
+    /** Where `unhide` and an approval after `back_to_review` go (R44). */
+    returnStatus: listingStatus('return_status'),
+    moderationOutcome: moderationOutcome('moderation_outcome'),
+    moderationNote: text('moderation_note'),
+    moderatedAt: timestamp('moderated_at', { withTimezone: true }),
+    moderatedBy: uuid('moderated_by').references(() => adminUsers.id),
+    /** Hide / remove reason, or the seller's note. */
+    statusReason: text('status_reason'),
+    /** +1 on every content change; admin decisions send it back (R53). */
+    version: integer('version').notNull().default(1),
+    publishedAt: timestamp('published_at', { withTimezone: true }),
+    firstLiveAt: timestamp('first_live_at', { withTimezone: true }),
+    refreshedAt: timestamp('refreshed_at', { withTimezone: true }),
+    statusChangedAt: timestamp('status_changed_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    pointIdx: index('listings_point_idx').using('gist', t.point),
+    statusKindCategoryIdx: index('listings_status_kind_category_idx').on(t.status, t.kind, t.categoryId),
+    businessStatusUpdatedIdx: index('listings_business_status_updated_idx').on(t.businessId, t.status, t.updatedAt),
+    categoryIdx: index('listings_category_id_idx').on(t.categoryId),
+    partNumberNormIdx: index('listings_part_number_norm_idx').on(t.partNumberNorm).where(sql`${t.partNumberNorm} IS NOT NULL`),
+    partNumberBaseIdx: index('listings_part_number_base_idx').on(t.partNumberBase).where(sql`${t.partNumberBase} IS NOT NULL`),
+    statusRefreshedIdx: index('listings_status_refreshed_idx').on(t.status, t.refreshedAt),
+  }),
+);
+
+/** Machine fields (§4.4), 1 : 1 with a `machine` or `machine_rental` listing. `serial_number` is private. */
+export const listingMachines = pgTable(
+  'listing_machines',
+  {
+    listingId: uuid('listing_id')
+      .primaryKey()
+      .references(() => listings.id),
+    brandId: uuid('brand_id').references(() => brands.id),
+    brandOther: text('brand_other'),
+    modelId: uuid('model_id').references(() => machineModels.id),
+    modelOther: text('model_other'),
+    year: smallint('year'),
+    hoursRun: integer('hours_run'),
+    serialNumber: text('serial_number'),
+    underPower: boolean('under_power').notNull().default(false),
+    inspectionByAppointment: boolean('inspection_by_appointment').notNull().default(false),
+    reasonForSale: text('reason_for_sale'),
+  },
+  (t) => ({
+    brandIdx: index('listing_machines_brand_id_idx').on(t.brandId),
+    modelIdx: index('listing_machines_model_id_idx').on(t.modelId),
+  }),
+);
+
+/** Rental terms (§4.5), 1 : 1 with a `machine_rental` listing. Money in paise. */
+export const listingRentals = pgTable('listing_rentals', {
+  listingId: uuid('listing_id')
+    .primaryKey()
+    .references(() => listings.id),
+  rateHourPaise: bigint('rate_hour_paise', { mode: 'number' }),
+  rateDayPaise: bigint('rate_day_paise', { mode: 'number' }),
+  rateWeekPaise: bigint('rate_week_paise', { mode: 'number' }),
+  rateMonthPaise: bigint('rate_month_paise', { mode: 'number' }),
+  shiftHours: smallint('shift_hours').notNull().default(8),
+  monthDays: smallint('month_days').notNull().default(26),
+  overtimeRateHourPaise: bigint('overtime_rate_hour_paise', { mode: 'number' }),
+  minDuration: smallint('min_duration'),
+  minDurationPeriod: rentalPeriod('min_duration_period'),
+  operator: rentalOperator('operator'),
+  operatorRateDayPaise: bigint('operator_rate_day_paise', { mode: 'number' }),
+  fuel: rentalFuel('fuel').notNull().default('client'),
+  transport: rentalTransport('transport'),
+  transportChargePaise: bigint('transport_charge_paise', { mode: 'number' }),
+  serviceRadiusKm: smallint('service_radius_km'),
+  depositPaise: bigint('deposit_paise', { mode: 'number' }),
+  availableFrom: date('available_from'),
+  availabilityNote: text('availability_note'),
+});
+
+/** "Fits" rows of a part (§4.3): brand required; a model, "Other" text or neither (= all models); years; note. */
+export const listingFitments = pgTable(
+  'listing_fitments',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    listingId: uuid('listing_id')
+      .notNull()
+      .references(() => listings.id),
+    brandId: uuid('brand_id')
+      .notNull()
+      .references(() => brands.id),
+    modelId: uuid('model_id').references(() => machineModels.id),
+    modelOther: text('model_other'),
+    yearFrom: smallint('year_from'),
+    yearTo: smallint('year_to'),
+    note: text('note'),
+    source: fitmentSource('source').notNull().default('seller'),
+    sortOrder: integer('sort_order').notNull().default(0),
+  },
+  (t) => ({
+    listingIdx: index('listing_fitments_listing_id_idx').on(t.listingId),
+    modelIdx: index('listing_fitments_model_id_idx').on(t.modelId),
+    brandIdx: index('listing_fitments_brand_id_idx').on(t.brandId),
+  }),
+);
+
+/** Photos and videos (§6): public-bucket keys only, URLs built at read time. `thumb_key` = photo thumb or video poster. */
+export const listingMedia = pgTable(
+  'listing_media',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    listingId: uuid('listing_id')
+      .notNull()
+      .references(() => listings.id),
+    type: mediaType('type').notNull(),
+    key: text('key').notNull(),
+    thumbKey: text('thumb_key'),
+    contentType: text('content_type').notNull(),
+    sizeBytes: integer('size_bytes').notNull(),
+    durationMs: integer('duration_ms'),
+    sortOrder: integer('sort_order').notNull().default(0),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({ listingSortIdx: index('listing_media_listing_sort_idx').on(t.listingId, t.sortOrder) }),
+);
+
+/** Every status change (§7.5). `from_status` is null for the first. */
+export const listingStatusHistory = pgTable(
+  'listing_status_history',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    listingId: uuid('listing_id')
+      .notNull()
+      .references(() => listings.id),
+    fromStatus: listingStatus('from_status'),
+    toStatus: listingStatus('to_status').notNull(),
+    action: text('action').notNull(),
+    actor: historyActor('actor').notNull(),
+    userId: uuid('user_id').references(() => users.id),
+    adminId: uuid('admin_id').references(() => adminUsers.id),
+    reason: text('reason'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({ listingCreatedIdx: index('listing_status_history_listing_created_idx').on(t.listingId, t.createdAt) }),
+);
+
+/** Generic reports (A6-ready); listings are the only target in F2 (§8.4). One open report per business and target. */
+export const reports = pgTable(
+  'reports',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    targetType: reportTarget('target_type').notNull(),
+    targetId: uuid('target_id').notNull(),
+    reporterUserId: uuid('reporter_user_id').references(() => users.id),
+    reporterBusinessId: uuid('reporter_business_id').references(() => businesses.id),
+    reason: text('reason').notNull(),
+    details: text('details'),
+    status: reportStatus('status').notNull().default('open'),
+    resolvedBy: uuid('resolved_by').references(() => adminUsers.id),
+    resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+    resolutionNote: text('resolution_note'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    targetStatusIdx: index('reports_target_status_idx').on(t.targetType, t.targetId, t.status),
+    oneOpenUq: uniqueIndex('reports_one_open_uq')
+      .on(t.reporterBusinessId, t.targetType, t.targetId)
+      .where(sql`${t.status} IN ('open', 'reviewing')`),
+  }),
+);
+
+/** Marketplace settings (§12): the registry (`APP_SETTINGS`) is code; a missing row means the default. */
+export const appSettings = pgTable('app_settings', {
+  key: text('key').primaryKey(),
+  value: jsonb('value').notNull(),
+  updatedByAdminId: uuid('updated_by_admin_id').references(() => adminUsers.id),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
