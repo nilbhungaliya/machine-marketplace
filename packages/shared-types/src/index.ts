@@ -165,6 +165,10 @@ export const ADMIN_ROLES = [
 ] as const;
 export type AdminRole = (typeof ADMIN_ROLES)[number];
 
+/** An officer's reason or message (suspend, block, revoke, release, reject, ask for more): 3–500 characters, trimmed. */
+export const ADMIN_REASON_MIN = 3;
+export const ADMIN_REASON_MAX = 500;
+
 export interface AdminUser {
   id: string;
   name: string;
@@ -355,6 +359,17 @@ export type GstState = (typeof GST_STATES)[number];
 export const GST_DOCUMENT_TYPES = ['gst_certificate', 'id_proof', 'authorisation_letter'] as const;
 export type GstDocumentType = (typeof GST_DOCUMENT_TYPES)[number];
 
+/**
+ * How many files a review takes (§5.3, §6; amended 2026-11-18). A submission sends 2–5; each round of files added
+ * after an officer asks for more sends 1–5 new ones; a review holds at most 10 in all. The certificate and the ID /
+ * letter rule applies to the whole set. The API and the app read these, so they refuse the same things.
+ */
+export const GST_REVIEW_FILES_MIN = 2;
+export const GST_REVIEW_FILES_MAX = 5;
+export const GST_REVIEW_ADD_FILES_MIN = 1;
+export const GST_REVIEW_ADD_FILES_MAX = 5;
+export const GST_REVIEW_FILES_TOTAL_MAX = 10;
+
 const GSTIN_FORMAT = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
 const GSTIN_BASE36 = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
@@ -414,6 +429,8 @@ export interface GstStateView {
   details?: GstDetails;
   checkId?: string;
   proofId?: string;
+  /** An open review (`under_review` / `needs_more`): how many files it holds, for the add-files cap. */
+  documentCount?: number;
   hint?: string;
   resendAvailableAt?: string;
   officerMessage?: string;

@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useIsFocused } from '@react-navigation/native';
 import Toast from 'react-native-toast-message';
-import type { GstDocumentType, GstState, GstStateView } from '@mpm/shared-types';
+import { GST_REVIEW_FILES_TOTAL_MAX, type GstDocumentType, type GstState, type GstStateView } from '@mpm/shared-types';
 import ScreenWrapper from '@/components/ScreenWrapper';
 import Header from '@/components/Header';
 import Button from '@/components/Button';
@@ -15,7 +15,7 @@ import { GST_EVENTS } from '@/lib/analytics-events';
 import { errorCode, errorKey } from '@/lib/api-error';
 import { formatDate } from '@/lib/format-date';
 import { addReviewFiles, uploadDocuments, type LocalDocument } from '@/lib/gst-api';
-import { DOCUMENTS_MAX, DOCUMENTS_MIN, GST_ERROR_KEYS, gstScreen, newFilesProblem, startAgain } from '@/lib/gst-flow';
+import { GST_ERROR_KEYS, addFilesRoom, gstScreen, newFilesProblem, startAgain } from '@/lib/gst-flow';
 import { Clock, ShieldAlert, ShieldCheck, TriangleAlert, type LucideIcon } from '@/lib/icons';
 import { queryClient } from '@/lib/queryClient';
 import { fonts, radius, spacing, useTheme } from '@/lib/theme';
@@ -23,6 +23,7 @@ import { openTarget } from '@/navigation/go';
 import type { RootStackScreenProps } from '@/navigation/types';
 import DocumentPickerField, { DOCUMENT_PROBLEM_KEYS } from './document-picker';
 import GstDetailsCard from './gst-details-card';
+import GstLoadError from './gst-load-state';
 
 type StatusState = Extract<GstState, 'under_review' | 'needs_more' | 'rejected' | 'verified' | 'revoked'>;
 const STATUS_STATES: readonly GstState[] = ['under_review', 'needs_more', 'rejected', 'verified', 'revoked'];
@@ -57,6 +58,15 @@ export default function GstStatusScreen({ navigation }: RootStackScreenProps<'Gs
     gstin: { fontFamily: fonts.semiBold, fontSize: 14, letterSpacing: 1, color: colors.text, textAlign: 'center' },
     skeleton: { height: 160, borderRadius: radius.lg },
   }), [colors]);
+
+  if (!view && gst.isError) {
+    return (
+      <ScreenWrapper>
+        <Header title={t('verification.title')} />
+        <GstLoadError onRetry={() => void gst.refetch()} />
+      </ScreenWrapper>
+    );
+  }
 
   if (!view || !STATUS_STATES.includes(view.state)) {
     return (
@@ -101,7 +111,7 @@ export default function GstStatusScreen({ navigation }: RootStackScreenProps<'Gs
           <Button
             title={state === 'rejected' ? t('verification.status.rejected.startAgain') : t('verification.status.revoked.verifyAgain')}
             phLabel={state === 'rejected' ? 'Gst-start-again' : 'Gst-verify-again'}
-            onPress={() => openTarget(navigation, startAgain(view))}
+            onPress={() => openTarget(navigation, startAgain(view), 'replace')}
           />
         ) : null}
       </View>
@@ -109,7 +119,10 @@ export default function GstStatusScreen({ navigation }: RootStackScreenProps<'Gs
   );
 }
 
-/** Needs more (spec §5.3): the officer's message, then files for the same review, which sends it back to waiting. */
+/**
+ * Needs more (spec §5.3, amended): the officer's message, then 1–5 files for the same review (at most 10 on it in all,
+ * `documentCount` from the state view), which sends it back to waiting.
+ */
 function AddFiles({ view }: { view: GstStateView }) {
   const { t } = useTranslation();
   const { colors } = useTheme();
@@ -118,11 +131,14 @@ function AddFiles({ view }: { view: GstStateView }) {
   const [storageBlocked, setStorageBlocked] = useState(false);
   const [busy, setBusy] = useState(false);
   const uploadsOff = storageBlocked || !view.storageAvailable;
+  const room = addFilesRoom(view.documentCount);
+  const total = { total: GST_REVIEW_FILES_TOTAL_MAX };
 
   const send = async () => {
-    const problem = newFilesProblem(files);
+    const problem = newFilesProblem(files, view.documentCount ?? 0);
     if (problem) {
-      setDocError(t(DOCUMENT_PROBLEM_KEYS[problem]));
+      // A count problem here is the add-files rule (1–5), not a submission's 2–5.
+      setDocError(t(problem === 'count' ? 'verification.documents.addRule' : DOCUMENT_PROBLEM_KEYS[problem], total));
       return;
     }
     if (!view.proofId) return;
@@ -140,6 +156,7 @@ function AddFiles({ view }: { view: GstStateView }) {
       const code = errorCode(err);
       track(GST_EVENTS.filesAddFailed, { reason: code });
       if (code === 'STORAGE_UNAVAILABLE') setStorageBlocked(true);
+      else if (code === 'DOCUMENTS_REQUIRED') setDocError(t('verification.documents.addRule', total));
       else Toast.show({ type: 'error', text1: t(errorKey(err, GST_ERROR_KEYS)) });
       if (code === 'GST_REVIEW_STATE') void queryClient.invalidateQueries({ queryKey: businessKeys.gst });
     } finally {
@@ -159,9 +176,11 @@ function AddFiles({ view }: { view: GstStateView }) {
         <Notice tone="warning" icon={TriangleAlert} title={t('verification.status.needsMore.message')} text={view.officerMessage} />
       ) : null}
       <Text style={s.section}>{t('verification.status.needsMore.addFiles')}</Text>
-      <Text style={s.hint}>{t('verification.documents.rule')}</Text>
+      <Text style={s.hint}>{t('verification.documents.addRule', total)}</Text>
       {uploadsOff ? (
         <Notice tone="warning" icon={TriangleAlert} text={t('verification.documents.unavailable')} />
+      ) : room === 0 ? (
+        <Notice tone="info" text={t('verification.status.needsMore.full', total)} />
       ) : (
         <DocumentPickerField
           files={files}
@@ -169,7 +188,7 @@ function AddFiles({ view }: { view: GstStateView }) {
             setFiles(next);
             setDocError(undefined);
           }}
-          max={DOCUMENTS_MAX - DOCUMENTS_MIN}
+          max={room}
           disabled={busy}
           suggestCertificate={false}
         />
@@ -179,7 +198,7 @@ function AddFiles({ view }: { view: GstStateView }) {
         title={t('verification.status.needsMore.send')}
         phLabel="Gst-send-more-files"
         loading={busy}
-        disabled={uploadsOff || files.length === 0}
+        disabled={uploadsOff || room === 0 || files.length === 0}
         onPress={() => void send()}
       />
     </View>

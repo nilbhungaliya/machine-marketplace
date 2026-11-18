@@ -14,7 +14,8 @@ import { useConfirm } from '@/components/confirm-provider';
  */
 export function FormDialog({
   open, onClose, title, description, size = 'md', dirty, submitting = false,
-  submitLabel, submitDisabled = false, onSubmit, extraFooter, discardMessage = 'What you typed will be lost.', children,
+  submitLabel, submitVariant = 'primary', submitDisabled = false, onSubmit, extraFooter, discardMessage = 'What you typed will be lost.',
+  children,
 }: {
   open: boolean;
   /** Called after the discard check passes. */
@@ -26,6 +27,8 @@ export function FormDialog({
   dirty: boolean;
   submitting?: boolean;
   submitLabel: string;
+  /** `danger` for a destructive submit (suspend, block, revoke, reject…), as `useConfirm`'s `variant: 'danger'`. */
+  submitVariant?: 'primary' | 'danger';
   submitDisabled?: boolean;
   onSubmit: () => void | Promise<void>;
   /** Left side of the footer, e.g. a preview button. */
@@ -89,7 +92,15 @@ export function FormDialog({
           <Button variant="secondary" onClick={() => { void requestClose(); }} disabled={busy}>Cancel</Button>
           {/* Only `submitting` disables it: a button disabled under a handler's own
               confirm could not take focus back when that confirm closes. */}
-          <Button type="submit" form={formId} data-dialog-primary loading={submitting} disabled={submitDisabled} aria-busy={busy}>
+          <Button
+            type="submit"
+            form={formId}
+            variant={submitVariant}
+            data-dialog-primary
+            loading={submitting}
+            disabled={submitDisabled}
+            aria-busy={busy}
+          >
             {pending && !submitting ? <Loader2 size={14} className="animate-spin" aria-hidden /> : null}
             {submitLabel}
           </Button>

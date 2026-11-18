@@ -3,8 +3,9 @@ import type { Server as SocketIOServer } from 'socket.io';
 import type { AccountStatus, AdminRole } from '@mpm/shared-types';
 import type { Tx } from '../../db/index.js';
 import { users } from '../../db/schema.js';
-import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from '../../lib/errors.js';
+import { ConflictError, ForbiddenError, NotFoundError } from '../../lib/errors.js';
 import { userRoom } from '../../socket/rooms.js';
+import { adminText } from '../../lib/admin-text.js';
 import { writeAudit } from '../audit.service.js';
 
 // Account status actions (F1 + A2 spec §8.2, §10; scope A2). One state machine:
@@ -28,14 +29,6 @@ export interface UserStatusResult {
 
 type Action = 'suspend' | 'reinstate' | 'block' | 'unblock';
 
-function checkReason(reason: string): string {
-  const trimmed = reason.trim();
-  if (trimmed.length < 3 || trimmed.length > 500) {
-    throw new ValidationError('A reason of 3 to 500 characters is required', { field: 'reason' });
-  }
-  return trimmed;
-}
-
 async function transition(
   tx: Tx,
   admin: StatusActor,
@@ -44,7 +37,7 @@ async function transition(
   action: Action,
   decide: (current: AccountStatus) => AccountStatus,
 ): Promise<UserStatusResult> {
-  const why = checkReason(reason);
+  const why = adminText(reason);
   // Row lock: two officers acting at once see one state, and the second gets the state-conflict code.
   const [user] = await tx.select({ status: users.status }).from(users).where(eq(users.id, userId)).for('update');
   if (!user) throw new NotFoundError('User');

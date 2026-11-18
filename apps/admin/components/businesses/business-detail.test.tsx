@@ -138,6 +138,8 @@ describe('BusinessDetail', () => {
     const dialog = screen.getByRole('dialog');
     const submit = within(dialog).getByRole('button', { name: 'Suspend' }) as HTMLButtonElement;
     expect(submit.disabled).toBe(true);
+    // Destructive: the red danger button, not the primary one.
+    expect(submit.className).toContain('text-red-600');
     await user.type(within(dialog).getByLabelText('Reason'), 'Fake listings reported');
     await user.click(submit);
     expect(changeUserStatus).toHaveBeenCalledWith('u1', 'suspend', 'Fake listings reported');

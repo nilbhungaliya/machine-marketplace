@@ -18,8 +18,10 @@ import { ONBOARDING_EVENTS } from '@/lib/analytics-events';
 import { errorCode, errorKey } from '@/lib/api-error';
 import { fetchNearestPincode, saveLocation } from '@/lib/business-api';
 import { toAsciiDigits } from '@/lib/digits';
-import { Check, Info, LocateFixed, Search } from '@/lib/icons';
-import { buildLocationSchema, PINCODE_REGEX, toLocationBody, type FormMode, type LocationFormValues } from '@/lib/onboarding-step';
+import { Check, Info, LocateFixed, MapPin, Search, X } from '@/lib/icons';
+import {
+  buildLocationSchema, PINCODE_REGEX, pinAfterPincode, toLocationBody, type FormMode, type LocationFormValues,
+} from '@/lib/onboarding-step';
 import { queryClient } from '@/lib/queryClient';
 import { fonts, radius, spacing, useTheme } from '@/lib/theme';
 import type { RootStackScreenProps } from '@/navigation/types';
@@ -68,7 +70,11 @@ function LocationForm({ mode, title, profile, onDone }: {
   const { applyProfile } = useAuth();
   const saved = profile?.location ?? null;
 
+  // The saved pin starts the form: PUT /businesses/me/location replaces everything, so an edit sends it back (and keeps
+  // it) unless the user removes it or types a pincode it didn't come with.
   const [pin, setPin] = useState<Pin | null>(saved?.lat != null && saved.lng != null ? { lat: saved.lat, lng: saved.lng } : null);
+  /** The pincode the pin came with (`pinAfterPincode`). */
+  const pinFor = useRef<string | null>(saved?.pincode ?? null);
   const [otherOpen, setOtherOpen] = useState(!!saved?.industrialAreaOther);
   const [areaQuery, setAreaQuery] = useState('');
   const [locating, setLocating] = useState(false);
@@ -120,6 +126,26 @@ function LocationForm({ mode, title, profile, onDone }: {
   const validPin = PINCODE_REGEX.test(pincodeDigits) ? pincodeDigits : null;
   const pincodeInfo = usePincodeInfo(validPin);
   const areas = useIndustrialAreas(validPin);
+
+  // A pincode the pin didn't come with clears the pin; a pin that came with none binds to the first one.
+  useEffect(() => {
+    if (!pin) return;
+    const next = pinAfterPincode(pinFor.current, validPin);
+    if (next === 'bind') pinFor.current = validPin;
+    if (next === 'clear') {
+      setPin(null);
+      pinFor.current = null;
+      track(ONBOARDING_EVENTS.locationPinCleared, { reason: 'pincode_changed' });
+      Toast.show({ type: 'info', text1: t('onboarding.location.pinCleared') });
+    }
+    // Keyed on the pincode only.
+  }, [validPin]);
+
+  const removePin = () => {
+    setPin(null);
+    pinFor.current = null;
+    track(ONBOARDING_EVENTS.locationPinCleared, { reason: 'removed' });
+  };
 
   // A newly typed pincode fills city and state (both stay editable).
   useEffect(() => {
@@ -179,8 +205,11 @@ function LocationForm({ mode, title, profile, onDone }: {
       }
       const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
       const here = { lat: position.coords.latitude, lng: position.coords.longitude };
-      setPin(here);
       const info = await fetchNearestPincode(here.lat, here.lng);
+      // Bound before the pincode changes, so the effect above keeps this pin. With no office nearby it belongs to the
+      // pincode already typed, or the one typed next.
+      pinFor.current = info?.pincode ?? validPin;
+      setPin(here);
       if (!info) {
         track(ONBOARDING_EVENTS.locationDetectFailed, { reason: 'no_pincode' });
         Toast.show({ type: 'info', text1: t('onboarding.location.noPincodeNearby') });
@@ -213,6 +242,10 @@ function LocationForm({ mode, title, profile, onDone }: {
     },
     locateText: { fontFamily: fonts.semiBold, fontSize: 15, color: colors.primary },
     row: { flexDirection: 'row', gap: spacing.md },
+    pinRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm, minHeight: 44 },
+    pinText: { flex: 1, fontFamily: fonts.medium, fontSize: 14, color: colors.text },
+    pinRemove: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, minHeight: 44 },
+    pinRemoveText: { fontFamily: fonts.semiBold, fontSize: 14, color: colors.primary },
     half: { flex: 1 },
     notice: {
       flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start', padding: spacing.md, borderRadius: radius.md,
@@ -259,6 +292,24 @@ function LocationForm({ mode, title, profile, onDone }: {
             <LocationMap pin={pin} onChange={setPin} style={s.map} />
             <Text style={s.mapHint}>{t('onboarding.location.mapHint')}</Text>
           </>
+        ) : null}
+
+        {pin ? (
+          <View style={s.pinRow}>
+            <MapPin size={16} color={colors.green} />
+            <Text style={s.pinText}>{t('onboarding.location.pinSet')}</Text>
+            <Pressable
+              onPress={removePin}
+              hitSlop={12}
+              style={s.pinRemove}
+              testID="Remove-location-pin"
+              accessibilityRole="button"
+              accessibilityLabel={t('onboarding.location.removePin')}
+            >
+              <X size={14} color={colors.primary} />
+              <Text style={s.pinRemoveText}>{t('onboarding.location.removePin')}</Text>
+            </Pressable>
+          </View>
         ) : null}
 
         <Pressable

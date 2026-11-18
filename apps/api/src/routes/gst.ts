@@ -26,8 +26,8 @@ const presignBody = z
   })
   .strict();
 
-// Path A (spec §5.3): the file rule (2–5, certificate + ID / letter) and the details-iff-no-lookup rule are the
-// service's (400 DOCUMENTS_REQUIRED); the schema only bounds sizes. Keys are checked by staging (DOCUMENT_KEY_INVALID).
+// Path A (spec §5.3): the file rules (2–5 on submit, 1–5 more up to 10 in all after ask-for-more, certificate + ID /
+// letter) and the details-iff-no-lookup rule are the service's (400 DOCUMENTS_REQUIRED); the schema only bounds sizes. Keys are checked by staging (DOCUMENT_KEY_INVALID).
 const documentFile = z.object({ key: z.string().min(1).max(300), type: z.enum(GST_DOCUMENT_TYPES) }).strict();
 const documentFiles = z.array(documentFile).max(10);
 const gstAddress = z
@@ -59,17 +59,25 @@ const reviewBody = z
 const reviewFilesBody = z.object({ proofId: uuid, files: documentFiles }).strict();
 
 /**
- * Lookups and code sends also count per signed-in user (spec §5.2 step 2: "plus the per-user … route rate limit"),
- * on top of the business's daily limit and the proof's send limit. Runs after `requireUser`, so the key is the user.
+ * A per-signed-in-user route limit over 10 minutes. Runs after `requireUser` (`hook: 'preHandler'`), so the key is
+ * the user. Each route counts on its own.
  */
-const perUserLimit = {
+const perUser = (max: number) => ({
   rateLimit: {
-    max: 20,
+    max,
     timeWindow: '10 minutes',
     hook: 'preHandler' as const,
     keyGenerator: (request: FastifyRequest) => (request.user ? `user:${request.user.userId}` : `ip:${request.ip}`),
   },
-};
+});
+
+/**
+ * Lookups and code sends: 20 per user (spec §5.2 step 2: "plus the per-user … route rate limit"), on top of the
+ * business's daily limit and the proof's send limit.
+ */
+const perUserLimit = perUser(20);
+/** Document presigns: 30 per user (a review is 2–5 files, with retries), so a client can't mint signed PUTs in bulk. */
+const presignLimit = perUser(30);
 
 /** Per-IP route limit window (spec §5.2 "per-user and per-IP route rate limit"). */
 const IP_WINDOW_SECONDS = 600;
@@ -153,7 +161,7 @@ const gstRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   // A signed PUT for one review document (spec §6); the review submission names the uploaded keys.
-  fastify.post('/businesses/me/gst/documents/presign', auth, async (request) => {
+  fastify.post('/businesses/me/gst/documents/presign', { ...auth, config: presignLimit }, async (request) => {
     const body = presignBody.parse(request.body);
     return { data: await presignDocumentUpload(fastify.db, actorOf(request), body) };
   });

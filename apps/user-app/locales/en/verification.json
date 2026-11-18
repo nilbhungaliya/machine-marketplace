@@ -107,7 +107,9 @@
     "max_other": "You can add up to {{count}} files",
     "cameraDenied": "Allow the camera to take a photo, or pick a file instead",
     "unavailable": "Document upload isn't available yet. Please try again later.",
-    "uploading": "Uploading {{done}} of {{total}}…"
+    "uploading": "Uploading {{done}} of {{total}}…",
+    "addRule": "Add 1 to 5 files, up to {{total}} on your review in all. JPEG, PNG, WebP or PDF, up to 10 MB each.",
+    "total": "Your review can hold up to {{total}} files in all. Remove some files to continue."
   },
   "details": {
     "tradeName": "Trade name: {{name}}",
@@ -127,7 +129,8 @@
       "message": "Message from our team",
       "addFiles": "Add files",
       "send": "Send files",
-      "sent": "Files sent. Your review is back in the queue."
+      "sent": "Files sent. Your review is back in the queue.",
+      "full": "Your review already has {{total}} files, the most it can hold. Our team will get back to you."
     },
     "rejected": {
       "title": "Not approved",
@@ -172,5 +175,9 @@
     "declarationOutdated": "The declaration has changed. Update the app and try again.",
     "rateLimited": "Too many attempts. Please wait a few minutes and try again.",
     "otherGstinHeld": "Your business is linked to a different GSTIN. To change it, send your documents for review."
+  },
+  "loadError": {
+    "title": "Couldn't load your GST status",
+    "body": "Check your connection and try again."
   }
 }

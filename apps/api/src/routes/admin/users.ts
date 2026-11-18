@@ -2,6 +2,7 @@ import type { FastifyPluginAsync, preHandlerAsyncHookHandler } from 'fastify';
 import type { Server as SocketIOServer } from 'socket.io';
 import { z } from 'zod';
 import type { Tx } from '../../db/index.js';
+import { reasonBody } from '../../lib/admin-text.js';
 import {
   blockUser,
   disconnectUserSockets,
@@ -13,7 +14,6 @@ import {
 } from '../../services/admin/user-status.service.js';
 
 const idParams = z.object({ id: z.string().uuid() });
-const reasonBody = z.object({ reason: z.string().trim().min(3).max(500) }).strict();
 
 const tags = ['Admin Users'];
 

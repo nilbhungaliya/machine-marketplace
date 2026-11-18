@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useFormik } from 'formik';
@@ -26,6 +26,10 @@ const ERROR_KEYS: Record<string, string> = {
   INVALID_CATEGORY: 'onboarding.errors.invalidCategory',
 };
 
+const EMPTY_VALUES: ProfileFormValues = {
+  name: '', businessName: '', activities: [], categories: [], email: '', yearEstablished: '', employees: null,
+};
+
 const toggle = <T,>(list: T[], value: T): T[] => (list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
 
 /** F1 "Your business": onboarding step 1, or Profile → Business profile (`mode: 'edit'`). Spec §4.1, §7. */
@@ -41,18 +45,25 @@ export default function YourBusinessScreen({ navigation, route }: RootStackScree
 
   // Built at render time so messages follow the current language.
   const schema = useMemo(() => buildProfileSchema(t), [t]);
-  const initialValues = useMemo<ProfileFormValues>(() => ({
-    name: profile?.userName ?? sessionName ?? '',
-    businessName: profile?.tradeName ?? '',
-    activities: profile?.activities ?? [],
-    categories: profile?.categories ?? [],
-    email: profile?.email ?? '',
-    yearEstablished: profile?.yearEstablished ? String(profile.yearEstablished) : '',
-    employees: profile?.employees ?? null,
-  }), [profile, sessionName]);
+  // Initialised once, from the first loaded profile: a background refetch with changed data (GST approved meanwhile…)
+  // must not wipe what the user is typing. A name locked since is still honoured: the locked name is shown read-only
+  // and `toProfileBody` never sends a name while `nameLocked` (read live from the profile) is true.
+  const initial = useRef<ProfileFormValues | null>(null);
+  if (initial.current === null && !business.isLoading) {
+    initial.current = {
+      name: profile?.userName ?? sessionName ?? '',
+      businessName: profile?.tradeName ?? '',
+      activities: profile?.activities ?? [],
+      categories: profile?.categories ?? [],
+      email: profile?.email ?? '',
+      yearEstablished: profile?.yearEstablished ? String(profile.yearEstablished) : '',
+      employees: profile?.employees ?? null,
+    };
+  }
 
   const form = useFormik({
-    initialValues,
+    initialValues: initial.current ?? EMPTY_VALUES,
+    // Takes the snapshot when it first appears (the form is behind a skeleton until then); it never changes after.
     enableReinitialize: true,
     validationSchema: schema,
     onSubmit: async (values) => {

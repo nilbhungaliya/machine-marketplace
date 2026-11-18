@@ -30,7 +30,7 @@ export default function Sidebar() {
     .map((g) => ({ ...g, items: g.items.filter((i) => canSee(i, user?.role)) }))
     .filter((g) => g.items.length > 0);
   const badgeKeys = groups.flatMap((g) => g.items.flatMap((i) => (i.badgeKey ? [i.badgeKey] : [] as NavBadgeKey[])));
-  const badges = useNavBadges(badgeKeys, pathname);
+  const badges = useNavBadges(badgeKeys);
 
   const row = (item: NavItem) => {
     const isActive = active?.item.href === item.href;

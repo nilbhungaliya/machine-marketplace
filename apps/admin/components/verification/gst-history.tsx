@@ -3,16 +3,11 @@
 import type { ReactNode } from 'react';
 import type { AdminGstHistory } from '@mpm/shared-types';
 import StatusBadge from '@/components/status-badge';
-import { CHECK_RESULT_LABELS, DOCUMENT_TYPE_LABELS, PROOF_STATUS_LABELS } from '@/lib/verification-api';
+import { CHECK_RESULT_LABELS, DOCUMENT_TYPE_LABELS, LOOKUP_AT_APPROVAL_LABELS, PROOF_STATUS_LABELS } from '@/lib/verification-api';
 import { formatDateTime } from '@/lib/utils';
 
 const PROOF_METHOD: Record<string, string> = { provider_otp: 'Registered-contact code', documents: 'Documents for review' };
 const GRANT_METHOD: Record<string, string> = { provider_otp: 'Instant (code)', officer_review: 'Officer review' };
-const LOOKUP_AT_APPROVAL: Record<string, string> = {
-  active: 'fresh lookup, active',
-  unavailable: 'provider unreachable, officer details',
-  none: 'no provider, officer details',
-};
 
 function Block({ title, empty, headers, rows }: { title: string; empty: string; headers: string[]; rows: ReactNode[][] }) {
   return (
@@ -73,7 +68,7 @@ export function GstHistory({ history }: { history: AdminGstHistory }) {
           <StatusBadge key="s" status={p.status} label={PROOF_STATUS_LABELS[p.status]} />,
           <span key="n" className="whitespace-normal">
             {p.reason ?? p.officerMessage ?? '—'}
-            {p.lookupAtApproval && <span className="block text-xs text-gray-500">Approved on {LOOKUP_AT_APPROVAL[p.lookupAtApproval]}</span>}
+            {p.lookupAtApproval && <span className="block text-xs text-gray-500">{LOOKUP_AT_APPROVAL_LABELS[p.lookupAtApproval]}</span>}
           </span>,
         ])}
       />

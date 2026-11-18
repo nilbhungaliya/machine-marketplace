@@ -30,9 +30,10 @@ type Props = {
   onSubmit?: () => void | Promise<void>;
   onClose?: () => void;
   discardMessage?: string;
+  submitVariant?: 'primary' | 'danger';
 };
 
-function Harness({ dirty = false, submitting = false, submitDisabled = false, onSubmit = () => {}, onClose, discardMessage }: Props) {
+function Harness({ dirty = false, submitting = false, submitDisabled = false, onSubmit = () => {}, onClose, discardMessage, submitVariant }: Props) {
   const [open, setOpen] = useState(true);
   return (
     <FormDialog
@@ -43,6 +44,7 @@ function Harness({ dirty = false, submitting = false, submitDisabled = false, on
       submitting={submitting}
       submitDisabled={submitDisabled}
       submitLabel="Save agent"
+      submitVariant={submitVariant}
       onSubmit={onSubmit}
       discardMessage={discardMessage}
       extraFooter={<button type="button">Preview</button>}
@@ -81,6 +83,17 @@ describe('FormDialog', () => {
     expect(onSubmit).toHaveBeenCalledTimes(1);
     await user.click(screen.getByRole('button', { name: 'Save agent' }));
     expect(onSubmit).toHaveBeenCalledTimes(2);
+  });
+
+  it('the submit button is primary by default and red with submitVariant danger', () => {
+    renderForm();
+    expect(screen.getByRole('button', { name: 'Save agent' }).className).toContain('bg-brand-600');
+    cleanup();
+    renderForm({ submitVariant: 'danger' });
+    const submit = screen.getByRole('button', { name: 'Save agent' });
+    expect(submit.className).toContain('text-red-600');
+    expect(submit.className).not.toContain('bg-brand-600');
+    expect(submit.hasAttribute('data-dialog-primary')).toBe(true);
   });
 
   it('submitDisabled blocks both Enter and the button', async () => {

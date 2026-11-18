@@ -125,6 +125,13 @@ describe('business profile API', () => {
       expect(user!.businessId).toBeNull();
     });
 
+    it('the old onboarding route PATCH /users/me is gone (404): it could create a business with no activities', async () => {
+      const res = await call('PATCH', '/users/me', { name: 'Ravi Patel', businessName: `Ravi Works ${S}` });
+      expect(res.statusCode, res.body).toBe(404);
+      const [user] = await db.select().from(users).where(eq(users.id, userId));
+      expect(user!.businessId).toBeNull();
+    });
+
     it('the first PATCH without activities is 400 VALIDATION_ERROR', async () => {
       const res = await call('PATCH', '/businesses/me', { name: 'Ravi Patel', businessName: `Ravi Works ${S}` });
       expect(res.statusCode, res.body).toBe(400);

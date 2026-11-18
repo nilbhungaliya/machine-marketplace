@@ -70,7 +70,8 @@ const iso = (d: Date | null | undefined): string | undefined => (d ? d.toISOStri
 /**
  * GET /businesses/me/gst (§5.5). In order:
  * 1. an active `gst` verification → `verified` (the details it was granted with);
- * 2. an open review → `under_review` / `needs_more` (with the officer's message);
+ * 2. an open review → `under_review` / `needs_more` (with the officer's message and the review's file count, which
+ *    the app's add-files screen checks against the 10-file cap);
  * 3. otherwise the newest of the latest officer revocation (`revoked`, only while the business still holds the
  *    revoked GSTIN: after Release GSTIN it reads `none`, ruling R9), rejected review (`rejected`) and business
  *    lookup decides. A lookup reads as its outcome: `found` (needs Yes, or declared), `code_sent`, or `none` with
@@ -126,6 +127,7 @@ export async function getGstState(conn: Db | Tx, businessId: string): Promise<Gs
       state: open.status === 'needs_more' ? 'needs_more' : 'under_review',
       gstin: open.gstin,
       proofId: open.id,
+      documentCount: open.documents.length,
       ...(open.checkId ? { checkId: open.checkId } : {}),
       ...(open.status === 'needs_more' && open.officerMessage ? { officerMessage: open.officerMessage } : {}),
     };

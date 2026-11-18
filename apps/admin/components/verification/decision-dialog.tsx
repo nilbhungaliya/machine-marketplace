@@ -1,22 +1,23 @@
 'use client';
 
 import { ReasonDialog } from '@/components/ui/reason-dialog';
-import { DECISION_TEXT_MAX, DECISION_TEXT_MIN } from '@/lib/verification-api';
 
 export type TextDecision = 'reject' | 'ask_for_more';
 
-const COPY: Record<TextDecision, { title: string; description: string; label: string; submit: string }> = {
+const COPY: Record<TextDecision, { title: string; description: string; label: string; submit: string; danger: boolean }> = {
   reject: {
     title: 'Reject this review',
     description: 'The business sees this reason and can start again with new documents.',
     label: 'Reason',
     submit: 'Reject',
+    danger: true,
   },
   ask_for_more: {
     title: 'Ask for more',
     description: 'The business sees this message and adds files; the review then comes back to Waiting.',
     label: 'Message to the business',
     submit: 'Send',
+    danger: false,
   },
 };
 
@@ -34,9 +35,8 @@ export function DecisionDialog({ kind, businessName, onClose, onSubmit }: {
       title={copy.title}
       description={<>{businessName}. {copy.description}</>}
       label={copy.label}
-      minLength={DECISION_TEXT_MIN}
-      maxLength={DECISION_TEXT_MAX}
       submitLabel={copy.submit}
+      submitVariant={copy.danger ? 'danger' : 'primary'}
       onClose={onClose}
       onSubmit={onSubmit}
     />

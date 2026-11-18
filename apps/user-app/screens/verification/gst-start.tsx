@@ -57,7 +57,8 @@ export default function GstStartScreen({ navigation }: RootStackScreenProps<'Gst
   const showResult = (next: GstStateView) => {
     queryClient.setQueryData(businessKeys.gst, next);
     const target = gstScreen(next);
-    if (target.screen !== 'GstStart') openTarget(navigation, target);
+    // Replace, so Back from the next step goes where the flow was opened from (see navigation/go.ts).
+    if (target.screen !== 'GstStart') openTarget(navigation, target, 'replace');
   };
 
   const lookup = async (input: string) => {
@@ -164,7 +165,7 @@ export default function GstStartScreen({ navigation }: RootStackScreenProps<'Gst
                       phLabel="Gst-send-for-review"
                       variant="outline"
                       style={{ flex: 1, width: undefined }}
-                      onPress={() => navigation.navigate('GstReviewForm', view?.gstin ? { gstin: view.gstin } : undefined)}
+                      onPress={() => navigation.replace('GstReviewForm', view?.gstin ? { gstin: view.gstin } : undefined)}
                     />
                   </View>
                 ) : null}

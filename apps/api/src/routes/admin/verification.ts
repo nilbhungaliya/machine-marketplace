@@ -1,9 +1,11 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
-import { GST_REVIEW_QUEUES } from '@mpm/shared-types';
+import { GST_REVIEW_FILES_TOTAL_MAX, GST_REVIEW_QUEUES } from '@mpm/shared-types';
+import { messageBody, reasonBody } from '../../lib/admin-text.js';
 import {
   approveReview,
   askForMore,
+  countReviews,
   documentUrl,
   getReviewDetail,
   listReviews,
@@ -13,11 +15,9 @@ import {
 const tags = ['Admin Verification'];
 
 const idParams = z.object({ id: z.string().uuid() });
-const documentParams = z.object({ proofId: z.string().uuid(), index: z.coerce.number().int().min(0).max(20) });
+const documentParams = z.object({ proofId: z.string().uuid(), index: z.coerce.number().int().min(0).max(GST_REVIEW_FILES_TOTAL_MAX - 1) });
 const listQuery = z.object({ status: z.enum(GST_REVIEW_QUEUES).default('waiting') }).strict();
-// Length rules (3–500) are the service's, so a short reason is the service's 400 with its message.
-const reasonBody = z.object({ reason: z.string().max(2000) }).strict();
-const messageBody = z.object({ message: z.string().max(2000) }).strict();
+const countQuery = z.object({ status: z.enum(['waiting', 'needs_more']).default('waiting') }).strict();
 const approveBody = z
   .object({
     legalName: z.string().trim().min(1).max(200).optional(),
@@ -44,6 +44,12 @@ const adminVerificationRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get('/admin/verification/reviews', officer, async (request) => {
     const { status } = listQuery.parse(request.query);
     return { data: await listReviews(fastify.db, status) };
+  });
+
+  // The nav badge's count (no 200-row cap, no rows downloaded). Static, so it wins over `/reviews/:id`.
+  fastify.get('/admin/verification/reviews/count', officer, async (request) => {
+    const { status } = countQuery.parse(request.query);
+    return { data: { count: await countReviews(fastify.db, status) } };
   });
 
   fastify.get('/admin/verification/reviews/:id', officer, async (request, reply) => {

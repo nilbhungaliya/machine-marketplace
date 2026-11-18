@@ -11,7 +11,8 @@ import {
 } from '@mpm/shared-types';
 import type { Db, Tx } from '../../db/index.js';
 import { adminUsers, auditLog, businessVerifications, businesses, gstRepresentativeProofs, users } from '../../db/schema.js';
-import { ConflictError, NotFoundError, ValidationError } from '../../lib/errors.js';
+import { ConflictError, NotFoundError } from '../../lib/errors.js';
+import { adminText } from '../../lib/admin-text.js';
 import { writeAudit } from '../audit.service.js';
 import { businessProfile } from '../business/profile.service.js';
 import { lockGstin } from '../verification/gst-grant.service.js';
@@ -26,8 +27,6 @@ import { getGstState, openReview } from '../verification/gst-state.service.js';
 
 export const PAGE_SIZE_MAX = 100;
 const AUDIT_LIMIT = 50;
-const REASON_MIN = 3;
-const REASON_MAX = 500;
 
 export interface BusinessListQuery {
   search?: string;
@@ -206,14 +205,6 @@ export async function getBusinessDetail(conn: Db | Tx, id: string): Promise<Admi
   };
 }
 
-function checkReason(reason: string): string {
-  const trimmed = reason.trim();
-  if (trimmed.length < REASON_MIN || trimmed.length > REASON_MAX) {
-    throw new ValidationError(`A reason of ${REASON_MIN} to ${REASON_MAX} characters is required`, { field: 'reason' });
-  }
-  return trimmed;
-}
-
 /** The business row, locked first (the lock every GST write takes). `404` when it doesn't exist. */
 async function lockBusiness(tx: Tx, id: string) {
   const [row] = await tx.select().from(businesses).where(eq(businesses.id, id)).for('update');
@@ -235,7 +226,7 @@ export interface GstActionResult {
  * the name unlocks (derived from the active verification). No active verification → `409 GST_NOT_VERIFIED`.
  */
 export async function revokeGst(tx: Tx, adminId: string, businessId: string, reason: string): Promise<GstActionResult> {
-  const why = checkReason(reason);
+  const why = adminText(reason);
   const business = await lockBusiness(tx, businessId);
   const [revoked] = await tx
     .update(businessVerifications)
@@ -279,7 +270,7 @@ export async function revokeGst(tx: Tx, adminId: string, businessId: string, rea
  * (`409 GSTIN_NOT_HELD`). Takes the GSTIN's advisory lock after the business row, like every change of who holds it.
  */
 export async function releaseGstin(tx: Tx, adminId: string, businessId: string, reason: string): Promise<GstActionResult> {
-  const why = checkReason(reason);
+  const why = adminText(reason);
   const business = await lockBusiness(tx, businessId);
   if ((await openReview(tx, businessId)) !== null) {
     throw new ConflictError('This business has a GST review open. Decide it first.', 'GST_REVIEW_OPEN');

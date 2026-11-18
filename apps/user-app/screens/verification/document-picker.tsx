@@ -25,6 +25,7 @@ export const DOCUMENT_PROBLEM_KEYS: Record<DocumentProblem, string> = {
   fileType: 'verification.documents.fileType',
   tooLarge: 'verification.documents.tooLarge',
   count: 'verification.documents.rule',
+  total: 'verification.documents.total',
   certificate: 'verification.documents.needCertificate',
   person: 'verification.documents.needPerson',
 };

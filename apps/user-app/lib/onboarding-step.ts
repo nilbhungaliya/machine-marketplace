@@ -3,24 +3,11 @@ import * as yup from 'yup';
 import { ONBOARDING_STEPS, type BusinessActivity, type EmployeeRange, type OnboardingStep } from '@mpm/shared-types';
 import { toAsciiDigits } from './digits';
 
-// Onboarding (F1 spec §7, plan Task 15): which screen a step opens, the two forms' rules and request bodies, the
+// Onboarding (F1 spec §7, plan Task 15): the two forms' rules and request bodies, the location pin's binding, the
 // once-per-device GST intro, and the step to resume at on a cold start. Pure apart from AsyncStorage.
 
 /** Builds messages at render time, so they follow the current language (pass `t` from useTranslation). */
 export type Translate = (key: string, options?: Record<string, unknown>) => string;
-
-export type OnboardingScreen = 'YourBusiness' | 'WhereAreYou' | 'Main';
-
-const STEP_TARGET: Record<OnboardingStep, { screen: OnboardingScreen }> = {
-  profile: { screen: 'YourBusiness' },
-  location: { screen: 'WhereAreYou' },
-  done: { screen: 'Main' },
-};
-
-/** The root navigator's first screen for a step. */
-export function nextScreen(step: OnboardingStep): OnboardingScreen {
-  return STEP_TARGET[step].screen;
-}
 
 /** Both onboarding screens open either as a step of onboarding or from Profile to edit. */
 export type FormMode = 'onboarding' | 'edit';
@@ -142,6 +129,17 @@ export function toLocationBody(v: LocationFormValues, pin: { lat: number; lng: n
     addressLine: blank(v.addressLine) ? null : v.addressLine.trim(),
     ...(pin ? { lat: pin.lat, lng: pin.lng } : {}),
   };
+}
+
+/**
+ * What a new valid pincode does to the location pin. The pin belongs to the pincode it came with (`pinFor`: the saved
+ * pincode for a saved pin, the nearest office's for "Use my location"; `null` when it came with none, e.g. no office
+ * nearby). A valid pincode that isn't the pin's clears it (it would point somewhere else); an unbound pin binds to the
+ * first valid pincode; a half-typed pincode changes nothing, so fixing a typo keeps the pin.
+ */
+export function pinAfterPincode(pinFor: string | null, validPincode: string | null): 'keep' | 'bind' | 'clear' {
+  if (validPincode === null || validPincode === pinFor) return 'keep';
+  return pinFor === null ? 'bind' : 'clear';
 }
 
 // ─── GST intro: shown once per device and user (plan Task 15) ───

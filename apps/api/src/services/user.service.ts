@@ -1,13 +1,14 @@
 import { eq } from 'drizzle-orm';
 import type { Db } from '../db/index.js';
-import { businesses, users } from '../db/schema.js';
-import { ForbiddenError, NotFoundError } from '../lib/errors.js';
+import { users } from '../db/schema.js';
+import { ForbiddenError } from '../lib/errors.js';
 import { signUserToken } from '../plugins/auth.js';
 import { onboardingForUser } from './business/profile.service.js';
 
 /**
  * Signs in (creating the user on first login). New = no name yet, so the app shows onboarding; `onboarding` says
- * which step it resumes at (`'profile'` while the user has no business, ruling R1).
+ * which step it resumes at (`'profile'` while the user has no business, ruling R1). The business is created by the
+ * first `PATCH /businesses/me` (`updateMyProfile`); there is no other way to create one.
  * A suspended or blocked account (scope A2) is refused with `ACCOUNT_SUSPENDED`.
  */
 export async function signInWithPhone(db: Db, phone: string) {
@@ -22,27 +23,4 @@ export async function signInWithPhone(db: Db, phone: string) {
     isNewUser: !user.name,
     onboarding: await onboardingForUser(db, user),
   };
-}
-
-/** Onboarding: sets the person's name and creates their business on first call. */
-export async function completeProfile(db: Db, userId: string, input: { name: string; businessName: string }) {
-  return db.transaction(async (tx) => {
-    const [user] = await tx.select().from(users).where(eq(users.id, userId));
-    if (!user) throw new NotFoundError('User');
-
-    let businessId = user.businessId;
-    if (businessId) {
-      await tx.update(businesses).set({ tradeName: input.businessName, updatedAt: new Date() }).where(eq(businesses.id, businessId));
-    } else {
-      const [biz] = await tx.insert(businesses).values({ tradeName: input.businessName }).returning({ id: businesses.id });
-      businessId = biz.id;
-    }
-
-    const [updated] = await tx
-      .update(users)
-      .set({ name: input.name, businessId, updatedAt: new Date() })
-      .where(eq(users.id, userId))
-      .returning();
-    return { id: updated.id, name: updated.name, phone: updated.phone, businessId };
-  });
 }

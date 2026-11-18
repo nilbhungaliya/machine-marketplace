@@ -5,20 +5,23 @@ log whenever a session changes the project's state.
 
 ## What's built
 
-**Base setup + A4 machine catalogue (2026-11-18, merged into `develop`).** The admin-managed
-catalogue is built and seeded; no listing, search or deal feature (F2–F9) exists yet, and the other admin modules are
-still placeholders.
+**Base setup + A4 machine catalogue + F1 business profile + A2 business verification (2026-11-18, on `develop`).** The
+admin-managed catalogue is built and seeded; businesses complete a profile with a pincode location and an industrial area
+and verify their GST (instant through a provider, or officer review with documents); admins run the verification queue,
+users & businesses and industrial areas. No listing, search or deal feature (F2–F9) exists yet, and the other admin
+modules are still placeholders.
 
 | Area | State |
 |---|---|
 | Monorepo | pnpm 11 workspace: `apps/api`, `apps/admin`, `apps/user-app`, `packages/shared-types` |
 | API | Fastify 4 + Drizzle + Zod; `{ data }` / `{ error, code }` shapes; Redis rate limits; Sentry (opt-in); Socket.IO `/user` + `/admin`; job runner with graceful shutdown |
-| Auth | Admin email + password + JWT, 6 roles; user phone OTP (fixed dev code outside production, MSG91 not wired) + JWT; onboarding creates the business; suspended/blocked accounts refused (`ACCOUNT_SUSPENDED`) |
-| Database | `admin_users`, `businesses` (GST, address, industrial area, city, state, pincode, PostGIS `location`, verification status), `users` (status), `audit_log`; catalogue (migrations 0002, 0003): `categories` (machine category › machine type › part group, `has_sides` / `side_convention` inherited), `template_fields` (`applies_to` parts/machines/both) + `template_field_options`, `brands`, `machine_models` (unique per brand + type, case-insensitive), `units`, `conditions` |
+| Auth | Admin email + password + JWT, 6 roles; user phone OTP (outside production the code is returned in the send response as `devCode`; MSG91 not wired) + JWT; onboarding creates the business; suspended/blocked accounts refused (`ACCOUNT_SUSPENDED`) at sign-in, on the very next API request (status read from the row on every request) and on socket connect |
+| Database | `admin_users`, `businesses` (trade/legal name, activities, categories, email, year, employees, GST fields, address, `industrial_area_id` or `industrial_area_other` — exactly one, CHECK —, city, state, pincode, PostGIS `location`, `verification_levels`, verification status), `users` (status), `audit_log`; catalogue (migrations 0002, 0003): `categories` (machine category › machine type › part group, `has_sides` / `side_convention` inherited), `template_fields` (`applies_to` parts/machines/both) + `template_field_options`, `brands`, `machine_models` (unique per brand + type, case-insensitive), `units`, `conditions`; F1 + A2 (migrations 0004–0007): `pincode_offices` (India Post directory, 156 932 offices / 19 300 pincodes), `industrial_areas` (unique name + city + state, case-insensitive), `gst_checks` (every lookup: business or officer), `gst_representative_proofs` (declaration → code or documents; one open review per business), `business_verifications` (grants and revocations, one active per business + level) |
+| Business profile (F1) + verification (A2) | Spec `docs/superpowers/specs/2026-11-18-f1-a2-business-profile-verification-design.md`, plan `docs/superpowers/plans/2026-11-18-f1-a2-business-profile-verification.md`. **API:** `GET/PATCH /businesses/me`, `PUT /businesses/me/location` (pincode + listed area or "Other", optional pin); public `GET /locations/pincodes/:pincode`, `/locations/nearest-pincode`, `/locations/industrial-areas?pincode=`; GST under `/businesses/me/gst` (state, lookup, declare, `otp/send`, `otp/verify`, `review`, `review/files`, `documents/presign`), one switch `getGstMode()` (`stub` in dev, `live` with a provider adapter + key, `review` otherwise or with `GST_PROVIDER=off`); R2-only private storage (`lib/storage.ts`, `503 STORAGE_UNAVAILABLE` when unset, uploads sniffed for JPEG/PNG/WebP/PDF); admin `/admin/verification/*` (queue, waiting count, detail, approve / reject / ask for more, 300 s document links), `/admin/businesses` (list, detail, revoke / release GST), `/admin/users/:id/suspend\|reinstate\|block\|unblock`, `/admin/industrial-areas` (CRUD, reorder, "Other" list and adopt); every mutation audit-logged. **Admin pages:** Business verification, Users & businesses (list + detail), Industrial areas. **App:** onboarding Your business (activities, machine categories) → Where are you? (pincode, area picker with Other, optional map pin), gating until done; GST intro → GSTIN → found → declaration → code (instant), or the review form with document picker; GST status and a completed Profile. Seeds: `db:seed:locations` (pincode directory), `db:seed:industrial-areas` (14 Surat areas); both refuse to run on a filled table |
 | Catalogue (A4) | Spec `docs/superpowers/specs/2026-11-18-a4-machine-catalogue-design.md`, plan `docs/superpowers/plans/2026-11-18-a4-machine-catalogue.md`. Public API: `GET /categories`, `/categories/:id/template?kind=part\|machine`, `/brands`, `/models`, `/master-data`; admin APIs for nodes (create, edit, side settings, move with root locks and clash checks, reorder, delete), fields and options, brands and models, units and conditions, CSV export (`/admin/catalog/export/:sheet`); `validateSpecs` service for M5. Admin pages: Categories & machine types, Specifications & fields, Brands, models & fit, Units, conditions & sides. Seed (`pnpm --filter @mpm/api db:seed:catalog`, loaded into dev 2026-11-18): Fibre2Fashion Machinery's 465 product types cleaned into 10 categories, 248 machine types, 331 part groups; embroidery and water-jet looms in full (81 fields); 14 brands and 19 models marked "needs review"; 8 units, 4 conditions. **`--reset` deletes the whole catalogue including admin edits: use only before go-live.** |
 | Shared types | Listing kinds/statuses, conditions, Left/Right/Pair + `complementarySide()`, units, price models, rental periods, enquiry/offer/deal/rental/part-request/report statuses, notification types, admin roles |
-| Admin | Login, role-filtered sidebar, dashboard KPI tiles (A1), placeholder pages for every A1–A6 module; UI kit (dialogs, data table, filters, tabs, lightbox, URL state, keyboard nav, socket) |
-| User app | Welcome → phone OTP → name/business → 5 tabs (Home, Search, Post, Chats, Deals) + Profile (language, theme, logout); en/hi/gu with parity + audit tests; toasts, confirm sheet, skeletons |
+| Admin | Login, role-filtered sidebar, dashboard KPI tiles (A1), A4 catalogue pages, A2 pages (Business verification, Users & businesses, Industrial areas), placeholder pages for the other A1–A6 modules; UI kit (dialogs, data table, filters, tabs, lightbox, URL state, keyboard nav, socket) |
+| User app | Welcome → phone OTP → Your business (name, business, activities, categories) → Where are you? → 5 tabs (Home, Search, Post, Chats, Deals) + Profile (business details, location, GST verification, language, theme, logout); en/hi/gu with parity + audit tests; toasts, confirm sheet, skeletons. Native modules added for F1 (`expo-location`, `expo-document-picker`, `expo-image-picker`, `react-native-maps`): needs a new dev-client build. Still in the base theme, not yet re-skinned to Periwinkle v2 |
 | Docs | `docs/product-scope.md`: full feature spec, modules M1–M20 + AD1–AD7 with phases and competitor inspiration (incl. M11 buyer requirements / RFQ, as in textile's M9); `docs/research/`: three sourced competitor notes; `docs/product-scope.txt`: PDF extract with U/F/A IDs; `docs/Machine Parts Marketplace Product Scope (full).pdf`: 46-page client-ready scope in the textile scope PDF's style (12 diagrams), exported from the Claude Doc https://claude.ai/artifact/VwZKCLT5xEzAwB5CgfnwyG |
 | Design | **Approved: Periwinkle v2** (D2; v2 chosen 2026-11-18): `docs/mockups/user-app-mockup-periwinkle-v2.html` (from `src/build-periwinkle-v2.mjs`) is the UI brief. v1: `docs/mockups/user-app-mockup-periwinkle.html`, 56 phone + 4 admin screens in 11 flows, light/dark, generated by `docs/mockups/src/build-periwinkle.mjs` (content from `build.mjs`, plus No results, Report listing, Handed over, Compare replies and Machines for rent); theme page `theme-periwinkle.html`. Superseded: `docs/mockups/user-app-mockup.html` (51 phone + 4 admin screens, light/dark, generated by `docs/mockups/src/build.mjs`); not yet reviewed by the client. Direction B: `docs/mockups/user-app-mockup-b.html` (same screens, paper / machine green / signal orange, L \| R side token, generated by `docs/mockups/src/build-b.mjs`) for decision D2 |
 | Infra | Local Docker compose (Postgres 18 + PostGIS on :5434, Redis on :6381), `infra/deploy` production kit (API + Redis + Caddy), API Dockerfile |
@@ -28,7 +31,41 @@ still placeholders.
 1. Docker Desktop running → `pnpm infra:up`
 2. `.env` at the repo root (copied from `.env.example`; dev secrets only)
 3. `pnpm --filter @mpm/api db:migrate && pnpm --filter @mpm/api db:migrate:test && pnpm --filter @mpm/api db:seed`
-4. `pnpm dev:api` (:3000, Swagger `/docs`), `pnpm dev:admin` (:3001), `pnpm start:user` (Metro :8082, needs a dev-client build: `pnpm android`)
+4. Seed data (each fills an empty table once and refuses after): `pnpm --filter @mpm/api db:seed:catalog`,
+   `pnpm --filter @mpm/api db:seed:locations` (pincode directory from `infra/seed/pincode-directory.csv.gz`; `--reset`
+   replaces it), `pnpm --filter @mpm/api db:seed:industrial-areas` (then edit areas in the admin panel)
+5. `pnpm dev:api` (:3000, Swagger `/docs`), `pnpm dev:admin` (:3001), `pnpm start:user` (Metro :8082, needs a dev-client build: `pnpm android`).
+   F1 added native modules (location, document and image pickers, maps), so **rebuild the dev client** (`pnpm android`)
+   before running the app; the map pin needs `EXPO_PUBLIC_GOOGLE_MAPS_ANDROID_KEY` (`apps/user-app/.env.example`).
+6. GST in dev: the stub answers any valid GSTIN (code `123456`; `24AAACC0000C1ZY` cancelled, `24AAACN0000N1Z0` not
+   found, `24AAACU0000U1ZF` provider down). Start the API with `GST_PROVIDER=off` to try the review path. Review
+   uploads need the R2 variables (see Open items); without them they answer `503 STORAGE_UNAVAILABLE`.
+
+## Open items
+
+- **R2 keys not set**: `AWS_S3_ENDPOINT`, `AWS_REGION` (`auto`), `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`,
+  `AWS_S3_PRIVATE_BUCKET`. Bucket private; token scoped to it with Object Read & Write; lifecycle rule "delete objects
+  with prefix `incoming-verification/` after 1 day"; no CORS needed (the app uploads with a native PUT, officers open
+  presigned links, the admin never uploads from a browser). The storage round-trip tests (3) are skipped until then.
+- The user app's theme is still the base theme: re-skin to Periwinkle v2.
+- Document upload and the map pin are untested on a real device.
+- **Live GST adapter** (when a provider is chosen): give its calls a short timeout and return `unavailable` instead of
+  throwing. Provider calls run inside the transaction that holds the business row lock (instant confirm, officer
+  approval), so a slow provider holds that lock.
+- **Socket.IO suspension disconnect** reaches only sockets on the same API process: add the Socket.IO Redis adapter
+  before running more than one API instance.
+- **Orphan `verification/` copies**: if the process crashes between staging the documents and the transaction, the
+  copies stay in R2 with no proof row (the `incoming-verification/` lifecycle rule doesn't cover them). A periodic sweep
+  of `verification/` keys with no proof would clean them.
+- **DPDP note**: admin search strings (phone, GSTIN) end up in request logs, and the `gst.release` audit row's `before`
+  keeps PAN and address. Decide retention / masking with the DPDP work.
+- `GST_OTHER_GSTIN_HELD` (`grantGst`) is unreachable today (the instant path refuses earlier); kept defensively.
+- Document submit checks the key shape (`400 DOCUMENT_KEY_INVALID`) before storage (`503`): documented in
+  `stageDocuments`, intended.
+- A location saved without a pin stores no point: nearby search (F4) should fall back to the pincode's
+  `pincode_offices.point`.
+- Admin `fetchCategoryNames` and the app's onboarding category chips download the whole `/categories` tree: add a
+  roots-only read with F4.
 
 ## Open decisions (ask the client)
 
@@ -44,7 +81,7 @@ The ten client decisions D1–D10 are listed at the end of `docs/product-scope.m
 ## Suggested build order
 
 1. ~~**A4 machine configuration**~~ — built 2026-11-18 (see What's built). Client still reviews the seed (CSV export).
-2. **F1 business profile + A2 verification** — location/industrial area, GST submission, admin approve/reject.
+2. ~~**F1 business profile + A2 verification**~~ — built 2026-11-18 (see What's built). R2 keys and a GST provider still to set.
 3. **F2 + F3 listings** — sell flow with specs, side, media upload (R2), preview, publish; A3 moderation.
 4. **F4 + F5 discovery** — search, filters, side filter, complementary parts, nearby (PostGIS).
 5. **F6 + F7 enquiries, chat, offers, deals**, then rentals.
@@ -95,3 +132,24 @@ The ten client decisions D1–D10 are listed at the end of `docs/product-scope.m
   typecheck, lint, tests (app 106, admin 199, API 212), live API checks and CSV exports. Committed as one commit and
   merged into `develop` (not pushed). Owner rule from now on: all feature work directly on `develop`, no feature branches.
   Open for the client: seed review via the CSV exports, embroidery split decision before launch (spec §15).
+- 2026-11-18 — F1 + A2 (business profile, GST verification, admin verification / users & businesses / industrial
+  areas), plan `2026-11-18-f1-a2-business-profile-verification.md`, built on `develop`. Tasks 1–16 committed and pushed
+  (last `9b3fa0b`); Batches 7–8 (app screens, end-to-end check and docs) ran on this machine
+  (`C:\Users\Dell\Desktop\machine marketplace`), where the earlier batches' build log and the textile repo weren't
+  available. Verified: typecheck, lint, tests (app 155, admin 227, API 458 + 3 skipped: R2 round-trips). Dev DB:
+  `db:seed:locations` (156 932 offices, 19 300 pincodes) and `db:seed:industrial-areas` (14) loaded; second runs refuse.
+  Live API walk-through (stub instant path → verified; `GST_PROVIDER=off` review submit → 503 without R2; SQL-inserted
+  review approved by the admin API → verified; suspension → next request 403) and admin pages in Chrome (queue → detail →
+  approve, suspend, add area, adopt an "Other" area); the walk-through's data was deleted afterwards.
+- 2026-11-18 — F1 + A2 final review fix wave (two whole-feature reviewers, `git diff a50fb0a HEAD`), on `develop`.
+  API: no needs-more dead end (1–5 new files, ≤ 10 per review, limits in shared-types; reject also closes a
+  `needs_more` review; spec §5.3 amendment); `PATCH /users/me` and `completeProfile` removed (the first
+  `PATCH /businesses/me` is the only way to create a business; test helper migrated); user row lock `FOR NO KEY UPDATE`;
+  per-user presign limit (30 / 10 min); one officer-reason helper (`lib/admin-text.ts`, limits in shared-types);
+  `GET /admin/verification/reviews/count` for the nav badge; stub `sent` record capped. App: constitution keys
+  translated on the GST card; GST screens replace one another so Back lands on Profile / Main; Sentry redacts GST /
+  profile keys and strips URL query strings; error state with Retry on GST status, found and code; location pin follows
+  its pincode and can be removed (edit keeps it); profile form initialised once; dead code removed. Admin: danger submit
+  on Suspend / Block / Revoke / Release / Reject; shared `Panel`; nav badge from the count endpoint, refetched on focus,
+  every minute and after a decision (not on every page change); Reject offered on a `needs_more` review; "Needs more"
+  amber in admin, as the app's orange chip. Verified: typecheck and lint clean; tests app 162, admin 233, API 466 + 3 skipped (R2 round-trips); `mpm_test` left empty; `CI=1 npx expo export --platform android` bundles.

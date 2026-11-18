@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import type { AdminGstReviewDetail, GstApprovalEdits } from '@mpm/shared-types';
 import StatusBadge from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
+import { Panel } from '@/components/ui/panel';
 import { StaleWarning } from '@/components/ui/stale-warning';
 import { ErrorState, Skeleton } from '@/components/ui/states';
 import { ApiError } from '@/lib/api';
@@ -15,7 +16,7 @@ import { classifyLoadError } from '@/lib/load-error';
 import { refreshNavBadges } from '@/lib/nav-badges';
 import { cn, formatDate, formatDateTime, formatPhone } from '@/lib/utils';
 import {
-  GST_PORTAL_SEARCH_URL, PROOF_STATUS_LABELS, approveReview, askForMore, constitutionLabel,
+  GST_PORTAL_SEARCH_URL, LOOKUP_AT_APPROVAL_LABELS, PROOF_STATUS_LABELS, approveReview, askForMore, constitutionLabel,
   explainVerificationError, fetchReview, rejectReview,
 } from '@/lib/verification-api';
 import { ApproveDialog } from './approve-dialog';
@@ -29,23 +30,6 @@ const LOAD_MESSAGES = {
   failed: 'Check your connection and try again.',
 };
 
-const LOOKUP_AT_APPROVAL: Record<string, string> = {
-  active: 'Approved on a fresh lookup that showed the GSTIN active.',
-  unavailable: "The provider couldn't be reached at approval: the officer's details were saved.",
-  none: "No GST provider: the officer's details were saved.",
-};
-
-function Panel({ title, action, children }: { title: string; action?: ReactNode; children: ReactNode }) {
-  return (
-    <section aria-label={title} className="rounded-[10px] border border-gray-200 bg-white p-4">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-sm font-bold text-gray-900">{title}</h3>
-        {action}
-      </div>
-      {children}
-    </section>
-  );
-}
 
 /** One row of the comparison: the field, the business's side, the GST side; tinted when the API flags a mismatch. */
 function CompareRow({ field, business, gst, mismatch = false }: { field: string; business: ReactNode; gst: ReactNode; mismatch?: boolean }) {
@@ -73,7 +57,9 @@ const joined = (parts: Array<string | null | undefined>) => parts.filter(Boolean
 /**
  * One GST review (F1 + A2 spec §8.1): what the business has on its profile beside the attached lookup (or what it
  * typed, with no lookup), mismatches highlighted; the documents; the GST portal search; history; and, while the
- * review waits, Approve / Reject / Ask for more. A second decision on the same review gets 409 STALE_REVIEW.
+ * review waits, Approve / Reject / Ask for more. A review sent back for more files (`needs_more`) can still be
+ * rejected, so one the business never answers can be closed (spec §5.3 amendment). A second decision on the same
+ * review gets 409 STALE_REVIEW.
  */
 export function ReviewDetail({ id, onChanged }: { id: string; onChanged: () => void }) {
   const [review, setReview] = useState<AdminGstReviewDetail | null>(null);
@@ -171,11 +157,11 @@ export function ReviewDetail({ id, onChanged }: { id: string; onChanged: () => v
               Open business
             </Link>
           </div>
-          {waiting && (
+          {(waiting || r.status === 'needs_more') && (
             <div className="flex flex-wrap gap-2">
-              <Button variant="secondary" onClick={() => setDialog('ask_for_more')}>Ask for more</Button>
+              {waiting && <Button variant="secondary" onClick={() => setDialog('ask_for_more')}>Ask for more</Button>}
               <Button variant="danger" onClick={() => setDialog('reject')}>Reject</Button>
-              <Button onClick={() => setDialog('approve')}>Approve</Button>
+              {waiting && <Button onClick={() => setDialog('approve')}>Approve</Button>}
             </div>
           )}
         </div>
@@ -189,7 +175,7 @@ export function ReviewDetail({ id, onChanged }: { id: string; onChanged: () => v
           </p>
         )}
         {r.status === 'needs_more' && (
-          <p className="mt-3 rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-900">
+          <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
             Waiting for the business to add files. You asked: {r.officerMessage}
           </p>
         )}
@@ -201,7 +187,7 @@ export function ReviewDetail({ id, onChanged }: { id: string; onChanged: () => v
         {r.status === 'approved' && (
           <div className="mt-3 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-900">
             Approved{r.decidedAt ? ` on ${formatDate(r.decidedAt)}` : ''}.
-            {r.lookupAtApproval && ` ${LOOKUP_AT_APPROVAL[r.lookupAtApproval]}`}
+            {r.lookupAtApproval && ` ${LOOKUP_AT_APPROVAL_LABELS[r.lookupAtApproval]}.`}
             {r.approvedDetails && (
               <span className="block">
                 Saved as {r.approvedDetails.legalName}
@@ -213,6 +199,7 @@ export function ReviewDetail({ id, onChanged }: { id: string; onChanged: () => v
       </div>
 
       <Panel
+        as="h3"
         title="Details"
         action={
           <span className="flex flex-wrap items-center gap-2">
@@ -278,11 +265,11 @@ export function ReviewDetail({ id, onChanged }: { id: string; onChanged: () => v
         </div>
       </Panel>
 
-      <Panel title="Documents">
+      <Panel as="h3" title="Documents">
         <DocumentViewer proofId={r.id} documents={r.documents} storageAvailable={r.storageAvailable} />
       </Panel>
 
-      <Panel title="History">
+      <Panel as="h3" title="History">
         <GstHistory history={r.history} />
       </Panel>
 

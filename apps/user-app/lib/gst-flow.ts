@@ -1,4 +1,15 @@
-import type { BusinessProfile, GstDocumentType, GstState, GstStateView } from '@mpm/shared-types';
+import {
+  CONSTITUTIONS,
+  GST_REVIEW_ADD_FILES_MAX,
+  GST_REVIEW_ADD_FILES_MIN,
+  GST_REVIEW_FILES_MAX,
+  GST_REVIEW_FILES_MIN,
+  GST_REVIEW_FILES_TOTAL_MAX,
+  type BusinessProfile,
+  type GstDocumentType,
+  type GstState,
+  type GstStateView,
+} from '@mpm/shared-types';
 import { isValidGstin, normalizeGstin } from './gstin';
 
 // GST verification in the app (F1 spec §5, §7; plan Task 16): which screen a `GstStateView` opens, the Profile rows and
@@ -135,8 +146,9 @@ export function completionSegments(c: BusinessProfile['completion']): { key: Com
 // ─── Review documents (spec §5.3, §6) ───
 
 export const DOCUMENT_MAX_BYTES = 10_485_760;
-export const DOCUMENTS_MIN = 2;
-export const DOCUMENTS_MAX = 5;
+/** A submission's files (shared-types, the API's numbers). */
+export const DOCUMENTS_MIN = GST_REVIEW_FILES_MIN;
+export const DOCUMENTS_MAX = GST_REVIEW_FILES_MAX;
 export const DOCUMENT_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'] as const;
 
 export interface PickedDocumentInfo {
@@ -146,7 +158,8 @@ export interface PickedDocumentInfo {
   mimeType: string;
 }
 
-export type DocumentProblem = 'untyped' | 'fileType' | 'tooLarge' | 'count' | 'certificate' | 'person';
+/** `total`: adding these would take the review past GST_REVIEW_FILES_TOTAL_MAX files. */
+export type DocumentProblem = 'untyped' | 'fileType' | 'tooLarge' | 'count' | 'total' | 'certificate' | 'person';
 
 /**
  * Why these files can't be sent yet, or `null`. `existing`: the types already on the review (adding files after the
@@ -163,16 +176,33 @@ export function documentProblem(files: PickedDocumentInfo[], existing: GstDocume
   return null;
 }
 
+/** How many files can still be added to a review holding `existing` (the state view's `documentCount`). */
+export function addFilesRoom(existing: number | undefined): number {
+  return Math.max(0, Math.min(GST_REVIEW_ADD_FILES_MAX, GST_REVIEW_FILES_TOTAL_MAX - (existing ?? 0)));
+}
+
 /**
- * Files added to a review the officer sent back. The review already has at least 2 of its 5 files, so 1–3 new ones;
- * the API checks the whole set (`DOCUMENTS_REQUIRED`), since the state view doesn't list the files it has.
+ * Files added to a review the officer sent back (spec §5.3 amendment, the API's rule): 1–5 new files (`count`), at
+ * most GST_REVIEW_FILES_TOTAL_MAX on the review in all (`total`; `existing` is the state view's `documentCount`). The
+ * certificate / ID rule over the whole set is checked by the API (`DOCUMENTS_REQUIRED`): the view gives the count, not
+ * the types.
  */
-export function newFilesProblem(files: PickedDocumentInfo[]): DocumentProblem | null {
+export function newFilesProblem(files: PickedDocumentInfo[], existing = 0): DocumentProblem | null {
   if (files.some((f) => f.type === null)) return 'untyped';
   if (files.some((f) => !(DOCUMENT_MIME_TYPES as readonly string[]).includes(f.mimeType))) return 'fileType';
   if (files.some((f) => f.size > DOCUMENT_MAX_BYTES)) return 'tooLarge';
-  if (files.length === 0 || files.length > DOCUMENTS_MAX - DOCUMENTS_MIN) return 'count';
+  if (files.length < GST_REVIEW_ADD_FILES_MIN || files.length > GST_REVIEW_ADD_FILES_MAX) return 'count';
+  if (existing + files.length > GST_REVIEW_FILES_TOTAL_MAX) return 'total';
   return null;
+}
+
+/**
+ * The translation key for a constitution. Officer-approved details carry a shared-types key (`private_limited`…),
+ * a provider's lookup sends its own text: a key → `verification.constitution.<key>`, anything else → null (show the
+ * text as it came).
+ */
+export function constitutionKey(value: string): string | null {
+  return (CONSTITUTIONS as readonly string[]).includes(value) ? `verification.constitution.${value}` : null;
 }
 
 /** API error codes of the GST routes → translated copy (`verification.errors.*`). */

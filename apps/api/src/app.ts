@@ -10,7 +10,6 @@ import authPlugin from './plugins/auth.js';
 import healthRoutes from './routes/health.js';
 import adminAuthRoutes from './routes/admin/auth.js';
 import authOtpRoutes from './routes/auth-otp.js';
-import usersRoutes from './routes/users.js';
 import businessRoutes from './routes/businesses.js';
 import gstRoutes from './routes/gst.js';
 import catalogRoutes from './routes/catalog.js';
@@ -70,7 +69,6 @@ export async function buildApp({ infra = true, logger = true }: BuildAppOptions 
     await app.register(redisPlugin);
     await app.register(rateLimitPlugin);
     await app.register(authOtpRoutes);
-    await app.register(usersRoutes);
     await app.register(businessRoutes);
     await app.register(gstRoutes);
     await app.register(catalogRoutes);

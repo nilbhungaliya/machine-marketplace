@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, type ReactNode } from 'react';
+import { ADMIN_REASON_MAX, ADMIN_REASON_MIN } from '@mpm/shared-types';
 import { FormDialog } from '@/components/ui/form-dialog';
 
 /**
@@ -9,7 +10,8 @@ import { FormDialog } from '@/components/ui/form-dialog';
  * dialog should close. Mount it only while open, so each opening starts empty. (As textile's ReasonDialog.)
  */
 export function ReasonDialog({
-  title, description, label = 'Reason', hint, minLength = 3, maxLength = 500, submitLabel, onClose, onSubmit, children,
+  title, description, label = 'Reason', hint, minLength = ADMIN_REASON_MIN, maxLength = ADMIN_REASON_MAX, submitLabel, submitVariant,
+  onClose, onSubmit, children,
 }: {
   title: string;
   description?: ReactNode;
@@ -18,6 +20,8 @@ export function ReasonDialog({
   minLength?: number;
   maxLength?: number;
   submitLabel: string;
+  /** `danger` when the action is destructive. */
+  submitVariant?: 'primary' | 'danger';
   onClose: () => void;
   onSubmit: (text: string) => Promise<boolean>;
   /** Above the field, e.g. what happens next. */
@@ -35,6 +39,7 @@ export function ReasonDialog({
       description={description}
       dirty={text !== ''}
       submitLabel={submitLabel}
+      submitVariant={submitVariant}
       submitDisabled={length < minLength || tooLong}
       onSubmit={async () => {
         if (await onSubmit(text.trim())) onClose();

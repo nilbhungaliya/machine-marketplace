@@ -1,22 +1,28 @@
 import { randomUUID } from 'node:crypto';
 import { and, asc, desc, eq, inArray, sql, type SQL } from 'drizzle-orm';
 import type { PgUpdateSetSource } from 'drizzle-orm/pg-core';
-import type {
-  AdminDocumentUrl,
-  AdminGstReviewDetail,
-  AdminGstReviewRow,
-  GstApprovalEdits,
-  GstDetails,
-  GstDocumentType,
-  GstEnteredDetails,
-  GstReviewQueue,
-  GstStateView,
+import {
+  GST_REVIEW_ADD_FILES_MAX,
+  GST_REVIEW_ADD_FILES_MIN,
+  GST_REVIEW_FILES_MAX,
+  GST_REVIEW_FILES_MIN,
+  GST_REVIEW_FILES_TOTAL_MAX,
+  type AdminDocumentUrl,
+  type AdminGstReviewDetail,
+  type AdminGstReviewRow,
+  type GstApprovalEdits,
+  type GstDetails,
+  type GstDocumentType,
+  type GstEnteredDetails,
+  type GstReviewQueue,
+  type GstStateView,
 } from '@mpm/shared-types';
 import type { Db, Tx } from '../../db/index.js';
 import { businesses, gstChecks, gstRepresentativeProofs, users } from '../../db/schema.js';
 import { AppError, ConflictError, NotFoundError, ValidationError } from '../../lib/errors.js';
 import { isUniqueViolation } from '../../lib/pg-errors.js';
 import { PRIVATE_GET_TTL_SECONDS, isStorageConfigured, requireStorage } from '../../lib/storage.js';
+import { adminText } from '../../lib/admin-text.js';
 import { writeAudit } from '../audit.service.js';
 import { deleteKeys, documentFormat, presignDocumentRead, stageDocuments } from './gst-documents.service.js';
 import { grantGst, gstinTaken, holderOf, lockBusinessRow, lockGstin } from './gst-grant.service.js';
@@ -24,7 +30,7 @@ import { gstHistory } from './gst-history.service.js';
 import { DECLARATION_VERSION, type GstActor } from './gst-instant.service.js';
 import { getGstMode } from './gst-mode.js';
 import { getGstProvider, type GstLookup } from './gst-provider.js';
-import { activeGstVerification, getGstState, openReview } from './gst-state.service.js';
+import { OPEN_REVIEW_STATUSES, activeGstVerification, getGstState, openReview } from './gst-state.service.js';
 import { parseGstin } from './gstin.js';
 
 /**
@@ -37,17 +43,15 @@ import { parseGstin } from './gstin.js';
  * transaction as each step (§5.4a).
  *
  * Lock order, everywhere: the business row first (`lockBusinessRow`, the lock `verifyGstCode` and `grantGst` take),
- * then the proof row, then (approval only) the GSTIN's advisory lock. Officer decisions claim the review with
- * `UPDATE … WHERE status = 'waiting' RETURNING` after the business lock, so a double-click or a second officer gets
- * `409 STALE_REVIEW` and writes nothing.
+ * then the proof row, then (approval only) the GSTIN's advisory lock. Every officer decision takes the business row
+ * lock first and holds it until commit, so two decisions on one review run one after the other; the second then
+ * claims the review (`claimReview`: `UPDATE … WHERE status IN (…) RETURNING`) against the first one's committed
+ * status and gets `409 STALE_REVIEW`, writing nothing. Reject and ask-for-more write their new status in the claim
+ * itself. Approve's claim only checks `waiting` and locks the proof row: its status becomes `approved` later, in
+ * `grantGst`, because a refused approval (`GST_NOT_ACTIVE`) commits its lookup row and must leave the review
+ * `waiting`. For approve, the business lock is what makes a second decision see `approved`.
  */
 
-/** §5.3 / §6: 2–5 files per review. */
-export const DOCUMENTS_MIN = 2;
-export const DOCUMENTS_MAX = 5;
-/** Officer reasons and messages. */
-export const DECISION_TEXT_MIN = 3;
-export const DECISION_TEXT_MAX = 500;
 /** The Decided tab's window (§8.1). */
 export const DECIDED_WINDOW_DAYS = 90;
 const LIST_LIMIT = 200;
@@ -91,31 +95,42 @@ function checkNotUsable(): ConflictError {
   return new ConflictError("This lookup can't be used for a review", 'GST_CHECK_NOT_USABLE');
 }
 
-/**
- * The file rule (§5.3): 2–5 files, at least one GST registration certificate and at least one ID of a named person or
- * authorisation letter. Otherwise `400 DOCUMENTS_REQUIRED`.
- */
-function checkDocuments(files: Array<{ type: GstDocumentType }>): void {
+/** At least one GST registration certificate and at least one ID of a named person or authorisation letter. */
+function coversBoth(files: Array<{ type: GstDocumentType }>): boolean {
   const certificate = files.some((f) => f.type === 'gst_certificate');
   const person = files.some((f) => f.type === 'id_proof' || f.type === 'authorisation_letter');
-  if (files.length < DOCUMENTS_MIN || files.length > DOCUMENTS_MAX || !certificate || !person) throw documentsRequired();
+  return certificate && person;
 }
 
-function documentsRequired(): ValidationError {
-  return new ValidationError(
-    'Add 2 to 5 files: the GST registration certificate, and an ID of a person named on it or an authorisation letter',
-    { min: DOCUMENTS_MIN, max: DOCUMENTS_MAX },
-    'DOCUMENTS_REQUIRED',
-  );
-}
-
-/** Reasons and messages: 3–500 characters after trimming. */
-function decisionText(text: string, field: 'reason' | 'message'): string {
-  const trimmed = text.trim();
-  if (trimmed.length < DECISION_TEXT_MIN || trimmed.length > DECISION_TEXT_MAX) {
-    throw new ValidationError(`A ${field} of ${DECISION_TEXT_MIN} to ${DECISION_TEXT_MAX} characters is required`, { field });
+/** A submission (§5.3): 2–5 files covering the certificate and the ID / letter. Otherwise `400 DOCUMENTS_REQUIRED`. */
+function checkDocuments(files: Array<{ type: GstDocumentType }>): void {
+  if (files.length < GST_REVIEW_FILES_MIN || files.length > GST_REVIEW_FILES_MAX || !coversBoth(files)) {
+    throw new ValidationError(
+      'Add 2 to 5 files: the GST registration certificate, and an ID of a person named on it or an authorisation letter',
+      { min: GST_REVIEW_FILES_MIN, max: GST_REVIEW_FILES_MAX },
+      'DOCUMENTS_REQUIRED',
+    );
   }
-  return trimmed;
+}
+
+/**
+ * Files added after ask-for-more (§5.3, amended 2026-11-18): 1–5 **new** files; the review's files and the new ones
+ * together cover the certificate and the ID / letter and number at most 10. Otherwise `400 DOCUMENTS_REQUIRED`.
+ */
+function checkAddedDocuments(existing: Array<{ type: GstDocumentType }>, added: Array<{ type: GstDocumentType }>): void {
+  const all = [...existing, ...added];
+  if (
+    added.length < GST_REVIEW_ADD_FILES_MIN ||
+    added.length > GST_REVIEW_ADD_FILES_MAX ||
+    all.length > GST_REVIEW_FILES_TOTAL_MAX ||
+    !coversBoth(all)
+  ) {
+    throw new ValidationError(
+      `Add 1 to 5 files, up to ${GST_REVIEW_FILES_TOTAL_MAX} on the review in all. Together they need the GST registration certificate and an ID of a person named on it or an authorisation letter`,
+      { min: GST_REVIEW_ADD_FILES_MIN, max: GST_REVIEW_ADD_FILES_MAX, totalMax: GST_REVIEW_FILES_TOTAL_MAX, existing: existing.length },
+      'DOCUMENTS_REQUIRED',
+    );
+  }
 }
 
 const blankToNull = (s: string | null | undefined): string | null => (s && s.trim() !== '' ? s.trim() : null);
@@ -226,8 +241,9 @@ export async function submitReview(db: Db, actor: GstActor, body: SubmitReviewIn
 
 /**
  * POST /businesses/me/gst/review/files (§5.3 "the business … adds files (same limits), which sends it back to
- * `waiting`"). Only on this business's review in `needs_more` (`404` / `409 GST_REVIEW_STATE`); at least one new file
- * and the review's files together must meet the file rule (≤ 5, `400 DOCUMENTS_REQUIRED`). The files are uploaded
+ * `waiting`"). Only on this business's review in `needs_more` (`404` / `409 GST_REVIEW_STATE`); 1–5 new files, the
+ * whole set ≤ 10 and covering the certificate and the ID / letter (`checkAddedDocuments`, `400 DOCUMENTS_REQUIRED`;
+ * the 2–5 rule is a submission's only, so a review sent back with 5 files can still be answered). The files are uploaded
  * with the proof's id as the upload id. Same order as `submitReview`: stage, then (business row, then proof row
  * locked) append the copied keys, set `waiting` and the summary `pending` (note cleared); delete the incoming files
  * after the commit, the copies on failure.
@@ -243,8 +259,7 @@ export async function addReviewFiles(
   const [current] = await db.select().from(gstRepresentativeProofs).where(own);
   if (!current) throw new NotFoundError('GST review');
   if (current.status !== 'needs_more') throw reviewState();
-  if (input.files.length === 0) throw documentsRequired();
-  checkDocuments([...current.documents, ...input.files]);
+  checkAddedDocuments(current.documents, input.files);
 
   const { stage, remove } = staging(opts);
   const staged = await stage({ businessId: actor.businessId, uploadId: proofId, proofId, files: input.files });
@@ -255,8 +270,8 @@ export async function addReviewFiles(
       const [proof] = await tx.select().from(gstRepresentativeProofs).where(own).for('update');
       if (!proof) throw new NotFoundError('GST review');
       if (proof.status !== 'needs_more') throw reviewState();
+      checkAddedDocuments(proof.documents, staged.copied);
       const documents = [...proof.documents, ...staged.copied];
-      checkDocuments(documents);
       await tx
         .update(gstRepresentativeProofs)
         .set({ documents, status: 'waiting', updatedAt: sql`now()` })
@@ -293,15 +308,31 @@ async function lockReviewBusiness(tx: Tx, id: string) {
   return lockBusinessRow(tx, row.businessId);
 }
 
-/** The STALE_REVIEW guard: claims the review only while it is `waiting`, writing `set`; otherwise `409 STALE_REVIEW`. */
-async function claimWaiting(tx: Tx, id: string, set: PgUpdateSetSource<typeof gstRepresentativeProofs>) {
+type OpenReviewStatus = (typeof OPEN_REVIEW_STATUSES)[number];
+
+/**
+ * The STALE_REVIEW guard: claims the review only while its status is one of `from`, writing `set`; otherwise `409
+ * STALE_REVIEW` (nothing written). Callers hold the business row lock (see the header). Returns the updated row and
+ * `claimedFrom`, the status it had before.
+ */
+async function claimReview(
+  tx: Tx,
+  id: string,
+  from: readonly OpenReviewStatus[],
+  set: PgUpdateSetSource<typeof gstRepresentativeProofs>,
+) {
+  const [before] = await tx
+    .select({ status: gstRepresentativeProofs.status })
+    .from(gstRepresentativeProofs)
+    .where(eq(gstRepresentativeProofs.id, id))
+    .for('update');
   const [row] = await tx
     .update(gstRepresentativeProofs)
     .set({ ...set, updatedAt: sql`now()` })
-    .where(and(eq(gstRepresentativeProofs.id, id), eq(gstRepresentativeProofs.status, 'waiting')))
+    .where(and(eq(gstRepresentativeProofs.id, id), inArray(gstRepresentativeProofs.status, [...from])))
     .returning();
-  if (!row) throw staleReview();
-  return row;
+  if (!row || !before) throw staleReview();
+  return { ...row, claimedFrom: before.status as OpenReviewStatus };
 }
 
 type ProofRow = typeof gstRepresentativeProofs.$inferSelect;
@@ -373,7 +404,8 @@ export type ApproveOutcome = { kind: 'approved'; review: ReviewDecision } | { ki
  */
 export async function approveReview(tx: Tx, adminId: string, id: string, edits: GstApprovalEdits = {}): Promise<ApproveOutcome> {
   const business = await lockReviewBusiness(tx, id);
-  const proof = await claimWaiting(tx, id, {});
+  // Checks `waiting` and locks the proof row; `grantGst` writes `approved` (see the header).
+  const proof = await claimReview(tx, id, ['waiting'], {});
   if ((await activeGstVerification(tx, business.id)) !== null) throw alreadyVerified();
   await lockGstin(tx, proof.gstin);
   if ((await holderOf(tx, proof.gstin, business.id)) !== null) throw gstinTaken();
@@ -434,11 +466,19 @@ export async function approveReview(tx: Tx, adminId: string, id: string, edits: 
   return { kind: 'approved', review: { id: proof.id, businessId: business.id, status: 'approved' } };
 }
 
-/** POST …/reject: `waiting` → `rejected` with the reason (3–500); the summary `rejected`, note = the reason (§5.4a). */
+/**
+ * POST …/reject: `waiting` or `needs_more` → `rejected` with the reason (3–500); the summary `rejected`, note = the
+ * reason (§5.4a). Rejecting a review sent back for more files closes one the business never answers (§5.3 amendment).
+ */
 export async function rejectReview(tx: Tx, adminId: string, id: string, reason: string): Promise<ReviewDecision> {
-  const why = decisionText(reason, 'reason');
+  const why = adminText(reason, 'reason');
   const business = await lockReviewBusiness(tx, id);
-  const proof = await claimWaiting(tx, id, { status: 'rejected', reason: why, officerId: adminId, decidedAt: sql`now()` });
+  const proof = await claimReview(tx, id, ['waiting', 'needs_more'], {
+    status: 'rejected',
+    reason: why,
+    officerId: adminId,
+    decidedAt: sql`now()`,
+  });
   await tx
     .update(businesses)
     .set({ verificationStatus: 'rejected', verificationNote: why, updatedAt: sql`now()` })
@@ -448,7 +488,7 @@ export async function rejectReview(tx: Tx, adminId: string, id: string, reason: 
     action: 'gst_review.reject',
     entityType: 'gst_review',
     entityId: proof.id,
-    before: { status: 'waiting', businessId: business.id, verificationStatus: business.verificationStatus },
+    before: { status: proof.claimedFrom, businessId: business.id, verificationStatus: business.verificationStatus },
     after: { status: 'rejected', reason: why, verificationStatus: 'rejected' },
   });
   return { id: proof.id, businessId: business.id, status: 'rejected' };
@@ -456,9 +496,9 @@ export async function rejectReview(tx: Tx, adminId: string, id: string, reason: 
 
 /** POST …/ask-for-more: `waiting` → `needs_more` with the message (3–500); the summary `pending`, note = the message. */
 export async function askForMore(tx: Tx, adminId: string, id: string, message: string): Promise<ReviewDecision> {
-  const text = decisionText(message, 'message');
+  const text = adminText(message, 'message');
   const business = await lockReviewBusiness(tx, id);
-  const proof = await claimWaiting(tx, id, { status: 'needs_more', officerMessage: text });
+  const proof = await claimReview(tx, id, ['waiting'], { status: 'needs_more', officerMessage: text });
   await tx
     .update(businesses)
     .set({ verificationStatus: 'pending', verificationNote: text, updatedAt: sql`now()` })
@@ -542,6 +582,15 @@ export async function listReviews(conn: Db | Tx, queue: GstReviewQueue): Promise
     updatedAt: r.updatedAt.toISOString(),
     decidedAt: r.decidedAt?.toISOString() ?? null,
   }));
+}
+
+/** How many reviews are in `status` (the admin nav badge counts `waiting`), without the list's 200-row cap. */
+export async function countReviews(conn: Db | Tx, status: OpenReviewStatus): Promise<number> {
+  const [row] = await conn
+    .select({ count: sql<number>`count(*)::int` })
+    .from(gstRepresentativeProofs)
+    .where(and(eq(gstRepresentativeProofs.method, 'documents'), eq(gstRepresentativeProofs.status, status)));
+  return Number(row?.count ?? 0);
 }
 
 /** Case, spaces and punctuation don't make a mismatch. */

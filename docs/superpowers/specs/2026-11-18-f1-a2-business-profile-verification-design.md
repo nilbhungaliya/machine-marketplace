@@ -256,6 +256,18 @@ revokes or releases the current one); `409 GST_REVIEW_OPEN` while it has a revie
   officer can correct it like the other fields. After approval the shown name follows §4.1's rule. **[Claude]**
 - No notifications exist yet: the business sees the result when it next opens Profile or Verification. **[Claude]**
 
+> **Amendment 2026-11-18 (final review fix wave): no dead end after ask-for-more.** As first built, adding files ran
+> the 2–5 rule over the old and new files together, so a review sent back with 5 files could never be answered (and
+> with 4, only one file fitted), and nothing could close it: approve, reject and ask-for-more needed `waiting`.
+> (a) **Adding files** after ask-for-more takes **1–5 new files**; the certificate and the ID-or-letter rule runs over
+> the review's files and the new ones together, and a review holds **at most 10 files** in all (`400
+> DOCUMENTS_REQUIRED` otherwise). The numbers live in shared-types (`GST_REVIEW_FILES_MIN/MAX`,
+> `GST_REVIEW_ADD_FILES_MIN/MAX`, `GST_REVIEW_FILES_TOTAL_MAX`) so the app refuses what the API refuses; the state
+> view carries the open review's `documentCount` for the cap. A submission is still 2–5 files.
+> (b) **Reject** claims a review in `waiting` **or `needs_more`**, so an officer can close one the business never
+> answers. A second decision still gets `409 STALE_REVIEW` with no second audit row. Approve and ask-for-more still
+> need `waiting`.
+
 ### 5.4 Revocation by an officer
 An officer (§8.2) can **revoke** a GST verification with a reason: the `business_verifications` row becomes `revoked`
 (who, when, reason), `gst` leaves `verification_levels`, `verification_status = rejected` with the reason, and the

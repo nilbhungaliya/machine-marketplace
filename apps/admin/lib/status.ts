@@ -15,8 +15,11 @@ const TONE_BY_STATUS: Record<string, StatusTone> = {
   verified: 'green', approved: 'green', active: 'green', agreed: 'green', confirmed: 'green', returned: 'green',
   actioned: 'green', passed: 'green',
   reserved: 'blue', countered: 'blue', matched: 'blue', replied: 'blue', converted: 'blue', reviewing: 'blue',
-  needs_more: 'blue', code_sent: 'blue',
+  code_sent: 'blue',
+  // needs_more is amber, as the app's orange "Needs more" chip: an open review (its business summary is `pending`,
+  // amber) that waits on the business's action.
   pending_review: 'amber', pending: 'amber', open: 'amber', disputed: 'amber', requested: 'amber', waiting: 'amber',
+  needs_more: 'amber',
   rejected: 'red', cancelled: 'red', suspended: 'red', banned: 'red', failed: 'red', blocked: 'red', revoked: 'red',
   draft: 'gray', paused: 'gray', expired: 'gray', removed: 'gray', withdrawn: 'gray', closed: 'gray',
   unavailable: 'gray', dismissed: 'gray', not_submitted: 'gray',

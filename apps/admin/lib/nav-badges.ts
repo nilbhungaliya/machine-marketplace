@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { fetchWaitingCount, REVIEW_LIST_CAP } from './verification-api';
+import { fetchWaitingCount } from './verification-api';
 
 /** Counts a menu item can show beside its label (`NavItem.badgeKey`). */
 export type NavBadgeKey = 'verificationWaiting';
@@ -10,8 +10,8 @@ const FETCHERS: Record<NavBadgeKey, () => Promise<number>> = {
   verificationWaiting: fetchWaitingCount,
 };
 
-/** The most a badge can know: the review list stops at REVIEW_LIST_CAP rows. */
-const CAPS: Partial<Record<NavBadgeKey, number>> = { verificationWaiting: REVIEW_LIST_CAP };
+/** How often the counts are fetched again while the tab is visible. */
+export const NAV_BADGE_POLL_MS = 60_000;
 
 const REFRESH_EVENT = 'mpm:nav-badges';
 
@@ -20,18 +20,17 @@ export function refreshNavBadges(): void {
   if (typeof window !== 'undefined') window.dispatchEvent(new Event(REFRESH_EVENT));
 }
 
-/** "200+" at the cap; nothing for zero. */
-export function badgeText(key: NavBadgeKey, count: number | undefined): string | null {
-  if (!count) return null;
-  const cap = CAPS[key];
-  return cap !== undefined && count >= cap ? `${cap}+` : String(count);
+/** The count; nothing for zero or an unknown count. */
+export function badgeText(_key: NavBadgeKey, count: number | undefined): string | null {
+  return count ? String(count) : null;
 }
 
 /**
- * The counts for the badges the admin can see, fetched on mount, whenever `refreshKey` changes (the page) and on
- * `refreshNavBadges()`. A failed fetch just shows no badge.
+ * The counts for the badges the admin can see: fetched on mount, on `refreshNavBadges()` (after a decision), when the
+ * window regains focus or the tab becomes visible, and every NAV_BADGE_POLL_MS while it is visible. Not on every page
+ * change: each fetch is one small count request. A failed fetch just shows no badge.
  */
-export function useNavBadges(keys: readonly NavBadgeKey[], refreshKey: string): Partial<Record<NavBadgeKey, number>> {
+export function useNavBadges(keys: readonly NavBadgeKey[]): Partial<Record<NavBadgeKey, number>> {
   const [counts, setCounts] = useState<Partial<Record<NavBadgeKey, number>>>({});
   const sig = keys.join(',');
 
@@ -43,10 +42,20 @@ export function useNavBadges(keys: readonly NavBadgeKey[], refreshKey: string): 
     }
   }, [sig]);
 
-  useEffect(() => { load(); }, [load, refreshKey]);
   useEffect(() => {
+    load();
+    const visible = () => document.visibilityState !== 'hidden';
+    const onVisible = () => { if (visible()) load(); };
+    const timer = window.setInterval(onVisible, NAV_BADGE_POLL_MS);
     window.addEventListener(REFRESH_EVENT, load);
-    return () => window.removeEventListener(REFRESH_EVENT, load);
+    window.addEventListener('focus', load);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener(REFRESH_EVENT, load);
+      window.removeEventListener('focus', load);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, [load]);
 
   return counts;

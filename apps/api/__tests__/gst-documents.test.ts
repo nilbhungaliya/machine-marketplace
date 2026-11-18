@@ -189,6 +189,22 @@ describe('GST documents (no R2 needed)', () => {
     await expect(presignDocumentRead(`incoming-verification/${user.businessId}/a/b.pdf`)).rejects.toMatchObject({ statusCode: 400 });
   });
 
+  it('route limit: 30 presigns per user per 10 minutes, counted per user', async () => {
+    const a = await createTestBusinessUser();
+    const b = await createTestBusinessUser();
+    try {
+      // Refused by the service (400 DOCUMENT_TYPE) after the limiter has counted them.
+      fakeStorageEnv();
+      for (let i = 0; i < 30; i++) expect((await presign({ contentType: 'text/html', size: 10 }, a)).statusCode).toBe(400);
+      const limited = await presign({ contentType: 'text/html', size: 10 }, a);
+      expect(limited.statusCode).toBe(429);
+      expect(limited.json().code).toBe('RATE_LIMITED');
+      expect((await presign({ contentType: 'text/html', size: 10 }, b)).statusCode).toBe(400);
+    } finally {
+      await deleteTestBusinesses([a.businessId, b.businessId]);
+    }
+  });
+
   it('presignDocumentUpload is the service behind the route', async () => {
     fakeStorageEnv();
     const out = await presignDocumentUpload(db, { userId: user.userId, businessId: user.businessId }, { contentType: 'image/webp', size: 10 });

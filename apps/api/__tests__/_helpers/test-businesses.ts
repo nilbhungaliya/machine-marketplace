@@ -4,7 +4,8 @@ import type { BusinessActivity, GstDetails, GstDocumentType, GstEnteredDetails, 
 import { db } from '../../src/db/index.js';
 import { businessVerifications, businesses, gstChecks, gstRepresentativeProofs, users } from '../../src/db/schema.js';
 import { signUserToken } from '../../src/plugins/auth.js';
-import { completeProfile, signInWithPhone } from '../../src/services/user.service.js';
+import { updateMyProfile } from '../../src/services/business/profile.service.js';
+import { signInWithPhone } from '../../src/services/user.service.js';
 import { grantGst } from '../../src/services/verification/gst-grant.service.js';
 import { DECLARATION_VERSION } from '../../src/services/verification/gst-instant.service.js';
 import { gstStub } from '../../src/services/verification/gst-stub.js';
@@ -21,8 +22,9 @@ export interface TestBusinessUser {
 }
 
 /**
- * Signs a new user in (`signInWithPhone`) and onboards them (`completeProfile`), then sets the business's activities
- * (default `['buy']`) and, when given, its pincode. Remove with `deleteTestBusinesses([businessId])`.
+ * Signs a new user in (`signInWithPhone`) and onboards them the way the app does (`updateMyProfile`, the service behind
+ * the first `PATCH /businesses/me`, which creates the business) with the given activities (default `['buy']`), then
+ * sets the pincode when given. Remove with `deleteTestBusinesses([businessId])`.
  */
 export async function createTestBusinessUser(
   opts: { activities?: BusinessActivity[]; pincode?: string } = {},
@@ -30,12 +32,13 @@ export async function createTestBusinessUser(
   const phone = uniqueTestPhone();
   const signIn = await signInWithPhone(db, phone);
   const suffix = `${Date.now()}${seq++}`;
-  const profile = await completeProfile(db, signIn.user.id, { name: 'Test Owner', businessName: `Test Works ${suffix}` });
-  const businessId = profile.businessId;
-  await db
-    .update(businesses)
-    .set({ activities: opts.activities ?? ['buy'], pincode: opts.pincode ?? null })
-    .where(eq(businesses.id, businessId));
+  const profile = await updateMyProfile(db, signIn.user.id, {
+    name: 'Test Owner',
+    businessName: `Test Works ${suffix}`,
+    activities: opts.activities ?? ['buy'],
+  });
+  const businessId = profile.id;
+  if (opts.pincode) await db.update(businesses).set({ pincode: opts.pincode }).where(eq(businesses.id, businessId));
   return { userId: signIn.user.id, businessId, token: signUserToken({ userId: signIn.user.id, businessId }), phone };
 }
 

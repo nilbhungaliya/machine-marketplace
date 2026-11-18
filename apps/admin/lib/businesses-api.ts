@@ -32,9 +32,7 @@ export async function fetchCategoryNames(): Promise<Map<string, string>> {
   return new Map(tree.map((node) => [node.id, node.name]));
 }
 
-// Reasons: 3–500 characters (the services' rule).
-export const REASON_MIN = 3;
-export const REASON_MAX = 500;
+// Reasons: ADMIN_REASON_MIN–ADMIN_REASON_MAX (3–500) from shared-types, the API's one rule (`lib/admin-text.ts`).
 
 /** 409 GST_NOT_VERIFIED when there is nothing to revoke. */
 export const revokeGst = (id: string, reason: string) => api.post<unknown>(`/admin/businesses/${id}/gst/revoke`, { reason });

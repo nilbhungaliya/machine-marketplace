@@ -170,8 +170,13 @@ describe('account status', () => {
     it('requires a reason of 3–500 characters', async () => {
       const u = await newUser();
       expect((await act(officer.token, u.userId, 'suspend', {})).statusCode).toBe(400);
-      expect((await act(officer.token, u.userId, 'suspend', { reason: '  a ' })).statusCode).toBe(400);
-      expect((await act(officer.token, u.userId, 'suspend', { reason: 'x'.repeat(501) })).statusCode).toBe(400);
+      const short = await act(officer.token, u.userId, 'suspend', { reason: '  a ' });
+      expect(short.statusCode).toBe(400);
+      // The same answer as revoke, release, reject and ask-for-more (one helper, lib/admin-text.ts).
+      expect(short.json()).toMatchObject({ code: 'VALIDATION_ERROR', error: 'A reason of 3 to 500 characters is required', details: { field: 'reason' } });
+      const long = await act(officer.token, u.userId, 'suspend', { reason: 'x'.repeat(501) });
+      expect(long.statusCode).toBe(400);
+      expect(long.json()).toMatchObject({ code: 'VALIDATION_ERROR', error: 'A reason of 3 to 500 characters is required' });
       expect(await statusOf(u.userId)).toBe('active');
       expect(await auditRows(u.userId, 'user.suspend')).toHaveLength(0);
     });

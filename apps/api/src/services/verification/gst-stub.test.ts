@@ -4,6 +4,7 @@ import {
   STUB_GSTIN_CANCELLED,
   STUB_GSTIN_NOT_FOUND,
   STUB_GSTIN_UNAVAILABLE,
+  SENT_KEEP,
   gstStub,
   resetStubGstins,
   setStubGstin,
@@ -63,6 +64,15 @@ describe('gstStub', () => {
     expect(stubSentCodes()).toEqual([VALID, VALID]);
     resetStubGstins();
     expect(stubSentCodes()).toEqual([]);
+  });
+
+  it('keeps only the last SENT_KEEP code sends', async () => {
+    const other = '24AAACC1206D1ZM';
+    await gstStub.sendContactOtp(other);
+    for (let i = 0; i < SENT_KEEP; i++) await gstStub.sendContactOtp(VALID);
+    const record = stubSentCodes();
+    expect(record).toHaveLength(SENT_KEEP);
+    expect(record).not.toContain(other);
   });
 
   it('code-send to an unavailable GSTIN answers unavailable', async () => {

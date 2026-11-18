@@ -4,6 +4,12 @@ import type { RootStackParamList } from './types';
 
 // Opening a screen chosen at run time (`gstScreen`, `profileRowTarget`): React Navigation's typed `navigate` can't
 // take a union of targets, so the cast lives here, once.
+//
+// GST flow rule: Profile (or the GST intro, which resets to Main) opens one GST screen; from then on every GST step
+// **replaces** the one before it (GstStart → GstFound → GstDeclare → GstCode, "Can't get the code?", "Send for review",
+// "Not mine", Start again, and every state redirect). So the stack is always the origin plus one GST screen, and Back
+// from any GST screen lands on Profile or Main, never on a step whose state has moved on. A flow that ends uses
+// `finishGstFlow`, which rebuilds the same shape.
 
 /** Any root-stack screen's navigation (only these methods, which don't depend on the screen). */
 type Nav = Pick<NativeStackNavigationProp<RootStackParamList>, 'navigate' | 'replace' | 'reset' | 'getState'>;

@@ -4,14 +4,12 @@ import type {
 } from '@mpm/shared-types';
 import { api, ApiError } from './api';
 
+type LookupAtApproval = NonNullable<AdminGstReviewDetail['lookupAtApproval']>;
+
 // Typed calls to the Business verification API (F1 + A2 spec §8.1). Each returns the endpoint's `data`.
 
 /** `listReviews` returns at most this many rows per tab, with no paging. */
 export const REVIEW_LIST_CAP = 200;
-
-/** Reject reasons and ask-for-more messages: 3–500 characters (the service's rule). */
-export const DECISION_TEXT_MIN = 3;
-export const DECISION_TEXT_MAX = 500;
 
 /** The public GST portal's taxpayer search: the officer's check when no provider decides (§5.3). */
 export const GST_PORTAL_SEARCH_URL = 'https://services.gst.gov.in/services/searchtp';
@@ -45,8 +43,9 @@ export const askForMore = (id: string, message: string) =>
 export const fetchDocumentUrl = (proofId: string, index: number) =>
   api.get<AdminDocumentUrl>(`/admin/verification/documents/${proofId}/${index}/url`);
 
-/** The nav badge: how many reviews wait (REVIEW_LIST_CAP means "at least"). */
-export const fetchWaitingCount = async () => (await fetchReviews('waiting')).length;
+/** The nav badge: how many reviews wait. A count from the API, so no rows are downloaded and there is no cap. */
+export const fetchWaitingCount = async () =>
+  (await api.get<{ count: number }>('/admin/verification/reviews/count?status=waiting')).count;
 
 // ─── wording ───
 
@@ -95,6 +94,13 @@ export const PROOF_STATUS_LABELS: Partial<Record<GstProofStatus, string>> = {
   code_sent: 'Code sent',
   passed: 'Code passed',
   spent: 'Closed',
+};
+
+/** How an approval was decided (`lookupAtApproval`), on the review page and in GST history. */
+export const LOOKUP_AT_APPROVAL_LABELS: Record<LookupAtApproval, string> = {
+  active: 'Approved on a fresh lookup that showed the GSTIN active',
+  unavailable: "The provider couldn't be reached at approval: the officer's details were saved",
+  none: "No GST provider: the officer's details were saved",
 };
 
 export const CHECK_RESULT_LABELS: Record<GstCheckResult, string> = {

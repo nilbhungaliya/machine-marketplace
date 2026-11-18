@@ -198,6 +198,7 @@ describe('admin businesses', () => {
       const { gstin } = await grantTestGst(user.businessId);
       const short = await revoke(user.businessId, 'no');
       expect(short.status).toBe(400);
+      expect(short.body).toMatchObject({ code: 'VALIDATION_ERROR', error: 'A reason of 3 to 500 characters is required', details: { field: 'reason' } });
 
       const res = await revoke(user.businessId, 'Certificate was forged');
       expect(res.status).toBe(200);

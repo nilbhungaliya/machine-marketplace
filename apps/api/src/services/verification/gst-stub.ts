@@ -12,7 +12,10 @@ export const STUB_GSTIN_CANCELLED = '24AAACC0000C1ZY';
 export const STUB_GSTIN_NOT_FOUND = '24AAACN0000N1Z0';
 export const STUB_GSTIN_UNAVAILABLE = '24AAACU0000U1ZF';
 
-/** The same value as the login OTP's dev code. */
+/**
+ * The registered-contact code the stub always accepts. Not the login OTP: outside production the login code is random
+ * and comes back as `devCode` (`otp.service.ts`).
+ */
 const STUB_CONTACT_OTP = '123456';
 const STUB_HINT = '98•••••36';
 
@@ -27,7 +30,11 @@ const DEFAULTS = new Map<string, StubOutcome>([
 /** Tests change what a GSTIN returns (a later cancellation, the provider coming back). */
 const overrides = new Map<string, StubOutcome>();
 
-/** Every GSTIN `sendContactOtp` was called for, in order (tests assert that a guard sent no code). */
+/**
+ * The GSTINs `sendContactOtp` was called for, in order (tests assert that a guard sent no code). Only the last
+ * `SENT_KEEP` are kept, so a long-running dev server doesn't grow it without end.
+ */
+export const SENT_KEEP = 100;
 const sent: string[] = [];
 
 /** `null` puts the GSTIN back to its default. */
@@ -73,6 +80,7 @@ export const gstStub: GstProvider = {
   },
   async sendContactOtp(gstin) {
     sent.push(gstin);
+    if (sent.length > SENT_KEEP) sent.splice(0, sent.length - SENT_KEEP);
     if (outcomeOf(gstin) === 'unavailable') return { kind: 'unavailable' };
     return { ref: `stub-otp-${gstin}`, hint: STUB_HINT };
   },

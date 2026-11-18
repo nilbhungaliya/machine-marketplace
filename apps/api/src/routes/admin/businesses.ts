@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { ACCOUNT_STATUSES, VERIFICATION_STATUSES } from '@mpm/shared-types';
+import { reasonBody } from '../../lib/admin-text.js';
 import {
   PAGE_SIZE_MAX,
   getBusinessDetail,
@@ -23,8 +24,6 @@ const listQuery = z
     pageSize: z.coerce.number().int().min(1).max(PAGE_SIZE_MAX).default(25),
   })
   .strict();
-// Length rules (3–500) are the service's.
-const reasonBody = z.object({ reason: z.string().max(2000) }).strict();
 
 // Users & businesses (F1 + A2 spec §8.2, §10). Thin: validate → service → `{ data }`. Reads: support, verification
 // officers, moderators; Revoke GST and Release GSTIN: verification officers (super_admin passes every role check).

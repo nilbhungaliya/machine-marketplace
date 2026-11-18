@@ -13,8 +13,9 @@ import { AppError, ConflictError, NotFoundError, ValidationError } from '../../l
 import { areasForPincode } from '../locations/industrial-areas.service.js';
 import { pincodeDistrict } from '../locations/pincode.service.js';
 
-// The business profile and location (F1 spec §4.1, §4.2, §10; ruling R1: a new user has no business row until their
-// first PATCH /businesses/me, which creates it).
+// The business profile and location (F1 spec §4.1, §4.2, §10). Ruling R1: a new user has no business row until their
+// first PATCH /businesses/me, which creates it; that is the only way a business is created (the old onboarding route
+// PATCH /users/me is gone), so every business starts with a name, a business name and at least one activity.
 
 export type BusinessRow = typeof businesses.$inferSelect;
 
@@ -84,9 +85,15 @@ export async function onboardingForUser(conn: Db | Tx, user: { name: string | nu
   return onboardingStep({ ...b, categories: await activeCategoryIds(conn, b.categories) }, user.name);
 }
 
+/**
+ * The user row. `lock` takes `FOR NO KEY UPDATE`, not `FOR UPDATE`: it still serialises two first PATCHes, but it
+ * doesn't conflict with the `FOR KEY SHARE` lock that inserting a row with a `user_id` foreign key takes (the GST
+ * steps insert `gst_checks` / `gst_representative_proofs` rows while holding the business lock), so a profile save and
+ * a GST step can't deadlock on the user and business rows.
+ */
 async function userRow(conn: Db | Tx, userId: string, lock = false) {
   const query = conn.select().from(users).where(eq(users.id, userId));
-  const [user] = lock ? await query.for('update') : await query;
+  const [user] = lock ? await query.for('no key update') : await query;
   if (!user) throw new NotFoundError('User');
   return user;
 }

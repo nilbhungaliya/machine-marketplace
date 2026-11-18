@@ -2,9 +2,10 @@
 
 import { useState, type ReactNode } from 'react';
 import { ExternalLink, MapPin } from 'lucide-react';
-import type { AdminAuditEntry, AdminBusinessDetail } from '@mpm/shared-types';
+import type { AdminAuditEntry, AdminBusinessDetail, GstState } from '@mpm/shared-types';
 import StatusBadge from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
+import { Panel } from '@/components/ui/panel';
 import { GstHistory } from '@/components/verification/gst-history';
 import { useAuth } from '@/lib/auth-context';
 import {
@@ -14,7 +15,7 @@ import { constitutionLabel } from '@/lib/verification-api';
 import { formatDate, formatDateTime, formatPhone } from '@/lib/utils';
 import { StatusActionDialog, type StatusAction } from './status-action-dialog';
 
-const GST_STATE_LABELS: Record<string, string> = {
+const GST_STATE_LABELS: Record<GstState, string> = {
   none: 'Not started',
   found: 'Lookup found, waiting for the business',
   code_sent: 'Code sent to the registered contact',
@@ -24,18 +25,6 @@ const GST_STATE_LABELS: Record<string, string> = {
   verified: 'Verified',
   revoked: 'Revoked by an officer',
 };
-
-export function Panel({ title, action, children }: { title: string; action?: ReactNode; children: ReactNode }) {
-  return (
-    <section aria-label={title} className="rounded-[10px] border border-gray-200 bg-white p-4">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-sm font-bold text-gray-900">{title}</h2>
-        {action}
-      </div>
-      {children}
-    </section>
-  );
-}
 
 function Facts({ rows }: { rows: Array<[string, ReactNode]> }) {
   return (

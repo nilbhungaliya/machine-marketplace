@@ -3,7 +3,9 @@ import type { GstStateView } from '@mpm/shared-types';
 import {
   GST_ERROR_KEYS,
   blocksNewAttempt,
+  addFilesRoom,
   completionSegments,
+  constitutionKey,
   documentProblem,
   gstChip,
   gstScreen,
@@ -181,14 +183,43 @@ describe('documentProblem: the review file rule, before anything is uploaded', (
 });
 
 describe('newFilesProblem: files added after the officer asks for more', () => {
-  // The state view doesn't list the review's files, so the API checks the whole set (DOCUMENTS_REQUIRED).
-  it('needs at least one typed, allowed file of at most 10 MB', () => {
-    const file = { type: 'id_proof' as const, size: 1000, mimeType: 'image/jpeg' };
+  // The API's rule (spec §5.3 amendment): 1–5 new files, at most 10 on the review in all. The certificate / ID rule
+  // over the whole set is the API's (the state view gives the count, not the types).
+  const file = { type: 'id_proof' as const, size: 1000, mimeType: 'image/jpeg' };
+  const files = (n: number) => Array.from({ length: n }, () => file);
+
+  it('needs 1 to 5 typed, allowed files of at most 10 MB', () => {
     expect(newFilesProblem([file])).toBeNull();
     expect(newFilesProblem([])).toBe('count');
     expect(newFilesProblem([{ ...file, type: null }])).toBe('untyped');
     expect(newFilesProblem([{ ...file, mimeType: 'text/html' }])).toBe('fileType');
     expect(newFilesProblem([{ ...file, size: 10_485_761 }])).toBe('tooLarge');
-    expect(newFilesProblem(Array.from({ length: 4 }, () => file))).toBe('count');
+    expect(newFilesProblem(files(4))).toBeNull();
+    expect(newFilesProblem(files(5))).toBeNull();
+    expect(newFilesProblem(files(6))).toBe('count');
+  });
+
+  it('a review that already has 4 or 5 files still takes 5 more, up to 10 in all', () => {
+    expect(newFilesProblem(files(5), 4)).toBeNull();
+    expect(newFilesProblem(files(5), 5)).toBeNull();
+    expect(newFilesProblem(files(1), 10)).toBe('total');
+    expect(newFilesProblem(files(3), 8)).toBe('total');
+    expect(newFilesProblem(files(2), 8)).toBeNull();
+  });
+
+  it('room left on a review', () => {
+    expect(addFilesRoom(2)).toBe(5);
+    expect(addFilesRoom(7)).toBe(3);
+    expect(addFilesRoom(10)).toBe(0);
+    expect(addFilesRoom(undefined)).toBe(5);
+  });
+});
+
+describe('constitutionKey: officer-approved details carry a key, a provider sends text', () => {
+  it('a shared-types key → its translation key; anything else → null (shown as it came)', () => {
+    expect(constitutionKey('private_limited')).toBe('verification.constitution.private_limited');
+    expect(constitutionKey('proprietorship')).toBe('verification.constitution.proprietorship');
+    expect(constitutionKey('Private Limited Company')).toBeNull();
+    expect(constitutionKey('')).toBeNull();
   });
 });

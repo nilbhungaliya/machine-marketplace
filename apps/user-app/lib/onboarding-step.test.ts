@@ -28,9 +28,9 @@ import {
   hasSeenGstIntro,
   markGstIntroSeen,
   appEntry,
-  nextScreen,
   shouldShowGstIntro,
   stepAfterBootError,
+  pinAfterPincode,
   toLocationBody,
   toProfileBody,
   type ProfileFormValues,
@@ -43,11 +43,16 @@ beforeEach(() => {
   broken = false;
 });
 
-describe('nextScreen', () => {
-  it('maps each onboarding step to its screen', () => {
-    expect(nextScreen('profile')).toBe('YourBusiness');
-    expect(nextScreen('location')).toBe('WhereAreYou');
-    expect(nextScreen('done')).toBe('Main');
+describe('pinAfterPincode: the location pin follows the pincode it came with', () => {
+  it('keeps the pin for its own pincode and while the pincode is half-typed', () => {
+    expect(pinAfterPincode('395010', '395010')).toBe('keep');
+    expect(pinAfterPincode('395010', null)).toBe('keep');
+    expect(pinAfterPincode(null, null)).toBe('keep');
+  });
+
+  it('clears it for another pincode, and binds a pin that came with none to the first pincode', () => {
+    expect(pinAfterPincode('395010', '380015')).toBe('clear');
+    expect(pinAfterPincode(null, '395010')).toBe('bind');
   });
 });
 

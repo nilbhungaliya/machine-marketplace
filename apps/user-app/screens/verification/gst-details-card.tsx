@@ -3,6 +3,7 @@ import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-na
 import { useTranslation } from 'react-i18next';
 import type { GstDetails } from '@mpm/shared-types';
 import { formatDate } from '@/lib/format-date';
+import { constitutionKey } from '@/lib/gst-flow';
 import { CircleCheck } from '@/lib/icons';
 import { fonts, radius, spacing, useTheme } from '@/lib/theme';
 
@@ -25,6 +26,9 @@ export default function GstDetailsCard({ details, gstin, style }: { details?: Gs
     badgeText: { fontFamily: fonts.semiBold, fontSize: 12, color: colors.green },
   }), [colors]);
 
+  // Officer-approved details carry a constitution key; a provider's lookup carries its own text.
+  const constitutionTKey = details ? constitutionKey(details.constitution) : null;
+  const constitution = constitutionTKey ? t(constitutionTKey) : (details?.constitution ?? '');
   const registered = details?.registeredOn ? Date.parse(details.registeredOn) : NaN;
   const address = details ? [details.address.line, details.address.city, details.address.state, details.address.pincode].filter(Boolean).join(', ') : '';
 
@@ -36,7 +40,7 @@ export default function GstDetailsCard({ details, gstin, style }: { details?: Gs
       ) : null}
       {details ? (
         <Text style={s.line}>
-          {details.constitution}
+          {constitution}
           {Number.isNaN(registered) ? '' : ` · ${t('verification.details.registeredOn', { date: formatDate(registered) })}`}
         </Text>
       ) : null}

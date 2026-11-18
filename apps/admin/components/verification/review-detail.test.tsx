@@ -109,6 +109,33 @@ describe('ReviewDetail', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
+  it('submits Reject with the red danger button, and Ask for more with the primary one', async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetchReview).mockResolvedValue(reviewFixture());
+    renderDetail();
+    await user.click(await screen.findByRole('button', { name: 'Reject' }));
+    let dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByRole('button', { name: 'Reject' }).className).toContain('text-red-600');
+    await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    await user.click(screen.getByRole('button', { name: 'Ask for more' }));
+    dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByRole('button', { name: 'Send' }).className).toContain('bg-brand-600');
+  });
+
+  it('a review waiting for more files can only be rejected (no Approve or Ask for more)', async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetchReview).mockResolvedValue(reviewFixture({ status: 'needs_more', officerMessage: 'Add the second page' }));
+    vi.mocked(rejectReview).mockResolvedValue({ id: 'r1', businessId: 'b1', status: 'rejected' });
+    renderDetail();
+    await user.click(await screen.findByRole('button', { name: 'Reject' }));
+    expect(screen.queryByRole('button', { name: 'Approve' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Ask for more' })).toBeNull();
+    const dialog = screen.getByRole('dialog');
+    await user.type(within(dialog).getByLabelText('Reason'), 'No reply in two weeks');
+    await user.click(within(dialog).getByRole('button', { name: 'Reject' }));
+    expect(rejectReview).toHaveBeenCalledWith('r1', 'No reply in two weeks');
+  });
+
   it('has no decision buttons once the review is decided', async () => {
     vi.mocked(fetchReview).mockResolvedValue(reviewFixture({ status: 'rejected', reason: 'Blurry certificate', decidedAt: '2026-11-18T06:00:00.000Z' }));
     renderDetail();

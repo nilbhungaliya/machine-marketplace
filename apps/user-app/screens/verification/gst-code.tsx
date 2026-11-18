@@ -19,6 +19,7 @@ import { queryClient } from '@/lib/queryClient';
 import { fonts, radius, spacing, useTheme } from '@/lib/theme';
 import { finishGstFlow, openTarget } from '@/navigation/go';
 import type { RootStackScreenProps } from '@/navigation/types';
+import GstLoadError from './gst-load-state';
 
 const CODE_REGEX = /^\d{4,8}$/;
 
@@ -118,6 +119,15 @@ export default function GstCodeScreen({ navigation }: RootStackScreenProps<'GstC
     footer: { paddingHorizontal: spacing.xxl, paddingBottom: spacing.xxl, paddingTop: spacing.sm },
   }), [colors]);
 
+  if (!view && gst.isError) {
+    return (
+      <ScreenWrapper>
+        <Header title={t('verification.title')} />
+        <GstLoadError onRetry={refresh} />
+      </ScreenWrapper>
+    );
+  }
+
   if (!view || view.state !== 'code_sent') {
     return (
       <ScreenWrapper>
@@ -157,7 +167,7 @@ export default function GstCodeScreen({ navigation }: RootStackScreenProps<'GstC
             {wait > 0 ? t('verification.code.resendIn', { seconds: wait }) : t('verification.code.resend')}
           </Text>
         </Pressable>
-        <Pressable onPress={() => openTarget(navigation, reviewFromCode(view))} testID="Gst-cant-get-code" accessibilityRole="button">
+        <Pressable onPress={() => openTarget(navigation, reviewFromCode(view), 'replace')} testID="Gst-cant-get-code" accessibilityRole="button">
           <Text style={s.link}>{t('verification.code.cantGetCode')}</Text>
         </Pressable>
       </View>

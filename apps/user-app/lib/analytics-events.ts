@@ -25,6 +25,8 @@ export const ONBOARDING_EVENTS = {
   locationDetectFailed: 'onboarding_location_detect_failed',
   locationSaved: 'onboarding_location_saved',
   locationSaveFailed: 'onboarding_location_save_failed',
+  /** `reason`: `removed` (the user) or `pincode_changed` (a pincode the pin didn't come with). */
+  locationPinCleared: 'onboarding_location_pin_cleared',
   gstIntroShown: 'onboarding_gst_intro_shown',
   gstIntroSkipped: 'onboarding_gst_intro_skipped',
   gstIntroAccepted: 'onboarding_gst_intro_accepted',

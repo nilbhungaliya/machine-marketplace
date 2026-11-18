@@ -292,7 +292,7 @@ describe('GST review (path A)', () => {
       expect(removed).toEqual([copied]);
     });
 
-    it('add files on needs_more → waiting, summary pending, note cleared; refused when not needs_more or over 5', async () => {
+    it('add files on needs_more → waiting, summary pending, note cleared; refused when not needs_more, none or over 5 new', async () => {
       const user = await newBusiness();
       const { proofId } = await insertTestReview(user.businessId);
       const actor = { userId: user.userId, businessId: user.businessId };
@@ -303,8 +303,12 @@ describe('GST review (path A)', () => {
       ).rejects.toMatchObject({ statusCode: 409, code: 'GST_REVIEW_STATE' });
 
       expect((await askForMore(proofId, 'The certificate is blurred')).status).toBe(200);
+      await expect(addReviewFiles(db, actor, proofId, { files: [] }, opts)).rejects.toMatchObject({
+        statusCode: 400,
+        code: 'DOCUMENTS_REQUIRED',
+      });
       await expect(
-        addReviewFiles(db, actor, proofId, { files: incomingFiles(user, proofId, ['id_proof', 'id_proof', 'id_proof', 'id_proof']) }, opts),
+        addReviewFiles(db, actor, proofId, { files: incomingFiles(user, proofId, Array<GstDocumentType>(6).fill('id_proof')) }, opts),
       ).rejects.toMatchObject({ statusCode: 400, code: 'DOCUMENTS_REQUIRED' });
 
       const view = await addReviewFiles(db, actor, proofId, { files: incomingFiles(user, proofId, ['gst_certificate']) }, opts);
@@ -313,6 +317,47 @@ describe('GST review (path A)', () => {
       expect(p.status).toBe('waiting');
       expect(p.documents).toHaveLength(3);
       expect(await business(user.businessId)).toMatchObject({ verificationStatus: 'pending', verificationNote: null });
+    });
+
+    it('a review sent back with 4 or 5 files takes 1–5 more, up to 10 in all (amendment to §5.3)', async () => {
+      const opts = { stage: fakeStage, remove: async () => {} };
+      const four: Array<{ type: GstDocumentType }> = [{ type: 'gst_certificate' }, { type: 'id_proof' }, { type: 'id_proof' }, { type: 'authorisation_letter' }];
+
+      // 4 files: 5 more fit (9).
+      const a = await newBusiness();
+      const ra = await insertTestReview(a.businessId, { status: 'needs_more', documents: four });
+      expect(await state(a)).toMatchObject({ state: 'needs_more', documentCount: 4 });
+      const actorA = { userId: a.userId, businessId: a.businessId };
+      const va = await addReviewFiles(db, actorA, ra.proofId, { files: incomingFiles(a, ra.proofId, Array<GstDocumentType>(5).fill('id_proof')) }, opts);
+      expect(va).toMatchObject({ state: 'under_review', documentCount: 9 });
+      expect((await proof(ra.proofId)).documents).toHaveLength(9);
+
+      // 5 files: 5 more fit (10); sent back again, one more is over the cap.
+      const b = await newBusiness();
+      const rb = await insertTestReview(b.businessId, { status: 'needs_more', documents: [...four, { type: 'id_proof' }] });
+      const actorB = { userId: b.userId, businessId: b.businessId };
+      await addReviewFiles(db, actorB, rb.proofId, { files: incomingFiles(b, rb.proofId, Array<GstDocumentType>(5).fill('gst_certificate')) }, opts);
+      expect((await proof(rb.proofId)).documents).toHaveLength(10);
+      expect((await askForMore(rb.proofId, 'One page is still missing')).status).toBe(200);
+      await expect(
+        addReviewFiles(db, actorB, rb.proofId, { files: incomingFiles(b, rb.proofId, ['id_proof']) }, opts),
+      ).rejects.toMatchObject({ statusCode: 400, code: 'DOCUMENTS_REQUIRED' });
+      expect((await proof(rb.proofId)).status).toBe('needs_more');
+    });
+
+    it('added files still need the certificate and an ID or letter across the whole review', async () => {
+      const user = await newBusiness();
+      const { proofId } = await insertTestReview(user.businessId, {
+        status: 'needs_more',
+        documents: [{ type: 'id_proof' }, { type: 'id_proof' }],
+      });
+      const actor = { userId: user.userId, businessId: user.businessId };
+      const opts = { stage: fakeStage, remove: async () => {} };
+      await expect(
+        addReviewFiles(db, actor, proofId, { files: incomingFiles(user, proofId, ['authorisation_letter']) }, opts),
+      ).rejects.toMatchObject({ statusCode: 400, code: 'DOCUMENTS_REQUIRED' });
+      const view = await addReviewFiles(db, actor, proofId, { files: incomingFiles(user, proofId, ['gst_certificate']) }, opts);
+      expect(view.state).toBe('under_review');
     });
 
     it('add files with storage unset → 503 (route)', async () => {
@@ -409,6 +454,7 @@ describe('GST review (path A)', () => {
       const { proofId } = await insertTestReview(user.businessId);
       const short = await reject(proofId, 'no');
       expect(short.status).toBe(400);
+      expect(short.body).toMatchObject({ code: 'VALIDATION_ERROR', error: 'A reason of 3 to 500 characters is required', details: { field: 'reason' } });
       const res = await reject(proofId, 'The certificate is for another business');
       expect(res.status).toBe(200);
       expect(await business(user.businessId)).toMatchObject({
@@ -421,6 +467,32 @@ describe('GST review (path A)', () => {
       const again = await askForMore(proofId, 'Send the certificate again');
       expect(again.status).toBe(409);
       expect(again.body.code).toBe('STALE_REVIEW');
+    });
+
+    it('a review in needs_more can be rejected (it is never stuck): summary rejected, state rejected', async () => {
+      const user = await newBusiness();
+      const { proofId } = await insertTestReview(user.businessId, { status: 'needs_more' });
+      const res = await reject(proofId, 'No reply to the request for more files');
+      expect(res.status).toBe(200);
+      expect(await proof(proofId)).toMatchObject({ status: 'rejected', reason: 'No reply to the request for more files', officerId: officer.id });
+      expect(await business(user.businessId)).toMatchObject({ verificationStatus: 'rejected', verificationNote: 'No reply to the request for more files' });
+      expect(await state(user)).toMatchObject({ state: 'rejected' });
+      const [row] = await auditRows(proofId, 'gst_review.reject');
+      expect(row!.before).toMatchObject({ status: 'needs_more' });
+    });
+
+    it('double reject (waiting and needs_more) → one 200, one 409 STALE_REVIEW, one audit row', async () => {
+      for (const status of ['waiting', 'needs_more'] as const) {
+        const user = await newBusiness();
+        const { proofId } = await insertTestReview(user.businessId, { status });
+        const [first, second] = await Promise.all([reject(proofId, 'Wrong certificate'), reject(proofId, 'Wrong certificate')]);
+        expect([first.status, second.status].sort()).toEqual([200, 409]);
+        expect([first, second].find((r) => r.status === 409)!.body.code).toBe('STALE_REVIEW');
+        const third = await reject(proofId, 'Wrong certificate again');
+        expect(third.status).toBe(409);
+        expect(third.body.code).toBe('STALE_REVIEW');
+        expect(await auditRows(proofId, 'gst_review.reject')).toHaveLength(1);
+      }
     });
 
     it('ask for more → summary pending with the message, state needs_more', async () => {
@@ -561,6 +633,24 @@ describe('GST review (path A)', () => {
       );
       expect(row).toMatchObject({ businessId: a.businessId, gstin: ra.gstin, status: 'waiting', hasLookup: false, documentCount: 2 });
       expect((await call(officer.token, 'GET', '/admin/verification/reviews?status=bogus')).status).toBe(400);
+    });
+
+    it('count: how many reviews wait (or need more), for the nav badge; officers only', async () => {
+      const count = async (query = '') => {
+        const res = await call(officer.token, 'GET', `/admin/verification/reviews/count${query}`);
+        expect(res.status).toBe(200);
+        return (res.body.data as { count: number }).count;
+      };
+      const waitingBefore = await count();
+      const needsMoreBefore = await count('?status=needs_more');
+      const user = await newBusiness();
+      const { proofId } = await insertTestReview(user.businessId);
+      expect(await count('?status=waiting')).toBe(waitingBefore + 1);
+      expect((await askForMore(proofId, 'Add the other page')).status).toBe(200);
+      expect(await count()).toBe(waitingBefore);
+      expect(await count('?status=needs_more')).toBe(needsMoreBefore + 1);
+      expect((await call(officer.token, 'GET', '/admin/verification/reviews/count?status=decided')).status).toBe(400);
+      expect((await call(support.token, 'GET', '/admin/verification/reviews/count')).status).toBe(403);
     });
 
     it('detail: entered details, documents without keys, mismatches, history, providerAvailable', async () => {

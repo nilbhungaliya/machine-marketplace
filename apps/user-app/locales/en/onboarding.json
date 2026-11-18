@@ -50,7 +50,10 @@
     "address": "Address line (optional)",
     "addressPlaceholder": "Plot, street",
     "save": "Save location",
-    "saved": "Location saved"
+    "saved": "Location saved",
+    "pinSet": "Your location pin is set",
+    "removePin": "Remove pin",
+    "pinCleared": "We removed the location pin because the pincode changed."
   },
   "errors": {
     "required": "Required",

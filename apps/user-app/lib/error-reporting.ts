@@ -2,9 +2,30 @@ import * as Sentry from '@sentry/react-native';
 
 const DSN = process.env.EXPO_PUBLIC_SENTRY_DSN;
 
-/** Keys that must never leave the device in a crash report. */
-const SECRET_KEYS =
-  /^(authorization|cookie|token|refreshtoken|password|otp|phone|firebase_token|phone_token|razorpay_signature|jwt_token)$/i;
+/**
+ * Keys that must never leave the device in a crash report: credentials, and the personal data the business and GST
+ * bodies carry (F1: GSTIN, PAN, email, names, addresses, the location pin and pincode, codes, the code hint, officer
+ * messages). Matched on the whole key, any case.
+ */
+const SECRET_KEYS = new RegExp(
+  '^(' +
+    [
+      'authorization', 'cookie', 'token', 'refreshtoken', 'password', 'otp', 'code', 'phone', 'firebase_token',
+      'phone_token', 'razorpay_signature', 'jwt_token',
+      // Not plain `name`: Sentry's own contexts use it (os.name, app name). The person's name only travels in request
+      // bodies, which scrubEvent drops whole.
+      'gstin', 'pan', 'email', 'username', 'legalname', 'tradename', 'businessname', 'displayname',
+      'address', 'addressline', 'gstaddress', 'industrialareaother', 'lat', 'lng', 'latitude', 'longitude', 'pincode',
+      'hint', 'officermessage',
+    ].join('|') +
+    ')$',
+  'i',
+);
+
+/** A URL without its query string (`?lat=…&lng=…`, a signed upload's `X-Amz-Signature=…`). */
+export function stripQuery<T>(url: T): T {
+  return (typeof url === 'string' ? url.replace(/\?[^\s#]*/g, '') : url) as T;
+}
 
 export function redact(input: unknown): any {
   if (!input || typeof input !== 'object') return input;
@@ -20,6 +41,8 @@ export function redact(input: unknown): any {
 export function scrubEvent(event: any): any {
   if (!event) return event;
   if (event.request) {
+    event.request.url = stripQuery(event.request.url);
+    event.request.query_string = undefined;
     event.request.headers = redact(event.request.headers);
     event.request.data = undefined;
     event.request.cookies = undefined;
@@ -34,7 +57,13 @@ export function scrubEvent(event: any): any {
 export function scrubBreadcrumb(crumb: any): any {
   if (!crumb) return crumb;
   // The axios integration puts request headers here, which carries our JWT.
-  if (crumb.data) crumb.data = redact(crumb.data);
+  if (crumb.data) {
+    crumb.data = redact(crumb.data);
+    for (const key of ['url', 'from', 'to']) {
+      if (typeof crumb.data[key] === 'string') crumb.data[key] = stripQuery(crumb.data[key]);
+    }
+  }
+  if (typeof crumb.message === 'string') crumb.message = stripQuery(crumb.message);
   return crumb;
 }
 
