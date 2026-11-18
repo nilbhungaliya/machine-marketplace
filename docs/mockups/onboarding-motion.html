@@ -1,0 +1,1009 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Onboarding Motion</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ── Periwinkle v2 tokens (docs/mockups/src/build-periwinkle-v2.mjs) ───────────────────────────── */
+:root{
+  --page:#EFEDF6; --tile-a:#DAD4FB; --tile-b:#A497F3; --tile-c:#7B6BEE; --tile-ink:#1C1A27;
+  --canvas:#F5F4FA; --surface:#FFFFFF; --photo:#ECEBF1;
+  --ink:#1C1A27; --ink-2:#5E5B6E; --ink-3:#8E8B9E; --line:#E7E5EF; --line-2:#F0EEF6;
+  --primary:#5B41E6; --primary-ink:#4A31D4; --on-primary:#FFFFFF; --soft:#E1DBFF; --soft2:#F1EEFF;
+  --sun:#FFD52E; --on-sun:#1C1A27;
+  --ok:#14915F; --ok-soft:#DFF4EA; --warn:#B26F00; --warn-soft:#FFF1D2; --danger:#D93A44; --danger-soft:#FDE6E7;
+  --bezel:#E2E1E9; --shadow:rgba(52,36,140,.13); --part-line:#4F5261; --scrim:rgba(28,20,70,.45);
+  --f:'Manrope','Noto Sans Gujarati','Noto Sans Devanagari',system-ui,sans-serif;
+  --field:#F0EFF5; --hair:#E6E4EE; --frame:#26252C; --mono:'JetBrains Mono',ui-monospace,Consolas,monospace;
+  /* motion: workshop precision */
+  --glide:cubic-bezier(.16,.84,.24,1);   /* machined stop: fast travel, exact landing */
+  --seat:cubic-bezier(.34,1.32,.6,1);    /* a part seating: one small settle, no bounce */
+  --rail:cubic-bezier(.65,0,.35,1);      /* carriage on a guide rail: even start and stop */
+  --grid:rgba(91,65,230,.07); --plate-ink:#3E414B; --plate-hi:rgba(255,255,255,.75);
+}
+[data-theme="dark"]{
+  --page:#0C0A18; --tile-a:#2B2463; --tile-b:#1F1949; --tile-c:#140F31; --tile-ink:#F1EFFA;
+  --canvas:#110F1F; --surface:#1B1830; --photo:#26223F;
+  --ink:#F1EFFA; --ink-2:#B8B4CC; --ink-3:#8A86A0; --line:#2C2846; --line-2:#221F3A;
+  --primary:#8B78FF; --primary-ink:#B3A6FF; --on-primary:#0E0B22; --soft:#2D2660; --soft2:#221D45;
+  --sun:#FFD84A; --on-sun:#1C1A27;
+  --ok:#4CCB93; --ok-soft:#123326; --warn:#F0B44C; --warn-soft:#3A2B10; --danger:#FF7A80; --danger-soft:#3D1A1E;
+  --bezel:#05040C; --shadow:rgba(0,0,0,.45); --part-line:#3B3E4C; --scrim:rgba(0,0,0,.6);
+  --field:#232038; --hair:#2A2643; --frame:#000; --grid:rgba(139,120,255,.09);
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--f);background:var(--page);color:var(--ink);-webkit-font-smoothing:antialiased;line-height:1.45;padding:0 16px 48px}
+.mono{font-family:var(--mono)}
+.ic{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;flex:none}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+
+/* ── page chrome ───────────────────────────────────────────────────────────────────────────────── */
+.top{position:sticky;top:0;z-index:30;margin:0 -16px;padding:12px 16px;background:color-mix(in srgb,var(--page) 88%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:15px;letter-spacing:-.01em}
+.brand small{display:block;font-weight:600;font-size:11.5px;color:var(--ink-3);letter-spacing:0}
+.ctrls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.seg{display:inline-flex;padding:3px;border-radius:999px;background:var(--field)}
+.seg button{border:0;background:none;height:30px;padding:0 13px;border-radius:999px;font-size:12.5px;font-weight:700;color:var(--ink-2)}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px var(--shadow)}
+.pill{display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 14px;border-radius:999px;border:0;background:var(--field);font-size:12.5px;font-weight:700;color:var(--ink-2)}
+.pill.primary{background:var(--primary);color:var(--on-primary)}
+.pill input{accent-color:var(--primary);width:15px;height:15px}
+
+.intro{max-width:1180px;margin:28px auto 8px}
+.intro h1{font-size:clamp(26px,4vw,38px);line-height:1.08;font-weight:800;letter-spacing:-.03em;max-width:760px}
+.intro p{color:var(--ink-2);font-weight:500;font-size:15px;max-width:700px;margin-top:10px}
+
+.kit{max-width:1180px;margin:22px auto 6px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(250px,100%),1fr));gap:10px}
+.kit div{background:var(--surface);border:1px solid var(--hair);border-radius:18px;padding:13px 14px 14px}
+.kit b{font-size:13px;font-weight:800}.kit code{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);display:block;margin-top:2px}
+.kit p{font-size:12px;color:var(--ink-2);margin-top:6px}
+.track{position:relative;height:16px;margin-top:10px;border-radius:999px;background:var(--field);overflow:hidden}
+.track i{position:absolute;left:3px;top:3px;width:30px;height:10px;border-radius:999px;background:var(--primary);animation:kit 2.6s infinite both}
+.track.glide i{animation-timing-function:var(--glide)}
+.track.seat i{animation-timing-function:var(--seat)}
+.track.rail i{animation-timing-function:var(--rail)}
+.track.ratchet i{animation-timing-function:steps(6,end)}
+@keyframes kit{0%,12%{left:3px}62%,100%{left:calc(100% - 33px)}}
+
+.grid{max-width:1180px;margin:22px auto 0;display:grid;grid-template-columns:repeat(auto-fill,minmax(min(330px,100%),1fr));gap:34px 22px}
+.cell{display:flex;flex-direction:column;align-items:center;gap:14px;min-width:0}
+.cap{width:100%;max-width:330px}
+.cap .n{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--primary-ink);letter-spacing:.06em}
+.cap h3{font-size:16.5px;font-weight:800;letter-spacing:-.015em;margin-top:2px}
+.cap p{font-size:12.5px;color:var(--ink-2);margin-top:4px}
+.cap ol{list-style:none;margin-top:8px;display:grid;gap:4px}
+.cap li{display:grid;grid-template-columns:62px 1fr;gap:8px;font-size:12px;color:var(--ink-2)}
+.cap li span{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);padding-top:1px}
+.cap .row{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;align-items:center}
+.tag{font-family:var(--mono);font-size:10.5px;font-weight:600;padding:3px 8px;border-radius:999px;background:var(--soft2);color:var(--primary-ink)}
+.tag.live{background:var(--sun);color:var(--on-sun)}
+.replay{margin-left:auto;display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:var(--surface);font-size:12px;font-weight:700}
+.replay .ic{width:14px;height:14px}
+.notes{max-width:1180px;margin:40px auto 0;background:var(--surface);border:1px solid var(--hair);border-radius:20px;padding:18px 20px}
+.notes h2{font-size:16px;font-weight:800}
+.notes ul{margin:8px 0 0 18px;display:grid;gap:5px;font-size:13px;color:var(--ink-2)}
+
+/* ── phone ─────────────────────────────────────────────────────────────────────────────────────── */
+.phone{position:relative;width:300px;height:640px;flex:none;border-radius:44px;border:9px solid var(--frame);background:var(--canvas);overflow:hidden;display:flex;flex-direction:column;font-size:13px;color:var(--ink);box-shadow:0 0 0 1px #4B4A53,0 40px 60px -30px rgba(28,20,70,.45),0 10px 20px -12px rgba(28,20,70,.25)}
+[data-theme="dark"] .phone{box-shadow:0 0 0 1px #2E2D36,0 40px 60px -30px rgba(0,0,0,.8)}
+@media (max-width:350px){.phone{zoom:.9}}
+.sbar{display:flex;justify-content:space-between;align-items:center;height:30px;padding:6px 22px 0;font-size:12px;font-weight:800;flex:none;position:relative;z-index:4}
+.sb-r{display:flex;gap:2px;align-items:flex-end}.sb-r i{width:3px;border-radius:1px;background:currentColor}
+.sb-r i:nth-child(1){height:5px}.sb-r i:nth-child(2){height:7px}.sb-r i:nth-child(3){height:9px}
+.sb-r em{width:18px;height:9px;border:1.5px solid currentColor;border-radius:3px;margin-left:4px;position:relative}
+.sb-r em::after{content:'';position:absolute;inset:1px 4px 1px 1px;background:currentColor;border-radius:1px}
+.scr{flex:1;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;position:relative;display:flex;flex-direction:column}
+.scr::-webkit-scrollbar{display:none}
+.pad{padding:4px 18px 18px;display:flex;flex-direction:column;gap:12px}
+.appbar{display:flex;align-items:center;gap:8px;padding:4px 12px 4px;min-height:46px}
+.appbar h4{font-size:14.5px;font-weight:700}
+.back{width:36px;height:36px;border-radius:999px;display:grid;place-items:center;background:var(--surface);border:1px solid var(--hair)}
+.h1{font-weight:700;font-size:23px;line-height:1.12;letter-spacing:-.03em}
+.lead{color:var(--ink-2);font-size:13.5px;font-weight:500;margin-top:-6px}
+.fine{color:var(--ink-3);font-size:12px}
+.foot{flex:none;display:flex;gap:8px;padding:10px 16px 18px;background:var(--canvas);border-top:1px solid var(--hair);position:relative;z-index:3}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;height:46px;padding:0 18px;border-radius:999px;font-weight:700;font-size:14.5px;letter-spacing:-.005em;background:var(--primary);color:var(--on-primary);flex:1;white-space:nowrap;border:0;transition:opacity .35s,transform .15s,background .4s}
+.btn.ghost{background:var(--surface);color:var(--ink);border:1.5px solid var(--line)}
+.btn.press{transform:scale(.97)}
+.link{color:var(--primary-ink);font-weight:700;text-align:center;font-size:13px;padding:6px}
+.field{display:flex;flex-direction:column;gap:5px}
+.f-l{font-size:11.5px;font-weight:700;color:var(--ink-2)}
+.f-h{font-size:11px;color:var(--ink-3)}
+.inp{height:44px;border-radius:12px;background:var(--field);display:flex;align-items:center;padding:0 14px;font-weight:600;font-size:14px;color:var(--ink)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;height:32px;padding:0 13px;border-radius:999px;border:0;background:var(--field);font-size:12.5px;font-weight:700;color:var(--ink-2);white-space:nowrap}
+.chip.on{background:var(--soft);color:var(--primary-ink)}
+.callout{display:flex;gap:10px;padding:12px;border-radius:16px;background:var(--soft2);border:1px solid var(--soft);font-size:12.5px}
+.callout .ic{color:var(--primary-ink);margin-top:1px}
+.steps{display:flex;align-items:center;gap:8px;padding:0 18px 4px;font-size:11.5px;font-weight:700;color:var(--ink-3)}
+.steps .bar{flex:1;display:flex;gap:4px}
+.steps .bar i{flex:1;height:4px;border-radius:4px;background:var(--line);position:relative;overflow:hidden}
+.steps .bar i b{position:absolute;inset:0;background:var(--primary);border-radius:4px;transform-origin:left}
+.capture{position:absolute;inset:0;opacity:0;width:100%;height:100%;border:0;cursor:text;font-size:16px}
+
+/* ── shared entrances (play once per replay) ──────────────────────────────────────────────────────
+   Headings: a tool head (violet bar, yellow tip) passes along the line and leaves the text behind it.
+   Fields: a guide rail draws down their left edge, then the field slides in along it.               */
+.wl{position:relative;display:block;width:fit-content}
+.wl::after{content:'';position:absolute;top:-1px;bottom:-1px;left:100%;width:2px;border-radius:2px;background:linear-gradient(var(--sun) 0 5px,var(--primary) 5px);opacity:0}
+.play .wt{display:block;animation:wipe .85s var(--rail) both;animation-delay:var(--d,.2s)}
+.play .wl::after{animation:tool .85s var(--rail) both;animation-delay:var(--d,.2s)}
+@keyframes wipe{from{clip-path:inset(-12% 100% -12% 0)}to{clip-path:inset(-12% -3% -12% 0)}}
+@keyframes tool{0%{left:0;opacity:1}88%{opacity:1}100%{left:100%;opacity:0}}
+.slide,.rail{position:relative}
+.play .slide,.play .rail{animation:slideIn .7s var(--glide) both;animation-delay:calc(var(--b,.6s) + var(--i,0) * 90ms)}
+.rail::before{content:'';position:absolute;left:-9px;top:2px;bottom:2px;width:2px;border-radius:2px;background:var(--primary);transform-origin:top;opacity:0}
+.play .rail::before{animation:railLine 1s var(--glide) both;animation-delay:calc(var(--b,.6s) + var(--i,0) * 90ms - .12s)}
+@keyframes slideIn{from{opacity:0;transform:translateX(-14px)}to{opacity:1;transform:none}}
+@keyframes railLine{0%{transform:scaleY(0);opacity:1}40%{transform:scaleY(1);opacity:1}100%{transform:scaleY(1);opacity:0}}
+.play .foot{animation:footIn .8s var(--glide) 1.15s both}
+@keyframes footIn{from{transform:translateY(100%)}to{transform:none}}
+.play .art{animation:artIn 1s var(--glide) .05s both}
+@keyframes artIn{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:none}}
+
+/* ── 01 Welcome: exploded hub ──────────────────────────────────────────────────────────────────── */
+.wel{padding:8px 20px 20px;gap:12px;background:radial-gradient(120% 70% at 0% 0%,var(--tile-a),var(--canvas) 70%)}
+.w-svg{width:100%;max-width:236px;display:block;margin:0 auto;overflow:visible}
+.w-tokrow{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:4px;min-height:38px}
+.w-tok{position:relative;display:inline-flex;gap:2px}
+.w-tok i{font-style:normal;width:36px;height:36px;display:grid;place-items:center;font-size:15px;font-weight:800;line-height:1;position:relative;overflow:hidden}
+.w-tok i:nth-child(1){border-radius:999px 4px 4px 999px;background:var(--primary);color:var(--on-primary)}
+.w-tok i:nth-child(2){border-radius:4px 999px 999px 4px;color:var(--primary-ink);box-shadow:inset 0 0 0 1.5px var(--primary);background-image:repeating-linear-gradient(-45deg,transparent 0 3px,var(--soft) 3px 5px)}
+.w-tok .rs{position:absolute;left:38px;top:0;border-radius:4px 999px 999px 4px;background:var(--primary);color:var(--on-primary);box-shadow:0 6px 14px var(--shadow)}
+.w-tok .scan{position:absolute;inset:0;background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--primary) 45%,transparent),transparent);opacity:0}
+.w-tok::after{content:'';position:absolute;inset:-6px;border-radius:999px;border:2px solid var(--primary);opacity:0;pointer-events:none}
+.w-found{font-size:11px;font-weight:600;color:var(--ok);display:flex;align-items:center;gap:5px}
+.w-found::before{content:'';width:7px;height:7px;border-radius:9px;background:var(--ok)}
+.wh{font-size:29px;line-height:1.06;font-weight:800;letter-spacing:-.03em}
+.wel p{color:var(--ink-2);font-size:14px;font-weight:500}
+.wel .lang{display:flex;align-items:center;justify-content:center;gap:6px;font-size:12px;color:var(--ink-3);font-weight:600}
+.wel .lang .ic{width:15px;height:15px}
+
+.play .w-gear{animation:wGear 10s var(--glide) infinite both}
+.play .w-gtick{animation:wTick 10s cubic-bezier(.45,0,.2,1.45) infinite both}
+.play .w-bear{animation:wBear 10s var(--glide) infinite both}
+.play .w-balls{animation:wBalls 10s linear infinite both}
+.play .w-hub{animation:wHub 10s var(--glide) infinite both}
+.play .w-bolt{animation:wBolt 10s var(--glide) infinite both;animation-delay:var(--dl)}
+.play .w-click{animation:wClick 10s ease-out infinite both}
+.play .w-guide{animation:wGuide 10s linear infinite both}
+.play .w-dim{animation:wDim 10s linear infinite both}
+.play .w-dimdraw{animation:wDimDraw 10s var(--rail) infinite both}
+.play .w-tok .scan{animation:wScan 10s var(--rail) infinite both}
+.play .w-tok .rs{animation:wR 10s var(--glide) infinite both}
+.play .w-tok::after{animation:wSnap 10s ease-out infinite both}
+.play .w-found{animation:wFound 10s var(--glide) infinite both}
+.w-gtick,.w-balls,.w-click{transform-box:fill-box;transform-origin:center}
+.w-guide{opacity:0}
+@keyframes wGear{0%,4%{transform:translateX(-170px);opacity:0}16%,84%{transform:none;opacity:1}94%,100%{transform:translateX(-170px);opacity:0}}
+@keyframes wTick{0%,46%{transform:rotate(0)}49%,56%{transform:rotate(16.36deg)}59%,66%{transform:rotate(32.73deg)}69%,95%{transform:rotate(49.09deg)}95.1%,100%{transform:rotate(0)}}
+@keyframes wBear{0%,10%{transform:translateX(170px);opacity:0}22%,86%{transform:none;opacity:1}95%,100%{transform:translateX(170px);opacity:0}}
+@keyframes wBalls{0%,30%{transform:rotate(0)}86%,100%{transform:rotate(108deg)}}
+@keyframes wHub{0%,18%{transform:translateY(-120px);opacity:0}28%,88%{transform:none;opacity:1}96%,100%{transform:translateY(-120px);opacity:0}}
+@keyframes wBolt{0%,26%{transform:translate(var(--dx),var(--dy));opacity:0}35%,82%{transform:none;opacity:1}90%,100%{transform:translate(var(--dx),var(--dy));opacity:0}}
+@keyframes wClick{0%,37%{opacity:0;transform:scale(.9)}38%{opacity:.9;transform:scale(.94)}47%,100%{opacity:0;transform:scale(1.16)}}
+@keyframes wGuide{0%{opacity:0}5%,30%{opacity:1}42%,100%{opacity:0}}
+@keyframes wDim{0%,40%{opacity:0}45%,84%{opacity:1}90%,100%{opacity:0}}
+@keyframes wDimDraw{0%,40%{stroke-dashoffset:1}48%,100%{stroke-dashoffset:0}}
+@keyframes wScan{0%,44%{transform:translateX(-100%);opacity:0}45%{opacity:1}55%{transform:translateX(100%);opacity:1}56%,100%{transform:translateX(100%);opacity:0}}
+@keyframes wR{0%,56%{transform:translateX(70px);opacity:0}58%{opacity:1}64%,88%{transform:none;opacity:1}94%,100%{transform:translateX(70px);opacity:0}}
+@keyframes wSnap{0%,63.5%{opacity:0;transform:scale(.92)}64.5%{opacity:.8;transform:scale(.96)}72%,100%{opacity:0;transform:scale(1.18)}}
+@keyframes wFound{0%,65%{opacity:0;transform:translateX(-8px)}69%,88%{opacity:1;transform:none}93%,100%{opacity:0;transform:none}}
+
+/* ── 02 Mobile number: odometer and dial gauge ─────────────────────────────────────────────────── */
+.gauge{width:150px;display:block;margin:2px auto 0}
+.needle{transform-box:view-box;transform-origin:100px 86px;transform:rotate(-120deg);transition:transform .55s cubic-bezier(.3,1.45,.5,1)}
+.lamp{fill:var(--line);transition:fill .3s}
+.full .lamp{fill:var(--ok)}
+.pf{position:relative;display:flex;align-items:center;border-radius:16px;background:var(--field);font-weight:700;font-size:20px;margin-top:4px;transition:box-shadow .3s}
+.pf:focus-within{box-shadow:inset 0 0 0 2px var(--primary)}
+.pf .cc{padding:12px 13px;border-right:1.5px solid var(--hair);color:var(--ink-2)}
+.odos{display:flex;padding:0 12px;font-family:var(--mono);font-weight:600}
+.odo{display:block;width:13px;height:28px;overflow:hidden;text-align:center}
+.odo:nth-child(5){margin-right:8px}
+.strip{display:flex;flex-direction:column;transition:transform .6s cubic-bezier(.2,.75,.15,1)}
+.strip span{height:28px;line-height:28px}
+.strip span:first-child{color:var(--ink-3)}
+.phone-safe{display:flex;gap:8px;align-items:flex-start;font-size:12px;color:var(--ink-2);background:var(--surface);border:1px solid var(--hair);border-radius:14px;padding:10px 12px}
+.phone-safe .ic{width:16px;height:16px;color:var(--ok)}
+#p-phone .foot .btn{opacity:.45}
+#p-phone.full .foot .btn{opacity:1}
+
+/* ── 03 Code: flange, one bolt per digit ───────────────────────────────────────────────────────── */
+.flange{width:100%;max-width:236px;display:block;margin:0 auto}
+.flange-turn{transform-box:view-box;transform-origin:130px 78px;transition:transform 1.15s var(--glide)}
+.verified .flange-turn{transform:rotate(60deg)}
+.bh{transform-box:fill-box;transform-origin:center;transform:rotate(-120deg) scale(1.24);transition:transform .52s steps(4,end)}
+.tight .bh{transform:none}
+.bsh{transform:translate(3px,4px);opacity:.38;transition:transform .5s,opacity .5s}
+.tight .bsh{transform:translate(.8px,1px);opacity:.25}
+.stripe{stroke-dasharray:1;stroke-dashoffset:1;transition:stroke-dashoffset .25s ease-out}
+.tight .stripe{stroke-dashoffset:0;transition-delay:.52s}
+.clk{opacity:0;transform-box:fill-box;transform-origin:center}
+.play .tight .clk{animation:clk .45s .4s ease-out}
+@keyframes clk{0%{opacity:0;transform:scale(.8)}30%{opacity:1}100%{opacity:0;transform:scale(1.35)}}
+.socket{transition:transform .42s var(--glide),opacity .3s}
+.socket.gone{opacity:0}
+.socket circle{stroke-dasharray:4 3;animation:spin 3s linear infinite}
+@keyframes spin{to{stroke-dashoffset:-14}}
+.seal{fill:var(--photo);transition:fill .45s}
+.verified .seal{fill:var(--ok)}
+.sealchk{stroke-dasharray:1;stroke-dashoffset:1;transition:stroke-dashoffset .4s .35s var(--glide)}
+.verified .sealchk{stroke-dashoffset:0}
+.otpwrap{position:relative}
+.otp{display:flex;gap:7px}
+.otp i{flex:1;height:52px;border-radius:14px;display:grid;place-items:center;font-weight:800;font-size:22px;font-style:normal;background:var(--field);transition:box-shadow .25s,background .25s}
+.otp i.cur{background:var(--surface);box-shadow:inset 0 0 0 2px var(--primary)}
+.verified .otp i{background:var(--ok-soft);color:var(--ok)}
+.otp b{display:block;font-weight:800;animation:press .32s var(--seat)}
+@keyframes press{from{transform:translateY(-7px);opacity:0}to{transform:none;opacity:1}}
+.vstat{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--ok);opacity:0;transform:translateY(4px);transition:opacity .35s .5s,transform .35s .5s}
+.verified .vstat{opacity:1;transform:none}
+.vstat .ic{width:15px;height:15px}
+.resend{display:flex;justify-content:space-between;align-items:center}
+.verified .foot .btn{background:var(--ok)}
+
+/* ── 04 Your business: laser-engraved nameplate, conveyor ──────────────────────────────────────── */
+.plate-svg{width:100%;display:block;overflow:visible}
+.play .b-plate{animation:bPlate 12s var(--glide) infinite both}
+.play .b-rivet{animation:bRivet 12s var(--seat) infinite both;animation-delay:var(--dl)}
+.play .b-t1{animation:bT1 12s linear infinite both}
+.play .b-t2{animation:bT2 12s linear infinite both}
+.play .b-laser{animation:bLaser 12s infinite both}
+.play .b-beam1{animation:bBeam1 12s linear infinite both}
+.play .b-beam2{animation:bBeam2 12s linear infinite both}
+.b-rivet{transform-box:fill-box;transform-origin:center}
+.b-beam1,.b-beam2{opacity:0}
+.b-spark{animation:flick .18s steps(2,end) infinite alternate}
+.b-spark:nth-child(2n){animation-duration:.26s}
+@keyframes flick{from{opacity:1}to{opacity:.15}}
+@keyframes bPlate{0%{transform:translateX(290px)}7%,86%{transform:none}95%,100%{transform:translateX(-290px)}}
+@keyframes bRivet{0%,7%{transform:scale(0);opacity:0}9.5%,100%{transform:none;opacity:1}}
+@keyframes bT1{0%,12%{clip-path:inset(-20% 100% -20% 0)}34%,100%{clip-path:inset(-20% 0 -20% 0)}}
+@keyframes bT2{0%,38%{clip-path:inset(-20% 100% -20% 0)}50%,100%{clip-path:inset(-20% 0 -20% 0)}}
+@keyframes bLaser{
+  0%,11%{transform:none;animation-timing-function:cubic-bezier(.65,0,.35,1)}
+  12%{transform:none;animation-timing-function:linear}
+  34%{transform:translateX(200px);animation-timing-function:cubic-bezier(.16,.84,.24,1)}
+  37%,38%{transform:none;animation-timing-function:linear}
+  50%{transform:translateX(152px);animation-timing-function:cubic-bezier(.16,.84,.24,1)}
+  58%,100%{transform:none}}
+@keyframes bBeam1{0%,11.9%{opacity:0}12%,33.9%{opacity:1}34%,100%{opacity:0}}
+@keyframes bBeam2{0%,37.9%{opacity:0}38%,49.9%{opacity:1}50%,100%{opacity:0}}
+.conv{position:relative;padding-bottom:16px;overflow:hidden;margin:0 -18px;padding-left:18px;padding-right:18px}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;position:relative;z-index:1}
+.tile{display:flex;flex-direction:column;align-items:center;gap:7px;padding:11px 4px 10px;border-radius:16px;border:0;background:var(--field);font-size:12px;font-weight:700;color:var(--ink-2)}
+.tile .ic{width:20px;height:20px}
+.tile.on{background:var(--soft);color:var(--primary-ink)}
+.belt{position:absolute;left:0;right:0;bottom:2px;height:12px}
+.belt::before{content:'';position:absolute;left:0;right:0;top:0;height:3px;background:repeating-linear-gradient(90deg,var(--ink-3) 0 8px,transparent 8px 12px);opacity:.55;background-position-x:0}
+.belt .rollers{position:absolute;left:10px;right:10px;top:4px;display:flex;justify-content:space-between}
+.roller{width:8px;height:8px;border-radius:9px;background:conic-gradient(var(--ink-3) 0 25%,var(--line) 0 50%,var(--ink-3) 0 75%,var(--line) 0)}
+.play .tiles{animation:bTiles 1.5s var(--glide) .45s both}
+.play .belt::before{animation:bBelt 1.5s var(--glide) .45s both}
+.play .roller{animation:bRoll 1.5s var(--glide) .45s both}
+.play .tile.on{animation:bOn .45s ease-out both;animation-delay:var(--dl)}
+.u,.play .u{animation:none!important}
+@keyframes bTiles{from{transform:translateX(-290px)}to{transform:none}}
+@keyframes bBelt{from{background-position-x:-288px}to{background-position-x:0}}
+@keyframes bRoll{from{transform:rotate(-720deg)}to{transform:none}}
+@keyframes bOn{0%{background:var(--field);color:var(--ink-2);transform:none}40%{transform:scale(.94)}100%{background:var(--soft);color:var(--primary-ink);transform:none}}
+.steps .b1{transform:none}
+.play .stepfill{animation:rack .9s steps(6,end) .35s both}
+@keyframes rack{from{transform:scaleX(0)}to{transform:none}}
+
+/* ── 05 Where are you: crane drop and radar ────────────────────────────────────────────────────── */
+.map{position:relative;border-radius:18px;overflow:hidden;border:1px solid var(--hair);background:var(--surface)}
+.map svg{display:block;width:100%}
+.plot{fill:var(--soft2);stroke:color-mix(in srgb,var(--primary) 22%,transparent);stroke-width:.8}
+.road{fill:var(--field)}
+.map .count{position:absolute;left:10px;bottom:10px;display:flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;background:var(--surface);box-shadow:0 4px 12px var(--shadow);font-size:11px;font-weight:700}
+.map .count i{width:8px;height:8px;border-radius:9px;background:var(--sun);box-shadow:0 0 0 1.5px var(--on-sun)}
+.l-cable{transform-box:fill-box;transform-origin:50% 0}
+.l-ring{transform-box:view-box;transform-origin:128px 124px}
+.l-sweep{transform-box:view-box;transform-origin:128px 124px;opacity:0}
+.l-land,.l-ping{transform-box:fill-box;transform-origin:center}
+.l-land{opacity:0}
+.play .l-trol{animation:lTrol 12s var(--glide) infinite both}
+.play .l-cable{animation:lCable 12s var(--glide) infinite both}
+.play .l-hook{animation:lHook 12s var(--glide) infinite both}
+.play .l-pin{animation:lPin 12s var(--glide) infinite both}
+.play .l-land{animation:lLand 12s ease-out infinite both}
+.play .l-label{animation:lLabel 12s var(--glide) infinite both}
+.play .l-ring{animation:lRing 12s var(--glide) infinite both;animation-delay:var(--dl)}
+.play .l-sweep{animation:lSweep 12s linear infinite both}
+.play .map .count{animation:lCount 12s var(--glide) infinite both}
+@keyframes lTrol{0%,3%{transform:translateX(150px)}16%,40%{transform:none}50%,100%{transform:translateX(-160px)}}
+@keyframes lCable{0%,17%{transform:none}28%,30%{transform:scaleY(6)}38%,100%{transform:none}}
+@keyframes lHook{0%,17%{transform:none}28%,30%{transform:translateY(60px)}38%,100%{transform:none}}
+@keyframes lPin{0%,3%{transform:translate(150px,-60px);opacity:1}16%,17%{transform:translate(0,-60px)}28%,88%{transform:none;opacity:1}94%,100%{transform:none;opacity:0}}
+@keyframes lLand{0%,27.5%{opacity:0;transform:scale(.6)}28.5%{opacity:.9;transform:scale(.8)}37%,100%{opacity:0;transform:scale(2.4)}}
+@keyframes lLabel{0%,37%{opacity:0;transform:translateX(-6px)}41%,88%{opacity:1;transform:none}94%,100%{opacity:0;transform:none}}
+@keyframes lRing{0%,44%{transform:scale(.15);opacity:0}47%{opacity:.9}58%,88%{transform:none;opacity:.55}94%,100%{transform:none;opacity:0}}
+@keyframes lSweep{0%,45%{transform:rotate(-30deg);opacity:0}46%{transform:rotate(-30deg);opacity:1}70%{transform:rotate(330deg);opacity:1}72%,100%{transform:rotate(330deg);opacity:0}}
+@keyframes lCount{0%,70%{opacity:0;transform:translateY(6px)}74%,88%{opacity:1;transform:none}94%,100%{opacity:0;transform:none}}
+.loc-btn .ic{color:var(--primary)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+/* ── 06 GST: caliper reads the GSTIN ───────────────────────────────────────────────────────────── */
+.gfield{border-radius:14px;background:var(--field);padding:6px 10px 10px}
+.gwrap{position:relative;padding-top:20px;width:225px;margin:0 auto}
+.gwrap svg{position:absolute;left:0;top:0;width:225px;height:46px;overflow:visible}
+.gst{display:flex;font-family:var(--mono);font-size:17px;font-weight:600;position:relative}
+.gc{width:15px;text-align:center;height:26px;line-height:26px;border-bottom:2px solid transparent;transition:background .3s,color .3s,border-color .3s}
+.gc.meas{background:var(--soft);color:var(--primary-ink)}
+.gc.ok{border-bottom-color:var(--ok)}
+.jaw{transition:transform .75s var(--glide)}
+.readout{display:flex;align-items:center;gap:8px;min-height:30px;border-radius:10px;padding:6px 10px;background:#C9D3C0;color:#1E2B1E;font-family:var(--mono);font-size:11px;font-weight:600}
+.readout b{font-weight:700;padding:1px 6px;border-radius:5px;background:#1E2B1E;color:#C9D3C0;font-size:10px;letter-spacing:.04em}
+.readout span{transition:opacity .25s}
+.readout.fade span,.readout.fade b{opacity:0}
+.tol{display:inline-flex;align-items:center;gap:6px;align-self:flex-start;padding:5px 11px;border-radius:999px;background:var(--ok-soft);color:var(--ok);font-size:12px;font-weight:700;opacity:0;transform:translateY(5px);transition:opacity .35s,transform .45s var(--glide)}
+.tol .ic{width:15px;height:15px}
+.g-done .tol{opacity:1;transform:none}
+.gcard{border-radius:16px;background:var(--surface);border:1px solid var(--hair);padding:12px 13px;opacity:0;transform:translateY(18px);transition:opacity .45s .25s,transform .7s .25s var(--glide)}
+.g-done .gcard{opacity:1;transform:none}
+.gcard h4{font-size:14px;font-weight:700}.gcard p{font-size:12px;color:var(--ink-2)}
+.badge{display:inline-flex;align-items:center;gap:5px;margin-top:7px;padding:3px 9px;border-radius:999px;background:var(--sun);color:var(--on-sun);font-size:11px;font-weight:800}
+.badge .ic{width:13px;height:13px}
+
+/* ── reduce motion: everything still, at the rest frame ────────────────────────────────────────── */
+html.rm .phone *,html.rm .phone *::before,html.rm .phone *::after,html.rm .phone,html.rm .track i{animation:none!important;transition:none!important}
+.snap,.snap *{transition:none!important}
+</style>
+</head>
+<body>
+
+<!-- material gradients and icons, shared by every drawing (0×0, not display:none, so gradients resolve) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="g-steel" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F7F8FA"/><stop offset=".45" stop-color="#C7CAD2"/><stop offset="1" stop-color="#7F838E"/></linearGradient>
+    <linearGradient id="g-chrome" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8E929C"/><stop offset=".25" stop-color="#FFFFFF"/><stop offset=".55" stop-color="#B4B8C1"/><stop offset="1" stop-color="#6B6F7A"/></linearGradient>
+    <radialGradient id="g-ball" cx=".35" cy=".3" r=".75"><stop offset="0" stop-color="#FFFFFF"/><stop offset=".5" stop-color="#B9BCC5"/><stop offset="1" stop-color="#6F737E"/></radialGradient>
+    <linearGradient id="g-black" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#555761"/><stop offset=".4" stop-color="#2C2D33"/><stop offset="1" stop-color="#17181C"/></linearGradient>
+    <linearGradient id="g-brass" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#8E6618"/><stop offset=".45" stop-color="#F3D98A"/><stop offset="1" stop-color="#9C7420"/></linearGradient>
+    <linearGradient id="g-brush" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#C9CCD3"/><stop offset=".18" stop-color="#EEF0F3"/><stop offset=".42" stop-color="#D3D6DC"/><stop offset=".63" stop-color="#F4F5F7"/><stop offset=".85" stop-color="#CDD0D7"/><stop offset="1" stop-color="#E4E6EA"/></linearGradient>
+    <radialGradient id="g-sh" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#1C1A27" stop-opacity=".28"/><stop offset="1" stop-color="#1C1A27" stop-opacity="0"/></radialGradient>
+    <pattern id="p-brush" width="6" height="2" patternUnits="userSpaceOnUse"><rect width="6" height=".5" fill="#fff" opacity=".35"/></pattern>
+    <pattern id="p-grid" width="12" height="12" patternUnits="userSpaceOnUse"><path d="M12 0H0V12" fill="none" stroke="var(--grid)" stroke-width="1"/></pattern>
+    <linearGradient id="g-sweep" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="var(--primary)" stop-opacity="0"/><stop offset="1" stop-color="var(--primary)" stop-opacity=".28"/></linearGradient>
+  </defs>
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 5 8 12l7 7"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.5 2.3 3.5 5.2 3.5 8.5s-1 6.2-3.5 8.5c-2.5-2.3-3.5-5.2-3.5-8.5s1-6.2 3.5-8.5z"/></symbol>
+  <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s-7-6.3-7-11.5A7 7 0 0 1 19 9.5C19 14.7 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3 5 6v6c0 4.4 3 7.6 7 9 4-1.4 7-4.6 7-9V6z"/><path d="m9 12 2 2 4-4"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4.5 4.5L19 7"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></symbol>
+  <symbol id="i-rupee" viewBox="0 0 24 24"><path d="M7 4h10M7 8h10M7 4c5 0 7 2 7 4s-2 4-7 4l7 8"/></symbol>
+  <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></symbol>
+  <symbol id="i-replay" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v4h4"/></symbol>
+</svg>
+
+<header class="top">
+  <div class="brand">
+    <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><rect x="2" y="7" width="12.5" height="16" rx="8 2 2 8" fill="var(--primary)"/><rect x="15.5" y="7" width="12.5" height="16" rx="2 8 8 2" fill="none" stroke="var(--primary)" stroke-width="1.6" stroke-dasharray="3 2"/></svg>
+    <span>Onboarding motion<small>Machine Parts · workshop precision · Periwinkle v2</small></span>
+  </div>
+  <div class="ctrls">
+    <div class="seg" role="group" aria-label="Theme">
+      <button type="button" data-theme-set="light" aria-pressed="true">Light</button>
+      <button type="button" data-theme-set="dark" aria-pressed="false">Dark</button>
+    </div>
+    <label class="pill"><input type="checkbox" id="rm-toggle"> Reduce motion</label>
+    <button type="button" class="pill primary" id="replay-all"><svg class="ic" style="width:15px;height:15px"><use href="#i-replay"/></svg>Replay all</button>
+  </div>
+</header>
+
+<section class="intro">
+  <h1>Parts that click into place: onboarding motion for the machine parts app</h1>
+  <p>Textile's onboarding moves like cloth: slow folds and words rising. This app moves like a workshop. Parts glide along axis lines and seat with a click, bolts ratchet tight, carriages run on rails, and gauges read. Every drawing tells that screen's story, and the left/right matching idea opens the app.</p>
+</section>
+
+<section class="kit" aria-label="Motion language">
+  <div><b>Glide</b><code>cubic-bezier(.16,.84,.24,1)</code><div class="track glide"><i></i></div><p>Fast travel, exact landing. Parts, fields, the footer.</p></div>
+  <div><b>Seat</b><code>cubic-bezier(.34,1.32,.6,1)</code><div class="track seat"><i></i></div><p>One small settle when something lands. Needles, rivets, typed digits.</p></div>
+  <div><b>Ratchet</b><code>steps(4–6)</code><div class="track ratchet"><i></i></div><p>Clicks, not a slide. Bolts tightening, gear teeth, progress bars.</p></div>
+  <div><b>Rail</b><code>cubic-bezier(.65,0,.35,1)</code><div class="track rail"><i></i></div><p>Even start and stop. Tool heads, lasers, calipers.</p></div>
+</section>
+
+<main class="grid">
+
+<!-- ═════════════ 01 WELCOME ═════════════ -->
+<article class="cell">
+  <div class="phone" id="p-welcome">
+    <div class="sbar"><b>9:41</b><span class="sb-r"><i></i><i></i><i></i><em></em></span></div>
+    <div class="scr wel">
+      <div class="art">
+        <svg class="w-svg" viewBox="0 0 260 196" aria-hidden="true">
+          <rect x="0" y="0" width="260" height="182" rx="20" fill="url(#p-grid)"/>
+          <g class="w-guide" stroke="var(--primary)" stroke-width="1" stroke-dasharray="4 4" opacity=".5">
+            <line x1="-10" y1="90" x2="270" y2="90"/><line x1="130" y1="-6" x2="130" y2="160"/>
+            <circle cx="130" cy="90" r="70" fill="none"/>
+          </g>
+          <ellipse cx="130" cy="158" rx="62" ry="7" fill="url(#g-sh)"/>
+          <g class="w-gear"><g class="w-gtick">
+            <path id="w-gear-path" fill="url(#g-steel)" stroke="#80848F" stroke-width=".6"/>
+            <circle cx="130" cy="90" r="44.5" fill="#9DA1AB"/><circle cx="130" cy="90" r="42.5" fill="url(#g-steel)"/>
+          </g></g>
+          <g class="w-bear">
+            <circle cx="130" cy="90" r="34" fill="url(#g-steel)" stroke="#7C808B" stroke-width=".8"/>
+            <circle cx="130" cy="90" r="28.5" fill="#7E828D"/>
+            <g class="w-balls" id="w-balls"></g>
+            <circle cx="130" cy="90" r="17.5" fill="url(#g-steel)"/>
+            <path d="M103 74A31 31 0 0 1 126 59.5" stroke="#fff" stroke-opacity=".75" stroke-width="2" fill="none" stroke-linecap="round"/>
+          </g>
+          <g id="w-bolts"></g>
+          <g class="w-hub">
+            <circle cx="130" cy="90" r="12" fill="url(#g-black)"/><circle cx="130" cy="90" r="6.5" fill="#55575F"/><rect x="128.2" y="82" width="3.6" height="4" fill="#55575F"/>
+          </g>
+          <circle class="w-click" cx="130" cy="90" r="60" fill="none" stroke="var(--primary)" stroke-width="2" opacity="0"/>
+          <g class="w-dim" stroke="var(--ink-3)" stroke-width="1" fill="none">
+            <line x1="74" y1="152" x2="74" y2="178"/><line x1="186" y1="152" x2="186" y2="178"/>
+            <path class="w-dimdraw" d="M76 172H184M76 172l5 -3M76 172l5 3M184 172l-5 -3M184 172l-5 3" pathLength="1" stroke-dasharray="1" stroke-dashoffset="0"/>
+            <rect x="104" y="180" width="52" height="14" rx="7" fill="var(--canvas)" stroke="none"/>
+            <text x="130" y="190.5" text-anchor="middle" font-family="JetBrains Mono" font-size="9" font-weight="600" fill="var(--ink-2)" stroke="none">Ø112 · 22T</text>
+          </g>
+        </svg>
+        <div class="w-tokrow">
+          <span class="w-tok" aria-label="Left side held, right side found"><i>L</i><i><span class="scan"></span>R</i><i class="rs">R</i></span>
+          <span class="w-found mono">Right side · 6 km</span>
+        </div>
+      </div>
+      <h1 class="wh"><span class="wl" style="--d:.35s"><span class="wt">Find the part your</span></span><span class="wl" style="--d:.62s"><span class="wt">machine is missing</span></span></h1>
+      <p class="slide" style="--b:.95s">Spare parts and machinery from verified businesses near you. Got only the left side? We find the right one.</p>
+      <span class="btn slide" style="--b:1.1s">Continue with mobile number</span>
+      <span class="link slide" style="--b:1.2s">Browse without signing in</span>
+      <span class="lang slide" style="--b:1.3s"><svg class="ic"><use href="#i-globe"/></svg>English, हिन्दी, ગુજરાતી</span>
+    </div>
+  </div>
+  <div class="cap">
+    <span class="n">01 · WELCOME</span>
+    <h3>Exploded hub assembly</h3>
+    <p>The hub assembles itself along its axis lines, then the left/right token finds its missing half, which is the app's promise.</p>
+    <ol>
+      <li><span>0.4–1.6 s</span>Gear glides in from the left, bearing from the right, hub from above.</li>
+      <li><span>2.6–3.5 s</span>Five bolts close in radially; a ring flashes once as the assembly seats.</li>
+      <li><span>4.0–4.8 s</span>Dimension line draws: Ø112 · 22T. The gear ratchets three teeth.</li>
+      <li><span>4.4–6.9 s</span>The dashed R is scanned, the real R slides in on its rail and snaps.</li>
+      <li><span>8.4–10 s</span>Everything backs out along the same lines; loop.</li>
+    </ol>
+    <div class="row"><span class="tag">Loop 10 s</span><span class="tag">Title: tool-head wipe</span><button class="replay" data-replay="p-welcome"><svg class="ic"><use href="#i-replay"/></svg>Replay</button></div>
+  </div>
+</article>
+
+<!-- ═════════════ 02 MOBILE NUMBER ═════════════ -->
+<article class="cell">
+  <div class="phone" id="p-phone">
+    <div class="sbar"><b>9:41</b><span class="sb-r"><i></i><i></i><i></i><em></em></span></div>
+    <div class="scr">
+      <div class="appbar"><span class="back"><svg class="ic"><use href="#i-back"/></svg></span></div>
+      <div class="pad">
+        <svg class="gauge art" viewBox="0 0 200 170" aria-hidden="true">
+          <ellipse cx="100" cy="164" rx="60" ry="5" fill="url(#g-sh)"/>
+          <circle cx="100" cy="86" r="76" fill="url(#g-chrome)"/>
+          <circle cx="100" cy="86" r="69" fill="var(--surface)" stroke="#9DA1AB" stroke-width="1"/>
+          <path d="M 157.9 119.4 A 66 66 0 0 0 165.2 75" fill="none" stroke="var(--ok)" stroke-width="5" opacity=".35"/>
+          <g id="g-ticks"></g>
+          <text x="100" y="128" text-anchor="middle" font-family="JetBrains Mono" font-size="8" font-weight="700" fill="var(--ink-3)" letter-spacing=".12em">DIGITS</text>
+          <circle class="lamp" cx="100" cy="112" r="4.2"/>
+          <g class="needle"><path d="M98.2 86 L100 30 L101.8 86 Z" fill="var(--primary)"/><path d="M99 86h2v14h-2z" fill="var(--primary)"/></g>
+          <circle cx="100" cy="86" r="7" fill="url(#g-black)"/><circle cx="100" cy="86" r="2.4" fill="#8E929C"/>
+          <path d="M44 58A62 62 0 0 1 84 26" stroke="#fff" stroke-opacity=".8" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        </svg>
+        <h1 class="h1"><span class="wl" style="--d:.3s"><span class="wt">Your mobile number</span></span></h1>
+        <p class="lead slide" style="--b:.7s">We send a 6-digit code by SMS.</p>
+        <div class="pf rail" style="--b:.85s">
+          <span class="cc">+91</span>
+          <span class="odos" id="odos"></span>
+          <input class="capture" inputmode="numeric" autocomplete="off" aria-label="Mobile number, 10 digits">
+        </div>
+        <div class="phone-safe slide" style="--b:1s"><svg class="ic"><use href="#i-shield"/></svg><span>Buyers see your number only after you share it in a chat.</span></div>
+      </div>
+    </div>
+    <div class="foot"><span class="btn">Send code</span></div>
+  </div>
+  <div class="cap">
+    <span class="n">02 · MOBILE NUMBER</span>
+    <h3>Odometer digits, a gauge that fills</h3>
+    <p>Each digit rolls up like a mechanical counter. A pressure gauge reads how many digits are in, and its lamp turns green at 10.</p>
+    <ol>
+      <li><span>per digit</span>Counter wheel rolls from its current value to the new one (600 ms).</li>
+      <li><span>per digit</span>Needle steps 24° with one small settle; Send code lights up at 10.</li>
+      <li><span>delete</span>Wheels roll back to the dot, the needle drops.</li>
+    </ol>
+    <div class="row"><span class="tag live">Live: tap the field and type</span><button class="replay" data-replay="p-phone"><svg class="ic"><use href="#i-replay"/></svg>Replay</button></div>
+  </div>
+</article>
+
+<!-- ═════════════ 03 CODE ═════════════ -->
+<article class="cell">
+  <div class="phone" id="p-otp">
+    <div class="sbar"><b>9:41</b><span class="sb-r"><i></i><i></i><i></i><em></em></span></div>
+    <div class="scr">
+      <div class="appbar"><span class="back"><svg class="ic"><use href="#i-back"/></svg></span></div>
+      <div class="pad">
+        <svg class="flange art" viewBox="0 0 260 156" aria-hidden="true">
+          <ellipse cx="130" cy="148" rx="70" ry="6" fill="url(#g-sh)"/>
+          <g class="flange-turn">
+            <circle cx="130" cy="78" r="64" fill="url(#g-steel)" stroke="#7C808B" stroke-width=".8"/>
+            <circle cx="130" cy="78" r="56" fill="none" stroke="#fff" stroke-opacity=".35" stroke-width="1"/>
+            <circle cx="130" cy="78" r="29" fill="#8E929C"/><circle cx="130" cy="78" r="27" fill="url(#g-steel)"/>
+            <path d="M80 50A60 60 0 0 1 118 19" stroke="#fff" stroke-opacity=".75" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+            <g id="o-bolts"></g>
+          </g>
+          <circle class="seal" cx="130" cy="78" r="20" stroke="#7C808B" stroke-width=".8"/>
+          <path class="sealchk" d="M121 78.5l6 6 12-12.5" pathLength="1" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+          <g class="socket" id="o-socket"><circle r="14" fill="none" stroke="var(--primary)" stroke-width="2"/></g>
+        </svg>
+        <h1 class="h1"><span class="wl" style="--d:.3s"><span class="wt">Enter the code</span></span></h1>
+        <p class="lead slide" style="--b:.7s">Sent to <b class="mono" style="font-weight:600">+91 98250 41736</b></p>
+        <div class="otpwrap rail" style="--b:.85s">
+          <div class="otp" id="otp"><i class="cur"></i><i></i><i></i><i></i><i></i><i></i></div>
+          <input class="capture" inputmode="numeric" autocomplete="one-time-code" aria-label="6-digit code">
+        </div>
+        <div class="resend slide" style="--b:1s"><span class="fine" id="o-resend">Resend in 24 s</span><span class="vstat"><svg class="ic"><use href="#i-check"/></svg>Number verified</span></div>
+      </div>
+    </div>
+    <div class="foot"><button type="button" class="btn" id="o-verify">Verify</button></div>
+  </div>
+  <div class="cap">
+    <span class="n">03 · CODE</span>
+    <h3>One bolt per digit</h3>
+    <p>A flange with six bolts. Each digit typed tightens the next bolt with ratchet clicks and a yellow torque stripe, the mark fitters paint on a torqued bolt. Verify turns the flange and the seal goes green.</p>
+    <ol>
+      <li><span>per digit</span>A socket ring moves to the next bolt; the bolt turns in 4 clicks and drops flush.</li>
+      <li><span>+0.5 s</span>Torque stripe paints across the head; click marks flash once.</li>
+      <li><span>Verify</span>Flange turns 60°, the seal fills green and a tick draws.</li>
+      <li><span>backspace</span>The last bolt backs out again.</li>
+    </ol>
+    <div class="row"><span class="tag live">Live: type, paste or backspace</span><button class="replay" data-replay="p-otp"><svg class="ic"><use href="#i-replay"/></svg>Replay</button></div>
+  </div>
+</article>
+
+<!-- ═════════════ 04 YOUR BUSINESS ═════════════ -->
+<article class="cell">
+  <div class="phone" id="p-biz">
+    <div class="sbar"><b>9:41</b><span class="sb-r"><i></i><i></i><i></i><em></em></span></div>
+    <div class="scr">
+      <div class="appbar"><span class="back"><svg class="ic"><use href="#i-back"/></svg></span><h4>Your business</h4></div>
+      <div class="steps"><span>Step 1 of 2</span><span class="bar"><i><b class="stepfill"></b></i><i></i></span></div>
+      <div class="pad">
+        <svg class="plate-svg art" viewBox="0 0 260 112" aria-hidden="true">
+          <g class="b-plate">
+            <rect x="14" y="28" width="232" height="78" rx="7" fill="url(#g-brush)" stroke="#9DA1AB" stroke-width=".8"/>
+            <rect x="14" y="28" width="232" height="78" rx="7" fill="url(#p-brush)"/>
+            <rect x="19" y="33" width="222" height="68" rx="4" fill="none" stroke="#A9ADB6" stroke-width=".7"/>
+            <circle class="b-rivet" style="--dl:0s" cx="25" cy="39" r="3.3" fill="url(#g-ball)"/>
+            <circle class="b-rivet" style="--dl:.08s" cx="235" cy="39" r="3.3" fill="url(#g-ball)"/>
+            <circle class="b-rivet" style="--dl:.16s" cx="25" cy="95" r="3.3" fill="url(#g-ball)"/>
+            <circle class="b-rivet" style="--dl:.24s" cx="235" cy="95" r="3.3" fill="url(#g-ball)"/>
+            <g class="b-t1" font-family="JetBrains Mono" font-weight="700" font-size="12.5">
+              <text x="30" y="65.6" textLength="200" lengthAdjust="spacingAndGlyphs" fill="var(--plate-hi)">SHREE AMBICA ENGINEERING</text>
+              <text x="30" y="65" textLength="200" lengthAdjust="spacingAndGlyphs" fill="#3E414B">SHREE AMBICA ENGINEERING</text>
+            </g>
+            <g class="b-t2" font-family="JetBrains Mono" font-weight="600" font-size="8.5">
+              <text x="30" y="85" textLength="152" lengthAdjust="spacingAndGlyphs" fill="#6A6E79">AJI GIDC · RAJKOT · EST 2011</text>
+            </g>
+          </g>
+          <rect x="4" y="4" width="252" height="6" rx="3" fill="url(#g-chrome)"/>
+          <g class="b-laser">
+            <g class="b-beam1">
+              <line x1="30" y1="14" x2="30" y2="58" stroke="var(--primary)" stroke-width="5" opacity=".18"/>
+              <line x1="30" y1="14" x2="30" y2="58" stroke="var(--primary)" stroke-width="1.3"/>
+              <circle cx="30" cy="59" r="2.6" fill="#fff" stroke="var(--primary)" stroke-width="1.2"/>
+              <circle class="b-spark" cx="26" cy="55" r=".9" fill="var(--sun)"/><circle class="b-spark" cx="35" cy="56" r=".8" fill="var(--sun)"/><circle class="b-spark" cx="33" cy="52" r=".7" fill="var(--sun)"/>
+            </g>
+            <g class="b-beam2">
+              <line x1="30" y1="14" x2="30" y2="80" stroke="var(--primary)" stroke-width="5" opacity=".18"/>
+              <line x1="30" y1="14" x2="30" y2="80" stroke="var(--primary)" stroke-width="1.3"/>
+              <circle cx="30" cy="81" r="2.2" fill="#fff" stroke="var(--primary)" stroke-width="1.1"/>
+              <circle class="b-spark" cx="27" cy="78" r=".8" fill="var(--sun)"/><circle class="b-spark" cx="34" cy="77" r=".7" fill="var(--sun)"/>
+            </g>
+            <rect x="21" y="1" width="18" height="13" rx="3" fill="url(#g-black)"/>
+            <circle cx="30" cy="7.5" r="2" fill="var(--primary)"/>
+          </g>
+        </svg>
+        <div class="field rail" style="--b:.55s;--i:0"><span class="f-l">Your name</span><span class="inp">Hitesh Patel</span></div>
+        <div class="field rail" style="--b:.55s;--i:1"><span class="f-l">Business name</span><span class="inp">Shree Ambica Engineering</span></div>
+        <div class="field">
+          <span class="f-l slide" style="--b:.55s;--i:2">What will you do here?</span>
+          <div class="conv">
+            <div class="tiles">
+              <button type="button" class="tile on" style="--dl:2.05s"><svg class="ic"><use href="#i-search"/></svg>Buy parts</button>
+              <button type="button" class="tile on" style="--dl:2.3s"><svg class="ic"><use href="#i-rupee"/></svg>Sell parts</button>
+              <button type="button" class="tile"><svg class="ic"><use href="#i-calendar"/></svg>Rent out</button>
+            </div>
+            <div class="belt"><div class="rollers"><i class="roller"></i><i class="roller"></i><i class="roller"></i><i class="roller"></i><i class="roller"></i><i class="roller"></i><i class="roller"></i></div></div>
+          </div>
+          <span class="f-h slide" style="--b:.55s;--i:4">One account can buy and sell. Change it any time.</span>
+        </div>
+        <div class="field rail" style="--b:.55s;--i:5"><span class="f-l">Machines you work with</span>
+          <div class="chips"><button type="button" class="chip on">CNC &amp; lathes</button><button type="button" class="chip on">Earthmoving</button><button type="button" class="chip">Textile</button><button type="button" class="chip">Plastic moulding</button><button type="button" class="chip">Printing</button><button type="button" class="chip">Tractors</button></div>
+        </div>
+      </div>
+    </div>
+    <div class="foot"><span class="btn">Next</span></div>
+  </div>
+  <div class="cap">
+    <span class="n">04 · YOUR BUSINESS</span>
+    <h3>Laser-engraved nameplate, conveyor tiles</h3>
+    <p>A steel nameplate slides in under a gantry, is riveted, and a laser engraves the business name, then the area. The activity tiles arrive on a conveyor belt whose rollers turn with them.</p>
+    <ol>
+      <li><span>0–1.1 s</span>Plate slides in on the line; four rivets set one after another.</li>
+      <li><span>1.4–4.1 s</span>Laser runs the first line at an even speed, then the second.</li>
+      <li><span>0.45–2 s</span>Tiles ride in on the belt; Buy and Sell press in as chosen.</li>
+      <li><span>10.3–11.4 s</span>Plate moves on down the line, a blank one follows.</li>
+    </ol>
+    <div class="row"><span class="tag">Loop 12 s</span><span class="tag live">Tiles and chips tap</span><button class="replay" data-replay="p-biz"><svg class="ic"><use href="#i-replay"/></svg>Replay</button></div>
+  </div>
+</article>
+
+<!-- ═════════════ 05 WHERE ARE YOU ═════════════ -->
+<article class="cell">
+  <div class="phone" id="p-loc">
+    <div class="sbar"><b>9:41</b><span class="sb-r"><i></i><i></i><i></i><em></em></span></div>
+    <div class="scr">
+      <div class="appbar"><span class="back"><svg class="ic"><use href="#i-back"/></svg></span><h4>Where are you?</h4></div>
+      <div class="steps"><span>Step 2 of 2</span><span class="bar"><i><b></b></i><i><b class="stepfill"></b></i></span></div>
+      <div class="pad">
+        <div class="map art">
+          <svg viewBox="0 0 264 180" aria-hidden="true">
+            <rect width="264" height="180" fill="url(#p-grid)"/>
+            <rect class="road" x="0" y="98" width="264" height="12"/><rect class="road" x="94" y="0" width="10" height="180"/><rect class="road" x="186" y="0" width="10" height="180"/>
+            <line x1="0" y1="104" x2="264" y2="104" stroke="var(--ink-3)" stroke-width=".7" stroke-dasharray="5 4" opacity=".6"/>
+            <g>
+              <rect class="plot" x="8" y="8" width="38" height="36" rx="2"/><rect class="plot" x="50" y="8" width="40" height="36" rx="2"/><rect class="plot" x="8" y="48" width="82" height="46" rx="2"/>
+              <rect class="plot" x="8" y="114" width="36" height="30" rx="2"/><rect class="plot" x="48" y="114" width="42" height="30" rx="2"/><rect class="plot" x="8" y="148" width="82" height="28" rx="2"/>
+              <rect class="plot" x="108" y="8" width="74" height="38" rx="2"/><rect class="plot" x="108" y="50" width="34" height="44" rx="2"/><rect class="plot" x="146" y="50" width="36" height="44" rx="2"/>
+              <rect x="108" y="114" width="40" height="30" rx="2" fill="var(--soft)" stroke="var(--primary)" stroke-width="1.2"/>
+              <rect class="plot" x="152" y="114" width="30" height="30" rx="2"/><rect class="plot" x="108" y="148" width="74" height="28" rx="2"/>
+              <rect class="plot" x="200" y="8" width="56" height="40" rx="2"/><rect class="plot" x="200" y="52" width="56" height="42" rx="2"/>
+              <rect class="plot" x="200" y="114" width="56" height="28" rx="2"/><rect class="plot" x="200" y="146" width="56" height="30" rx="2"/>
+            </g>
+            <text x="8" y="107" font-family="JetBrains Mono" font-size="5.5" font-weight="600" fill="var(--ink-3)" letter-spacing=".08em">GIDC ROAD 2</text>
+            <text x="112" y="140" font-family="JetBrains Mono" font-size="6.5" font-weight="700" fill="var(--primary-ink)">214</text>
+            <g class="l-ring" style="--dl:0s"><circle cx="128" cy="124" r="40" fill="none" stroke="var(--primary)" stroke-width="1" stroke-dasharray="3 3"/></g>
+            <g class="l-ring" style="--dl:.15s"><circle cx="128" cy="124" r="75" fill="none" stroke="var(--primary)" stroke-width="1" stroke-dasharray="3 3"/></g>
+            <g class="l-ring" style="--dl:.3s"><circle cx="128" cy="124" r="110" fill="none" stroke="var(--primary)" stroke-width="1" stroke-dasharray="3 3"/></g>
+            <g class="l-sweep"><path d="M128 124 L128 14 A110 110 0 0 1 183 28.7 Z" fill="var(--primary)" opacity=".16"/><line x1="128" y1="124" x2="183" y2="28.7" stroke="var(--primary)" stroke-width="1.4" opacity=".7"/></g>
+            <g id="l-pings"></g>
+            <ellipse class="l-land" cx="128" cy="124" rx="10" ry="4" fill="none" stroke="var(--primary)" stroke-width="1.5"/>
+            <g class="l-label">
+              <rect x="140" y="99" width="86" height="15" rx="7.5" fill="var(--surface)" stroke="var(--line)"/>
+              <text x="183" y="109.3" text-anchor="middle" font-family="JetBrains Mono" font-size="6.6" font-weight="700" fill="var(--ink)">PLOT 214 · AJI GIDC</text>
+            </g>
+            <g class="l-pin">
+              <ellipse cx="128" cy="124" rx="5" ry="1.8" fill="#1C1A27" opacity=".25"/>
+              <path d="M128 124 C122 117 118.5 112 118.5 106 A9.5 9.5 0 1 1 137.5 106 C137.5 112 134 117 128 124 Z" fill="var(--primary)"/>
+              <circle cx="128" cy="106" r="3.6" fill="#fff"/>
+            </g>
+            <rect x="0" y="2" width="264" height="5" fill="url(#g-chrome)"/>
+            <g class="l-trol">
+              <rect class="l-cable" x="127.3" y="10" width="1.4" height="12" fill="#6B6F7A"/>
+              <g class="l-hook"><path d="M128 22v6.5a4 4 0 1 1-4 4" fill="none" stroke="#6B6F7A" stroke-width="2" stroke-linecap="round"/></g>
+              <rect x="118" y="0" width="20" height="10" rx="2.5" fill="url(#g-black)"/>
+              <circle cx="122" cy="10" r="1.6" fill="#8E929C"/><circle cx="134" cy="10" r="1.6" fill="#8E929C"/>
+            </g>
+          </svg>
+          <span class="count"><i></i>7 businesses within 5 km</span>
+        </div>
+        <span class="btn ghost loc-btn slide" style="--b:.6s"><svg class="ic"><use href="#i-pin"/></svg>Use my current location</span>
+        <div class="field rail" style="--b:.7s;--i:0"><span class="f-l">Pincode</span><span class="inp mono">360003</span></div>
+        <div class="field rail" style="--b:.7s;--i:1"><span class="f-l">Industrial area</span><span class="inp">Aji GIDC, Phase 2</span><span class="f-h">Buyers search by industrial area</span></div>
+        <div class="two rail" style="--b:.7s;--i:2">
+          <div class="field"><span class="f-l">City</span><span class="inp">Rajkot</span></div>
+          <div class="field"><span class="f-l">State</span><span class="inp">Gujarat</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="foot"><span class="btn">Save location</span></div>
+  </div>
+  <div class="cap">
+    <span class="n">05 · WHERE ARE YOU?</span>
+    <h3>Crane drop and radar sweep</h3>
+    <p>A blueprint map of the industrial estate. An overhead crane carries the pin in and lowers it onto plot 214, then a radar sweep finds the businesses around it. That's the "near you" the app is built on.</p>
+    <ol>
+      <li><span>0.4–3.6 s</span>Trolley runs in on the gantry, the hook lowers, the pin lands with a ring.</li>
+      <li><span>3.8–6 s</span>Hook rises, trolley leaves, the plot label slides out.</li>
+      <li><span>5.5–8.4 s</span>Range rings open; one sweep pings each unit as it passes.</li>
+      <li><span>8.4 s</span>"7 businesses within 5 km" rises in.</li>
+    </ol>
+    <div class="row"><span class="tag">Loop 12 s</span><button class="replay" data-replay="p-loc"><svg class="ic"><use href="#i-replay"/></svg>Replay</button></div>
+  </div>
+</article>
+
+<!-- ═════════════ 06 GST ═════════════ -->
+<article class="cell">
+  <div class="phone" id="p-gst">
+    <div class="sbar"><b>9:41</b><span class="sb-r"><i></i><i></i><i></i><em></em></span></div>
+    <div class="scr">
+      <div class="appbar"><span class="back"><svg class="ic"><use href="#i-back"/></svg></span></div>
+      <div class="pad">
+        <h1 class="h1"><span class="wl" style="--d:.25s"><span class="wt">Get verified</span></span></h1>
+        <div class="callout slide" style="--b:.6s"><svg class="ic"><use href="#i-shield"/></svg><p><b>Verified businesses get 3× more enquiries.</b> We check your GSTIN with the GST network. It is free.</p></div>
+        <div class="field rail" style="--b:.75s">
+          <span class="f-l">GSTIN</span>
+          <div class="gfield">
+            <div class="gwrap">
+              <svg viewBox="0 0 225 46" aria-hidden="true">
+                <rect x="-6" y="2" width="237" height="9" rx="2" fill="url(#g-chrome)"/>
+                <g id="g-scale" stroke="#5E626C" stroke-width=".6"></g>
+                <g class="jaw" id="jaw-a">
+                  <rect x="-9" y="0" width="9" height="15" rx="2" fill="url(#g-black)"/>
+                  <path d="M-4 15H0V44H-1.5Z" fill="url(#g-black)"/>
+                </g>
+                <g class="jaw" id="jaw-b">
+                  <rect x="0" y="0" width="9" height="15" rx="2" fill="url(#g-black)"/>
+                  <circle cx="4.5" cy="7.5" r="2" fill="var(--sun)"/>
+                  <path d="M0 15H4L1.5 44H0Z" fill="url(#g-black)"/>
+                </g>
+              </svg>
+              <div class="gst" id="gst"></div>
+            </div>
+          </div>
+        </div>
+        <div class="readout slide" id="g-read" style="--b:.85s"><b>READY</b><span>Caliper at zero</span></div>
+        <span class="tol"><svg class="ic"><use href="#i-check"/></svg>Within tolerance · GSTIN is valid</span>
+        <div class="gcard">
+          <h4>Shree Ambica Engineering</h4><p>Partnership firm, active since 2011</p><p>Plot 214, Aji GIDC, Rajkot, Gujarat</p>
+          <span class="badge"><svg class="ic"><use href="#i-check"/></svg>Matches your profile</span>
+        </div>
+      </div>
+    </div>
+    <div class="foot"><span class="btn ghost">Skip for now</span><span class="btn">Submit</span></div>
+  </div>
+  <div class="cap">
+    <span class="n">06 · GST</span>
+    <h3>A caliper reads the GSTIN</h3>
+    <p>A vernier caliper measures the 15 characters part by part: state, PAN, entity, the fixed Z and the check digit. A readout names each part. Once all five pass, the full span is "within tolerance" and the registered details slide up.</p>
+    <ol>
+      <li><span>per part</span>Jaws open to the part (750 ms rail move); its characters light up, then underline green.</li>
+      <li><span>after 5</span>Jaws open to the full 15 characters; "within tolerance" seats.</li>
+      <li><span>+0.25 s</span>The GST card rises with Matches your profile.</li>
+    </ol>
+    <div class="row"><span class="tag">Loop ~11 s</span><button class="replay" data-replay="p-gst"><svg class="ic"><use href="#i-replay"/></svg>Replay</button></div>
+  </div>
+</article>
+
+</main>
+
+<section class="notes">
+  <h2>Building it in the app</h2>
+  <ul>
+    <li>Same layered approach as textile's onboarding: each moving part is its own full-size <code>Svg</code> in an <code>Animated.View</code>, driven by one 0–1 loop value with keyframe tracks; the percentages here are the tracks.</li>
+    <li>Glide, Seat, Rail and Ratchet become four named easings in <code>lib/motion</code>; ratchet is a stepped interpolation.</li>
+    <li>Mobile number, Code and GST react to real input (digits typed, the GSTIN parts), so they are state-driven, not loops.</li>
+    <li>Reduce motion shows every drawing at its rest frame (assembled hub, tightened bolts, engraved plate, landed pin, measured GSTIN). Switch it on above to see them.</li>
+    <li>No new dependency; no fabric folds, rising words or bouncing.</li>
+  </ul>
+</section>
+
+<script>
+(() => {
+  const $ = (s, r = document) => r.querySelector(s);
+  const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+  const NS = 'http://www.w3.org/2000/svg';
+  const html = document.documentElement;
+  const reduced = () => html.classList.contains('rm');
+  const svgEl = (tag, attrs) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); return e; };
+  const timeline = () => { let ids = []; return { at(ms, fn) { ids.push(setTimeout(fn, ms)); }, clear() { ids.forEach(clearTimeout); ids = []; } }; };
+
+  /* ── drawings generated once ── */
+  // Welcome gear: 22 trapezoid teeth
+  (() => {
+    const cx = 130, cy = 90, n = 22, ro = 56, ri = 49, st = (2 * Math.PI) / n; let d = '';
+    for (let i = 0; i < n; i++) {
+      const t = i * st - Math.PI / 2;
+      [[ri, -.27], [ro, -.13], [ro, .13], [ri, .27]].forEach(([r, f], k) => {
+        const a = t + f * st; d += (i === 0 && k === 0 ? 'M' : 'L') + (cx + r * Math.cos(a)).toFixed(2) + ' ' + (cy + r * Math.sin(a)).toFixed(2);
+      });
+    }
+    $('#w-gear-path').setAttribute('d', d + 'Z');
+    const balls = $('#w-balls');
+    for (let k = 0; k < 10; k++) { const a = k * Math.PI / 5 - Math.PI / 2; balls.append(svgEl('circle', { cx: (130 + 23 * Math.cos(a)).toFixed(2), cy: (90 + 23 * Math.sin(a)).toFixed(2), r: 4.6, fill: 'url(#g-ball)' })); }
+    const bolts = $('#w-bolts');
+    for (let k = 0; k < 5; k++) {
+      const a = k * 2 * Math.PI / 5 - Math.PI / 2, x = 130 + 38.7 * Math.cos(a), y = 90 + 38.7 * Math.sin(a);
+      const g = svgEl('g', { class: 'w-bolt', style: `--dx:${(62 * Math.cos(a)).toFixed(1)}px;--dy:${(62 * Math.sin(a)).toFixed(1)}px;--dl:${(k * .1).toFixed(2)}s` });
+      let hex = ''; for (let j = 0; j < 6; j++) { const b = j * Math.PI / 3; hex += (j ? 'L' : 'M') + (x + 3.9 * Math.cos(b)).toFixed(2) + ' ' + (y + 3.9 * Math.sin(b)).toFixed(2); }
+      g.append(svgEl('path', { d: hex + 'Z', fill: 'url(#g-black)' }), svgEl('circle', { cx: x.toFixed(2), cy: y.toFixed(2), r: 1.4, fill: '#8E929C' }));
+      bolts.append(g);
+    }
+  })();
+
+  // Gauge ticks 0..10
+  (() => {
+    const g = $('#g-ticks');
+    for (let k = 0; k <= 10; k++) {
+      const a = (-120 + 24 * k) * Math.PI / 180, s = Math.sin(a), c = -Math.cos(a);
+      g.append(svgEl('line', { x1: 100 + 58 * s, y1: 86 + 58 * c, x2: 100 + 66 * s, y2: 86 + 66 * c, stroke: 'var(--ink-2)', 'stroke-width': 1.6, 'stroke-linecap': 'round' }));
+      if (k < 10) { const m = a + 12 * Math.PI / 180; g.append(svgEl('line', { x1: 100 + 62 * Math.sin(m), y1: 86 - 62 * Math.cos(m), x2: 100 + 66 * Math.sin(m), y2: 86 - 66 * Math.cos(m), stroke: 'var(--ink-3)', 'stroke-width': 1 })); }
+      const t = svgEl('text', { x: (100 + 47 * s).toFixed(1), y: (86 + 47 * c + 3).toFixed(1), 'text-anchor': 'middle', 'font-family': 'JetBrains Mono', 'font-size': 8, 'font-weight': 600, fill: 'var(--ink-2)' });
+      t.textContent = k; g.append(t);
+    }
+  })();
+
+  // Odometer wheels
+  (() => {
+    const box = $('#odos');
+    for (let i = 0; i < 10; i++) box.insertAdjacentHTML('beforeend', `<span class="odo"><span class="strip"><span>·</span>${[...'0123456789'].map(d => `<span>${d}</span>`).join('')}</span></span>`);
+  })();
+
+  // OTP flange bolts (r 44, every 60°), each rotated so its torque stripe points outward
+  const BOLTS = [];
+  (() => {
+    const g = $('#o-bolts');
+    for (let k = 0; k < 6; k++) {
+      const deg = k * 60, a = (deg - 90) * Math.PI / 180, x = 130 + 44 * Math.cos(a), y = 78 + 44 * Math.sin(a);
+      BOLTS.push([x, y]);
+      let hex = ''; for (let j = 0; j < 6; j++) { const b = j * Math.PI / 3 + Math.PI / 6; hex += (j ? 'L' : 'M') + (8.2 * Math.cos(b)).toFixed(2) + ' ' + (8.2 * Math.sin(b)).toFixed(2); }
+      const outer = svgEl('g', { transform: `translate(${x.toFixed(2)} ${y.toFixed(2)}) rotate(${deg})` });
+      outer.innerHTML = `<g class="bolt"><circle class="bsh" r="9" fill="#1C1A27"/><circle r="10.5" fill="#9DA1AB"/><circle r="9.6" fill="url(#g-steel)"/>
+        <g class="bh"><path d="${hex}Z" fill="url(#g-black)"/><circle r="3.4" fill="#6B6F7A"/><path d="M-6 -2.5 L6 -2.5" stroke="#fff" stroke-opacity=".25"/></g>
+        <path class="stripe" d="M0 -14 L0 2" pathLength="1" stroke="var(--sun)" stroke-width="2.6" stroke-linecap="round" fill="none"/>
+        <path class="clk" d="M-13 -9 l-4 -3 M13 -9 l4 -3 M0 -17 l0 -4" stroke="var(--primary)" stroke-width="1.6" stroke-linecap="round" fill="none"/></g>`;
+      g.append(outer);
+    }
+  })();
+
+  // Location pings: each lights when the sweep's leading edge passes it
+  (() => {
+    const P = [[60, 26], [222, 30], [226, 72], [232, 128], [178, 160], [50, 160], [70, 128]];
+    const g = $('#l-pings'); let css = '';
+    P.forEach(([x, y], i) => {
+      let a = Math.atan2(x - 128, -(y - 124)) * 180 / Math.PI; if (a < 0) a += 360;
+      const p = 46 + 24 * a / 360;
+      css += `.play .l-ping.k${i}{animation:lp${i} 12s ease-out infinite both}@keyframes lp${i}{0%,${p.toFixed(2)}%{opacity:0;transform:scale(.3)}${(p + .8).toFixed(2)}%{opacity:1;transform:scale(1.35)}${(p + 3).toFixed(2)}%,88%{opacity:1;transform:none}94%,100%{opacity:0;transform:none}}`;
+      const pg = svgEl('g', { class: `l-ping k${i}` });
+      pg.append(svgEl('circle', { cx: x, cy: y, r: 8, fill: 'var(--sun)', opacity: .25 }), svgEl('circle', { cx: x, cy: y, r: 4.2, fill: 'var(--sun)', stroke: '#1C1A27', 'stroke-width': 1.2 }));
+      g.append(pg);
+    });
+    const st = document.createElement('style'); st.textContent = css; document.head.append(st);
+  })();
+
+  // Caliper scale and GSTIN characters
+  const GSTIN = '24AAKFS4821M1Z6', CW = 15;
+  (() => {
+    const g = $('#g-scale');
+    for (let x = 0; x <= 225; x += 5) g.append(svgEl('line', { x1: x, y1: 2, x2: x, y2: x % 15 === 0 ? 8 : 5 }));
+    $('#gst').innerHTML = [...GSTIN].map(c => `<span class="gc">${c}</span>`).join('');
+  })();
+
+  /* ── screen controllers (state-driven screens) ── */
+  const mods = {};
+
+  // 02 Mobile number
+  mods['p-phone'] = (() => {
+    const ph = $('#p-phone'), strips = $$('.strip', ph), needle = $('.needle', ph), inp = $('.capture', ph);
+    const NUM = '9825041736', tl = timeline();
+    const set = s => {
+      strips.forEach((st, i) => { st.style.transform = `translateY(${s[i] === undefined ? 0 : -(+s[i] + 1) * 28}px)`; });
+      needle.style.transform = `rotate(${-120 + 24 * s.length}deg)`;
+      ph.classList.toggle('full', s.length === 10);
+    };
+    const loop = () => {
+      set('');
+      for (let i = 1; i <= 10; i++) tl.at(1100 + i * 260, () => set(NUM.slice(0, i)));
+      const end = 1100 + 10 * 260 + 2800;
+      for (let i = 9; i >= 0; i--) tl.at(end + (9 - i) * 70, () => set(NUM.slice(0, i)));
+      tl.at(end + 1500, loop);
+    };
+    inp.addEventListener('input', () => { tl.clear(); inp.value = inp.value.replace(/\D/g, '').slice(0, 10); set(inp.value); });
+    return { start() { tl.clear(); inp.value = ''; loop(); }, stop() { tl.clear(); }, final() { tl.clear(); inp.value = ''; set(NUM); } };
+  })();
+
+  // 03 Code
+  mods['p-otp'] = (() => {
+    const ph = $('#p-otp'), cells = $$('#otp i', ph), bolts = $$('.bolt', ph), sock = $('#o-socket'), inp = $('.capture', ph);
+    const btn = $('#o-verify'), resend = $('#o-resend'), CODE = '481926', tl = timeline();
+    let val = '', secs = 24, tick = null;
+    const render = () => {
+      cells.forEach((c, i) => {
+        const d = val[i];
+        if (d !== undefined && c.dataset.d !== d) { c.innerHTML = `<b>${d}</b>`; c.dataset.d = d; }
+        if (d === undefined && c.dataset.d) { c.innerHTML = ''; delete c.dataset.d; }
+        c.classList.toggle('cur', i === val.length && !ph.classList.contains('verified'));
+      });
+      bolts.forEach((b, i) => b.classList.toggle('tight', i < val.length));
+      if (val.length < 6) { const [x, y] = BOLTS[val.length]; sock.style.transform = `translate(${x}px,${y}px)`; sock.classList.remove('gone'); }
+      else sock.classList.add('gone');
+    };
+    const verify = () => { ph.classList.add('verified'); btn.textContent = 'Verified'; render(); };
+    const unverify = () => { if (!ph.classList.contains('verified')) return; ph.classList.add('snap'); ph.classList.remove('verified'); void ph.offsetWidth; ph.classList.remove('snap'); btn.textContent = 'Verify'; };
+    const countdown = () => {
+      clearInterval(tick); secs = 24; resend.textContent = `Resend in ${secs} s`;
+      tick = setInterval(() => { secs--; resend.textContent = secs > 0 ? `Resend in ${secs} s` : 'Resend code'; if (secs <= 0) clearInterval(tick); }, 1000);
+    };
+    const loop = () => {
+      unverify(); val = ''; render(); countdown();
+      for (let i = 1; i <= 6; i++) tl.at(1100 + i * 560, () => { val = CODE.slice(0, i); render(); });
+      const t = 1100 + 6 * 560 + 900;
+      tl.at(t, () => btn.classList.add('press'));
+      tl.at(t + 160, () => { btn.classList.remove('press'); verify(); });
+      for (let i = 5; i >= 0; i--) tl.at(t + 3400 + (5 - i) * 140, () => { if (i === 5) unverify(); val = CODE.slice(0, i); render(); });
+      tl.at(t + 3400 + 6 * 140 + 900, loop);
+    };
+    inp.addEventListener('input', () => {
+      tl.clear(); unverify();
+      val = inp.value.replace(/\D/g, '').slice(0, 6); inp.value = val; render();
+    });
+    btn.addEventListener('click', () => { if (val.length === 6 && !ph.classList.contains('verified')) { tl.clear(); verify(); } });
+    return {
+      start() { tl.clear(); inp.value = ''; loop(); },
+      stop() { tl.clear(); clearInterval(tick); },
+      final() { tl.clear(); clearInterval(tick); resend.textContent = 'Resend in 24 s'; val = CODE; inp.value = ''; verify(); },
+    };
+  })();
+
+  // 06 GST
+  mods['p-gst'] = (() => {
+    const ph = $('#p-gst'), chars = $$('.gc', ph), ja = $('#jaw-a'), jb = $('#jaw-b'), read = $('#g-read'), tl = timeline();
+    const SEG = [[0, 2, 'STATE', '24 · Gujarat'], [2, 12, 'PAN', 'AAKFS4821M · PAN of the firm'], [12, 13, 'ENTITY', '1 · first registration'], [13, 14, 'FIXED', 'Z · default letter'], [14, 15, 'CHECK', '6 · check digit matches']];
+    const jaws = (a, b) => { ja.style.transform = `translateX(${a * CW}px)`; jb.style.transform = `translateX(${b * CW}px)`; };
+    const say = (tag, text) => { read.classList.add('fade'); setTimeout(() => { read.innerHTML = `<b>${tag}</b><span>${text}</span>`; read.classList.remove('fade'); }, 180); };
+    const sayNow = (tag, text) => { read.classList.remove('fade'); read.innerHTML = `<b>${tag}</b><span>${text}</span>`; };
+    const reset = () => { ph.classList.remove('g-done'); chars.forEach(c => c.classList.remove('meas', 'ok')); jaws(0, 0); sayNow('READY', 'Caliper at zero'); };
+    const loop = () => {
+      reset();
+      SEG.forEach(([a, b, tag, text], i) => {
+        const t = 1300 + i * 1250;
+        tl.at(t, () => { jaws(a, b); say(tag, text); });
+        tl.at(t + 520, () => chars.slice(a, b).forEach(c => c.classList.add('meas')));
+        tl.at(t + 1100, () => chars.slice(a, b).forEach(c => { c.classList.remove('meas'); c.classList.add('ok'); }));
+      });
+      const end = 1300 + SEG.length * 1250;
+      tl.at(end, () => { jaws(0, 15); say('15/15', 'Within tolerance'); });
+      tl.at(end + 650, () => ph.classList.add('g-done'));
+      tl.at(end + 4200, () => { ph.classList.remove('g-done'); jaws(0, 0); });
+      tl.at(end + 5100, loop);
+    };
+    return {
+      start() { tl.clear(); loop(); },
+      stop() { tl.clear(); },
+      final() { tl.clear(); chars.forEach(c => { c.classList.remove('meas'); c.classList.add('ok'); }); jaws(0, 15); sayNow('15/15', 'Within tolerance'); ph.classList.add('g-done'); },
+    };
+  })();
+
+  /* ── play control ── */
+  const phones = $$('.phone');
+  const started = new Set();
+  const restart = ph => {
+    const m = mods[ph.id];
+    m && m.stop();
+    $$('.u', ph).forEach(e => e.classList.remove('u'));
+    ph.classList.remove('play'); void ph.offsetWidth; ph.classList.add('play');
+    if (m) reduced() ? m.final() : m.start();
+    started.add(ph.id);
+  };
+  const restartAll = () => phones.forEach(restart);
+
+  const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting && !started.has(e.target.id)) restart(e.target); }), { threshold: .35 });
+  phones.forEach(p => io.observe(p));
+
+  $$('[data-replay]').forEach(b => b.addEventListener('click', () => restart($('#' + b.dataset.replay))));
+  $('#replay-all').addEventListener('click', restartAll);
+
+  // tap to choose on Your business (stops that element's entrance so it doesn't replay over the choice)
+  $$('#p-biz .tile, #p-biz .chip').forEach(b => b.addEventListener('click', () => { b.classList.add('u'); b.classList.toggle('on'); }));
+
+  // theme
+  const setTheme = t => { html.dataset.theme = t; $$('[data-theme-set]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.themeSet === t))); };
+  $$('[data-theme-set]').forEach(b => b.addEventListener('click', () => setTheme(b.dataset.themeSet)));
+  try { if (matchMedia('(prefers-color-scheme: dark)').matches) setTheme('dark'); } catch (e) {}
+
+  // reduce motion: defaults to the system setting
+  const rm = $('#rm-toggle');
+  try { rm.checked = matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
+  const applyRm = () => { html.classList.toggle('rm', rm.checked); phones.filter(p => started.has(p.id)).forEach(restart); };
+  rm.addEventListener('change', applyRm);
+  html.classList.toggle('rm', rm.checked);
+})();
+</script>
+</body>
+</html>
