@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { Layers } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { Button } from '@/components/ui/button';
+import { inputCls } from '@/components/ui/field-classes';
 
 const schema = z.object({
   email: z.string().trim().email('Enter a valid email'),
@@ -53,7 +54,7 @@ export default function LoginPage() {
               type="email"
               autoComplete="username"
               {...register('email')}
-              className="w-full rounded-xl border-0 bg-gray-100 text-sm font-semibold text-gray-900 placeholder:text-gray-400 focus:bg-white focus:ring-2 focus:ring-brand-600"
+              className={inputCls}
               placeholder="admin@example.com"
             />
             {errors.email && <p className="mt-1 text-xs font-semibold text-red-600">{errors.email.message}</p>}
@@ -66,7 +67,7 @@ export default function LoginPage() {
               type="password"
               autoComplete="current-password"
               {...register('password')}
-              className="w-full rounded-xl border-0 bg-gray-100 text-sm font-semibold text-gray-900 placeholder:text-gray-400 focus:bg-white focus:ring-2 focus:ring-brand-600"
+              className={inputCls}
               placeholder="••••••••"
             />
             {errors.password && <p className="mt-1 text-xs font-semibold text-red-600">{errors.password.message}</p>}

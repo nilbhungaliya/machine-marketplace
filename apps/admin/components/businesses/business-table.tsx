@@ -19,6 +19,7 @@ import {
 import { useTablePageSize } from '@/lib/use-table-page-size';
 import { positiveInt, useUrlState } from '@/lib/use-url-state';
 import { formatDate, formatPhone } from '@/lib/utils';
+import { inputCls } from '@/components/ui/field-classes';
 
 const SEARCH_DELAY_MS = 300;
 
@@ -230,7 +231,7 @@ function BusinessFilterDialog({ start, search, onClose, onApply }: {
       <Section title={<label htmlFor="filter-city">City</label>}>
         <input
           id="filter-city"
-          className="w-full rounded-xl border-0 bg-gray-100 text-sm font-semibold text-gray-900 placeholder:text-gray-400 focus:bg-white focus:ring-2 focus:ring-brand-600"
+          className={inputCls}
           placeholder="e.g. Surat"
           value={draft.city}
           onChange={(e) => setDraft({ ...draft, city: e.target.value })}

@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 import { ActiveSwitch, Tag } from './active-switch';
 import { ModelFormDialog } from './model-form-dialog';
 import { SearchableSelect } from './searchable-select';
+import { inputCls } from '@/components/ui/field-classes';
 
 const REORDER_BTN = 'rounded-md p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-900 disabled:opacity-40';
 
@@ -274,7 +275,7 @@ function MoveModelDialog({ model, brands, choices, onClose, onMoved }: {
           <label htmlFor="move-model-brand" className="mb-1.5 block text-[12.5px] font-bold text-gray-600">Brand</label>
           <select
             id="move-model-brand"
-            className="w-full rounded-xl border-0 bg-gray-100 text-sm font-semibold text-gray-900 placeholder:text-gray-400 focus:bg-white focus:ring-2 focus:ring-brand-600"
+            className={inputCls}
             value={brandId}
             aria-describedby={errors.brand ? 'move-model-brand-error' : undefined}
             onChange={(e) => { setBrandId(e.target.value); setErrors({}); }}

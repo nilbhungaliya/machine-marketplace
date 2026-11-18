@@ -8,8 +8,8 @@ log whenever a session changes the project's state.
 **Base setup + A4 machine catalogue + F1 business profile + A2 business verification (2026-11-18, on `develop`).** The
 admin-managed catalogue is built and seeded; businesses complete a profile with a pincode location and an industrial area
 and verify their GST (instant through a provider, or officer review with documents); admins run the verification queue,
-users & businesses and industrial areas. No listing, search or deal feature (F2–F9) exists yet, and the other admin
-modules are still placeholders.
+users & businesses and industrial areas. The app and the admin wear the approved **Periwinkle v2** design (re-skin,
+2026-11-18). No listing, search or deal feature (F2–F9) exists yet, and the other admin modules are still placeholders.
 
 | Area | State |
 |---|---|
@@ -20,10 +20,11 @@ modules are still placeholders.
 | Business profile (F1) + verification (A2) | Spec `docs/superpowers/specs/2026-11-18-f1-a2-business-profile-verification-design.md`, plan `docs/superpowers/plans/2026-11-18-f1-a2-business-profile-verification.md`. **API:** `GET/PATCH /businesses/me`, `PUT /businesses/me/location` (pincode + listed area or "Other", optional pin); public `GET /locations/pincodes/:pincode`, `/locations/nearest-pincode`, `/locations/industrial-areas?pincode=`; GST under `/businesses/me/gst` (state, lookup, declare, `otp/send`, `otp/verify`, `review`, `review/files`, `documents/presign`), one switch `getGstMode()` (`stub` in dev, `live` with a provider adapter + key, `review` otherwise or with `GST_PROVIDER=off`); R2-only private storage (`lib/storage.ts`, `503 STORAGE_UNAVAILABLE` when unset, uploads sniffed for JPEG/PNG/WebP/PDF); admin `/admin/verification/*` (queue, waiting count, detail, approve / reject / ask for more, 300 s document links), `/admin/businesses` (list, detail, revoke / release GST), `/admin/users/:id/suspend\|reinstate\|block\|unblock`, `/admin/industrial-areas` (CRUD, reorder, "Other" list and adopt); every mutation audit-logged. **Admin pages:** Business verification, Users & businesses (list + detail), Industrial areas. **App:** onboarding Your business (activities, machine categories) → Where are you? (pincode, area picker with Other, optional map pin), gating until done; GST intro → GSTIN → found → declaration → code (instant), or the review form with document picker; GST status and a completed Profile. Seeds: `db:seed:locations` (pincode directory), `db:seed:industrial-areas` (14 Surat areas); both refuse to run on a filled table |
 | Catalogue (A4) | Spec `docs/superpowers/specs/2026-11-18-a4-machine-catalogue-design.md`, plan `docs/superpowers/plans/2026-11-18-a4-machine-catalogue.md`. Public API: `GET /categories`, `/categories/:id/template?kind=part\|machine`, `/brands`, `/models`, `/master-data`; admin APIs for nodes (create, edit, side settings, move with root locks and clash checks, reorder, delete), fields and options, brands and models, units and conditions, CSV export (`/admin/catalog/export/:sheet`); `validateSpecs` service for M5. Admin pages: Categories & machine types, Specifications & fields, Brands, models & fit, Units, conditions & sides. Seed (`pnpm --filter @mpm/api db:seed:catalog`, loaded into dev 2026-11-18): Fibre2Fashion Machinery's 465 product types cleaned into 10 categories, 248 machine types, 331 part groups; embroidery and water-jet looms in full (81 fields); 14 brands and 19 models marked "needs review"; 8 units, 4 conditions. **`--reset` deletes the whole catalogue including admin edits: use only before go-live.** |
 | Shared types | Listing kinds/statuses, conditions, Left/Right/Pair + `complementarySide()`, units, price models, rental periods, enquiry/offer/deal/rental/part-request/report statuses, notification types, admin roles |
-| Admin | Login, role-filtered sidebar, dashboard KPI tiles (A1), A4 catalogue pages, A2 pages (Business verification, Users & businesses, Industrial areas), placeholder pages for the other A1–A6 modules; UI kit (dialogs, data table, filters, tabs, lightbox, URL state, keyboard nav, socket) |
-| User app | Welcome → phone OTP → Your business (name, business, activities, categories) → Where are you? → 5 tabs (Home, Search, Post, Chats, Deals) + Profile (business details, location, GST verification, language, theme, logout); en/hi/gu with parity + audit tests; toasts, confirm sheet, skeletons. Native modules added for F1 (`expo-location`, `expo-document-picker`, `expo-image-picker`, `react-native-maps`): needs a new dev-client build. Still in the base theme, not yet re-skinned to Periwinkle v2 |
+| Admin | Login, role-filtered sidebar, dashboard KPI tiles (A1), A4 catalogue pages, A2 pages (Business verification, Users & businesses, Industrial areas), placeholder pages for the other A1–A6 modules; UI kit (dialogs, data table, filters, segmented tabs, lightbox, URL state, keyboard nav, socket), in Periwinkle v2 (see Design system) |
+| User app | Welcome → phone OTP → Your business (name, business, activities, categories) → Where are you? → 5 tabs (Home, Search, Post, Chats, Deals) + Profile (business details, location, GST verification, language, theme, logout); en/hi/gu with parity + audit tests; toasts, confirm sheet, skeletons. Native modules added for F1 (`expo-location`, `expo-document-picker`, `expo-image-picker`, `react-native-maps`): needs a new dev-client build. Re-skinned to Periwinkle v2 (see Design system); not yet checked on a device |
+| Design system | Spec `docs/superpowers/specs/2026-11-18-periwinkle-v2-reskin-design.md` (rulings R1–R17), plan `docs/superpowers/plans/2026-11-18-periwinkle-v2-reskin.md`. **App:** tokens in `apps/user-app/lib/palette.ts` (light + dark, `shadows.raised / float / segment`) behind `useTheme()`; Manrope + JetBrains Mono (`@expo-google-fonts/*`); type scale `lib/typography.ts` via `useType()` with the Hindi / Gujarati rules (system Noto fallback, R6); the v2 kit in `components/` (Button variants / sizes, filled Input with `prefix` / `size` / `mono`, Field, Chip, SegmentedControl, OtpCells, Card, ListRow, StatusChip, Notice, Steps, IconButton, Header, FooterBar, SideToken, HeroGlow, `art/GearShot`) and the icon-only floating tab bar (`navigation/floating-tab-bar.tsx`, `useTabBarInset()`); every screen restyled with no copy, `testID` or behaviour change. **Admin:** `apps/admin/lib/palette.ts` remaps Tailwind's `gray / brand / red / amber / green` to v2 and adds `sun`, `photo`, `scrim` (no `blue` / `indigo` / `side`); Manrope + JetBrains Mono via `next/font`; `components/ui/field-classes.ts`; kit, shell and the four mockup-mapped pages restyled class-only. **Guards:** palette parity tests read the mockup's source in both apps (plus WCAG contrast floors in the app); style audits (`lib/style-audit.test.ts` in each app) fail on hard-coded or off-palette colours, and in the app on `fontWeight` or a literal font family. How-to: `apps/user-app/CLAUDE.md` §1–2, §6, §8.1, `apps/admin/CLAUDE.md` |
 | Docs | `docs/product-scope.md`: full feature spec, modules M1–M20 + AD1–AD7 with phases and competitor inspiration (incl. M11 buyer requirements / RFQ, as in textile's M9); `docs/research/`: three sourced competitor notes; `docs/product-scope.txt`: PDF extract with U/F/A IDs; `docs/Machine Parts Marketplace Product Scope (full).pdf`: 46-page client-ready scope in the textile scope PDF's style (12 diagrams), exported from the Claude Doc https://claude.ai/artifact/VwZKCLT5xEzAwB5CgfnwyG |
-| Design | **Approved: Periwinkle v2** (D2; v2 chosen 2026-11-18): `docs/mockups/user-app-mockup-periwinkle-v2.html` (from `src/build-periwinkle-v2.mjs`) is the UI brief. v1: `docs/mockups/user-app-mockup-periwinkle.html`, 56 phone + 4 admin screens in 11 flows, light/dark, generated by `docs/mockups/src/build-periwinkle.mjs` (content from `build.mjs`, plus No results, Report listing, Handed over, Compare replies and Machines for rent); theme page `theme-periwinkle.html`. Superseded: `docs/mockups/user-app-mockup.html` (51 phone + 4 admin screens, light/dark, generated by `docs/mockups/src/build.mjs`); not yet reviewed by the client. Direction B: `docs/mockups/user-app-mockup-b.html` (same screens, paper / machine green / signal orange, L \| R side token, generated by `docs/mockups/src/build-b.mjs`) for decision D2 |
+| Design | **Approved: Periwinkle v2** (D2; v2 chosen 2026-11-18): `docs/mockups/user-app-mockup-periwinkle-v2.html` (from `src/build-periwinkle-v2.mjs`) is the UI brief, and since the re-skin the code's palettes are tested against it (see Design system). v1 (kept for reference only): `docs/mockups/user-app-mockup-periwinkle.html`, 56 phone + 4 admin screens in 11 flows, light/dark, generated by `docs/mockups/src/build-periwinkle.mjs` (content from `build.mjs`, plus No results, Report listing, Handed over, Compare replies and Machines for rent); theme page `theme-periwinkle.html`. Superseded: `docs/mockups/user-app-mockup.html` (51 phone + 4 admin screens, light/dark, generated by `docs/mockups/src/build.mjs`); not yet reviewed by the client. Direction B: `docs/mockups/user-app-mockup-b.html` (same screens, paper / machine green / signal orange, L \| R side token, generated by `docs/mockups/src/build-b.mjs`) for decision D2 |
 | Infra | Local Docker compose (Postgres 18 + PostGIS on :5434, Redis on :6381), `infra/deploy` production kit (API + Redis + Caddy), API Dockerfile |
 
 ## How to run
@@ -47,7 +48,18 @@ modules are still placeholders.
   `AWS_S3_PRIVATE_BUCKET`. Bucket private; token scoped to it with Object Read & Write; lifecycle rule "delete objects
   with prefix `incoming-verification/` after 1 day"; no CORS needed (the app uploads with a native PUT, officers open
   presigned links, the admin never uploads from a browser). The storage round-trip tests (3) are skipped until then.
-- The user app's theme is still the base theme: re-skin to Periwinkle v2.
+- **Periwinkle v2 device check (owner):** the app's re-skin is checked by tests and an Android bundle only; the visual
+  pass is the owner's on a dev build (re-skin spec §12.3: English light and dark, Hindi light, Gujarati dark). The
+  splash and adaptive-icon colours in `app.json` show only after the next native build.
+- **Noto contingency (re-skin spec §5.3):** if hi/gu titles don't look bolder than body text on the Android device,
+  bundle Noto Sans Devanagari / Gujarati and switch the family in `typeStyle` (`apps/user-app/lib/typography.ts`).
+- **Owner question:** on the GST status screen the status chip repeats the title's wording; keep both or drop one?
+- Home's category chips aren't tappable yet but are `Chip`s, so they announce a checkbox role; give them the right
+  role (or make them filters) with F4.
+- Rulings worth a second look: R9 (icon-only tab bar; labels are one flag away) and R15 (light-theme muted and status
+  text under AA 4.5 : 1; darker values ready in the spec).
+- Admin KPI subtitles are grey (`text-gray-500`), not the mockup's green: the current ones ("Hidden from the app",
+  "N with left / right sides") aren't good news. Give `StatCard` a tone when a KPI with a positive delta lands (A1).
 - Document upload and the map pin are untested on a real device.
 - **Live GST adapter** (when a provider is chosen): give its calls a short timeout and return `unavailable` instead of
   throwing. Provider calls run inside the transaction that holds the business row lock (instant confirm, officer
@@ -82,7 +94,9 @@ The ten client decisions D1–D10 are listed at the end of `docs/product-scope.m
 
 1. ~~**A4 machine configuration**~~ — built 2026-11-18 (see What's built). Client still reviews the seed (CSV export).
 2. ~~**F1 business profile + A2 verification**~~ — built 2026-11-18 (see What's built). R2 keys and a GST provider still to set.
-3. **F2 + F3 listings** — sell flow with specs, side, media upload (R2), preview, publish; A3 moderation.
+3. **F2 + F3 listings** — sell flow with specs, side, media upload (R2), preview, publish; A3 moderation. Spec
+   `docs/superpowers/specs/2026-11-18-f2-f3-listings-design.md` and plan `docs/superpowers/plans/2026-11-18-f2-f3-listings.md`
+   (11 batches, 30 tasks) both approved by the owner 2026-11-18; building next.
 4. **F4 + F5 discovery** — search, filters, side filter, complementary parts, nearby (PostGIS).
 5. **F6 + F7 enquiries, chat, offers, deals**, then rentals.
 6. **F8 part requests + matching job**, **F9 notifications** (FCM).
@@ -153,3 +167,14 @@ The ten client decisions D1–D10 are listed at the end of `docs/product-scope.m
   on Suspend / Block / Revoke / Release / Reject; shared `Panel`; nav badge from the count endpoint, refetched on focus,
   every minute and after a decision (not on every page change); Reject offered on a `needs_more` review; "Needs more"
   amber in admin, as the app's orange chip. Verified: typecheck and lint clean; tests app 162, admin 233, API 466 + 3 skipped (R2 round-trips); `mpm_test` left empty; `CI=1 npx expo export --platform android` bundles.
+- 2026-11-18 — **Periwinkle v2 re-skin** (app + admin), plan `2026-11-18-periwinkle-v2-reskin.md`, on `develop` in five
+  batches (Batches 1–4 committed as `2deb9b0`, `849d52f`, `b5fc78d`, `c8947da`; Batch 5 verification + docs, with three
+  admin review fixes: grey KPI subtitles, the inline filled-input classes built from `inputCls`, and a tighter admin
+  style audit). No copy, locale, `testID` or behaviour change (only the planned `Confirm-sheet-cancel` and `Tab-*`
+  IDs added); no API or shared-types change. Verified: typecheck and lint clean; tests app 213 (was 162), admin 268
+  (was 233), API 466 + 3 skipped; `expo install --check` clean, `expo export --platform android` bundles; admin
+  production build. Admin checked in Chrome against the mockup's admin screens (computed styles; screenshots time out):
+  Dashboard, Categories with a part group selected, Business verification with a review open (a throwaway business,
+  deleted afterwards), Users & businesses with its filter dialog, Industrial areas, Brands & models: every colour on
+  those pages is a palette value. Dev DB: `db:seed:catalog` loaded (it was empty on this machine; a second run
+  refuses). Still the owner's: the device check on a dev build (Open items).

@@ -21,6 +21,7 @@ import { cn } from '@/lib/utils';
 import { NodeFormDialog } from './node-form-dialog';
 import { SearchableSelect } from './searchable-select';
 import { SideSettingsForm, type SideSettings } from './side-settings-form';
+import { inputCls } from '@/components/ui/field-classes';
 
 interface NodeDetailsProps {
   id: string;
@@ -460,7 +461,7 @@ function MoveDialog({ node, targets, targetLabel, searchable, onClose, onMoved }
           <label htmlFor="move-target" className="mb-1.5 block text-[12.5px] font-bold text-gray-600">{label}</label>
           <select
             id="move-target"
-            className="w-full rounded-xl border-0 bg-gray-100 text-sm font-semibold text-gray-900 placeholder:text-gray-400 focus:bg-white focus:ring-2 focus:ring-brand-600"
+            className={inputCls}
             value={parentId}
             onChange={(e) => choose(e.target.value)}
           >

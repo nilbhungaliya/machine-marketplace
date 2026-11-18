@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { DEFAULT_SIDE_CONVENTION, type CategoryNode } from '@mpm/shared-types';
 import { Button } from '@/components/ui/button';
+import { inputCls } from '@/components/ui/field-classes';
 
 const CONVENTION_MAX = 300;
 
@@ -121,7 +122,7 @@ export function SideSettingsForm({ node, ancestors, onSave }: {
                 aria-label="Own side convention"
                 rows={2}
                 maxLength={CONVENTION_MAX}
-                className="w-full rounded-xl border-0 bg-gray-100 text-sm font-semibold text-gray-900 placeholder:text-gray-400 focus:bg-white focus:ring-2 focus:ring-brand-600"
+                className={inputCls}
                 placeholder={DEFAULT_SIDE_CONVENTION}
                 {...register('convention')}
               />

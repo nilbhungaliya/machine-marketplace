@@ -2,6 +2,8 @@
 
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { PAGE_SIZE_OPTIONS } from '@/lib/use-table-page-size';
+import { inputCls } from '@/components/ui/field-classes';
+import { cn } from '@/lib/utils';
 
 interface TablePaginationProps {
   page: number;
@@ -78,7 +80,7 @@ export default function TablePagination({
             <select
               value={pageSize}
               onChange={(e) => onPageSizeChange(Number(e.target.value))}
-              className="h-8 rounded-xl border-0 bg-gray-100 py-0 pl-3 text-sm font-semibold text-gray-600 focus:bg-white focus:ring-2 focus:ring-brand-600"
+              className={cn(inputCls, 'h-8 w-auto py-0 pl-3 text-gray-600')}
             >
               {PAGE_SIZE_OPTIONS.map((n) => (
                 <option key={n} value={n}>

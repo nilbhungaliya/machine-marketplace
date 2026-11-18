@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { FormDialog } from '@/components/ui/form-dialog';
 import { ApiError } from '@/lib/api';
 import { adoptOtherValue, titleCase, type OtherValue } from '@/lib/industrial-areas-api';
+import { inputCls } from '@/components/ui/field-classes';
 
 const schema = z.object({ name: z.string().trim().min(2, 'At least 2 characters').max(80, 'At most 80 characters') });
 
@@ -82,7 +83,7 @@ function AdoptDialog({ value, onClose, onAdopted }: { value: OtherValue; onClose
       onSubmit={handleSubmit(save)}
     >
       <label htmlFor="adopt-name" className="mb-1.5 block text-[12.5px] font-bold text-gray-600">Area name</label>
-      <input id="adopt-name" className="w-full rounded-xl border-0 bg-gray-100 text-sm font-semibold text-gray-900 placeholder:text-gray-400 focus:bg-white focus:ring-2 focus:ring-brand-600" autoComplete="off" {...register('name')} />
+      <input id="adopt-name" className={inputCls} autoComplete="off" {...register('name')} />
       {errors.name
         ? <p className="mt-1 text-xs font-semibold text-red-600">{errors.name.message}</p>
         : <p className="mt-1 text-[12.5px] text-gray-500">As the app shows it in the picker.</p>}

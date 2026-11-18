@@ -19,6 +19,14 @@ describe('auditClasses', () => {
     expect(rules("const c = 'bg-side text-side-dim';")).toEqual(['off-palette', 'off-palette']);
   });
 
+  it('flags theme(colors.…) lookups outside the palette', () => {
+    expect(rules("const c = 'shadow-[inset_3px_0_0_theme(colors.blue.600)]';")).toEqual(['off-palette']);
+    expect(rules("const c = 'ring-[theme(colors.side.DEFAULT)]';")).toEqual(['off-palette']);
+    expect(rules("const c = \"theme('colors.indigo.500')\";")).toEqual(['off-palette']);
+    expect(rules("const c = 'shadow-[inset_3px_0_0_theme(colors.brand.600)] border-[theme(colors.sun.DEFAULT)]';")).toEqual([]);
+    expect(rules("const c = 'bg-[theme(colors.gray.50)] ring-[theme(colors.black)]';")).toEqual([]);
+  });
+
   it('flags arbitrary colour values', () => {
     expect(rules("const c = 'text-[#123456]';")).toEqual(['arbitrary-colour']);
     expect(rules("const c = 'bg-[rgb(1_2_3)]';")).toEqual(['arbitrary-colour']);
@@ -31,6 +39,13 @@ describe('auditClasses', () => {
     expect(rules("const s = { backgroundColor: 'rgba(0,0,0,0.9)' };")).toEqual(['rgb']);
     expect(rules("const s = 'hsl(250 80% 60%)';")).toEqual(['rgb']);
     expect(rules("const fill = '#5B41E6CC';")).toEqual(['hex']);
+    expect(rules("const s = { color: '#000' };")).toEqual(['hex']);
+    expect(rules("const s = 'color:#000000';")).toEqual(['hex']);
+    expect(rules("const s = '1px solid #abc';")).toEqual(['hex']);
+  });
+
+  it('does not flag numbers after a # in copy', () => {
+    expect(rules("const t = 'Order #123'; const u = `Ticket #2024 of ${n}`; const v = 'Row #123456';")).toEqual([]);
   });
 
   it('allows palette classes, black/white and non-colour lookalikes', () => {

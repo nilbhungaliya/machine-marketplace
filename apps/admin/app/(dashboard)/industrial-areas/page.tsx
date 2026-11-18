@@ -13,6 +13,8 @@ import { Tabs } from '@/components/ui/tabs';
 import { cityKey, fetchAreas, fetchOtherValues, type OtherValue } from '@/lib/industrial-areas-api';
 import { useTabParam } from '@/lib/use-tab-param';
 import { useUrlState } from '@/lib/use-url-state';
+import { inputCls } from '@/components/ui/field-classes';
+import { cn } from '@/lib/utils';
 
 const TAB_KEYS = ['areas', 'other'] as const;
 type TabKey = (typeof TAB_KEYS)[number];
@@ -105,7 +107,7 @@ export default function IndustrialAreasPage() {
                 <label htmlFor="area-city-picker" className="text-sm font-semibold text-gray-700">City</label>
                 <select
                   id="area-city-picker"
-                  className="min-w-[14rem] rounded-xl border-0 bg-gray-100 text-sm font-semibold text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-600"
+                  className={cn(inputCls, 'w-auto min-w-[14rem]')}
                   value={selected.key}
                   onChange={(e) => setUrl({ city: e.target.value })}
                 >

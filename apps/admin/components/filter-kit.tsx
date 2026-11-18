@@ -2,6 +2,8 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Dialog } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { inputCls } from '@/components/ui/field-classes';
+import { cn } from '@/lib/utils';
 
 /** The pieces of a table's filter bar and popup — shared by every list page. */
 
@@ -39,7 +41,7 @@ export function SearchBox({ value, onChange, placeholder, label }: {
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         aria-label={label ?? placeholder}
-        className="w-full rounded-xl border-0 bg-gray-100 py-2 pl-9 pr-3 text-sm font-semibold text-gray-900 placeholder:text-gray-400 focus:bg-white focus:ring-2 focus:ring-brand-600"
+        className={cn(inputCls, 'py-2 pl-9 pr-3')}
       />
     </div>
   );

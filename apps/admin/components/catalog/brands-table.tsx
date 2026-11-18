@@ -13,6 +13,7 @@ import type { NodeChoice } from '@/lib/category-tree';
 import { cn } from '@/lib/utils';
 import { ActiveSwitch, Tag } from './active-switch';
 import { BrandFormDialog } from './brand-form-dialog';
+import { inputCls } from '@/components/ui/field-classes';
 
 const REORDER_BTN = 'rounded-md p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-900 disabled:opacity-40';
 const CLEAR_TO_REORDER = 'Clear filters to reorder';
@@ -209,7 +210,7 @@ export function BrandsTable({ brands, machineTypes, selectedId, onSelect, onChan
                 id="brands-machine-type"
                 value={machineTypeId}
                 onChange={(e) => setMachineTypeId(e.target.value)}
-                className="h-8 max-w-[260px] rounded-xl border-0 bg-gray-100 py-0 text-sm font-semibold text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-600"
+                className={cn(inputCls, 'h-8 w-auto max-w-[260px] py-0')}
               >
                 <option value="">All</option>
                 {machineTypes.map((t) => <option key={t.id} value={t.id}>{t.label}{t.isActive ? '' : ' (off)'}</option>)}

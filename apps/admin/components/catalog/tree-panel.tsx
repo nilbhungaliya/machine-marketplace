@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { FolderTree, Search, X } from 'lucide-react';
 import type { CategoryNode } from '@mpm/shared-types';
 import { CategoryTree } from './category-tree';
+import { inputCls } from '@/components/ui/field-classes';
+import { cn } from '@/lib/utils';
 
 /** The left column of the catalogue pages: a search box over the category tree. */
 export function TreePanel({ tree, selectedId, onSelect, onReordered, reorderable = true }: {
@@ -34,7 +36,7 @@ export function TreePanel({ tree, selectedId, onSelect, onReordered, reorderable
             placeholder="Search categories, machine types, part groups…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="h-[34px] w-full rounded-xl border-0 bg-gray-100 pl-9 pr-8 text-sm font-semibold text-gray-900 placeholder:text-gray-400 focus:bg-white focus:ring-2 focus:ring-brand-600 [&::-webkit-search-cancel-button]:hidden"
+            className={cn(inputCls, 'h-[34px] pl-9 pr-8 [&::-webkit-search-cancel-button]:hidden')}
           />
           {query && (
             <button

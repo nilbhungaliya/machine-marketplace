@@ -37,7 +37,7 @@ export default function StatCard({
         <p className="text-xs font-semibold text-gray-400">{title}</p>
         <p className="mt-1 text-[26px] font-extrabold leading-tight tracking-[-0.03em] text-gray-900">{value}</p>
         {subtitle && (
-          <p className="mt-1 text-[11.5px] font-bold text-green-600">{subtitle}</p>
+          <p className="mt-1 text-[11.5px] font-bold text-gray-500">{subtitle}</p>
         )}
         {link && !href && !onClick && (
           <Link href={link.href} className="mt-2 inline-block text-xs font-bold text-brand-600 hover:underline">

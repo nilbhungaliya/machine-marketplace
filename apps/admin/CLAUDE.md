@@ -7,7 +7,8 @@ Scope: `apps/admin/` (Next.js 14 App Router, React 18, Tailwind 3, English only,
 |---|---|
 | Framework | Next.js 14 App Router; every page is a client component under `app/(dashboard)/` behind the auth guard in its `layout.tsx` |
 | Styling | Tailwind 3 + `@tailwindcss/forms`; `cn()` from `lib/utils.ts` (clsx + tailwind-merge); variants with `class-variance-authority` |
-| Brand | Tailwind `brand` scale = indigo (same as user-app primary). Buttons `brand-600`, focus rings `brand-400`. Sidebar uses the `side` palette. Font: Onest via `next/font` |
+| Brand | **Periwinkle v2** (spec `docs/superpowers/specs/2026-11-18-periwinkle-v2-reskin-design.md` §4.4, §10; mockup `docs/mockups/user-app-mockup-periwinkle-v2.html?only=admin`). `lib/palette.ts` (the only file with colour values) remaps Tailwind's own names onto v2 in `tailwind.config.ts`: `gray` = v2 neutrals (`gray-50` canvas, `gray-100` field, `gray-200` hairline, `gray-400` / `gray-600` / `gray-900` ink), `brand` = violet (`brand-600` primary, `brand-700` violet text, `brand-50` / `brand-100` lavender fills), `red` / `amber` / `green` = danger / warn / ok (`-600` text on `-50` fill), plus `sun` / `sun-ink` (yellow badge), `photo` (photo placeholder), `scrim` (modal backdrop). **No `blue`, `indigo` or other Tailwind families, no `side` palette**; violet only for actions and selection; white cards with a `gray-200` hairline and no shadow. Light only (R4). Fonts via `next/font`: **Manrope** (`font-sans`) and **JetBrains Mono** (`font-mono`, for keys, slugs, GSTIN, codes); Onest is gone |
+| Form fields | `components/ui/field-classes.ts`: `inputCls` (filled grey, white + violet ring on focus), `labelCls`, `errorCls`, `checkCls`. Never copy the strings: `className={inputCls}`, or `cn(inputCls, 'h-8 pl-9')` for extras (`cn` uses tailwind-merge, so `w-auto` / `text-gray-600` override cleanly) |
 | Forms | React Hook Form + Zod (`@hookform/resolvers/zod`) — see `app/login/page.tsx` |
 | Charts | Recharts |
 | Toasts | `sonner` (`<Toaster>` is mounted in the dashboard layout) |
@@ -55,3 +56,10 @@ Scope: `apps/admin/` (Next.js 14 App Router, React 18, Tailwind 3, English only,
 - Money: `formatCurrency` (₹, en-IN grouping); phones: `formatPhone`.
 - Use `.tnum` on numeric table columns.
 - `pnpm lint` must be warning-free; `pnpm build` must pass.
+- **Colours come from the palette classes only.** `lib/style-audit.test.ts` scans `app/`, `components/` and `lib/` and
+  fails on a hex / `rgb()` / `hsl()` colour, an arbitrary colour value (`text-[#…]`, `bg-[rgb(…)]`), a Tailwind colour
+  family outside the palette (`blue`, `indigo`, `slate`, `side`…) or a `theme(colors.<name>)` lookup outside it. An
+  exemption goes in `AUDIT_EXEMPT` in `lib/style-audit.ts`, scoped to the one finding's text where possible, with a
+  reason. `lib/palette.test.ts` checks the palette's anchors against the mockup's CSS variables.
+- Tabs are the segmented control (`components/ui/tabs.tsx`); KPI tiles, panels and tables are white with a hairline
+  border and no shadow; buttons are pills.
