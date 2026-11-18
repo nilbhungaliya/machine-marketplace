@@ -1,4 +1,4 @@
-import { and, asc, inArray, lt, sql, type SQL } from 'drizzle-orm';
+import { and, asc, inArray, lt, notInArray, sql, type SQL } from 'drizzle-orm';
 import type { Db } from '../../db/index.js';
 import { listings } from '../../db/schema.js';
 import { getSettings } from '../settings.service.js';
@@ -9,7 +9,8 @@ import { applySystemTransition } from './listing-lifecycle.service.js';
 // `expired` (status + history, actor `system`). It locks only the listings (`FOR UPDATE SKIP LOCKED`), never the
 // business: taking a business lock after a listing lock would invert the order every seller write uses. A listing
 // another transaction holds is skipped this run; `applySystemTransition` keeps `AND status = $from`, so a renew that
-// commits first wins. No reminder job in this build (R11).
+// commits first wins. Each row runs in its own savepoint: a row that fails is rolled back alone, logged and left out of
+// the rest of the run (it is tried again next hour), and the batch goes on. No reminder job in this build (R11).
 
 /** Rows per batch (one transaction each) and batches per run (§7.4). */
 export const EXPIRY_BATCH_SIZE = 200;
@@ -18,15 +19,21 @@ export const EXPIRY_MAX_BATCHES = 10;
 export interface ListingExpiryOptions {
   /** Tests only: limit the run to these businesses' listings, so a run never touches another suite's fixtures. */
   businessIds?: string[];
+  /** Where a failing row is reported (the job passes `app.log`). Default: `console.error`. */
+  log?: { error: (obj: Record<string, unknown>, msg: string) => void };
 }
 
 /** One run of the expiry job: up to 10 batches of 200, oldest `refreshed_at` first. Returns how many expired. */
 export async function runListingExpiry(db: Db, opts: ListingExpiryOptions = {}): Promise<{ expired: number }> {
   const scope: SQL | undefined = opts.businessIds ? inArray(listings.businessId, opts.businessIds) : undefined;
   if (opts.businessIds && opts.businessIds.length === 0) return { expired: 0 };
+  // Called on the logger (pino's methods need their `this`).
+  const logError = (obj: Record<string, unknown>, msg: string) => (opts.log ? opts.log.error(obj, msg) : console.error(msg, obj));
+  /** Rows that failed this run: not selected again by a later batch. */
+  const failed: string[] = [];
   let expired = 0;
   for (let batch = 0; batch < EXPIRY_MAX_BATCHES; batch++) {
-    const n = await db.transaction(async (tx) => {
+    const { selected, done } = await db.transaction(async (tx) => {
       const { listing_expiry_days: days } = await getSettings(tx);
       const rows = await tx
         .select()
@@ -36,16 +43,26 @@ export async function runListingExpiry(db: Db, opts: ListingExpiryOptions = {}):
             inArray(listings.status, ['live', 'rented']),
             lt(listings.refreshedAt, sql`now() - make_interval(days => ${days}::int)`),
             scope,
+            failed.length > 0 ? notInArray(listings.id, failed) : undefined,
           ),
         )
         .orderBy(asc(listings.refreshedAt))
         .limit(EXPIRY_BATCH_SIZE)
         .for('update', { skipLocked: true });
-      for (const row of rows) await applySystemTransition(tx, row, 'expire', { lockBusiness: false });
-      return rows.length;
+      let done = 0;
+      for (const row of rows) {
+        try {
+          await tx.transaction((sp) => applySystemTransition(sp, row, 'expire', { lockBusiness: false }));
+          done++;
+        } catch (err) {
+          failed.push(row.id);
+          logError({ job: 'listing-expiry', listingId: row.id, err }, 'listing expiry failed for one listing; skipped');
+        }
+      }
+      return { selected: rows.length, done };
     });
-    expired += n;
-    if (n < EXPIRY_BATCH_SIZE) break;
+    expired += done;
+    if (selected < EXPIRY_BATCH_SIZE) break;
   }
   return { expired };
 }

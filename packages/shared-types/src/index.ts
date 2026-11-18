@@ -1489,9 +1489,13 @@ export interface AdminListingDetail {
 /**
  * The video switch (amendment 3, plan Task 13). The API reads it only through `videoUploadEnabled()` in
  * `apps/api/src/lib/media-switch.ts`; the app through `videoUploadEnabled()` in `lib/media-prepare.ts` (also Android
- * only until iOS is verified). Off → presign / attach of `video` answer `400 MEDIA_TYPE`.
+ * only until iOS is verified). Off → presign / attach of `video` answer `400 MEDIA_TYPE` and the app offers photos only.
+ *
+ * **Off** until the native media spike has run on a real device. How the owner turns it on (device checks, then this
+ * constant, the shared-types build, and the API test "the shipped video switch"):
+ * `docs/superpowers/spikes/2026-11-18-f2-native-media.md`.
  */
-export const LISTING_VIDEO_UPLOAD_ENABLED: boolean = true;
+export const LISTING_VIDEO_UPLOAD_ENABLED: boolean = false;
 
 /** The roles one media item uploads, in this order (§6.2). */
 export const MEDIA_ROLES_BY_TYPE: Readonly<Record<MediaType, readonly [MediaRole, MediaRole]>> = {

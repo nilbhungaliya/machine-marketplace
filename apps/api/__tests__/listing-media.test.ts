@@ -534,6 +534,26 @@ describe('POST /listings/:id/media (attach)', () => {
   });
 });
 
+describe('the shipped video switch (amendment 3)', () => {
+  // The real `videoUploadEnabled` (the mock above stands in for it everywhere else). Video ships off until the native
+  // spike has run on a device: when the owner turns `LISTING_VIDEO_UPLOAD_ENABLED` on
+  // (docs/superpowers/spikes/2026-11-18-f2-native-media.md), this test is the one to flip.
+  it('is off: presign and attach of a video → 400 MEDIA_TYPE with no storage call', async () => {
+    const real = await vi.importActual<typeof import('../src/lib/media-switch.js')>('../src/lib/media-switch.js');
+    expect(real.videoUploadEnabled()).toBe(false);
+    m.video.mockImplementation(real.videoUploadEnabled);
+    const id = await listingOf(seller);
+    const signed = await presign(seller, id, { type: 'video', files: videoFiles });
+    expect(signed.statusCode).toBe(400);
+    expect(signed.json().code).toBe('MEDIA_TYPE');
+    const attached = await attach(seller, id, videoBody(seller, id));
+    expect(attached.statusCode).toBe(400);
+    expect(attached.json().code).toBe('MEDIA_TYPE');
+    expect(m.presign).not.toHaveBeenCalled();
+    noStorageCalls();
+  });
+});
+
 describe('PUT /listings/:id/media/order', () => {
   it('a different set → 400 MEDIA_ORDER_INVALID; the full set reorders and bumps the version', async () => {
     const id = await listingOf(seller, { photos: 3, videos: 1 });

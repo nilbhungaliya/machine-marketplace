@@ -89,6 +89,48 @@ describe('public catalogue API', () => {
     }
   });
 
+  // The listing page labels a listing's retired values too (F2 spec §8.1); the sell wizard keeps the default.
+  describe('?includeRetired=1 (listing page labels)', () => {
+    const withRetired = (id: string, kind: string, flag = '1') =>
+      app.inject({ method: 'GET', url: `/categories/${id}/template?kind=${kind}&includeRetired=${flag}` });
+
+    it('adds retired fields and options in template order, each marked status "retired"', async () => {
+      const res = await withRetired(cat.partGroupId, 'part');
+      expect(res.statusCode).toBe(200);
+      const t = res.json().data as EffectiveTemplate;
+      expect(t.fields.map((f) => f.key)).toEqual(['old_note', 'frame_width', 'loom_part_note', 'temple_type']);
+      expect(t.fields.find((f) => f.key === 'old_note')).toMatchObject({ label: 'Old note', status: 'retired' });
+      expect(t.fields.find((f) => f.key === 'frame_width')!.status).toBe('active');
+      expect(t.fields.find((f) => f.key === 'temple_type')!.options.map((o) => [o.key, o.label, o.status])).toEqual([
+        ['ring', 'Ring', 'active'],
+        ['roller', 'Roller', 'retired'],
+      ]);
+      const machine = (await withRetired(cat.machineTypeId, 'machine', 'true')).json().data as EffectiveTemplate;
+      expect(machine.fields.map((f) => f.key)).toEqual(['old_note', 'reed_space', 'frame_width']);
+    });
+
+    it('0 / false is the default (active only); anything else → 400', async () => {
+      for (const flag of ['0', 'false']) {
+        const t = (await withRetired(cat.partGroupId, 'part', flag)).json().data as EffectiveTemplate;
+        expect(t.fields.map((f) => f.key)).toEqual(['frame_width', 'loom_part_note', 'temple_type']);
+      }
+      expect((await withRetired(cat.partGroupId, 'part', 'yes')).statusCode).toBe(400);
+    });
+
+    it('still answers for an inactive machine type (a listing filed there keeps its labels); wrong level still 404s', async () => {
+      await db.update(categories).set({ isActive: false }).where(eq(categories.id, cat.machineTypeId));
+      try {
+        const res = await withRetired(cat.partGroupId, 'part');
+        expect(res.statusCode).toBe(200);
+        expect((res.json().data as EffectiveTemplate).fields.map((f) => f.key)).toContain('temple_type');
+        expect((await withRetired(cat.machineTypeId, 'machine')).statusCode).toBe(200);
+        expect((await withRetired(cat.machineTypeId, 'part')).statusCode).toBe(404);
+      } finally {
+        await db.update(categories).set({ isActive: true }).where(eq(categories.id, cat.machineTypeId));
+      }
+    });
+  });
+
   it('GET /master-data lists the test unit and condition', async () => {
     const res = await app.inject({ method: 'GET', url: '/master-data' });
     expect(res.statusCode).toBe(200);
