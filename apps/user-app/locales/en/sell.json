@@ -21,17 +21,38 @@
     "date": "Enter a date as YYYY-MM-DD.",
     "textMax": "Keep it under {{max}} characters.",
     "pickOne": "Choose one.",
-    "pickAtLeastOne": "Choose at least one."
+    "pickAtLeastOne": "Choose at least one.",
+    "titleLength": "Enter {{min}} to {{max}} characters.",
+    "wholeRange": "Enter a whole number from {{min}} to {{max}}."
   },
   "quantity": {
     "empty": "Enter the quantity.",
     "invalid": "Enter a number.",
     "decimals": "Too many decimals for this unit.",
     "zero": "Enter more than 0.",
-    "tooLarge": "That's more than we can list at once."
+    "tooLarge": "That's more than we can list at once.",
+    "label": "Quantity",
+    "unit": "Unit",
+    "pickUnit": "Choose",
+    "machines": "Number of machines",
+    "condition": "Condition",
+    "conditionNote": "Condition notes (optional)",
+    "conditionNotePlaceholder": "Slight surface rust on 2 pieces"
   },
   "price": {
-    "invalid": "Enter an amount in rupees, like 420 or 420.50."
+    "invalid": "Enter an amount in rupees, like 420 or 420.50.",
+    "model": "How do you want to price it?",
+    "modelShort": {
+      "fixed": "Fixed",
+      "negotiable": "Negotiable",
+      "on_request": "On request"
+    },
+    "amount": "Price",
+    "amountPer": "Price {{per}}",
+    "range": "Enter an amount from ₹1 to ₹100 crore.",
+    "gst": "GST",
+    "minOrder": "Minimum order",
+    "modelHelp": "Negotiable: buyers can make offers. On request: buyers ask you for the price."
   },
   "media": {
     "photoLimit": "You can add up to 10 photos.",
@@ -46,10 +67,227 @@
     "retry": "Retry",
     "uploading": "Uploading {{percent}}%",
     "failed": "Upload failed",
-    "unreadable": "Couldn't read this file. Try another."
+    "unreadable": "Couldn't read this file. Try another.",
+    "addPhoto": "Add photo",
+    "addVideo": "Add video",
+    "takePhoto": "Take a photo",
+    "recordVideo": "Record a video",
+    "fromLibrary": "Choose from gallery",
+    "cameraDenied": "Allow camera access in Settings to take photos.",
+    "deletePhotoTitle": "Delete this photo?",
+    "deleteVideoTitle": "Delete this video?",
+    "photoCount_one": "{{count}} of {{max}} photos",
+    "photoCount_other": "{{count}} of {{max}} photos",
+    "photoLabel": "Photo {{index}}",
+    "videoLabel": "Video {{index}}",
+    "preparing": "Preparing photo",
+    "tipsTitle": "Photos that sell",
+    "tipNumber": "The part number or nameplate",
+    "tipFaces": "Both faces, and any wear or rust",
+    "tipVideo": "A video of a machine running",
+    "tipLight": "Good daylight, no clutter behind"
   },
   "side": {
     "diagramTitle": "Seen from behind, facing forward",
-    "diagramText": "Left is the operator's left hand. Buyers see the same picture on your listing."
+    "diagramText": "Left is the operator's left hand. Buyers see the same picture on your listing.",
+    "title": "Is this a left, right or pair?",
+    "option": {
+      "left": "Left only",
+      "right": "Right only",
+      "pair": "Pair (both sides)"
+    },
+    "matchLeft": "Buyers who have the right side will see your left one as a match.",
+    "matchRight": "Buyers who have the left side will see your right one as a match.",
+    "matchPair": "Buyers who need either side will see your pair."
+  },
+  "next": "Next",
+  "previewListing": "Preview listing",
+  "optional": "Optional",
+  "saved": "Changes saved",
+  "loadError": "Couldn't load this",
+  "verifyGst": "Verify GST",
+  "reviewOnEdit": "Changes to side or fit are checked by our team before they show.",
+  "editCheck": {
+    "message": "If it's right, save: our team checks it before buyers see the change.",
+    "saveAnyway": "Yes, save"
+  },
+  "leave": {
+    "discardMessage": "Your changes on this step won't be saved.",
+    "saveFailedMessage": "Your changes on this step weren't saved.",
+    "uploadsTitle": "Photos are still uploading",
+    "uploadsMessage": "If you leave now, uploads in progress will stop.",
+    "unsavedTitle": "Leave without saving?",
+    "unsavedMessage": "Some details on this step aren't complete, so they weren't saved.",
+    "leave": "Leave"
+  },
+  "picker": {
+    "search": "Search",
+    "noMatch": "Nothing matches"
+  },
+  "post": {
+    "title": "What are you listing?",
+    "drafts_one": "Drafts ({{count}})",
+    "drafts_other": "Drafts ({{count}})"
+  },
+  "category": {
+    "searchParts": "Search: temple roller, bearing, gear…",
+    "searchMachines": "Search: rapier loom, embroidery…",
+    "picked": "Chosen category",
+    "recent": "Recently used",
+    "browse": "All machine categories",
+    "up": "Back",
+    "required": "Choose a category.",
+    "tip": "Pick the machine first, then the part group. Your recent picks show here next time."
+  },
+  "details": {
+    "partName": "Part name",
+    "partNumber": "Part number (optional)",
+    "partNumberPlaceholder": "As printed on the part",
+    "partNumberHint": "Helps buyers find the exact match, and finds the other side for you.",
+    "partNumberInvalid": "Use up to {{max}} letters, numbers, spaces, . / or -.",
+    "description": "Description (optional)",
+    "descriptionPlaceholder": "Condition, history, what's included"
+  },
+  "specError": {
+    "required": "Fill this in.",
+    "unknown_field": "This field isn't used for this category any more.",
+    "invalid_option": "Pick one of the options.",
+    "not_a_number": "Enter a number.",
+    "below_min": "This is below the lowest allowed value.",
+    "above_max": "This is above the highest allowed value.",
+    "invalid_date": "Enter a date as YYYY-MM-DD.",
+    "invalid_text": "This text can't be saved; remove special characters.",
+    "retired": "This option is no longer offered; pick another.",
+    "unsupported_type": "This field can't be saved right now."
+  },
+  "spec": {
+    "labelUnit": "{{label}} ({{unit}})",
+    "required": "*",
+    "range": "From {{min}} to {{max}}",
+    "min": "{{min}} or more",
+    "max": "Up to {{max}}",
+    "datePlaceholder": "YYYY-MM-DD"
+  },
+  "machine": {
+    "make": "Make",
+    "pickMake": "Choose the make",
+    "makeRequired": "Choose the make, or type it under Other.",
+    "makeOther": "Make name",
+    "otherMake": "Other make…",
+    "model": "Model",
+    "pickModel": "Choose the model",
+    "modelOther": "Model name",
+    "otherModel": "Other model…",
+    "noModel": "No model",
+    "other": "Other",
+    "otherLength": "Enter {{min}} to {{max}} characters.",
+    "year": "Year of manufacture",
+    "title": "Listing title",
+    "count": "Number of machines",
+    "hoursRun": "Hours run",
+    "serial": "Serial number",
+    "serialHint": "Only you and our team see this.",
+    "viewing": "Viewing",
+    "running": "Can be seen running",
+    "inspection": "Inspection by appointment",
+    "reason": "Reason for sale"
+  },
+  "fit": {
+    "partBrand": "Part brand",
+    "pickPartBrand": "Choose the brand",
+    "noPartBrand": "No brand",
+    "fitsTitle": "Fits these machines",
+    "fitsHint": "Buyers searching for these machines will find your part.",
+    "none": "No machines added yet.",
+    "addMachine": "Add machine",
+    "full": "Up to {{max}} machines",
+    "remove": "Remove {{name}}",
+    "add": "Add",
+    "brand": "Machine brand",
+    "pickBrand": "Choose the brand",
+    "model": "Model",
+    "pickModel": "Choose the model",
+    "allModels": "All models",
+    "otherModel": "Other model…",
+    "modelOther": "Model name",
+    "otherTypes": "Other machine types",
+    "backToMachine": "Back",
+    "yearFrom": "From year",
+    "yearTo": "To year",
+    "yearOrder": "The end year can't be before the start year.",
+    "note": "Note (optional)",
+    "notePlaceholder": "With hydraulic tensioner"
+  },
+  "rates": {
+    "range": "Enter an amount up to ₹10 crore.",
+    "title": "Rates",
+    "atLeastOne": "Enter at least one rate.",
+    "shiftHours": "Hours in a day",
+    "monthDays": "Working days in a month",
+    "overtime": "Overtime per hour",
+    "minDuration": "Minimum hire (optional)",
+    "minDurationPeriod": "Minimum hire in",
+    "period": {
+      "hour": "Hours",
+      "day": "Days",
+      "week": "Weeks",
+      "month": "Months"
+    },
+    "operator": "Operator",
+    "operatorRate": "Operator charge per day",
+    "fuel": "Fuel",
+    "transport": "Transport",
+    "transportCharge": "Transport charge, each way",
+    "deposit": "Security deposit",
+    "availableFrom": "Available from (empty = now)",
+    "availableFromPast": "Choose today or a later date.",
+    "availabilityNote": "Availability note"
+  },
+  "location": {
+    "titleStock": "Where is the stock?",
+    "titleMachine": "Where is the machine?",
+    "business": "My business address",
+    "godown": "Another godown",
+    "godownHint": "Add the pincode and area",
+    "pincode": "Enter a 6-digit pincode.",
+    "addressLine": "Address line (optional)",
+    "addressPrivate": "Buyers see only the area and city, never this address.",
+    "delivery": "Delivery",
+    "deliveryRequired": "Choose at least one delivery option.",
+    "worksWithin": "Works within (km)"
+  },
+  "preview": {
+    "note": "This is how buyers will see it.",
+    "score": "Listing score",
+    "scoreValue": "{{score}} / 100",
+    "scoreFull": "Everything buyers look for is here.",
+    "priceCheck": "Is {{price}} right?",
+    "unitCheck": "Is {{unit}} the right unit for a part?",
+    "quantityCheck": "Is {{quantity}} right?",
+    "flagsMessage": "If it's right, publish: our team checks it before it goes live.",
+    "publishAnyway": "Yes, publish",
+    "fixIt": "Fix it",
+    "publish": "Publish listing",
+    "resubmit": "Send for review",
+    "finishStep": "Finish \"{{step}}\" to publish.",
+    "gstHelp": "GST-verified businesses can list more, and their listings go live faster."
+  },
+  "published": {
+    "viewMine": "View in My listings",
+    "liveTitle": "Your listing is live",
+    "liveLead": "Buyers can find it now.",
+    "reviewTitle": "Listing sent for review",
+    "reviewLead": "Our team checks it; you'll see the result in My listings.",
+    "listAnother": "List another"
+  },
+  "drafts": {
+    "title": "Drafts",
+    "untitled": "Untitled draft",
+    "delete": "Delete",
+    "deleteTitle": "Delete this draft?",
+    "deleteMessage": "Its details and photos are deleted for good.",
+    "deleted": "Draft deleted",
+    "emptyTitle": "No drafts",
+    "emptySubtitle": "Listings you start and don't publish wait here."
   }
 }
