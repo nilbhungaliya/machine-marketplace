@@ -1,4 +1,4 @@
-import { sql, type SQL } from 'drizzle-orm';
+import { sql, type AnyColumn, type SQL } from 'drizzle-orm';
 import { PUBLIC_LISTING_STATUSES } from '@mpm/shared-types';
 import { listings } from '../../db/schema.js';
 
@@ -9,8 +9,8 @@ import { listings } from '../../db/schema.js';
 
 /** Anything with the two listing columns the condition reads: `listings` itself or an `alias(listings, …)`. */
 export interface ListingColumns {
-  status: typeof listings.status;
-  businessId: typeof listings.businessId;
+  status: AnyColumn;
+  businessId: AnyColumn;
 }
 
 const PUBLIC_STATUSES = sql.join(

@@ -24,6 +24,7 @@ import { isRealDate, isStorableText } from '../lib/spec-check.js';
 import { applySellerAction, publishListing } from '../services/listings/listing-lifecycle.service.js';
 import { getListing, getOwnerView, listMine } from '../services/listings/listing-read.service.js';
 import { createReport } from '../services/listings/listing-reports.service.js';
+import { findOtherSide } from '../services/listings/other-side.service.js';
 import { createListing, deleteDraft, patchListing, type ListingPatchInput } from '../services/listings/listing-write.service.js';
 
 // Seller listing writes (F2 spec §5.3, §7.3, §14). Thin: Zod-parse → service (in one transaction) → `{ data }`. Types,
@@ -191,6 +192,12 @@ const listingRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get('/listings/:id', optionalUser, async (request) => {
     const { id } = idParams.parse(request.params);
     return { data: await getListing(fastify.db, id, request.user) };
+  });
+
+  // Other side (§9.1): public, or the owner's own listing in any status ("Find the other side" from My listings).
+  fastify.get('/listings/:id/other-side', optionalUser, async (request) => {
+    const { id } = idParams.parse(request.params);
+    return { data: await findOtherSide(fastify.db, id, request.user) };
   });
 
   // The owner view in any status (removed only when an admin removed it in the last 30 days).
