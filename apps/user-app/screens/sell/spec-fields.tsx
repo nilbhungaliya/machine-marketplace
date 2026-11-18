@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { ListingKind, TemplateField } from '@mpm/shared-types';
@@ -8,6 +8,7 @@ import Input from '@/components/Input';
 import { activeOptions, editableFields, specControl, type SpecFormValues } from '@/lib/spec-form';
 import { spacing } from '@/lib/theme';
 import { useTemplate } from '@/hooks/use-listing';
+import { specErrorsFromApi, translateErrors } from '@/lib/sell-form';
 
 /**
  * A category's template fields as form controls (F2 spec §5.2 "Template fields"): single select → radio chips, multi
@@ -88,5 +89,21 @@ export default function SpecFields({ fields, values, errors, onChange }: {
 /** The listing's template for its kind; `fields` empty until loaded or without a category. */
 export function useSpecTemplate(categoryId: string | null, kind: ListingKind) {
   const q = useTemplate(categoryId, kind);
-  return { fields: q.data?.fields ?? [], loading: !!categoryId && q.isLoading, error: q.isError, refetch: q.refetch };
+  return { fields: q.data?.fields ?? [], loading: !!categoryId && q.isLoading, error: !!categoryId && q.isError && !q.data, refetch: q.refetch };
+}
+
+/**
+ * The server's verdict on the step's specs (`400 SPECS_INVALID` on Next): each message on its own field until that field
+ * changes. Kept apart from Formik's errors, which re-validation would replace.
+ */
+export function useApiSpecErrors() {
+  const { t } = useTranslation();
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const onSaveError = useCallback((err: unknown) => setErrors(translateErrors(specErrorsFromApi(err), t)), [t]);
+  const clear = useCallback((key: string) => setErrors((e) => {
+    if (!(key in e)) return e;
+    const { [key]: _gone, ...rest } = e;
+    return rest;
+  }), []);
+  return { errors, onSaveError, clear };
 }

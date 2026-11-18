@@ -19,7 +19,7 @@ import { fetchNearestPincode } from '@/lib/business-api';
 import { toAsciiDigits } from '@/lib/digits';
 import { Building2, Info, LocateFixed, MapPin, Package, X } from '@/lib/icons';
 import { deliveryLabel } from '@/lib/listing-format';
-import { PINCODE_REGEX } from '@/lib/onboarding-step';
+import { PINCODE_REGEX, pinAfterPincode } from '@/lib/onboarding-step';
 import {
   ADDRESS_LINE_MAX, AREA_OTHER_MAX, locationInitial, locationPatch, translateErrors, validateLocation, type LocationValues,
 } from '@/lib/sell-form';
@@ -46,7 +46,12 @@ export default function StepLocation({ ctx }: StepProps) {
     stored.source === 'godown' && stored.lat != null && stored.lng != null ? { lat: stored.lat, lng: stored.lng } : null,
   );
   const [locating, setLocating] = useState(false);
-  const filledFor = useRef<string | null>(stored.source === 'godown' ? stored.pincode : null);
+  const storedPincode = stored.source === 'godown' ? stored.pincode : null;
+  const filledFor = useRef<string | null>(storedPincode);
+  /** The pincode the pin came with (`pinAfterPincode`, as F1). */
+  const pinFor = useRef<string | null>(pin ? storedPincode : null);
+  /** The pincode the picked industrial area belongs to: another pincode clears it. */
+  const areaFor = useRef<string | null>(storedPincode);
 
   const form = useFormik<LocationValues>({
     initialValues: locationInitial(listing),
@@ -62,6 +67,24 @@ export default function StepLocation({ ctx }: StepProps) {
   const validPin = godown && PINCODE_REGEX.test(digits) ? digits : null;
   const pincodeInfo = usePincodeInfo(validPin);
   const areas = useIndustrialAreas(validPin);
+
+  // A pincode the pin didn't come with clears the pin; a pin that came with none binds to the first one (as F1). A
+  // new pincode also clears the industrial area, which belongs to the old one.
+  useEffect(() => {
+    if (validPin && validPin !== areaFor.current) {
+      areaFor.current = validPin;
+      if (form.values.industrialAreaId) void form.setFieldValue('industrialAreaId', null);
+    }
+    if (!pin) return;
+    const next = pinAfterPincode(pinFor.current, validPin);
+    if (next === 'bind') pinFor.current = validPin;
+    if (next === 'clear') {
+      setPin(null);
+      pinFor.current = null;
+      Toast.show({ type: 'info', text1: t('onboarding.location.pinCleared') });
+    }
+    // Keyed on the pincode only.
+  }, [validPin]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // A newly typed pincode fills city and state (both stay editable), as F1.
   useEffect(() => {
@@ -97,11 +120,14 @@ export default function StepLocation({ ctx }: StepProps) {
       const here = { lat: position.coords.latitude, lng: position.coords.longitude };
       setPin(here);
       const info = await fetchNearestPincode(here.lat, here.lng);
+      // The pin belongs to the nearest office's pincode; with none nearby it binds to the next valid one typed.
+      pinFor.current = info?.pincode ?? null;
       if (!info) {
         Toast.show({ type: 'info', text1: t('onboarding.location.noPincodeNearby') });
         return;
       }
       filledFor.current = info.pincode;
+      areaFor.current = info.pincode;
       await form.setValues({ ...form.values, pincode: info.pincode, city: info.city, state: info.state, industrialAreaId: null });
       Toast.show({ type: 'success', text1: t('onboarding.location.found', { pincode: info.pincode }) });
     } catch {
@@ -160,6 +186,7 @@ export default function StepLocation({ ctx }: StepProps) {
       patch={() => locationPatch(v, godown ? pin : null, listing.kind)}
       validate={({ loose }) => (loose ? Object.keys(validateLocation(v, listing.kind)).length === 0 : formCheck(form))}
       nextLabel={ctx.mode === 'create' ? t('sell.previewListing') : undefined}
+      title={t(listing.kind === 'part' ? 'sell.location.titleStock' : 'sell.location.titleMachine')}
     >
       {choice('business', t('sell.location.business'), bizLine, Building2)}
       {choice('godown', t('sell.location.godown'), t('sell.location.godownHint'), Package)}
@@ -245,7 +272,7 @@ export default function StepLocation({ ctx }: StepProps) {
             <View style={s.pinRow}>
               <MapPin size={18} color={colors.ok} />
               <Text style={s.pinText}>{t('onboarding.location.pinSet')}</Text>
-              <Button title={t('onboarding.location.removePin')} phLabel="Sell-godown-remove-pin" variant="ghost" size="sm" icon={X} onPress={() => setPin(null)} />
+              <Button title={t('onboarding.location.removePin')} phLabel="Sell-godown-remove-pin" variant="ghost" size="sm" icon={X} onPress={() => { setPin(null); pinFor.current = null; }} />
             </View>
           ) : null}
           <Button

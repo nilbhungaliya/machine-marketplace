@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import Toast from 'react-native-toast-message';
@@ -13,7 +13,7 @@ import { useCreateListing } from '@/hooks/use-sell-draft';
 import { useTabBarInset } from '@/hooks/use-tab-bar-inset';
 import { useType } from '@/hooks/use-type';
 import { errorCode } from '@/lib/api-error';
-import { BellRing, CalendarClock, ChevronRight, ClipboardList, Factory, ShieldCheck, Wrench, type LucideIcon } from '@/lib/icons';
+import { BellRing, CalendarClock, ChevronRight, ClipboardList, Factory, Package, ShieldCheck, Wrench, type LucideIcon } from '@/lib/icons';
 import { listingErrorMessage } from '@/lib/listing-errors';
 import { canListRental } from '@/lib/sell-wizard';
 import { radius, spacing, useTheme } from '@/lib/theme';
@@ -25,7 +25,7 @@ type Area = 'sellPart' | 'sellMachine' | 'rentMachine' | 'partRequest';
 /**
  * What are you listing? (F2 spec §5.1, §15.1; mockup "What are you listing?"): a spare part or a machine for sale
  * creates a draft and opens the wizard's first step; a machine for rent needs GST verification (disabled with "Verify
- * GST" otherwise); a requirement is coming soon. "Drafts (n)" resumes unpublished listings.
+ * GST" otherwise); a requirement is coming soon. "Drafts (n)" resumes unpublished listings; "My listings" opens them all.
  */
 export default function PostScreen({ navigation }: TabScreenProps<'Post'>) {
   const { t } = useTranslation();
@@ -38,9 +38,12 @@ export default function PostScreen({ navigation }: TabScreenProps<'Post'>) {
   const create = useCreateListing();
   const gst = useOpenGst();
   const [creating, setCreating] = useState<ListingKind | null>(null);
+  // A second tap before the re-render would create a second draft.
+  const starting = useRef(false);
   // The API's `403 RENTAL_NEEDS_GST` also disables the card (the profile in the cache can be older than a revocation).
   const [rentalRefused, setRentalRefused] = useState(false);
-  const rentalAllowed = canListRental(business.data) && !rentalRefused;
+  // While the profile loads, the card isn't shown as locked (the API still refuses without GST).
+  const rentalAllowed = (business.data === undefined || canListRental(business.data)) && !rentalRefused;
   const draftCount = drafts.data?.counts.drafts ?? 0;
 
   const s = useMemo(() => StyleSheet.create({
@@ -61,7 +64,8 @@ export default function PostScreen({ navigation }: TabScreenProps<'Post'>) {
   }), [colors, type]);
 
   const start = async (kind: ListingKind) => {
-    if (creating) return;
+    if (starting.current) return;
+    starting.current = true;
     setCreating(kind);
     try {
       const listing = await create.mutateAsync(kind);
@@ -70,6 +74,7 @@ export default function PostScreen({ navigation }: TabScreenProps<'Post'>) {
       if (errorCode(err) === 'RENTAL_NEEDS_GST') setRentalRefused(true);
       Toast.show({ type: 'error', text1: listingErrorMessage(err) });
     } finally {
+      starting.current = false;
       setCreating(null);
     }
   };
@@ -113,19 +118,25 @@ export default function PostScreen({ navigation }: TabScreenProps<'Post'>) {
         ),
       })}
       {card(BellRing, 'partRequest', () => Toast.show({ type: 'info', text1: t('common.comingSoon') }))}
-      {draftCount > 0 ? (
-        <Card flush>
+      <Card flush>
+        {draftCount > 0 ? (
           <ListRow
             icon={ClipboardList}
             label={t('sell.post.drafts', { count: draftCount })}
             chevron
-            last
             onPress={() => navigation.navigate('MyDrafts')}
             testID="Post-drafts"
           />
-        </Card>
-      ) : null}
-      {/* INTEGRATION: "My listings" row (Task 27): `navigation.navigate('MyListings')`, under the drafts row. */}
+        ) : null}
+        <ListRow
+          icon={Package}
+          label={t('profile.rows.listings')}
+          chevron
+          last
+          onPress={() => navigation.navigate('MyListings')}
+          testID="Post-my-listings"
+        />
+      </Card>
     </ScreenWrapper>
   );
 }

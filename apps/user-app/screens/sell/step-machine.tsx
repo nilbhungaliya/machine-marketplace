@@ -16,8 +16,8 @@ import {
 import { machineTitle } from '@/lib/sell-wizard';
 import { buildSpecSchema, specInitialValues, toSpecs, type SpecFormValues } from '@/lib/spec-form';
 import { spacing } from '@/lib/theme';
-import StepFrame, { StepSkeleton, type StepProps } from './step-frame';
-import SpecFields, { useSpecTemplate } from './spec-fields';
+import StepFrame, { StepLoadError, StepSkeleton, type StepProps } from './step-frame';
+import SpecFields, { useApiSpecErrors, useSpecTemplate } from './spec-fields';
 import { PickerField, PickerSheet } from './sell-sheet';
 import { formCheck, specErrors } from './form-check';
 
@@ -34,6 +34,13 @@ const NONE = '__none__';
  */
 export default function StepMachine({ ctx }: StepProps) {
   const template = useSpecTemplate(ctx.listing.categoryId, ctx.listing.kind);
+  if (template.error) {
+    return (
+      <StepFrame key="error" ctx={ctx} patch={() => null} validate={() => false} nextDisabled>
+        <StepLoadError onRetry={() => void template.refetch()} />
+      </StepFrame>
+    );
+  }
   if (template.loading) {
     return (
       <StepFrame key="loading" ctx={ctx} patch={() => null} validate={() => false} nextDisabled>
@@ -71,6 +78,7 @@ function MachineForm({ ctx, fields }: StepProps & { fields: TemplateField[] }) {
   const models = useModels(v.brandIsOther ? null : v.brandId, typeId);
   const err = (k: keyof MachineValues) => (form.submitCount > 0 || form.touched[k] ? form.errors[k] : undefined);
   const specErr = (form.submitCount > 0 ? form.errors.specs : undefined) as Partial<Record<string, string>> | undefined;
+  const apiSpec = useApiSpecErrors();
 
   const brandName = v.brandIsOther ? v.brandOther : brands.data?.find((b) => b.id === v.brandId)?.name ?? listing.machine?.brandName ?? null;
   const modelName = v.modelIsOther ? v.modelOther : models.data?.find((m) => m.id === v.modelId)?.name
@@ -104,6 +112,7 @@ function MachineForm({ ctx, fields }: StepProps & { fields: TemplateField[] }) {
   return (
     <StepFrame
       ctx={ctx}
+      onSaveError={apiSpec.onSaveError}
       patch={() => machinePatch(v, listing.kind, toSpecs(v.specs, fields, listing.specs))}
       validate={({ loose: isLoose }) => (isLoose
         ? Object.keys(validateMachine(v, { kind: listing.kind, thisYear })).length === 0 && Object.keys(specErrors(loose, v.specs)).length === 0
@@ -133,7 +142,7 @@ function MachineForm({ ctx, fields }: StepProps & { fields: TemplateField[] }) {
         placeholder={t('sell.machine.pickModel')}
         hint={t('sell.optional')}
         disabled={!v.brandId && !v.brandIsOther}
-        onPress={() => (v.brandIsOther ? pickModel(OTHER) : setSheet('model'))}
+        onPress={() => setSheet('model')}
         testID="Sell-machine-model"
       />
       {v.modelIsOther ? (
@@ -179,8 +188,8 @@ function MachineForm({ ctx, fields }: StepProps & { fields: TemplateField[] }) {
       <SpecFields
         fields={fields}
         values={v.specs}
-        errors={specErr ?? {}}
-        onChange={(key, value) => void form.setFieldValue(`specs.${key}`, value)}
+        errors={{ ...apiSpec.errors, ...specErr }}
+        onChange={(key, value) => { apiSpec.clear(key); void form.setFieldValue(`specs.${key}`, value); }}
       />
       <Input
         label={t('sell.machine.hoursRun')}

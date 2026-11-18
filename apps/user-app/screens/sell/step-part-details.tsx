@@ -8,8 +8,8 @@ import Notice from '@/components/Notice';
 import { Info } from '@/lib/icons';
 import { partDetailsInitial, partDetailsPatch, translateErrors, validatePartDetails, type PartDetailsValues } from '@/lib/sell-form';
 import { buildSpecSchema, specInitialValues, toSpecs, type SpecFormValues } from '@/lib/spec-form';
-import StepFrame, { StepSkeleton, type StepProps } from './step-frame';
-import SpecFields, { useSpecTemplate } from './spec-fields';
+import StepFrame, { StepLoadError, StepSkeleton, type StepProps } from './step-frame';
+import SpecFields, { useApiSpecErrors, useSpecTemplate } from './spec-fields';
 import { formCheck, specErrors } from './form-check';
 
 type Values = PartDetailsValues & { specs: SpecFormValues };
@@ -20,6 +20,13 @@ type Values = PartDetailsValues & { specs: SpecFormValues };
  */
 export default function StepPartDetails({ ctx }: StepProps) {
   const template = useSpecTemplate(ctx.listing.categoryId, ctx.listing.kind);
+  if (template.error) {
+    return (
+      <StepFrame key="error" ctx={ctx} patch={() => null} validate={() => false} nextDisabled>
+        <StepLoadError onRetry={() => void template.refetch()} />
+      </StepFrame>
+    );
+  }
   if (template.loading) {
     return (
       <StepFrame key="loading" ctx={ctx} patch={() => null} validate={() => false} nextDisabled>
@@ -43,10 +50,12 @@ function PartDetailsForm({ ctx, fields }: StepProps & { fields: TemplateField[] 
   });
   const err = (k: keyof PartDetailsValues) => (form.submitCount > 0 || form.touched[k] ? form.errors[k] : undefined);
   const specErr = (form.submitCount > 0 ? form.errors.specs : undefined) as Partial<Record<string, string>> | undefined;
+  const apiSpec = useApiSpecErrors();
 
   return (
     <StepFrame
       ctx={ctx}
+      onSaveError={apiSpec.onSaveError}
       // The stored specs carry over keys the form doesn't edit (retired fields, §7.3).
       patch={() => partDetailsPatch(form.values, toSpecs(form.values.specs, fields, listing.specs))}
       validate={({ loose: isLoose }) => (isLoose
@@ -79,8 +88,8 @@ function PartDetailsForm({ ctx, fields }: StepProps & { fields: TemplateField[] 
       <SpecFields
         fields={fields}
         values={form.values.specs}
-        errors={specErr ?? {}}
-        onChange={(key, value) => void form.setFieldValue(`specs.${key}`, value)}
+        errors={{ ...apiSpec.errors, ...specErr }}
+        onChange={(key, value) => { apiSpec.clear(key); void form.setFieldValue(`specs.${key}`, value); }}
       />
       <Input
         label={t('sell.details.description')}

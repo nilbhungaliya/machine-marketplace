@@ -7,13 +7,15 @@ import ScreenWrapper from '@/components/ScreenWrapper';
 import Header from '@/components/Header';
 import EmptyState from '@/components/EmptyState';
 import Skeleton from '@/components/Skeleton';
-import { useCategoryTree } from '@/hooks/use-listing';
+import { useConfirm } from '@/components/ConfirmSheet';
+import { useCategoryTree, useMasterData } from '@/hooks/use-listing';
 import { useSellDraft } from '@/hooks/use-sell-draft';
 import { track } from '@/lib/analytics';
 import { LISTING_EVENTS } from '@/lib/analytics-events';
 import { TriangleAlert } from '@/lib/icons';
 import { listingErrorKey } from '@/lib/listing-errors';
 import { findNode, hasSidesFor } from '@/lib/sell-category';
+import { editFlags, editSaveToastKey, patchedListing } from '@/lib/sell-form';
 import { firstIncompleteStep, nextStep } from '@/lib/sell-wizard';
 import { radius, spacing } from '@/lib/theme';
 import type { RootStackScreenProps } from '@/navigation/types';
@@ -28,19 +30,22 @@ import StepMedia from './step-media';
 import StepPrice from './step-price';
 import StepRates from './step-rates';
 import StepLocation from './step-location';
-import Preview from './preview';
+import Preview, { flagText } from './preview';
 
 /**
  * The `Sell` route (F2 spec §5.2, §5.3, §15.1): one route pushed per step, so Back works naturally. Loads the draft's
  * owner view (the wizard's source of truth) and the category tree (sides, breadcrumbs), then draws the step. Next
  * saves the step (`PATCH`) and pushes the next step from `nextStep(kind, hasSides, step)`; in `edit` mode it saves
- * and goes back to the Edit listing menu.
+ * and goes back (to the Edit listing menu, or to Preview), first confirming any sanity warning the change adds, as
+ * Preview does, and says when the edit sent a public listing back to review.
  */
 export default function SellStepScreen({ navigation, route }: RootStackScreenProps<'Sell'>) {
   const { listingId, step, mode = 'create' } = route.params;
   const { t } = useTranslation();
   const draft = useSellDraft(listingId);
   const tree = useCategoryTree();
+  const master = useMasterData();
+  const confirm = useConfirm();
   const listing = draft.listing;
 
   const ctx = useMemo<SellStepContext | null>(() => {
@@ -55,21 +60,36 @@ export default function SellStepScreen({ navigation, route }: RootStackScreenPro
       mode,
       save: (patch: ListingPatch) => draft.save(patch),
       complete: async (patch: ListingPatch | null) => {
+        if (mode === 'edit' && patch) {
+          const flags = editFlags(listing, patch, master.data?.units ?? []);
+          if (flags.length > 0) {
+            const after = patchedListing(listing, patch);
+            const warnings = flags.map((f) => flagText(t, f, after));
+            const ok = await confirm({
+              title: warnings[0]!,
+              message: [...warnings.slice(1), t('sell.editCheck.message')].join('\n'),
+              confirmLabel: t('sell.editCheck.saveAnyway'),
+              cancelLabel: t('sell.preview.fixIt'),
+            });
+            if (!ok) return false;
+          }
+        }
         let saved = listing;
         if (patch) saved = await draft.save(patch, step);
         else track(LISTING_EVENTS.sellStepCompleted, { kind: listing.kind, step });
         if (mode === 'edit') {
-          Toast.show({ type: 'success', text1: t('sell.saved') });
+          Toast.show({ type: 'success', text1: t(editSaveToastKey(listing.status, saved.status)) });
           navigation.goBack();
-          return;
+          return true;
         }
         const sides = hasSidesFor(nodes, saved);
         const next = nextStep(saved.kind, sides, step) ?? firstIncompleteStep(saved, sides);
         navigation.push('Sell', { listingId, step: next, mode });
+        return true;
       },
     };
-    // `draft.save` is a new function each render; the context follows the listing, tree and route.
-  }, [listing, tree.data, step, mode, listingId]); // eslint-disable-line react-hooks/exhaustive-deps
+    // `draft.save` and `confirm` are new functions each render; the context follows the listing, tree, units and route.
+  }, [listing, tree.data, master.data, step, mode, listingId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!ctx) {
     const failed = draft.query.isError || tree.isError;

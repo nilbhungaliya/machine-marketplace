@@ -44,7 +44,9 @@ function QuantityForm({ ctx, master }: StepProps & { master: MasterData }) {
   const units = useMemo(() => {
     const list = master.units.filter((u) => u.isActive);
     if (listing.unitId && listing.unit && !list.some((u) => u.id === listing.unitId)) {
-      list.push({ id: listing.unitId, key: listing.unit.key, label: listing.unit.label, decimals: listing.unit.decimals, sortOrder: 999, isActive: false });
+      // The owner view's unit has no flag: take it from master data (it may list inactive units), else not a machine unit.
+      const isMachineUnit = master.units.find((u) => u.id === listing.unitId)?.isMachineUnit ?? false;
+      list.push({ id: listing.unitId, key: listing.unit.key, label: listing.unit.label, decimals: listing.unit.decimals, sortOrder: 999, isActive: false, isMachineUnit });
     }
     return list;
   }, [master.units, listing.unitId, listing.unit]);

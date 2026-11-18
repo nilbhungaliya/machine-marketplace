@@ -1,6 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { CategoryNode } from '@mpm/shared-types';
 import { CATEGORY_EDITABLE_STATUSES } from '@mpm/shared-types';
@@ -9,6 +10,7 @@ import Field, { FieldError } from '@/components/Field';
 import Input from '@/components/Input';
 import ListRow from '@/components/ListRow';
 import Notice from '@/components/Notice';
+import { useDeleteDraft } from '@/hooks/use-sell-draft';
 import { useType } from '@/hooks/use-type';
 import { ChevronLeft, Clock, Info, Search } from '@/lib/icons';
 import {
@@ -41,6 +43,7 @@ async function writeRecent(level: string, ids: string[]): Promise<void> {
  * Step 1, Category (F2 spec §5.2, R28): a search over the cached tree with breadcrumbs, the device's last 5 picks, and
  * a drill-down (machine category → machine type → part group). Parts pick a part group, machines a machine type. The
  * category can change only in `draft` and `rejected` (R43); the server then drops specs, side and fit that don't fit.
+ * Leaving a draft that still has no category deletes it, so abandoned starts don't count toward the draft limit.
  */
 export default function StepCategory({ ctx }: StepProps) {
   const { t } = useTranslation();
@@ -60,6 +63,16 @@ export default function StepCategory({ ctx }: StepProps) {
   const [initial] = useState(listing.categoryId);
 
   useEffect(() => { void readRecent(level).then(setRecent); }, [level]);
+
+  // Back from step 1 with nothing picked: the draft is empty (every other step comes after this one), so delete it
+  // rather than leave it in Drafts and toward `DRAFT_LIMIT`. With a pick, the frame's autosave keeps it instead.
+  const navigation = useNavigation();
+  const deleteDraft = useDeleteDraft();
+  const empty = useRef(false);
+  empty.current = ctx.mode === 'create' && listing.status === 'draft' && !listing.categoryId && !picked;
+  useEffect(() => navigation.addListener('beforeRemove', () => {
+    if (empty.current) deleteDraft.mutate(listing.id);
+  }), [navigation, listing.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const open = findNode(tree, openId);
   const rows = open ? open.children : tree;
@@ -155,7 +168,7 @@ export default function StepCategory({ ctx }: StepProps) {
         </>
       )}
       {tried && !picked ? <FieldError>{t('sell.category.required')}</FieldError> : null}
-      {recents.length === 0 && !query.trim() && !openId ? (
+      {listing.kind === 'part' && recents.length === 0 && !query.trim() && !openId ? (
         <Notice tone="info" icon={Clock} text={t('sell.category.tip')} />
       ) : null}
     </StepFrame>

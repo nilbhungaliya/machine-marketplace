@@ -12,7 +12,7 @@ import Header from '@/components/Header';
 import Notice from '@/components/Notice';
 import ScreenWrapper from '@/components/ScreenWrapper';
 import { useConfirm } from '@/components/ConfirmSheet';
-import { useMasterData, useTemplate } from '@/hooks/use-listing';
+import { useListingTemplate, useMasterData } from '@/hooks/use-listing';
 import { usePublishListing } from '@/hooks/use-sell-draft';
 import { useType } from '@/hooks/use-type';
 import { errorCode } from '@/lib/api-error';
@@ -30,8 +30,8 @@ import { useOpenGst } from './use-open-gst';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
-/** The sanity warning for a flag (§5.4): "Is ₹4 /pc right?". */
-function flagText(t: (k: string, o?: Record<string, unknown>) => string, flag: ListingFlag, l: ListingOwnerView): string {
+/** The sanity warning for a flag (§5.4): "Is ₹4 /pc right?". Also the edit-mode Save's check (`sell-step.tsx`). */
+export function flagText(t: (k: string, o?: Record<string, unknown>) => string, flag: ListingFlag, l: ListingOwnerView): string {
   switch (flag) {
     case 'price_check': return t('sell.preview.priceCheck', { price: priceText(l) });
     case 'unit_check': return t('sell.preview.unitCheck', { unit: unitLabel(l.unit) });
@@ -51,9 +51,8 @@ export default function Preview({ ctx }: StepProps) {
   const navigation = useNavigation<Nav>();
   const confirm = useConfirm();
   const { listing } = ctx;
-  // INTEGRATION: switch to the template with retired fields (`includeRetired=1`, L6's call in lib/listing-api.ts), so a
-  // retired field's stored value shows on the preview as on the listing page.
-  const template = useTemplate(listing.categoryId, listing.kind);
+  // The template with retired fields (`includeRetired=1`): a retired field's stored value shows here as on the listing page.
+  const template = useListingTemplate(listing);
   const master = useMasterData();
   const publish = usePublishListing(listing.kind);
   const [gstBlock, setGstBlock] = useState<string | null>(null);
@@ -98,7 +97,8 @@ export default function Preview({ ctx }: StepProps) {
       const target = problems.map((p) => stepForProblem(p.field, listing.kind)).find((st) => st !== null);
       if (target) {
         Toast.show({ type: 'info', text1: t('sell.preview.finishStep', { step: t(`sell.steps.${target}`) }) });
-        navigation.push('Sell', { listingId: listing.id, step: target, mode: 'create' });
+        // Edit mode: Save comes back to this Preview instead of walking the remaining steps again.
+        navigation.push('Sell', { listingId: listing.id, step: target, mode: 'edit' });
         return;
       }
       if (needsGstVerification(err)) {

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { RentalTerms } from '@mpm/shared-types';
 import { ownerFixture } from './listing-fixtures.test-helper';
 import {
-  fitRowPatch, locationInitial, locationPatch, machineInitial, machinePatch, partDetailsPatch, previewFlags, priceInitial,
+  editFlags, editSaveToastKey, fitRowPatch, specErrorsFromApi, locationInitial, locationPatch, machineInitial, machinePatch, partDetailsPatch, previewFlags, priceInitial,
   pricePatch, quantityInitial, quantityPatch, ratesInitial, ratesPatch, translateErrors, validateFitRow, validateLocation,
   validateMachine, validatePartDetails, validatePrice, validateQuantity, validateRates, type FitRowValues,
   type LocationValues, type MachineValues, type RatesValues,
@@ -139,6 +139,14 @@ describe('price', () => {
       .toEqual({ priceModel: 'sell.validation.pickOne' });
   });
 
+  it('takes ₹1 and ₹100 crore, and refuses just outside them', () => {
+    const ctx = { kind: 'machine' as const, decimals: 0, quantity: '1' };
+    expect(validatePrice({ ...base, price: '1' }, ctx)).toEqual({});
+    expect(validatePrice({ ...base, price: '1,00,00,00,000' }, ctx)).toEqual({});
+    expect(keys(validatePrice({ ...base, price: '0.99' }, ctx))).toEqual({ price: 'sell.price.range' });
+    expect(keys(validatePrice({ ...base, price: '1000000000.01' }, ctx))).toEqual({ price: 'sell.price.range' });
+  });
+
   it('keeps the minimum order within the quantity and the unit decimals', () => {
     expect(keys(validatePrice({ ...base, minOrder: '20' }, { kind: 'part', decimals: 0, quantity: '14' })))
       .toEqual({ minOrder: 'listing.errors.minOrderAboveQuantity' });
@@ -180,6 +188,16 @@ describe('rates and terms', () => {
     expect(keys(validateRates(v({ day: '2500', availableFrom: '2026-11-01' }), ctx))).toEqual({ availableFrom: 'sell.rates.availableFromPast' });
     expect(validateRates(v({ day: '2500', availableFrom: '2026-11-01' }), { ...ctx, previousAvailableFrom: '2026-11-01' })).toEqual({});
     expect(keys(validateRates(v({ day: '2500', availableFrom: '2026-13-01' }), ctx))).toEqual({ availableFrom: 'sell.validation.date' });
+  });
+
+  it('caps rates and charges at ₹10 crore with their own message, the deposit at ₹100 crore', () => {
+    const ctx = { today: '2026-11-18', previousAvailableFrom: null };
+    expect(validateRates(v({ day: '0.01', overtime: '10,00,00,000', transportCharge: '10,00,00,000' }), ctx)).toEqual({});
+    expect(keys(validateRates(v({ day: '100000000.01', overtime: '100000000.01', operator: 'optional', operatorRate: '100000000.01', transportCharge: '100000000.01' }), ctx)))
+      .toEqual({ day: 'sell.rates.range', overtime: 'sell.rates.range', operatorRate: 'sell.rates.range', transportCharge: 'sell.rates.range' });
+    expect(keys(validateRates(v({ day: '0.001' }), ctx))).toEqual({ day: 'sell.price.invalid' });
+    expect(validateRates(v({ day: '1', deposit: '1,00,00,00,000' }), ctx)).toEqual({});
+    expect(keys(validateRates(v({ day: '1', deposit: '1000000000.01' }), ctx))).toEqual({ deposit: 'sell.price.range' });
   });
 
   it('sends paise, whole numbers, and the operator rate only when there is an operator to pay', () => {
@@ -233,8 +251,39 @@ describe('preview flags and translation', () => {
     expect(previewFlags({ ...l, pricePaise: 42_000 }, [])).toEqual([]);
   });
 
+  it('edit mode: the flags a save would add, leaving out ones already accepted and drafts', () => {
+    const live = ownerFixture({ status: 'live', priceModel: 'fixed', pricePaise: 42_000, quantity: '2' });
+    expect(editFlags(live, { pricePaise: 400 }, [])).toEqual(['price_check']);
+    expect(editFlags(live, { quantity: '5000000' }, [])).toEqual(['quantity_check']);
+    expect(editFlags(live, { pricePaise: 50_000 }, [])).toEqual([]);
+    expect(editFlags({ ...live, acceptedFlags: ['price_check'] }, { pricePaise: 400 }, [])).toEqual([]);
+    expect(editFlags({ ...live, status: 'draft' }, { pricePaise: 400 }, [])).toEqual([]);
+    expect(editFlags(live, { title: 'Temple roller' }, [])).toEqual([]);
+  });
+
+  it('edit mode: a save that sent a public listing to review says so', () => {
+    expect(editSaveToastKey('live', 'pending_review')).toBe('listing.manage.sentForReview');
+    expect(editSaveToastKey('rented', 'pending_review')).toBe('listing.manage.sentForReview');
+    expect(editSaveToastKey('live', 'live')).toBe('sell.saved');
+    expect(editSaveToastKey('pending_review', 'pending_review')).toBe('sell.saved');
+    expect(editSaveToastKey('paused', 'paused')).toBe('sell.saved');
+  });
+
   it('translates errors with their params', () => {
     const t = (k: string, o?: Record<string, unknown>) => `${k}${o ? JSON.stringify(o) : ''}`;
     expect(translateErrors({ title: { key: 'a', params: { min: 3 } }, x: undefined }, t)).toEqual({ title: 'a{"min":3}' });
+  });
+});
+
+describe('SPECS_INVALID on the fields', () => {
+  const apiError = (code: string, details?: Record<string, unknown>) => ({
+    isAxiosError: true, response: { status: 400, data: { error: 'x', code, details } },
+  });
+
+  it('maps each field key to its message key, ignoring unknown codes and other errors', () => {
+    expect(specErrorsFromApi(apiError('SPECS_INVALID', { width: 'above_max', ends: 'invalid_option', x: 42, y: 'nope' })))
+      .toEqual({ width: { key: 'sell.specError.above_max' }, ends: { key: 'sell.specError.invalid_option' } });
+    expect(specErrorsFromApi(apiError('SPECS_INVALID'))).toEqual({});
+    expect(specErrorsFromApi(apiError('PRICE_REQUIRED', { width: 'required' }))).toEqual({});
   });
 });

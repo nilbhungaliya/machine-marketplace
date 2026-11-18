@@ -107,7 +107,13 @@
   "loadError": "Couldn't load this",
   "verifyGst": "Verify GST",
   "reviewOnEdit": "Changes to side or fit are checked by our team before they show.",
+  "editCheck": {
+    "message": "If it's right, save: our team checks it before buyers see the change.",
+    "saveAnyway": "Yes, save"
+  },
   "leave": {
+    "discardMessage": "Your changes on this step won't be saved.",
+    "saveFailedMessage": "Your changes on this step weren't saved.",
     "uploadsTitle": "Photos are still uploading",
     "uploadsMessage": "If you leave now, uploads in progress will stop.",
     "unsavedTitle": "Leave without saving?",
@@ -141,6 +147,18 @@
     "partNumberInvalid": "Use up to {{max}} letters, numbers, spaces, . / or -.",
     "description": "Description (optional)",
     "descriptionPlaceholder": "Condition, history, what's included"
+  },
+  "specError": {
+    "required": "Fill this in.",
+    "unknown_field": "This field isn't used for this category any more.",
+    "invalid_option": "Pick one of the options.",
+    "not_a_number": "Enter a number.",
+    "below_min": "This is below the lowest allowed value.",
+    "above_max": "This is above the highest allowed value.",
+    "invalid_date": "Enter a date as YYYY-MM-DD.",
+    "invalid_text": "This text can't be saved; remove special characters.",
+    "retired": "This option is no longer offered; pick another.",
+    "unsupported_type": "This field can't be saved right now."
   },
   "spec": {
     "labelUnit": "{{label}} ({{unit}})",
@@ -201,6 +219,7 @@
     "notePlaceholder": "With hydraulic tensioner"
   },
   "rates": {
+    "range": "Enter an amount up to ₹10 crore.",
     "title": "Rates",
     "atLeastOne": "Enter at least one rate.",
     "shiftHours": "Hours in a day",
@@ -225,6 +244,8 @@
     "availabilityNote": "Availability note"
   },
   "location": {
+    "titleStock": "Where is the stock?",
+    "titleMachine": "Where is the machine?",
     "business": "My business address",
     "godown": "Another godown",
     "godownHint": "Add the pincode and area",
@@ -252,6 +273,7 @@
     "gstHelp": "GST-verified businesses can list more, and their listings go live faster."
   },
   "published": {
+    "viewMine": "View in My listings",
     "liveTitle": "Your listing is live",
     "liveLead": "Buyers can find it now.",
     "reviewTitle": "Listing sent for review",

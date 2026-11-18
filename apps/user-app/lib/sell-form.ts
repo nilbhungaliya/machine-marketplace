@@ -1,9 +1,11 @@
 import {
-  LISTING_DESCRIPTION_MAX, LISTING_TITLE_MAX, LISTING_TITLE_MIN, PART_NUMBER_MAX, sanityFlags,
-  type DeliveryOption, type Fitment, type GstPriceMode, type ListingFlag, type ListingKind, type ListingOwnerView,
+  LISTING_DESCRIPTION_MAX, LISTING_TITLE_MAX, LISTING_TITLE_MIN, PART_NUMBER_MAX, PUBLIC_LISTING_STATUSES, SPEC_ERROR_CODES,
+  sanityFlags,
+  type DeliveryOption, type Fitment, type GstPriceMode, type ListingFlag, type ListingKind, type ListingOwnerView, type ListingStatus,
   type ListingPatch, type PriceModel, type RentalFuel, type RentalOperator, type RentalPeriod, type RentalTerms,
   type RentalTransport, type Specs, type Unit,
 } from '@mpm/shared-types';
+import { errorCode, errorDetails } from './api-error';
 import { toAsciiDigits } from './digits';
 import { parseRupees, rupeesInput } from './money';
 import { PINCODE_REGEX } from './onboarding-step';
@@ -274,18 +276,24 @@ export interface PriceValues {
 }
 
 export const PRICE_MIN_PAISE = 100;
-export const PRICE_MAX_PAISE = 10_000_000_000;
+/** ₹1 … ₹100 crore, as the API (`pricePaise`) and spec §4.6. */
+export const PRICE_MAX_PAISE = 100_000_000_000;
 
 export function priceInitial(l: ListingOwnerView): PriceValues {
   return { priceModel: l.priceModel, price: rupeesInput(l.pricePaise), gstMode: l.gstMode, minOrder: l.minOrderQty ?? '' };
 }
 
-/** A typed amount in a paise range: the error, or null when fine (`optional`: empty passes). */
-function amountError(text: string, min: number, max: number, optional: boolean): FieldError | null {
+/**
+ * A typed amount in a paise range: the error, or null when fine (`optional`: empty passes). `rangeKey` names the
+ * message for an amount outside it, which states the real cap.
+ */
+function amountError(
+  text: string, min: number, max: number, optional: boolean, rangeKey = 'sell.price.range',
+): FieldError | null {
   if (text.trim() === '') return optional ? null : REQUIRED;
   const p = parseRupees(text);
   if (p === null) return { key: 'sell.price.invalid' };
-  return p < min || p > max ? { key: 'sell.price.range' } : null;
+  return p < min || p > max ? { key: rangeKey } : null;
 }
 
 export function validatePrice(
@@ -339,7 +347,9 @@ export interface RatesValues {
   availabilityNote: string;
 }
 
+/** Rates and charges: up to ₹10 crore (the API's `RATE_MAX`); the deposit up to ₹100 crore. */
 export const RATE_MAX_PAISE = 10_000_000_000;
+const RATE_RANGE = 'sell.rates.range';
 export const DEPOSIT_MAX_PAISE = 100_000_000_000;
 export const AVAILABILITY_NOTE_MAX = 200;
 
@@ -377,7 +387,7 @@ export const operatorHasRate = (op: RentalOperator | null): boolean => op === 'o
 export function validateRates(
   v: RatesValues, ctx: { today: string; previousAvailableFrom: string | null },
 ): FormErrors<keyof RatesValues | 'rates'> {
-  const rateErrors = RATE_FIELDS.map((k) => [k, amountError(v[k], 1, RATE_MAX_PAISE, true)] as [keyof RatesValues, FieldError | null]);
+  const rateErrors = RATE_FIELDS.map((k) => [k, amountError(v[k], 1, RATE_MAX_PAISE, true, RATE_RANGE)] as [keyof RatesValues, FieldError | null]);
   const anyRate = RATE_FIELDS.some((k) => parseRupees(v[k]) !== null && v[k].trim() !== '');
   const from = toAsciiDigits(v.availableFrom.trim());
   let fromErr: FieldError | null = null;
@@ -392,11 +402,11 @@ export function validateRates(
     ['rates', anyRate || rateErrors.some(([, e]) => e) ? null : { key: 'listing.errors.rateRequired' }],
     ['shiftHours', shift === null ? REQUIRED : wholeError(v.shiftHours, 1, 24)],
     ['monthDays', days === null ? REQUIRED : wholeError(v.monthDays, 1, 31)],
-    ['overtime', amountError(v.overtime, 1, RATE_MAX_PAISE, true)],
+    ['overtime', amountError(v.overtime, 1, RATE_MAX_PAISE, true, RATE_RANGE)],
     ['minDuration', wholeError(v.minDuration, 1, 365)],
     ['minDurationPeriod', v.minDuration.trim() !== '' && !v.minDurationPeriod ? PICK_ONE : null],
-    ['operatorRate', operatorHasRate(v.operator) ? amountError(v.operatorRate, 1, RATE_MAX_PAISE, true) : null],
-    ['transportCharge', amountError(v.transportCharge, 1, RATE_MAX_PAISE, true)],
+    ['operatorRate', operatorHasRate(v.operator) ? amountError(v.operatorRate, 1, RATE_MAX_PAISE, true, RATE_RANGE) : null],
+    ['transportCharge', amountError(v.transportCharge, 1, RATE_MAX_PAISE, true, RATE_RANGE)],
     ['deposit', amountError(v.deposit, 1, DEPOSIT_MAX_PAISE, true)],
     ['availableFrom', fromErr],
     ['availabilityNote', textMax(v.availabilityNote, AVAILABILITY_NOTE_MAX)],
@@ -515,4 +525,50 @@ export function previewFlags(l: ListingOwnerView, units: readonly Pick<Unit, 'id
     unitIsMachineUnit: !!units.find((u) => u.id === l.unitId)?.isMachineUnit,
     rental: l.rental,
   });
+}
+
+/**
+ * Edit mode (one step from the Edit listing menu): the sanity flags a save would add (§5.4), so the step confirms them
+ * as Preview does before publishing. A flag already accepted is left out (the server doesn't re-check it), and so is
+ * a draft or rejected listing, whose flags Preview confirms on publish.
+ */
+export function editFlags(
+  l: ListingOwnerView, patch: ListingPatch, units: readonly Pick<Unit, 'id' | 'isMachineUnit'>[],
+): ListingFlag[] {
+  if (l.status === 'draft' || l.status === 'rejected') return [];
+  const before = new Set([...previewFlags(l, units), ...l.acceptedFlags]);
+  return previewFlags(patchedListing(l, patch), units).filter((f) => !before.has(f));
+}
+
+/** The owner view as it would read after `patch`, for the fields the sanity flags look at (price, quantity, rates). */
+export function patchedListing(l: ListingOwnerView, patch: ListingPatch): ListingOwnerView {
+  return {
+    ...l,
+    ...(patch.priceModel !== undefined ? { priceModel: patch.priceModel } : {}),
+    ...(patch.pricePaise !== undefined ? { pricePaise: patch.pricePaise } : {}),
+    ...(patch.quantity !== undefined ? { quantity: patch.quantity == null ? null : String(patch.quantity) } : {}),
+    ...(patch.unitId !== undefined ? { unitId: patch.unitId } : {}),
+    ...(patch.rental !== undefined
+      ? { rental: patch.rental && l.rental ? { ...l.rental, ...patch.rental } : (patch.rental as RentalTerms | null) }
+      : {}),
+  };
+}
+
+/** The toast after an edit-mode Save: an edit that sent a public listing back to review says so. */
+export function editSaveToastKey(before: ListingStatus, after: ListingStatus): string {
+  const wasPublic = (PUBLIC_LISTING_STATUSES as readonly ListingStatus[]).includes(before);
+  return wasPublic && after === 'pending_review' ? 'listing.manage.sentForReview' : 'sell.saved';
+}
+
+/**
+ * A `400 SPECS_INVALID` save: its `details` (`{ fieldKey: SpecErrorCode }`) as field errors, so the step shows each on
+ * its own template field. Empty for any other error, or codes the app doesn't know.
+ */
+export function specErrorsFromApi(err: unknown): Record<string, FieldError> {
+  if (errorCode(err) !== 'SPECS_INVALID') return {};
+  const out: Record<string, FieldError> = {};
+  for (const [field, code] of Object.entries(errorDetails(err))) {
+    if (typeof code === 'string' && (SPEC_ERROR_CODES as readonly string[]).includes(code)) out[field] = { key: `sell.specError.${code}` };
+  }
+  return out;
 }
