@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useIsFocused } from '@react-navigation/native';
 import Toast from 'react-native-toast-message';
@@ -8,6 +8,8 @@ import ScreenWrapper from '@/components/ScreenWrapper';
 import Header from '@/components/Header';
 import Input from '@/components/Input';
 import Button from '@/components/Button';
+import { FieldHint } from '@/components/Field';
+import FooterBar from '@/components/FooterBar';
 import Notice from '@/components/Notice';
 import Skeleton from '@/components/Skeleton';
 import { businessKeys, useGstState } from '@/hooks/use-business';
@@ -18,7 +20,7 @@ import { lookupGstin } from '@/lib/gst-api';
 import { GST_ERROR_KEYS, blocksNewAttempt, gstScreen, prepareLookup, startNotice, type StartNotice } from '@/lib/gst-flow';
 import { ShieldCheck, TriangleAlert } from '@/lib/icons';
 import { queryClient } from '@/lib/queryClient';
-import { fonts, radius, spacing, useTheme } from '@/lib/theme';
+import { radius, spacing } from '@/lib/theme';
 import { openTarget } from '@/navigation/go';
 import type { RootStackScreenProps } from '@/navigation/types';
 
@@ -33,7 +35,6 @@ const NOTICE_KEY: Record<StartNotice, string> = {
 /** Enter GSTIN (spec §5.2 steps 1–3): format and checksum here first, then the lookup; its outcome shows below. */
 export default function GstStartScreen({ navigation }: RootStackScreenProps<'GstStart'>) {
   const { t } = useTranslation();
-  const { colors } = useTheme();
   const gst = useGstState();
   const view = gst.data;
   const [text, setText] = useState('');
@@ -93,13 +94,11 @@ export default function GstStartScreen({ navigation }: RootStackScreenProps<'Gst
   };
 
   const s = useMemo(() => StyleSheet.create({
-    body: { flex: 1, paddingHorizontal: spacing.xxl, paddingTop: spacing.sm, gap: spacing.lg },
-    gstin: { fontFamily: fonts.semiBold, letterSpacing: 1.5, fontSize: 16 },
-    hint: { fontFamily: fonts.regular, fontSize: 13, color: colors.textMuted },
+    body: { flex: 1, paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.xl, gap: spacing.md },
     actions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm },
-    skeleton: { height: 52, borderRadius: radius.lg },
-    footer: { paddingHorizontal: spacing.xxl, paddingBottom: spacing.xxl, paddingTop: spacing.sm },
-  }), [colors]);
+    action: { flex: 1, width: undefined },
+    skeleton: { height: 52, borderRadius: radius.md },
+  }), []);
 
   const notice = view ? startNotice(view) : null;
   const reviewOnly = view?.instantAllowed === false;
@@ -117,6 +116,7 @@ export default function GstStartScreen({ navigation }: RootStackScreenProps<'Gst
               title={t('verification.start.sendForReview')}
               phLabel="Gst-open-review-form"
               variant="outline"
+              size="md"
               style={{ marginTop: spacing.sm }}
               onPress={() => navigation.replace('GstReviewForm', view?.gstin ? { gstin: view.gstin } : undefined)}
             />
@@ -136,11 +136,11 @@ export default function GstStartScreen({ navigation }: RootStackScreenProps<'Gst
                   setText(v);
                 }}
                 error={error}
-                style={s.gstin}
+                mono
                 onSubmitEditing={() => void lookup(text)}
                 testID="Gstin"
               />
-              {!error ? <Text style={s.hint}>{t('verification.start.gstinHint')}</Text> : null}
+              {!error ? <FieldHint>{t('verification.start.gstinHint')}</FieldHint> : null}
             </View>
             {notice ? (
               <Notice
@@ -156,7 +156,8 @@ export default function GstStartScreen({ navigation }: RootStackScreenProps<'Gst
                       title={t('common.retry')}
                       phLabel="Gst-lookup-retry"
                       variant="outline"
-                      style={{ flex: 1, width: undefined }}
+                      size="md"
+                      style={s.action}
                       loading={busy}
                       onPress={() => void lookup(view?.gstin ?? text)}
                     />
@@ -164,7 +165,8 @@ export default function GstStartScreen({ navigation }: RootStackScreenProps<'Gst
                       title={t('verification.start.sendForReview')}
                       phLabel="Gst-send-for-review"
                       variant="outline"
-                      style={{ flex: 1, width: undefined }}
+                      size="md"
+                      style={s.action}
                       onPress={() => navigation.replace('GstReviewForm', view?.gstin ? { gstin: view.gstin } : undefined)}
                     />
                   </View>
@@ -175,9 +177,9 @@ export default function GstStartScreen({ navigation }: RootStackScreenProps<'Gst
         )}
       </View>
       {!reviewOnly && !gst.isLoading ? (
-        <View style={s.footer}>
-          <Button title={t('verification.start.lookUp')} phLabel="Gst-look-up" loading={busy} onPress={() => void lookup(text)} />
-        </View>
+        <FooterBar>
+          <Button title={t('verification.start.lookUp')} phLabel="Gst-look-up" size="md" loading={busy} onPress={() => void lookup(text)} />
+        </FooterBar>
       ) : null}
     </ScreenWrapper>
   );

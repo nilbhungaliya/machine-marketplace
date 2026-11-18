@@ -7,8 +7,10 @@ import ScreenWrapper from '@/components/ScreenWrapper';
 import Header from '@/components/Header';
 import Input from '@/components/Input';
 import Button from '@/components/Button';
+import FooterBar from '@/components/FooterBar';
 import Skeleton from '@/components/Skeleton';
 import { businessKeys, useGstState } from '@/hooks/use-business';
+import { useType } from '@/hooks/use-type';
 import { track } from '@/lib/analytics';
 import { GST_EVENTS } from '@/lib/analytics-events';
 import { errorCode, errorDetails, errorKey } from '@/lib/api-error';
@@ -30,6 +32,7 @@ const CODE_REGEX = /^\d{4,8}$/;
 export default function GstCodeScreen({ navigation }: RootStackScreenProps<'GstCode'>) {
   const { t } = useTranslation();
   const { colors } = useTheme();
+  const type = useType();
   const gst = useGstState();
   const view = gst.data;
   const focused = useIsFocused();
@@ -109,15 +112,18 @@ export default function GstCodeScreen({ navigation }: RootStackScreenProps<'GstC
   };
 
   const s = useMemo(() => StyleSheet.create({
-    body: { flex: 1, paddingHorizontal: spacing.xxl, paddingTop: spacing.sm },
-    title: { fontFamily: fonts.bold, fontSize: 24, color: colors.text },
-    subtitle: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 21, color: colors.textSecondary, marginTop: spacing.sm, marginBottom: spacing.sm },
-    hint: { fontFamily: fonts.semiBold, color: colors.text },
-    code: { fontFamily: fonts.semiBold, fontSize: 20, letterSpacing: 6 },
-    link: { fontFamily: fonts.semiBold, fontSize: 14, color: colors.primary, paddingVertical: spacing.md },
+    body: { flex: 1, paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.xl },
+    loading: { gap: spacing.lg },
+    title: { ...type('title'), color: colors.text },
+    subtitle: { ...type('lead'), color: colors.textSecondary, marginTop: spacing.sm, marginBottom: spacing.md },
+    // Text links, as on the login OTP (spec §8): `caption` in bold, violet, muted while waiting; 44 dp tall.
+    links: { marginTop: spacing.sm, alignItems: 'flex-start' },
+    linkTap: { minHeight: 44, justifyContent: 'center' },
+    link: { ...type('caption'), fontFamily: fonts.bold, color: colors.primaryInk },
     linkMuted: { color: colors.textMuted },
-    footer: { paddingHorizontal: spacing.xxl, paddingBottom: spacing.xxl, paddingTop: spacing.sm },
-  }), [colors]);
+    titleSkeleton: { height: 28, width: '60%', borderRadius: radius.sm },
+    fieldSkeleton: { height: 60, borderRadius: radius.md },
+  }), [colors, type]);
 
   if (!view && gst.isError) {
     return (
@@ -132,9 +138,9 @@ export default function GstCodeScreen({ navigation }: RootStackScreenProps<'GstC
     return (
       <ScreenWrapper>
         <Header title={t('verification.title')} />
-        <View style={[s.body, { gap: spacing.lg }]}>
-          <Skeleton style={{ height: 28, width: '60%', borderRadius: radius.sm }} />
-          <Skeleton style={{ height: 52, borderRadius: radius.lg }} />
+        <View style={[s.body, s.loading]}>
+          <Skeleton style={s.titleSkeleton} />
+          <Skeleton style={s.fieldSkeleton} />
         </View>
       </ScreenWrapper>
     );
@@ -150,6 +156,8 @@ export default function GstCodeScreen({ navigation }: RootStackScreenProps<'GstC
         </Text>
         <Input
           label={t('verification.code.label')}
+          // One large field, not cells: the provider's code is 4 to 8 digits (Ruling 22).
+          size="lg"
           keyboardType="number-pad"
           autoComplete="one-time-code"
           textContentType="oneTimeCode"
@@ -157,23 +165,24 @@ export default function GstCodeScreen({ navigation }: RootStackScreenProps<'GstC
           value={code}
           onChangeText={setCode}
           error={error}
-          style={s.code}
           onSubmitEditing={() => void verify()}
           autoFocus
           testID="Gst-code"
         />
-        <Pressable disabled={wait > 0 || resending} onPress={() => void resend()} testID="Gst-resend-code" accessibilityRole="button">
-          <Text style={[s.link, (wait > 0 || resending) && s.linkMuted]}>
-            {wait > 0 ? t('verification.code.resendIn', { seconds: wait }) : t('verification.code.resend')}
-          </Text>
-        </Pressable>
-        <Pressable onPress={() => openTarget(navigation, reviewFromCode(view), 'replace')} testID="Gst-cant-get-code" accessibilityRole="button">
-          <Text style={s.link}>{t('verification.code.cantGetCode')}</Text>
-        </Pressable>
+        <View style={s.links}>
+          <Pressable style={s.linkTap} disabled={wait > 0 || resending} onPress={() => void resend()} testID="Gst-resend-code" accessibilityRole="button">
+            <Text style={[s.link, (wait > 0 || resending) && s.linkMuted]}>
+              {wait > 0 ? t('verification.code.resendIn', { seconds: wait }) : t('verification.code.resend')}
+            </Text>
+          </Pressable>
+          <Pressable style={s.linkTap} onPress={() => openTarget(navigation, reviewFromCode(view), 'replace')} testID="Gst-cant-get-code" accessibilityRole="button">
+            <Text style={s.link}>{t('verification.code.cantGetCode')}</Text>
+          </Pressable>
+        </View>
       </View>
-      <View style={s.footer}>
-        <Button title={t('verification.code.verify')} phLabel="Gst-verify-code" loading={busy} onPress={() => void verify()} />
-      </View>
+      <FooterBar>
+        <Button title={t('verification.code.verify')} phLabel="Gst-verify-code" size="md" loading={busy} onPress={() => void verify()} />
+      </FooterBar>
     </ScreenWrapper>
   );
 }

@@ -50,9 +50,9 @@ function AppContent() {
       background: colors.background,
       card: colors.surface,
       text: colors.text,
-      border: colors.border,
+      border: colors.hairline,
       primary: colors.primary,
-      notification: colors.primary,
+      notification: colors.danger,
     },
   };
 

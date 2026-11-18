@@ -6,30 +6,32 @@ import ScreenWrapper from '@/components/ScreenWrapper';
 import Header from '@/components/Header';
 import Input from '@/components/Input';
 import Button from '@/components/Button';
+import FooterBar from '@/components/FooterBar';
+import { useType } from '@/hooks/use-type';
 import api from '@/lib/api';
 import { AUTH_EVENTS, track } from '@/lib/analytics';
 import { authErrorCode, mapAuthError } from '@/lib/auth-errors';
 import { sanitizePhoneInput } from '@/lib/auth-input';
 import { ShieldCheck } from '@/lib/icons';
 import { isValidMobile, normalizeMobile } from '@/lib/validation/phone';
-import { fonts, spacing, useTheme } from '@/lib/theme';
+import { spacing, useTheme } from '@/lib/theme';
 import type { AuthStackScreenProps } from '@/navigation/types';
 
 export default function PhoneScreen({ navigation }: AuthStackScreenProps<'Phone'>) {
   const { t } = useTranslation();
   const { colors } = useTheme();
+  const type = useType();
   const [phone, setPhone] = useState('');
   const [error, setError] = useState<string>();
   const [loading, setLoading] = useState(false);
 
   const s = useMemo(() => StyleSheet.create({
-    body: { flex: 1, paddingHorizontal: spacing.xxl, paddingTop: spacing.lg },
-    title: { fontFamily: fonts.bold, fontSize: 26, color: colors.text },
-    subtitle: { fontFamily: fonts.regular, fontSize: 15, color: colors.textSecondary, marginTop: spacing.sm, marginBottom: spacing.lg },
+    body: { flex: 1, paddingHorizontal: spacing.lg, paddingTop: spacing.sm },
+    title: { ...type('title'), color: colors.text },
+    subtitle: { ...type('lead'), color: colors.textSecondary, marginTop: spacing.sm, marginBottom: spacing.md },
     safe: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.md },
-    safeText: { fontFamily: fonts.regular, fontSize: 13, color: colors.textSecondary },
-    footer: { paddingHorizontal: spacing.xxl, paddingBottom: spacing.xxl },
-  }), [colors]);
+    safeText: { flex: 1, ...type('caption'), color: colors.textSecondary },
+  }), [colors, type]);
 
   const submit = async () => {
     // The field keeps the raw text (rewriting it mid-composition makes Android
@@ -60,9 +62,12 @@ export default function PhoneScreen({ navigation }: AuthStackScreenProps<'Phone'
       <View style={s.body}>
         <Text style={s.title}>{t('auth.phone.title')}</Text>
         <Text style={s.subtitle}>{t('auth.phone.subtitle')}</Text>
+        {/* The +91 is shown only (Ruling R10): sanitizePhoneInput accepts the number with or without it. */}
         <Input
           label={t('auth.phone.label')}
           placeholder={t('auth.phone.placeholder')}
+          size="lg"
+          prefix="+91"
           keyboardType="phone-pad"
           autoComplete="tel"
           textContentType="telephoneNumber"
@@ -78,9 +83,9 @@ export default function PhoneScreen({ navigation }: AuthStackScreenProps<'Phone'
           <Text style={s.safeText}>{t('auth.phone.safe')}</Text>
         </View>
       </View>
-      <View style={s.footer}>
-        <Button title={t('auth.phone.sendOtp')} phLabel="Send-OTP" loading={loading} onPress={submit} />
-      </View>
+      <FooterBar>
+        <Button title={t('auth.phone.sendOtp')} phLabel="Send-OTP" size="md" loading={loading} onPress={submit} />
+      </FooterBar>
     </ScreenWrapper>
   );
 }

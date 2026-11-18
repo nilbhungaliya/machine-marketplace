@@ -4,9 +4,11 @@ import { useTranslation } from 'react-i18next';
 import ScreenWrapper from '@/components/ScreenWrapper';
 import Header from '@/components/Header';
 import Button from '@/components/Button';
+import FooterBar from '@/components/FooterBar';
 import Notice from '@/components/Notice';
 import { useAuth } from '@/hooks/useAuth';
 import { gstStateQuery, useGstState } from '@/hooks/use-business';
+import { useType } from '@/hooks/use-type';
 import { track } from '@/lib/analytics';
 import { ONBOARDING_EVENTS } from '@/lib/analytics-events';
 import { gstScreen, type GstTarget } from '@/lib/gst-flow';
@@ -24,6 +26,7 @@ import type { RootStackScreenProps } from '@/navigation/types';
 export default function GstIntroScreen({ navigation }: RootStackScreenProps<'GstIntro'>) {
   const { t } = useTranslation();
   const { colors } = useTheme();
+  const type = useType();
   const { dismissGstIntro } = useAuth();
   const gst = useGstState();
   const [opening, setOpening] = useState(false);
@@ -66,33 +69,33 @@ export default function GstIntroScreen({ navigation }: RootStackScreenProps<'Gst
     : [t('verification.intro.reviewStep1'), t('verification.intro.reviewStep2')];
 
   const s = useMemo(() => StyleSheet.create({
-    body: { flex: 1, paddingHorizontal: spacing.xxl, paddingTop: spacing.lg, gap: spacing.xl },
+    body: { flex: 1, paddingHorizontal: spacing.lg, paddingTop: spacing.lg, paddingBottom: spacing.xl, gap: spacing.xl },
     badge: {
       width: 72, height: 72, borderRadius: radius.full, backgroundColor: colors.primaryWash,
       alignItems: 'center', justifyContent: 'center', alignSelf: 'center',
     },
-    title: { fontFamily: fonts.bold, fontSize: 24, color: colors.text, textAlign: 'center' },
-    stepsTitle: { fontFamily: fonts.semiBold, fontSize: 15, color: colors.text },
+    title: { ...type('title'), color: colors.text, textAlign: 'center' },
+    steps: { gap: spacing.md },
+    stepsTitle: { ...type('section'), color: colors.text },
     step: { flexDirection: 'row', gap: spacing.md, alignItems: 'flex-start' },
     stepNo: {
       width: 26, height: 26, borderRadius: radius.full, backgroundColor: colors.field, alignItems: 'center',
       justifyContent: 'center',
     },
-    stepNoText: { fontFamily: fonts.semiBold, fontSize: 13, color: colors.primary },
-    stepText: { flex: 1, fontFamily: fonts.regular, fontSize: 15, lineHeight: 21, color: colors.textSecondary },
-    footer: { paddingHorizontal: spacing.xxl, paddingBottom: spacing.xxl, gap: spacing.sm },
-  }), [colors]);
+    stepNoText: { ...type('caption'), fontFamily: fonts.bold, color: colors.primaryInk },
+    stepText: { flex: 1, ...type('body'), color: colors.textSecondary },
+  }), [colors, type]);
 
   return (
     <ScreenWrapper scroll>
       <Header title={t('verification.title')} showBack={false} />
       <View style={s.body}>
         <View style={s.badge}>
-          <ShieldCheck size={36} color={colors.primary} />
+          <ShieldCheck size={36} color={colors.primaryInk} />
         </View>
         <Text style={s.title}>{t('verification.intro.title')}</Text>
         <Notice icon={ShieldCheck} text={t('verification.intro.callout')} />
-        <View style={{ gap: spacing.md }}>
+        <View style={s.steps}>
           <Text style={s.stepsTitle}>{t('verification.intro.howItWorks')}</Text>
           {steps.map((text, i) => (
             <View key={text} style={s.step}>
@@ -102,10 +105,10 @@ export default function GstIntroScreen({ navigation }: RootStackScreenProps<'Gst
           ))}
         </View>
       </View>
-      <View style={s.footer}>
-        <Button title={t('verification.intro.verifyNow')} phLabel="Gst-intro-verify" loading={opening} onPress={() => void verify()} />
-        <Button title={t('verification.intro.skip')} phLabel="Gst-intro-skip" variant="ghost" onPress={skip} />
-      </View>
+      <FooterBar>
+        <Button title={t('verification.intro.skip')} phLabel="Gst-intro-skip" variant="outline" size="md" onPress={skip} />
+        <Button title={t('verification.intro.verifyNow')} phLabel="Gst-intro-verify" size="md" loading={opening} onPress={() => void verify()} />
+      </FooterBar>
     </ScreenWrapper>
   );
 }

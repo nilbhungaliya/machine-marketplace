@@ -23,8 +23,9 @@ const isNavOwner = (text: string) => {
 const IGNORED_ATTRS = new Set(['ph-label', 'phLabel', 'ctaPhLabel', 'testID', 'key', 'nativeID', 'name', 'style', 'source', 'href']);
 
 // Object keys whose values are code: navigation targets, PostHog's list of
-// component names to skip, and a tab's testID (React Navigation option).
-const IGNORED_KEYS = new Set(['screen', 'ignoreLabels', 'tabBarButtonTestID']);
+// component names to skip, a tab's testID (React Navigation option) and an
+// option's testID (SegmentedControl's `options`).
+const IGNORED_KEYS = new Set(['screen', 'ignoreLabels', 'tabBarButtonTestID', 'testID']);
 
 // Prose: contains a space between letters, or starts Capital+lowercase. Keys,
 // enum values, route names and colours never match.

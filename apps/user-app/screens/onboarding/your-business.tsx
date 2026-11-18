@@ -9,9 +9,14 @@ import Header from '@/components/Header';
 import Input from '@/components/Input';
 import Button from '@/components/Button';
 import Chip from '@/components/Chip';
+import Field, { FieldLabel } from '@/components/Field';
+import FooterBar from '@/components/FooterBar';
 import Skeleton from '@/components/Skeleton';
+import StatusChip from '@/components/StatusChip';
+import Steps from '@/components/Steps';
 import { useAuth } from '@/hooks/useAuth';
 import { useBusiness, useMachineCategories } from '@/hooks/use-business';
+import { useType } from '@/hooks/use-type';
 import { track } from '@/lib/analytics';
 import { ONBOARDING_EVENTS } from '@/lib/analytics-events';
 import { errorCode, errorKey } from '@/lib/api-error';
@@ -37,6 +42,7 @@ export default function YourBusinessScreen({ navigation, route }: RootStackScree
   const mode = route.params?.mode ?? 'onboarding';
   const { t } = useTranslation();
   const { colors } = useTheme();
+  const type = useType();
   const { applyProfile, name: sessionName } = useAuth();
   const business = useBusiness();
   const categories = useMachineCategories();
@@ -87,27 +93,23 @@ export default function YourBusinessScreen({ navigation, route }: RootStackScree
   });
 
   const s = useMemo(() => StyleSheet.create({
-    body: { flex: 1, paddingHorizontal: spacing.xxl, paddingTop: spacing.sm, paddingBottom: spacing.xl },
-    step: { fontFamily: fonts.medium, fontSize: 13, color: colors.textMuted },
-    subtitle: { fontFamily: fonts.regular, fontSize: 15, color: colors.textSecondary, marginTop: spacing.xs, marginBottom: spacing.sm },
-    label: {
-      fontFamily: fonts.medium, fontSize: 13, color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.8,
-      marginTop: spacing.xl, marginBottom: spacing.sm,
-    },
-    hint: { fontFamily: fonts.regular, fontSize: 13, color: colors.textMuted, marginTop: spacing.sm },
-    error: { fontFamily: fonts.regular, fontSize: 12, color: colors.danger, marginTop: spacing.sm },
+    body: { flex: 1, paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.xl },
+    subtitle: { ...type('lead'), color: colors.textSecondary, marginTop: spacing.md },
+    // The same top spacing as an Input, so chip groups and text fields keep one rhythm.
+    group: { marginTop: spacing.md },
+    hint: { ...type('caption'), color: colors.textMuted },
     chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+    // The locked name reads as a filled field that can't be focused (spec §8).
     locked: {
-      marginTop: 10, borderRadius: 16, paddingHorizontal: 16, paddingVertical: 14, backgroundColor: colors.field,
+      minHeight: 52, justifyContent: 'center', alignItems: 'flex-start', gap: spacing.sm, borderRadius: radius.md,
+      paddingHorizontal: spacing.lg, paddingVertical: spacing.md, backgroundColor: colors.field,
     },
-    lockedName: { fontFamily: fonts.semiBold, fontSize: 15, color: colors.text },
-    lockedHint: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: spacing.xs },
-    lockedHintText: { fontFamily: fonts.medium, fontSize: 12, color: colors.ok },
-    section: { fontFamily: fonts.semiBold, fontSize: 16, color: colors.text, marginTop: spacing.xxl },
-    retry: { fontFamily: fonts.semiBold, fontSize: 14, color: colors.primary, marginTop: spacing.sm },
-    skeleton: { height: 52, borderRadius: radius.lg, marginTop: spacing.lg },
-    footer: { paddingHorizontal: spacing.xxl, paddingBottom: spacing.xxl, paddingTop: spacing.sm },
-  }), [colors]);
+    lockedName: { ...type('fieldValue'), color: colors.text },
+    section: { ...type('section'), color: colors.text, marginTop: spacing.xxl },
+    retry: { ...type('caption'), fontFamily: fonts.bold, color: colors.primaryInk, marginTop: spacing.xs },
+    skeleton: { height: 52, borderRadius: radius.md, marginTop: spacing.md },
+    chipSkeleton: { width: 110, height: 40, borderRadius: radius.full },
+  }), [colors, type]);
 
   const fieldError = (k: 'name' | 'businessName' | 'email' | 'yearEstablished') => (form.touched[k] ? form.errors[k] : undefined);
   const listError = (k: 'activities' | 'categories') =>
@@ -135,7 +137,7 @@ export default function YourBusinessScreen({ navigation, route }: RootStackScree
       <View style={s.body}>
         {mode === 'onboarding' ? (
           <>
-            <Text style={s.step}>{t('onboarding.step', { current: 1, total: 2 })}</Text>
+            <Steps current={1} total={2} label={t('onboarding.step', { current: 1, total: 2 })} />
             <Text style={s.subtitle}>{t('onboarding.business.subtitle')}</Text>
           </>
         ) : null}
@@ -151,16 +153,13 @@ export default function YourBusinessScreen({ navigation, route }: RootStackScree
         />
 
         {nameLocked && profile ? (
-          <>
-            <Text style={[s.label, { marginTop: spacing.md, marginBottom: 0 }]}>{t('onboarding.business.businessName')}</Text>
+          <View style={s.group}>
+            <FieldLabel>{t('onboarding.business.businessName')}</FieldLabel>
             <View style={s.locked}>
               <Text style={s.lockedName}>{profile.displayName}</Text>
-              <View style={s.lockedHint}>
-                <ShieldCheck size={14} color={colors.ok} />
-                <Text style={s.lockedHintText}>{t('onboarding.business.nameFromGst')}</Text>
-              </View>
+              <StatusChip tone="ok" icon={ShieldCheck} label={t('onboarding.business.nameFromGst')} />
             </View>
-          </>
+          </View>
         ) : (
           <Input
             label={t('onboarding.business.businessName')}
@@ -173,45 +172,51 @@ export default function YourBusinessScreen({ navigation, route }: RootStackScree
           />
         )}
 
-        <Text style={s.label}>{t('onboarding.business.activities')}</Text>
-        <View style={s.chips}>
-          {BUSINESS_ACTIVITIES.map((a: BusinessActivity) => (
-            <Chip
-              key={a}
-              label={t(`onboarding.activities.${a}`)}
-              selected={form.values.activities.includes(a)}
-              onPress={() => void form.setFieldValue('activities', toggle(form.values.activities, a))}
-              testID={`Activity-${a}`}
-            />
-          ))}
-        </View>
-        {activityError ? <Text style={s.error}>{activityError}</Text> : <Text style={s.hint}>{t('onboarding.business.activitiesHint')}</Text>}
-
-        <Text style={s.label}>{t('onboarding.business.categories')}</Text>
-        {categories.isLoading ? (
+        <Field
+          label={t('onboarding.business.activities')}
+          // The hint gives way to the list's error, as before.
+          hint={activityError ? undefined : t('onboarding.business.activitiesHint')}
+          error={activityError}
+          style={s.group}
+        >
           <View style={s.chips}>
-            {[0, 1, 2, 3].map((i) => <Skeleton key={i} style={{ width: 110, height: 40, borderRadius: radius.full }} />)}
-          </View>
-        ) : categories.isError ? (
-          <Pressable onPress={() => void categories.refetch()} testID="Retry-categories" accessibilityRole="button">
-            <Text style={s.hint}>{t('onboarding.business.categoriesError')}</Text>
-            <Text style={s.retry}>{t('common.retry')}</Text>
-          </Pressable>
-        ) : (
-          <View style={s.chips}>
-            {(categories.data ?? []).map((c) => (
+            {BUSINESS_ACTIVITIES.map((a: BusinessActivity) => (
               <Chip
-                key={c.id}
-                label={c.name}
-                icon={c.icon ? CATEGORY_ICON_COMPONENTS[c.icon] : undefined}
-                selected={form.values.categories.includes(c.id)}
-                onPress={() => void form.setFieldValue('categories', toggle(form.values.categories, c.id))}
-                testID={`Machine-category-${c.slug}`}
+                key={a}
+                label={t(`onboarding.activities.${a}`)}
+                selected={form.values.activities.includes(a)}
+                onPress={() => void form.setFieldValue('activities', toggle(form.values.activities, a))}
+                testID={`Activity-${a}`}
               />
             ))}
           </View>
-        )}
-        {categoryError ? <Text style={s.error}>{categoryError}</Text> : null}
+        </Field>
+
+        <Field label={t('onboarding.business.categories')} error={categoryError} style={s.group}>
+          {categories.isLoading ? (
+            <View style={s.chips}>
+              {[0, 1, 2, 3].map((i) => <Skeleton key={i} style={s.chipSkeleton} />)}
+            </View>
+          ) : categories.isError ? (
+            <Pressable onPress={() => void categories.refetch()} testID="Retry-categories" accessibilityRole="button">
+              <Text style={s.hint}>{t('onboarding.business.categoriesError')}</Text>
+              <Text style={s.retry}>{t('common.retry')}</Text>
+            </Pressable>
+          ) : (
+            <View style={s.chips}>
+              {(categories.data ?? []).map((c) => (
+                <Chip
+                  key={c.id}
+                  label={c.name}
+                  icon={c.icon ? CATEGORY_ICON_COMPONENTS[c.icon] : undefined}
+                  selected={form.values.categories.includes(c.id)}
+                  onPress={() => void form.setFieldValue('categories', toggle(form.values.categories, c.id))}
+                  testID={`Machine-category-${c.slug}`}
+                />
+              ))}
+            </View>
+          )}
+        </Field>
 
         {mode === 'edit' ? (
           <>
@@ -237,30 +242,32 @@ export default function YourBusinessScreen({ navigation, route }: RootStackScree
               error={fieldError('yearEstablished')}
               testID="Year-established"
             />
-            <Text style={s.label}>{t('onboarding.business.employees')}</Text>
-            <View style={s.chips}>
-              {EMPLOYEE_RANGES.map((r) => (
-                <Chip
-                  key={r}
-                  label={r}
-                  role="radio"
-                  selected={form.values.employees === r}
-                  onPress={() => void form.setFieldValue('employees', form.values.employees === r ? null : r)}
-                  testID={`Employees-${r}`}
-                />
-              ))}
-            </View>
+            <Field label={t('onboarding.business.employees')} style={s.group}>
+              <View style={s.chips}>
+                {EMPLOYEE_RANGES.map((r) => (
+                  <Chip
+                    key={r}
+                    label={r}
+                    role="radio"
+                    selected={form.values.employees === r}
+                    onPress={() => void form.setFieldValue('employees', form.values.employees === r ? null : r)}
+                    testID={`Employees-${r}`}
+                  />
+                ))}
+              </View>
+            </Field>
           </>
         ) : null}
       </View>
-      <View style={s.footer}>
+      <FooterBar>
         <Button
           title={mode === 'edit' ? t('onboarding.business.saveChanges') : t('onboarding.business.next')}
           phLabel={mode === 'edit' ? 'Save-business-profile' : 'Onboarding-business-next'}
+          size="md"
           loading={form.isSubmitting}
           onPress={() => form.handleSubmit()}
         />
-      </View>
+      </FooterBar>
     </ScreenWrapper>
   );
 }

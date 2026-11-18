@@ -5,7 +5,9 @@ import Toast from 'react-native-toast-message';
 import ScreenWrapper from '@/components/ScreenWrapper';
 import Header from '@/components/Header';
 import Button from '@/components/Button';
+import FooterBar from '@/components/FooterBar';
 import { businessKeys, gstStateQuery } from '@/hooks/use-business';
+import { useType } from '@/hooks/use-type';
 import { track } from '@/lib/analytics';
 import { GST_EVENTS } from '@/lib/analytics-events';
 import { errorCode, errorKey } from '@/lib/api-error';
@@ -13,7 +15,7 @@ import { declareGst, sendGstCode } from '@/lib/gst-api';
 import { GST_ERROR_KEYS, gstScreen } from '@/lib/gst-flow';
 import { Square, SquareCheck } from '@/lib/icons';
 import { queryClient } from '@/lib/queryClient';
-import { fonts, radius, spacing, useTheme } from '@/lib/theme';
+import { radius, spacing, useTheme } from '@/lib/theme';
 import { openTarget } from '@/navigation/go';
 import type { RootStackScreenProps } from '@/navigation/types';
 
@@ -25,6 +27,7 @@ export default function GstDeclareScreen({ navigation, route }: RootStackScreenP
   const { checkId } = route.params;
   const { t } = useTranslation();
   const { colors } = useTheme();
+  const type = useType();
   const [agreed, setAgreed] = useState(false);
   const [busy, setBusy] = useState(false);
 
@@ -57,24 +60,27 @@ export default function GstDeclareScreen({ navigation, route }: RootStackScreenP
   };
 
   const s = useMemo(() => StyleSheet.create({
-    body: { flex: 1, paddingHorizontal: spacing.xxl, paddingTop: spacing.sm, gap: spacing.lg },
-    title: { fontFamily: fonts.bold, fontSize: 24, color: colors.text },
-    subtitle: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 21, color: colors.textSecondary },
+    body: { flex: 1, paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.xl, gap: spacing.lg },
+    heading: { gap: spacing.sm },
+    title: { ...type('title'), color: colors.text },
+    subtitle: { ...type('lead'), color: colors.textSecondary },
+    // A choice card (v2 `.choice`): hairline when idle, a violet border on lavender when ticked.
     card: {
-      flexDirection: 'row', gap: spacing.md, padding: spacing.lg, borderRadius: radius.lg, backgroundColor: colors.surface,
-      borderWidth: 1.5, borderColor: agreed ? colors.primary : colors.border,
+      flexDirection: 'row', gap: spacing.md, padding: spacing.md, borderRadius: radius.lg, borderWidth: 1.5,
+      backgroundColor: agreed ? colors.primaryWash : colors.surface, borderColor: agreed ? colors.primary : colors.hairline,
     },
-    declaration: { flex: 1, fontFamily: fonts.medium, fontSize: 15, lineHeight: 22, color: colors.text },
-    fine: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 19, color: colors.textMuted },
-    footer: { paddingHorizontal: spacing.xxl, paddingBottom: spacing.xxl },
-  }), [colors, agreed]);
+    declaration: { flex: 1, ...type('bodyStrong'), color: colors.text },
+    fine: { ...type('caption'), color: colors.textMuted },
+  }), [colors, type, agreed]);
 
   return (
     <ScreenWrapper scroll>
       <Header title={t('verification.title')} />
       <View style={s.body}>
-        <Text style={s.title}>{t('verification.declare.title')}</Text>
-        <Text style={s.subtitle}>{t('verification.declare.subtitle')}</Text>
+        <View style={s.heading}>
+          <Text style={s.title}>{t('verification.declare.title')}</Text>
+          <Text style={s.subtitle}>{t('verification.declare.subtitle')}</Text>
+        </View>
         <Pressable
           style={s.card}
           onPress={() => setAgreed((a) => !a)}
@@ -87,15 +93,16 @@ export default function GstDeclareScreen({ navigation, route }: RootStackScreenP
         </Pressable>
         <Text style={s.fine}>{t('verification.declare.codeNote')}</Text>
       </View>
-      <View style={s.footer}>
+      <FooterBar>
         <Button
           title={t('verification.declare.sendCode')}
           phLabel="Gst-declare-send-code"
+          size="md"
           disabled={!agreed}
           loading={busy}
           onPress={() => void declareAndSend()}
         />
-      </View>
+      </FooterBar>
     </ScreenWrapper>
   );
 }

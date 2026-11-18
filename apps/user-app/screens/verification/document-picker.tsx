@@ -6,7 +6,9 @@ import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { GST_DOCUMENT_TYPES, type GstDocumentType } from '@mpm/shared-types';
+import Card from '@/components/Card';
 import Chip from '@/components/Chip';
+import { useType } from '@/hooks/use-type';
 import { DOCUMENT_MAX_BYTES, DOCUMENT_MIME_TYPES, type DocumentProblem } from '@/lib/gst-flow';
 import type { LocalDocument } from '@/lib/gst-api';
 import { Camera, FileText, Images, X } from '@/lib/icons';
@@ -49,6 +51,7 @@ export default function DocumentPickerField({ files, onChange, max, disabled = f
 }) {
   const { t } = useTranslation();
   const { colors } = useTheme();
+  const type = useType();
   const room = max - files.length;
 
   const add = (assets: PickedAsset[], fallbackType: string) => {
@@ -98,25 +101,29 @@ export default function DocumentPickerField({ files, onChange, max, disabled = f
   const remove = (id: string) => onChange(files.filter((f) => f.id !== id));
 
   const s = useMemo(() => StyleSheet.create({
-    file: {
-      padding: spacing.md, borderRadius: radius.lg, backgroundColor: colors.surface, gap: spacing.sm, marginBottom: spacing.sm,
-      borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border,
-    },
+    file: { gap: spacing.sm, marginBottom: spacing.sm },
     fileHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-    thumb: { width: 44, height: 44, borderRadius: radius.sm, backgroundColor: colors.field, alignItems: 'center', justifyContent: 'center' },
+    // The mockup's `.ph` photo tile.
+    thumb: {
+      width: 52, height: 52, borderRadius: radius.md, backgroundColor: colors.photo, overflow: 'hidden',
+      alignItems: 'center', justifyContent: 'center',
+    },
+    image: { width: 52, height: 52 },
     fileText: { flex: 1 },
-    fileName: { fontFamily: fonts.medium, fontSize: 14, color: colors.text },
-    fileSize: { fontFamily: fonts.regular, fontSize: 12, color: colors.textMuted, marginTop: 2 },
+    fileName: { ...type('bodyStrong'), color: colors.text },
+    fileSize: { ...type('caption'), color: colors.textMuted, marginTop: 2 },
     remove: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-    chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
+    chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
     addRow: { flexDirection: 'row', gap: spacing.sm },
+    // The mockup's `.ph.add` tile: lavender with a dashed violet border.
     add: {
-      flex: 1, minHeight: 64, borderRadius: radius.lg, alignItems: 'center', justifyContent: 'center', gap: spacing.xs,
-      backgroundColor: colors.primaryWash,
+      flex: 1, minHeight: 72, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', gap: spacing.xs,
+      paddingHorizontal: spacing.xs, paddingVertical: spacing.sm,
+      backgroundColor: colors.primaryWash, borderWidth: 1.5, borderStyle: 'dashed', borderColor: colors.primary,
     },
     addDisabled: { opacity: 0.5 },
-    addText: { fontFamily: fonts.semiBold, fontSize: 13, color: colors.primary },
-  }), [colors]);
+    addText: { ...type('caption'), fontFamily: fonts.bold, color: colors.primaryInk, textAlign: 'center' },
+  }), [colors, type]);
 
   const addDisabled = disabled || room <= 0;
   const addButtons = [
@@ -128,11 +135,11 @@ export default function DocumentPickerField({ files, onChange, max, disabled = f
   return (
     <View>
       {files.map((f) => (
-        <View key={f.id} style={s.file}>
+        <Card key={f.id} padding={spacing.md} style={s.file}>
           <View style={s.fileHead}>
             <View style={s.thumb}>
               {f.mimeType.startsWith('image/') ? (
-                <Image source={{ uri: f.uri }} style={{ width: 44, height: 44, borderRadius: radius.sm }} contentFit="cover" />
+                <Image source={{ uri: f.uri }} style={s.image} contentFit="cover" />
               ) : (
                 <FileText size={20} color={colors.textSecondary} />
               )}
@@ -167,7 +174,7 @@ export default function DocumentPickerField({ files, onChange, max, disabled = f
               />
             ))}
           </View>
-        </View>
+        </Card>
       ))}
       <View style={s.addRow}>
         {addButtons.map((b) => (
@@ -179,7 +186,7 @@ export default function DocumentPickerField({ files, onChange, max, disabled = f
             testID={`Add-document-${b.key}`}
             accessibilityRole="button"
           >
-            <b.icon size={20} color={colors.primary} />
+            <b.icon size={20} color={colors.primaryInk} />
             <Text style={s.addText}>{b.label}</Text>
           </Pressable>
         ))}

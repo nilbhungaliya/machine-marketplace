@@ -7,22 +7,25 @@ import { GST_REVIEW_FILES_TOTAL_MAX, type GstDocumentType, type GstState, type G
 import ScreenWrapper from '@/components/ScreenWrapper';
 import Header from '@/components/Header';
 import Button from '@/components/Button';
+import { FieldError } from '@/components/Field';
 import Notice from '@/components/Notice';
 import Skeleton from '@/components/Skeleton';
+import StatusChip from '@/components/StatusChip';
 import { businessKeys, useGstState } from '@/hooks/use-business';
+import { useType } from '@/hooks/use-type';
 import { track } from '@/lib/analytics';
 import { GST_EVENTS } from '@/lib/analytics-events';
 import { errorCode, errorKey } from '@/lib/api-error';
 import { formatDate } from '@/lib/format-date';
 import { addReviewFiles, uploadDocuments, type LocalDocument } from '@/lib/gst-api';
-import { GST_ERROR_KEYS, addFilesRoom, gstScreen, newFilesProblem, startAgain } from '@/lib/gst-flow';
+import { GST_ERROR_KEYS, addFilesRoom, gstChip, gstScreen, newFilesProblem, startAgain } from '@/lib/gst-flow';
 import { Clock, ShieldAlert, ShieldCheck, TriangleAlert, type LucideIcon } from '@/lib/icons';
 import { queryClient } from '@/lib/queryClient';
-import { fonts, radius, spacing, useTheme } from '@/lib/theme';
+import { radius, spacing, useTheme } from '@/lib/theme';
 import { openTarget } from '@/navigation/go';
 import type { RootStackScreenProps } from '@/navigation/types';
 import DocumentPickerField, { DOCUMENT_PROBLEM_KEYS } from './document-picker';
-import GstDetailsCard from './gst-details-card';
+import GstDetailsCard, { GstinLine } from './gst-details-card';
 import GstLoadError from './gst-load-state';
 
 type StatusState = Extract<GstState, 'under_review' | 'needs_more' | 'rejected' | 'verified' | 'revoked'>;
@@ -40,6 +43,7 @@ const HERO: Record<StatusState, { icon: LucideIcon; tone: 'ok' | 'warn' | 'dange
 export default function GstStatusScreen({ navigation }: RootStackScreenProps<'GstStatus'>) {
   const { t } = useTranslation();
   const { colors } = useTheme();
+  const type = useType();
   const gst = useGstState();
   const view = gst.data;
   const focused = useIsFocused();
@@ -50,14 +54,14 @@ export default function GstStatusScreen({ navigation }: RootStackScreenProps<'Gs
   }, [focused, view, navigation]);
 
   const s = useMemo(() => StyleSheet.create({
-    body: { flex: 1, paddingHorizontal: spacing.xxl, paddingTop: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xl },
+    body: { flex: 1, paddingHorizontal: spacing.lg, paddingTop: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xl },
     hero: { alignItems: 'center', gap: spacing.md },
     heroIcon: { width: 72, height: 72, borderRadius: radius.full, alignItems: 'center', justifyContent: 'center' },
-    title: { fontFamily: fonts.bold, fontSize: 24, color: colors.text, textAlign: 'center' },
-    text: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 22, color: colors.textSecondary, textAlign: 'center' },
-    gstin: { fontFamily: fonts.semiBold, fontSize: 14, letterSpacing: 1, color: colors.text, textAlign: 'center' },
-    skeleton: { height: 160, borderRadius: radius.lg },
-  }), [colors]);
+    chip: { alignSelf: 'center' },
+    title: { ...type('title'), color: colors.text, textAlign: 'center' },
+    text: { ...type('body'), color: colors.textSecondary, textAlign: 'center' },
+    skeleton: { height: 160, borderRadius: radius.xl },
+  }), [colors, type]);
 
   if (!view && gst.isError) {
     return (
@@ -80,6 +84,7 @@ export default function GstStatusScreen({ navigation }: RootStackScreenProps<'Gs
   const state = view.state as StatusState;
   const hero = HERO[state];
   const tint = { ok: [colors.ok, colors.okSoft], warn: [colors.warn, colors.warnSoft], danger: [colors.danger, colors.dangerSoft] }[hero.tone];
+  const chip = gstChip(state);
   const verifiedAt = view.verifiedAt ? Date.parse(view.verifiedAt) : NaN;
 
   return (
@@ -90,13 +95,14 @@ export default function GstStatusScreen({ navigation }: RootStackScreenProps<'Gs
           <View style={[s.heroIcon, { backgroundColor: tint[1] }]}>
             <hero.icon size={34} color={tint[0]} />
           </View>
+          <StatusChip tone={chip.tone} label={t(chip.key)} style={s.chip} />
           <Text style={s.title}>{t(`verification.status.${hero.key}.title`)}</Text>
           <Text style={s.text}>
             {state === 'verified' && !Number.isNaN(verifiedAt)
               ? t('verification.status.verified.since', { date: formatDate(verifiedAt) })
               : t(`verification.status.${hero.key}.body`)}
           </Text>
-          {view.gstin && state !== 'verified' ? <Text style={s.gstin}>{t('verification.details.gstin', { gstin: view.gstin })}</Text> : null}
+          {view.gstin && state !== 'verified' ? <GstinLine gstin={view.gstin} token="body" center /> : null}
         </View>
 
         {state === 'verified' ? <GstDetailsCard details={view.details} gstin={view.gstin} /> : null}
@@ -126,6 +132,7 @@ export default function GstStatusScreen({ navigation }: RootStackScreenProps<'Gs
 function AddFiles({ view }: { view: GstStateView }) {
   const { t } = useTranslation();
   const { colors } = useTheme();
+  const type = useType();
   const [files, setFiles] = useState<LocalDocument[]>([]);
   const [docError, setDocError] = useState<string>();
   const [storageBlocked, setStorageBlocked] = useState(false);
@@ -165,13 +172,13 @@ function AddFiles({ view }: { view: GstStateView }) {
   };
 
   const s = useMemo(() => StyleSheet.create({
-    section: { fontFamily: fonts.semiBold, fontSize: 16, color: colors.text, marginTop: spacing.sm },
-    hint: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 19, color: colors.textMuted },
-    error: { fontFamily: fonts.regular, fontSize: 12, color: colors.danger },
-  }), [colors]);
+    box: { gap: spacing.md },
+    section: { ...type('section'), color: colors.text, marginTop: spacing.sm },
+    hint: { ...type('caption'), color: colors.textMuted },
+  }), [colors, type]);
 
   return (
-    <View style={{ gap: spacing.md }}>
+    <View style={s.box}>
       {view.officerMessage ? (
         <Notice tone="warning" icon={TriangleAlert} title={t('verification.status.needsMore.message')} text={view.officerMessage} />
       ) : null}
@@ -193,7 +200,7 @@ function AddFiles({ view }: { view: GstStateView }) {
           suggestCertificate={false}
         />
       )}
-      {docError ? <Text style={s.error}>{docError}</Text> : null}
+      {docError ? <FieldError>{docError}</FieldError> : null}
       <Button
         title={t('verification.status.needsMore.send')}
         phLabel="Gst-send-more-files"

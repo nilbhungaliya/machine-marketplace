@@ -67,9 +67,10 @@ export default function OtpCells({
           keyboardType="number-pad"
           autoComplete="sms-otp"
           textContentType="oneTimeCode"
-          // Not `length`: a pasted or autofilled code can carry spaces ("481 936"), and a cap at 6 would cut its
-          // last digits. The cells and the screen use only the derived digits.
-          maxLength={length + 4}
+          // Not `length`: a pasted or autofilled code can carry spaces ("4 8 1 9 3 6") or arrive inside the SMS text
+          // ("Your code is 481936"), and the old field took either whole, so a tight cap would cut the code. The
+          // cells and the screen use only the derived digits.
+          maxLength={64}
           caretHidden
           onSubmitEditing={onSubmitEditing}
           autoFocus={autoFocus}

@@ -11,8 +11,11 @@ import Header from '@/components/Header';
 import Input from '@/components/Input';
 import Button from '@/components/Button';
 import Chip from '@/components/Chip';
+import Field, { FieldError } from '@/components/Field';
+import FooterBar from '@/components/FooterBar';
 import Notice from '@/components/Notice';
 import { businessKeys, gstStateQuery, useBusiness, useGstState } from '@/hooks/use-business';
+import { useType } from '@/hooks/use-type';
 import { track } from '@/lib/analytics';
 import { GST_EVENTS } from '@/lib/analytics-events';
 import { errorCode, errorKey } from '@/lib/api-error';
@@ -22,7 +25,7 @@ import { DOCUMENTS_MAX, GST_ERROR_KEYS, blocksNewAttempt, documentProblem, gstSc
 import { Square, SquareCheck, TriangleAlert } from '@/lib/icons';
 import { PINCODE_REGEX } from '@/lib/onboarding-step';
 import { queryClient } from '@/lib/queryClient';
-import { fonts, radius, spacing, useTheme } from '@/lib/theme';
+import { radius, spacing, useTheme } from '@/lib/theme';
 import { finishGstFlow, openTarget } from '@/navigation/go';
 import type { RootStackScreenProps } from '@/navigation/types';
 import DocumentPickerField, { DOCUMENT_PROBLEM_KEYS } from './document-picker';
@@ -49,6 +52,7 @@ export default function GstReviewFormScreen({ navigation, route }: RootStackScre
   const withDetails = !checkId;
   const { t } = useTranslation();
   const { colors } = useTheme();
+  const type = useType();
   const gst = useGstState();
   const business = useBusiness();
   const profile = business.data ?? null;
@@ -165,28 +169,25 @@ export default function GstReviewFormScreen({ navigation, route }: RootStackScre
   });
 
   const s = useMemo(() => StyleSheet.create({
-    body: { flex: 1, paddingHorizontal: spacing.xxl, paddingTop: spacing.sm, paddingBottom: spacing.xl },
-    title: { fontFamily: fonts.bold, fontSize: 24, color: colors.text },
-    subtitle: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 21, color: colors.textSecondary, marginTop: spacing.xs },
-    section: { fontFamily: fonts.semiBold, fontSize: 16, color: colors.text, marginTop: spacing.xxl, marginBottom: spacing.xs },
-    label: {
-      fontFamily: fonts.medium, fontSize: 13, color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.8,
-      marginTop: spacing.lg, marginBottom: spacing.sm,
-    },
-    hint: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 19, color: colors.textMuted, marginBottom: spacing.md },
+    body: { flex: 1, paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.xl },
+    title: { ...type('title'), color: colors.text },
+    subtitle: { ...type('lead'), color: colors.textSecondary, marginTop: spacing.sm },
+    section: { ...type('section'), color: colors.text, marginTop: spacing.xxl, marginBottom: spacing.xs },
+    hint: { ...type('caption'), color: colors.textMuted, marginBottom: spacing.md },
+    // The same top spacing as an Input.
+    group: { marginTop: spacing.md },
     chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-    gstin: { fontFamily: fonts.semiBold, letterSpacing: 1.5, fontSize: 16 },
     row: { flexDirection: 'row', gap: spacing.md },
     half: { flex: 1 },
+    // A choice card (v2 `.choice`), as on the declaration screen.
     declare: {
-      flexDirection: 'row', gap: spacing.md, padding: spacing.lg, borderRadius: radius.lg, backgroundColor: colors.surface,
-      borderWidth: 1.5, borderColor: form.values.declared ? colors.primary : colors.border, marginTop: spacing.xxl,
+      flexDirection: 'row', gap: spacing.md, padding: spacing.md, borderRadius: radius.lg, borderWidth: 1.5, marginTop: spacing.xxl,
+      backgroundColor: form.values.declared ? colors.primaryWash : colors.surface,
+      borderColor: form.values.declared ? colors.primary : colors.hairline,
     },
-    declareText: { flex: 1, fontFamily: fonts.medium, fontSize: 14, lineHeight: 21, color: colors.text },
-    error: { fontFamily: fonts.regular, fontSize: 12, color: colors.danger, marginTop: spacing.sm },
-    footer: { paddingHorizontal: spacing.xxl, paddingBottom: spacing.xxl, paddingTop: spacing.sm, gap: spacing.sm },
-    progress: { fontFamily: fonts.medium, fontSize: 13, color: colors.textSecondary, textAlign: 'center' },
-  }), [colors, form.values.declared]);
+    declareText: { flex: 1, ...type('bodyStrong'), color: colors.text },
+    progress: { ...type('caption'), color: colors.textSecondary, textAlign: 'center', marginBottom: spacing.sm, paddingHorizontal: spacing.lg },
+  }), [colors, type, form.values.declared]);
 
   const err = (k: keyof ReviewValues) => (form.touched[k] || form.submitCount > 0 ? form.errors[k] : undefined);
   const field = (k: 'legalName' | 'tradeName' | 'line' | 'city' | 'state' | 'pincode') => ({
@@ -214,7 +215,7 @@ export default function GstReviewFormScreen({ navigation, route }: RootStackScre
           onChangeText={form.handleChange('gstin')}
           onBlur={form.handleBlur('gstin')}
           error={err('gstin')}
-          style={s.gstin}
+          mono
           testID="Review-gstin"
         />
 
@@ -236,7 +237,7 @@ export default function GstReviewFormScreen({ navigation, route }: RootStackScre
               {...field('pincode')}
               testID="Review-pincode"
             />
-            <Text style={s.label}>{t('verification.review.constitution')}</Text>
+            <Field label={t('verification.review.constitution')} error={err('constitution')} style={s.group}>
             <View style={s.chips}>
               {CONSTITUTIONS.map((c) => (
                 <Chip
@@ -249,7 +250,7 @@ export default function GstReviewFormScreen({ navigation, route }: RootStackScre
                 />
               ))}
             </View>
-            {err('constitution') ? <Text style={s.error}>{err('constitution')}</Text> : null}
+            </Field>
           </>
         ) : null}
 
@@ -268,7 +269,7 @@ export default function GstReviewFormScreen({ navigation, route }: RootStackScre
             disabled={form.isSubmitting}
           />
         )}
-        {docError ? <Text style={s.error}>{docError}</Text> : null}
+        {docError ? <FieldError>{docError}</FieldError> : null}
 
         <Pressable
           style={s.declare}
@@ -280,20 +281,21 @@ export default function GstReviewFormScreen({ navigation, route }: RootStackScre
           {form.values.declared ? <SquareCheck size={22} color={colors.primary} /> : <Square size={22} color={colors.textSecondary} />}
           <Text style={s.declareText}>{t('verification.declare.text')}</Text>
         </Pressable>
-        {err('declared') ? <Text style={s.error}>{err('declared')}</Text> : null}
+        {err('declared') ? <FieldError>{err('declared') as string}</FieldError> : null}
       </View>
-      <View style={s.footer}>
-        {progress ? (
-          <Text style={s.progress}>{t('verification.documents.uploading', { done: Math.min(progress.done + 1, progress.total), total: progress.total })}</Text>
-        ) : null}
+      {progress ? (
+        <Text style={s.progress}>{t('verification.documents.uploading', { done: Math.min(progress.done + 1, progress.total), total: progress.total })}</Text>
+      ) : null}
+      <FooterBar>
         <Button
           title={t('verification.review.submit')}
           phLabel="Gst-submit-review"
+          size="md"
           loading={form.isSubmitting}
           disabled={uploadsOff}
           onPress={() => form.handleSubmit()}
         />
-      </View>
+      </FooterBar>
     </ScreenWrapper>
   );
 }

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useFormik } from 'formik';
 import Toast from 'react-native-toast-message';
@@ -10,15 +10,22 @@ import ScreenWrapper from '@/components/ScreenWrapper';
 import Header from '@/components/Header';
 import Input from '@/components/Input';
 import Button from '@/components/Button';
+import Card from '@/components/Card';
+import Field from '@/components/Field';
+import FooterBar from '@/components/FooterBar';
+import ListRow from '@/components/ListRow';
+import Notice from '@/components/Notice';
 import Skeleton from '@/components/Skeleton';
+import Steps from '@/components/Steps';
 import { useAuth } from '@/hooks/useAuth';
 import { businessKeys, useBusiness, useIndustrialAreas, usePincodeInfo } from '@/hooks/use-business';
+import { useType } from '@/hooks/use-type';
 import { AUTH_EVENTS, track } from '@/lib/analytics';
 import { ONBOARDING_EVENTS } from '@/lib/analytics-events';
 import { errorCode, errorKey } from '@/lib/api-error';
 import { fetchNearestPincode, saveLocation } from '@/lib/business-api';
 import { toAsciiDigits } from '@/lib/digits';
-import { Check, Info, LocateFixed, MapPin, Search, X } from '@/lib/icons';
+import { Info, LocateFixed, MapPin, Search, X } from '@/lib/icons';
 import {
   buildLocationSchema, PINCODE_REGEX, pinAfterPincode, toLocationBody, type FormMode, type LocationFormValues,
 } from '@/lib/onboarding-step';
@@ -45,8 +52,8 @@ export default function WhereAreYouScreen({ navigation, route }: RootStackScreen
     return (
       <ScreenWrapper>
         <Header title={title} showBack={mode === 'edit'} />
-        <View style={{ paddingHorizontal: spacing.xxl, gap: spacing.lg, paddingTop: spacing.lg }}>
-          {[0, 1, 2, 3].map((i) => <Skeleton key={i} style={{ height: 52, borderRadius: radius.lg }} />)}
+        <View style={{ paddingHorizontal: spacing.lg, gap: spacing.md, paddingTop: spacing.lg }}>
+          {[0, 1, 2, 3].map((i) => <Skeleton key={i} style={{ height: 52, borderRadius: radius.md }} />)}
         </View>
       </ScreenWrapper>
     );
@@ -67,6 +74,7 @@ function LocationForm({ mode, title, profile, onDone }: {
 }) {
   const { t } = useTranslation();
   const { colors } = useTheme();
+  const type = useType();
   const { applyProfile } = useAuth();
   const saved = profile?.location ?? null;
 
@@ -231,46 +239,24 @@ function LocationForm({ mode, title, profile, onDone }: {
   };
 
   const s = useMemo(() => StyleSheet.create({
-    body: { flex: 1, paddingHorizontal: spacing.xxl, paddingTop: spacing.sm, paddingBottom: spacing.xl },
-    step: { fontFamily: fonts.medium, fontSize: 13, color: colors.textMuted },
-    subtitle: { fontFamily: fonts.regular, fontSize: 15, color: colors.textSecondary, marginTop: spacing.xs, marginBottom: spacing.md },
+    body: { flex: 1, paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.xl },
+    subtitle: { ...type('lead'), color: colors.textSecondary, marginTop: spacing.md, marginBottom: spacing.lg },
     map: { height: 180, borderRadius: radius.lg, overflow: 'hidden', marginBottom: spacing.sm },
-    mapHint: { fontFamily: fonts.regular, fontSize: 12, color: colors.textMuted, marginBottom: spacing.sm },
-    locate: {
-      flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, minHeight: 48,
-      borderRadius: radius.full, backgroundColor: colors.primaryWash,
-    },
-    locateText: { fontFamily: fonts.semiBold, fontSize: 15, color: colors.primary },
+    mapHint: { ...type('caption'), color: colors.textMuted, marginBottom: spacing.sm },
     row: { flexDirection: 'row', gap: spacing.md },
     pinRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm, minHeight: 44 },
-    pinText: { flex: 1, fontFamily: fonts.medium, fontSize: 14, color: colors.text },
+    pinText: { flex: 1, ...type('bodyStrong'), color: colors.text },
     pinRemove: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, minHeight: 44 },
-    pinRemoveText: { fontFamily: fonts.semiBold, fontSize: 14, color: colors.primary },
+    pinRemoveText: { ...type('caption'), fontFamily: fonts.bold, color: colors.primaryInk },
     half: { flex: 1 },
-    notice: {
-      flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start', padding: spacing.md, borderRadius: radius.md,
-      backgroundColor: colors.warnSoft, marginTop: spacing.sm,
-    },
-    noticeText: { flex: 1, fontFamily: fonts.regular, fontSize: 13, color: colors.text },
-    label: {
-      fontFamily: fonts.medium, fontSize: 13, color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.8,
-      marginTop: spacing.xl, marginBottom: spacing.xs,
-    },
-    hint: { fontFamily: fonts.regular, fontSize: 13, color: colors.textMuted, marginBottom: spacing.sm },
-    list: { borderRadius: radius.lg, backgroundColor: colors.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border, overflow: 'hidden' },
-    option: {
-      flexDirection: 'row', alignItems: 'center', minHeight: 48, paddingHorizontal: spacing.lg,
-      borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.divider,
-    },
-    optionLast: { borderBottomWidth: 0 },
-    optionSelected: { backgroundColor: colors.primaryWash },
-    optionText: { flex: 1, fontFamily: fonts.medium, fontSize: 15, color: colors.text },
-    optionTextSelected: { color: colors.primary, fontFamily: fonts.semiBold },
-    empty: { fontFamily: fonts.regular, fontSize: 13, color: colors.textMuted, padding: spacing.lg },
-    error: { fontFamily: fonts.regular, fontSize: 12, color: colors.danger, marginTop: spacing.sm },
-    retry: { fontFamily: fonts.semiBold, fontSize: 14, color: colors.primary },
-    footer: { paddingHorizontal: spacing.xxl, paddingBottom: spacing.xxl, paddingTop: spacing.sm },
-  }), [colors]);
+    notice: { marginTop: spacing.sm },
+    // The same top spacing as an Input, so the area list keeps the form's rhythm.
+    group: { marginTop: spacing.md },
+    hint: { ...type('caption'), color: colors.textMuted },
+    retry: { ...type('caption'), fontFamily: fonts.bold, color: colors.primaryInk, marginTop: spacing.xs },
+    areaSkeleton: { height: 144, borderRadius: radius.lg },
+    search: { marginBottom: spacing.sm },
+  }), [colors, type]);
 
   const fieldError = (k: 'pincode' | 'city' | 'state' | 'industrialAreaOther' | 'addressLine') =>
     form.touched[k] || form.submitCount > 0 ? form.errors[k] : undefined;
@@ -282,7 +268,7 @@ function LocationForm({ mode, title, profile, onDone }: {
       <View style={s.body}>
         {mode === 'onboarding' ? (
           <>
-            <Text style={s.step}>{t('onboarding.step', { current: 2, total: 2 })}</Text>
+            <Steps current={2} total={2} label={t('onboarding.step', { current: 2, total: 2 })} />
             <Text style={s.subtitle}>{t('onboarding.location.subtitle')}</Text>
           </>
         ) : null}
@@ -296,7 +282,7 @@ function LocationForm({ mode, title, profile, onDone }: {
 
         {pin ? (
           <View style={s.pinRow}>
-            <MapPin size={16} color={colors.ok} />
+            <MapPin size={18} color={colors.ok} />
             <Text style={s.pinText}>{t('onboarding.location.pinSet')}</Text>
             <Pressable
               onPress={removePin}
@@ -306,23 +292,21 @@ function LocationForm({ mode, title, profile, onDone }: {
               accessibilityRole="button"
               accessibilityLabel={t('onboarding.location.removePin')}
             >
-              <X size={14} color={colors.primary} />
+              <X size={16} color={colors.primaryInk} />
               <Text style={s.pinRemoveText}>{t('onboarding.location.removePin')}</Text>
             </Pressable>
           </View>
         ) : null}
 
-        <Pressable
-          style={s.locate}
-          onPress={() => void locate()}
+        {/* The title switches to "Finding you…" and the button is disabled while locating, as before. */}
+        <Button
+          title={locating ? t('onboarding.location.locating') : t('onboarding.location.useMyLocation')}
+          phLabel="Use-my-location"
+          variant="outline"
+          icon={LocateFixed}
           disabled={locating}
-          testID="Use-my-location"
-          accessibilityRole="button"
-          accessibilityState={{ busy: locating }}
-        >
-          {locating ? <ActivityIndicator color={colors.primary} /> : <LocateFixed size={18} color={colors.primary} />}
-          <Text style={s.locateText}>{locating ? t('onboarding.location.locating') : t('onboarding.location.useMyLocation')}</Text>
-        </Pressable>
+          onPress={() => void locate()}
+        />
 
         <Input
           label={t('onboarding.location.pincode')}
@@ -337,10 +321,7 @@ function LocationForm({ mode, title, profile, onDone }: {
           testID="Pincode"
         />
         {validPin && pincodeInfo.data === null ? (
-          <View style={s.notice}>
-            <Info size={16} color={colors.warn} />
-            <Text style={s.noticeText}>{t('onboarding.location.unknownPincode')}</Text>
-          </View>
+          <Notice tone="warning" icon={Info} text={t('onboarding.location.unknownPincode')} style={s.notice} />
         ) : null}
 
         <View style={s.row}>
@@ -366,77 +347,71 @@ function LocationForm({ mode, title, profile, onDone }: {
           </View>
         </View>
 
-        <Text style={s.label}>{t('onboarding.location.area')}</Text>
-        <Text style={s.hint}>{t('onboarding.location.areaHint')}</Text>
-        {!validPin ? (
-          <Text style={s.hint}>{t('onboarding.location.areaEnterPincode')}</Text>
-        ) : areas.isLoading ? (
-          <Skeleton style={{ height: 144, borderRadius: radius.lg }} />
-        ) : areas.isError ? (
-          <Pressable onPress={() => void areas.refetch()} testID="Retry-industrial-areas" accessibilityRole="button">
-            <Text style={s.hint}>{t('onboarding.location.areasError')}</Text>
-            <Text style={s.retry}>{t('common.retry')}</Text>
-          </Pressable>
-        ) : (
-          <>
-            {options.length >= SEARCH_FROM ? (
-              <Input
-                placeholder={t('onboarding.location.areaSearch')}
-                value={areaQuery}
-                onChangeText={setAreaQuery}
-                autoCorrect={false}
-                testID="Search-industrial-areas"
-                style={{ marginBottom: spacing.sm }}
-              />
-            ) : null}
-            <View style={s.list}>
-              {shown.map((o) => {
-                const selected = form.values.industrialAreaId === o.id;
-                return (
-                  <Pressable
-                    key={o.id}
-                    style={[s.option, selected && s.optionSelected]}
-                    onPress={() => pickArea(o.id)}
-                    testID="Industrial-area-option"
-                    accessibilityRole="radio"
-                    accessibilityState={{ selected }}
-                  >
-                    <Text style={[s.optionText, selected && s.optionTextSelected]}>{o.name}</Text>
-                    {selected ? <Check size={18} color={colors.primary} /> : null}
-                  </Pressable>
-                );
-              })}
-              {query && shown.length === 0 ? (
-                <View style={[s.option, { gap: spacing.sm }]}>
-                  <Search size={16} color={colors.textMuted} />
-                  <Text style={[s.empty, { padding: 0, flex: 1 }]}>{t('onboarding.location.areaNoMatch')}</Text>
+        <Field label={t('onboarding.location.area')} hint={t('onboarding.location.areaHint')} error={areaError} style={s.group}>
+          {!validPin ? (
+            <Text style={s.hint}>{t('onboarding.location.areaEnterPincode')}</Text>
+          ) : areas.isLoading ? (
+            <Skeleton style={s.areaSkeleton} />
+          ) : areas.isError ? (
+            <Pressable onPress={() => void areas.refetch()} testID="Retry-industrial-areas" accessibilityRole="button">
+              <Text style={s.hint}>{t('onboarding.location.areasError')}</Text>
+              <Text style={s.retry}>{t('common.retry')}</Text>
+            </Pressable>
+          ) : (
+            <>
+              {options.length >= SEARCH_FROM ? (
+                <View style={s.search}>
+                  <Input
+                    placeholder={t('onboarding.location.areaSearch')}
+                    value={areaQuery}
+                    onChangeText={setAreaQuery}
+                    autoCorrect={false}
+                    testID="Search-industrial-areas"
+                  />
                 </View>
               ) : null}
-              <Pressable
-                style={[s.option, s.optionLast, showOther && s.optionSelected]}
-                onPress={pickOther}
-                testID="Industrial-area-other"
-                accessibilityRole="radio"
-                accessibilityState={{ selected: showOther }}
-              >
-                <Text style={[s.optionText, showOther && s.optionTextSelected]}>{t('onboarding.location.other')}</Text>
-                {showOther ? <Check size={18} color={colors.primary} /> : null}
-              </Pressable>
-            </View>
-            {showOther ? (
-              <Input
-                placeholder={t('onboarding.location.otherPlaceholder')}
-                value={form.values.industrialAreaOther}
-                onChangeText={form.handleChange('industrialAreaOther')}
-                onBlur={form.handleBlur('industrialAreaOther')}
-                error={fieldError('industrialAreaOther')}
-                maxLength={80}
-                testID="Industrial-area-other-text"
-              />
-            ) : null}
-          </>
-        )}
-        {areaError ? <Text style={s.error}>{areaError}</Text> : null}
+              <Card flush>
+                {shown.map((o) => {
+                  const selected = form.values.industrialAreaId === o.id;
+                  return (
+                    <ListRow
+                      key={o.id}
+                      label={o.name}
+                      selected={selected}
+                      onPress={() => pickArea(o.id)}
+                      testID="Industrial-area-option"
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected }}
+                    />
+                  );
+                })}
+                {query && shown.length === 0 ? (
+                  <ListRow icon={Search} label={t('onboarding.location.areaNoMatch')} />
+                ) : null}
+                <ListRow
+                  label={t('onboarding.location.other')}
+                  selected={showOther}
+                  last
+                  onPress={pickOther}
+                  testID="Industrial-area-other"
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: showOther }}
+                />
+              </Card>
+              {showOther ? (
+                <Input
+                  placeholder={t('onboarding.location.otherPlaceholder')}
+                  value={form.values.industrialAreaOther}
+                  onChangeText={form.handleChange('industrialAreaOther')}
+                  onBlur={form.handleBlur('industrialAreaOther')}
+                  error={fieldError('industrialAreaOther')}
+                  maxLength={80}
+                  testID="Industrial-area-other-text"
+                />
+              ) : null}
+            </>
+          )}
+        </Field>
 
         <Input
           label={t('onboarding.location.address')}
@@ -449,14 +424,15 @@ function LocationForm({ mode, title, profile, onDone }: {
           testID="Address-line"
         />
       </View>
-      <View style={s.footer}>
+      <FooterBar>
         <Button
           title={mode === 'edit' ? t('onboarding.business.saveChanges') : t('onboarding.location.save')}
           phLabel={mode === 'edit' ? 'Save-location' : 'Onboarding-location-save'}
+          size="md"
           loading={form.isSubmitting}
           onPress={() => form.handleSubmit()}
         />
-      </View>
+      </FooterBar>
     </ScreenWrapper>
   );
 }
