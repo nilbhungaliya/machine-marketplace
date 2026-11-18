@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import { eq, inArray, sql } from 'drizzle-orm';
 import type { ListingOwnerView } from '@mpm/shared-types';
@@ -17,6 +17,8 @@ import {
   units,
 } from '../src/db/schema.js';
 import { createListing } from '../src/services/listings/listing-write.service.js';
+import * as storage from '../src/lib/storage.js';
+import { purgeUrls } from '../src/lib/cdn-purge.js';
 import { createTestBrand, createTestCatalog, deleteTestBrands, deleteTestCatalog, type TestBrand, type TestCatalog } from './_helpers/test-catalog.js';
 import { deleteTestBusinesses } from './_helpers/test-businesses.js';
 import {
@@ -31,6 +33,16 @@ import {
 
 // Listing writes (F2 plan Task 7, spec §4, §5.1, §5.3, §7.3, §14): create, draft PATCH validation and its error codes,
 // draft delete, the business location sync, and the catalogue-guard lock (Batch 1 review item 1).
+// Storage and the CDN purge are mocked (plan Task 13): a draft delete's media clean-up never reaches R2 or Cloudflare.
+
+vi.mock('../src/lib/storage.js', async (importOriginal) => {
+  const real = await importOriginal<typeof import('../src/lib/storage.js')>();
+  return { ...real, deletePublicObject: vi.fn(async () => undefined), deleteObject: vi.fn(async () => undefined) };
+});
+vi.mock('../src/lib/cdn-purge.js', () => ({ purgeUrls: vi.fn(async () => 'ok') }));
+
+const deletePublic = vi.mocked(storage.deletePublicObject);
+const purge = vi.mocked(purgeUrls);
 
 let app: FastifyInstance;
 let catalog: TestCatalog;
@@ -446,13 +458,46 @@ describe('PATCH /listings/:id on a draft', () => {
 });
 
 describe('DELETE /listings/:id', () => {
-  it('deletes a draft with its children', async () => {
+  beforeEach(() => {
+    deletePublic.mockClear();
+    purge.mockClear();
+  });
+
+  it('deletes a draft with its children; without media storage the object clean-up is skipped, not thrown', async () => {
+    expect(storage.isMediaStorageConfigured()).toBe(false);
     const id = await draftOf(seller, 'part', { photos: 2, fitments: [{ brandId: machineBrand.id }] });
     const res = await remove(seller, id);
     expect(res.statusCode, res.body).toBe(200);
     expect(await db.select().from(listings).where(eq(listings.id, id))).toHaveLength(0);
     expect(await db.select().from(listingMedia).where(eq(listingMedia.listingId, id))).toHaveLength(0);
     expect(await db.select().from(listingFitments).where(eq(listingFitments.listingId, id))).toHaveLength(0);
+    expect(deletePublic).not.toHaveBeenCalled();
+    expect(purge).not.toHaveBeenCalled();
+  });
+
+  it('with media storage, deletes the draft’s public objects after commit and purges their URLs; a failed delete still answers 200', async () => {
+    const env: Record<string, string> = {
+      AWS_S3_ENDPOINT: 'http://127.0.0.1:9', AWS_REGION: 'auto', AWS_ACCESS_KEY_ID: 'k', AWS_SECRET_ACCESS_KEY: 's',
+      AWS_S3_PRIVATE_BUCKET: 'test-private', AWS_S3_PUBLIC_BUCKET: 'test-public', MEDIA_PUBLIC_BASE_URL: 'https://media.example.test',
+    };
+    const saved = Object.fromEntries(Object.keys(env).map((k) => [k, process.env[k]]));
+    Object.assign(process.env, env);
+    try {
+      const id = await draftOf(seller, 'part', { photos: 2 });
+      const media = await db.select().from(listingMedia).where(eq(listingMedia.listingId, id));
+      const keys = media.flatMap((r) => [r.key, r.thumbKey!]).sort();
+      deletePublic.mockRejectedValueOnce(new Error('R2 down'));
+      const res = await remove(seller, id);
+      expect(res.statusCode, res.body).toBe(200);
+      expect(deletePublic.mock.calls.map((c) => c[0]).sort()).toEqual(keys);
+      expect(purge).toHaveBeenCalledTimes(1);
+      expect(purge.mock.calls[0]![0].sort()).toEqual(keys.map((k) => `https://media.example.test/${k}`));
+    } finally {
+      for (const [k, v] of Object.entries(saved)) {
+        if (v === undefined) delete process.env[k];
+        else process.env[k] = v;
+      }
+    }
   });
 
   it('deletes a machine draft with its machine row', async () => {

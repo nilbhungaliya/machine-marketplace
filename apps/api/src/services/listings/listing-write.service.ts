@@ -14,7 +14,7 @@ import {
   type ListingStatus,
   type ReviewReason,
 } from '@mpm/shared-types';
-import type { Tx } from '../../db/index.js';
+import type { Db, Tx } from '../../db/index.js';
 import {
   businesses,
   listingFitments,
@@ -60,6 +60,7 @@ import {
   type StoredFitment,
   type UnitRow,
 } from './listing-validate.service.js';
+import { removePublicMedia } from './listing-media.service.js';
 import { hasOpenReport, toOwnerView } from './listing-view.service.js';
 import { listingNotFound, lockBusinessThenListing, type ListingRow } from './locks.js';
 
@@ -478,3 +479,17 @@ export async function deleteDraft(tx: Tx, user: UserTokenPayload, id: string): P
   return { mediaKeys: media.flatMap((m) => (m.thumbKey ? [m.key, m.thumbKey] : [m.key])) };
 }
 
+/**
+ * The route's draft delete: `deleteDraft` in its own transaction, then, after commit, the media objects deleted from
+ * the public bucket and their CDN URLs purged (§6.1, R45). The clean-up is best-effort: skipped when media storage
+ * isn't configured, each failure logged, never thrown (the rows are gone already).
+ */
+export async function deleteDraftWithMedia(
+  db: Db,
+  user: UserTokenPayload,
+  id: string,
+  log?: { error: (obj: unknown, msg?: string) => void },
+): Promise<void> {
+  const { mediaKeys } = await db.transaction((tx) => deleteDraft(tx, user, id));
+  await removePublicMedia(mediaKeys, log);
+}
