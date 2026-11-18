@@ -37,6 +37,12 @@ import guOnboarding from './gu/onboarding.json';
 import enVerification from './en/verification.json';
 import hiVerification from './hi/verification.json';
 import guVerification from './gu/verification.json';
+import enSell from './en/sell.json';
+import hiSell from './hi/sell.json';
+import guSell from './gu/sell.json';
+import enListing from './en/listing.json';
+import hiListing from './hi/listing.json';
+import guListing from './gu/listing.json';
 
 // One import per language per area. A new area: add its JSON in en/, hi/ and gu/, then register it here.
 export const resources = {
@@ -55,6 +61,8 @@ export const resources = {
       components: enComponents,
       onboarding: enOnboarding,
       verification: enVerification,
+      sell: enSell,
+      listing: enListing,
     },
   },
   hi: {
@@ -72,6 +80,8 @@ export const resources = {
       components: hiComponents,
       onboarding: hiOnboarding,
       verification: hiVerification,
+      sell: hiSell,
+      listing: hiListing,
     },
   },
   gu: {
@@ -89,6 +99,8 @@ export const resources = {
       components: guComponents,
       onboarding: guOnboarding,
       verification: guVerification,
+      sell: guSell,
+      listing: guListing,
     },
   },
 } as const;

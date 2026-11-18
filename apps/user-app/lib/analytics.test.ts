@@ -82,4 +82,12 @@ describe('pickAllowedParams', () => {
     expect(a.pickAllowedParams({ listingId: 'l1', phone: '+91', price: 5, category: { x: 1 } })).toEqual({ listingId: 'l1' });
     expect(a.pickAllowedParams(undefined)).toEqual({});
   });
+
+  it('keeps listing ids and businessId, never the listing routes\' step, group, from, outcome or index (F2 §15.5)', async () => {
+    const a = await loadModule(undefined);
+    expect(a.pickAllowedParams({ businessId: 'b', step: 'price' })).toEqual({ businessId: 'b' });
+    expect(
+      a.pickAllowedParams({ listingId: 'l1', mode: 'edit', group: 'live', from: 'mine', outcome: 'live', index: 2 }),
+    ).toEqual({ listingId: 'l1', mode: 'edit' });
+  });
 });

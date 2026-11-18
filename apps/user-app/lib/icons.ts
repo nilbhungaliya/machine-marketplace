@@ -8,6 +8,8 @@ import {
   ClipboardList, MapPin, Globe, Sun, LogOut, Check, ShieldCheck, CircleCheck, TriangleAlert, Info, Wrench, Factory,
   CalendarClock, BellRing, Cog, Scissors, Shirt, Layers, Droplets, Printer, Microscope, WashingMachine, Footprints,
   LocateFixed, Camera, Images, FileText, X, Clock, ShieldAlert, Building2, Square, SquareCheck,
+  // F2 listings (C0, for the app lanes): media tiles, sell steps, listing page, manage sheet, other side.
+  Play, Pause, Pencil, RefreshCw, Tag, Flag, Star, Video, ImagePlus, EllipsisVertical, ArrowLeftRight, Truck, RotateCcw, CircleX, Ban, Inbox, Trash, Eye, Gauge,
 } from 'lucide-react-native';
 
 export type { LucideIcon };
@@ -15,6 +17,7 @@ export {
   ChevronLeft, ChevronRight, Search, Package, ClipboardList, MapPin, Globe, Sun, LogOut, Check, ShieldCheck, User,
   CircleCheck, TriangleAlert, Info, Wrench, Factory, CalendarClock, BellRing, LocateFixed, Camera, Images, FileText, X,
   Clock, ShieldAlert, Building2, Square, SquareCheck,
+  Play, Pause, Pencil, RefreshCw, Tag, Flag, Star, Video, ImagePlus, EllipsisVertical, ArrowLeftRight, Truck, RotateCcw, CircleX, Ban, Inbox, Trash, Eye, Gauge,
 };
 
 export const TAB_ICONS = {

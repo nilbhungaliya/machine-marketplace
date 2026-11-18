@@ -687,6 +687,11 @@ export interface AdminBusinessDetail {
   reviewOpen: boolean;
   history: AdminGstHistory;
   audit: AdminAuditEntry[];
+  /**
+   * The business's listings in every status but `draft` (F2 plan Task 16, I12): the same set the default
+   * `/admin/listings?businessId=<id>` shows. The page links "Listings (n)" there.
+   */
+  listingsCount: number;
 }
 
 // ─── Listings (F2 + F3 + A3; spec 2026-11-18-f2-f3-listings-design) ───
@@ -862,6 +867,11 @@ export function listingTransition(
 /** The seller actions allowed on a listing now, in `SELLER_LISTING_ACTIONS` order (the manage sheet's buttons). */
 export function sellerActions(status: ListingStatus, kind: ListingKind): SellerListingAction[] {
   return SELLER_LISTING_ACTIONS.filter((a) => listingTransition(status, a, kind, 'seller') !== null);
+}
+
+/** The moderator status actions allowed on a listing now, in `ADMIN_LISTING_ACTIONS` order (the admin action bar, §11.3). */
+export function adminActions(status: ListingStatus, kind: ListingKind): AdminListingAction[] {
+  return ADMIN_LISTING_ACTIONS.filter((a) => listingTransition(status, a, kind, 'admin') !== null);
 }
 
 // Limits (spec §4, §6.3, §9.1, §10, §11.1).
@@ -1471,4 +1481,251 @@ export interface AdminListingDetail {
   };
   reports: AdminListingReport[];
   history: ListingHistoryEntry[];
+}
+
+// ─── Listing contracts shared by the F2 lanes (C0): request / response shapes of the routes still to be built ───
+// Route paths as in the plan (Tasks 13, 16, 19) and spec §11.3, §14. Responses are the `data` of `{ data }`.
+
+/**
+ * The video switch (amendment 3, plan Task 13). The API reads it only through `videoUploadEnabled()` in
+ * `apps/api/src/lib/media-switch.ts`; the app through `videoUploadEnabled()` in `lib/media-prepare.ts` (also Android
+ * only until iOS is verified). Off → presign / attach of `video` answer `400 MEDIA_TYPE`.
+ */
+export const LISTING_VIDEO_UPLOAD_ENABLED: boolean = true;
+
+/** The roles one media item uploads, in this order (§6.2). */
+export const MEDIA_ROLES_BY_TYPE: Readonly<Record<MediaType, readonly [MediaRole, MediaRole]>> = {
+  photo: ['full', 'thumb'],
+  video: ['video', 'poster'],
+};
+
+/**
+ * `Content-Type`s a presign accepts per role (signed into the PUT, §6.2). Photos and posters always leave the device as
+ * JPEG (manipulator, R46); the stored key's extension and the served type follow the server's sniff, not this.
+ */
+export const MEDIA_UPLOAD_CONTENT_TYPES: Readonly<Record<MediaRole, readonly string[]>> = {
+  full: ['image/jpeg'],
+  thumb: ['image/jpeg'],
+  video: ['video/mp4', 'video/quicktime'],
+  poster: ['image/jpeg'],
+};
+
+/** `POST /listings/:id/media/presign` body (§6.2): a photo sends `full` + `thumb`, a video `video` + `poster`. */
+export interface MediaPresignRequest {
+  type: MediaType;
+  /** Send the same id again to re-presign an item on retry. */
+  uploadId?: string;
+  files: Array<{ role: MediaRole; contentType: string; size: number }>;
+}
+
+/** `POST /listings/:id/media/presign` response: PUTs signed for 300 s with `Content-Type` and `Content-Length`. */
+export interface MediaPresignResult {
+  uploadId: string;
+  files: Array<{ role: MediaRole; key: string; url: string; expiresAt: string }>;
+}
+
+/** `POST /listings/:id/media` body (§6.2). `durationMs` is required for a video (≤ `LISTING_VIDEO_MAX_MS`). */
+export type MediaAttachRequest =
+  | { type: 'photo'; uploadId: string; keys: { full: string; thumb: string } }
+  | { type: 'video'; uploadId: string; keys: { video: string; poster: string }; durationMs: number };
+
+/** `POST /listings/:id/media` response (201): the attached item. */
+export type MediaAttachResult = ListingMediaItem;
+
+/** `PUT /listings/:id/media/order` body: every media id of the listing; the first photo is the cover (`400 MEDIA_ORDER_INVALID`). */
+export interface MediaOrderRequest {
+  ids: string[];
+}
+
+/** `PUT /listings/:id/media/order` response: the listing's media in the new order. */
+export type MediaOrderResult = ListingMediaItem[];
+
+/** `DELETE /listings/:id/media/:mediaId` response (seller). Objects and CDN copies go after commit, best-effort. */
+export interface MediaDeleteResult {
+  id: string;
+  deleted: true;
+}
+
+/** `purgeUrls` (`apps/api/src/lib/cdn-purge.ts`): no zone configured → `skipped`; any failure → `failed`, never thrown. */
+export const CDN_PURGE_RESULTS = ['ok', 'failed', 'skipped'] as const;
+export type CdnPurgeResult = (typeof CDN_PURGE_RESULTS)[number];
+
+// Seller routes already built (Batch 2b), typed for the app's `lib/listing-api.ts`.
+
+/** `POST /listings` body → `ListingOwnerView` (201). */
+export interface CreateListingRequest {
+  kind: ListingKind;
+}
+
+/** `POST /listings/:id/publish` and `POST /listings/:id/actions` response. */
+export interface ListingActionResult {
+  listing: ListingOwnerView;
+  /** Where the listing landed; for publish and the go-live actions `live` or `pending_review`. */
+  outcome: ListingStatus;
+}
+
+/** `POST /listings/:id/actions` body (§7.2). The note goes to the history row (and is the reason for unavailable / remove). */
+export interface ListingActionRequest {
+  action: SellerListingAction;
+  note?: string | null;
+}
+
+/** `DELETE /listings/:id` (drafts only) response. */
+export interface ListingDeleteResult {
+  id: string;
+  deleted: true;
+}
+
+/** `POST /listings/:id/reports` body (§8.4): `details` required for `something_else` (≤ 500). */
+export interface ListingReportRequest {
+  reason: ListingReportReason;
+  details?: string | null;
+}
+
+/** `POST /listings/:id/reports` response (201). */
+export interface ListingReportResult {
+  id: string;
+  status: 'open';
+}
+
+// `GET /listings/:id` → `ListingDetail`, or `ListingOwnerView` when `isOwner` · `GET /listings/:id/owner` →
+// `ListingOwnerView` · `GET /listings/mine?group=&page=` → `MyListingsView` · `PATCH /listings/:id` (`ListingPatch`) →
+// `ListingOwnerView` · `GET /businesses/:id/listings?limit=(1–50, default 20)&exclude=` → `ListingCard[]` ·
+// `GET /listings/:id/other-side` → `OtherSideResult`.
+
+// Admin (plan Task 16; roles §11.6: moderation and actions `moderator`; list and detail also `support`).
+
+/** Moderation queue page size (§11.1). */
+export const MODERATION_PAGE_SIZE = 50;
+
+/** `GET /admin/moderation/queue?tab=review|reported|decided&page=` (§11.1). */
+export interface AdminModerationQueue {
+  tab: ModerationTab;
+  rows: AdminModerationRow[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+/** `GET /admin/moderation/counts`. The nav badge `moderationWaiting` = `review + reported`. */
+export interface ModerationCounts {
+  review: number;
+  reported: number;
+}
+
+/** All listings page sizes (§11.4). */
+export const ADMIN_LISTING_PAGE_SIZES = [25, 50, 100] as const;
+export type AdminListingPageSize = (typeof ADMIN_LISTING_PAGE_SIZES)[number];
+
+/**
+ * `GET /admin/listings` filters (§11.4), parsed. In the URL (API and admin page alike) `status` and `flags` are
+ * comma-separated lists (`?status=live,paused`), `reported=1` means "has open reports", the rest are one value each:
+ * `?status=&kind=&machineCategoryId=&city=&side=&flags=&reported=&businessId=&q=&page=&pageSize=`.
+ */
+export interface AdminListingFilters {
+  /** Default: every status but `draft`. */
+  status?: ListingStatus[];
+  kind?: ListingKind;
+  /** A root (`machine_category`) node: listings anywhere under it. */
+  machineCategoryId?: string;
+  /** Exact city, case-insensitive. */
+  city?: string;
+  side?: PartSide;
+  /** Listings carrying any of these flags. */
+  flags?: ListingFlag[];
+  /** Only listings with at least one open report. */
+  reported?: boolean;
+  businessId?: string;
+  /** Title, normalised part number, `#ref` (`#100123`) or business name. */
+  q?: string;
+  page?: number;
+  pageSize?: AdminListingPageSize;
+}
+
+/** `GET /admin/listings` response. */
+export interface AdminListingList {
+  rows: AdminListingRow[];
+  total: number;
+  page: number;
+  pageSize: number;
+  /** The `businessId` filter's business, for the removable chip with its name; null without the filter. */
+  business: { id: string; name: string } | null;
+}
+
+/** `POST /admin/listings/:id/approve` body. `…/unhide` takes no body. */
+export interface AdminApproveRequest {
+  version: number;
+}
+
+/** `POST /admin/listings/:id/ask-for-changes` body (`ADMIN_REASON_MIN`–`ADMIN_REASON_MAX`). */
+export interface AdminAskForChangesRequest {
+  version: number;
+  message: string;
+}
+
+/** `POST /admin/listings/:id/reject` body. */
+export interface AdminRejectRequest {
+  version: number;
+  reason: string;
+}
+
+/** `POST /admin/listings/:id/hide` and `…/remove` body: no version, they always apply (R53). */
+export interface AdminReasonRequest {
+  reason: string;
+}
+
+/** `PATCH /admin/listings/:id` body (§11.3): at least one of category, side, fitments; edited fitments get `source = 'admin'`. */
+export interface AdminListingPatch {
+  version: number;
+  categoryId?: string;
+  side?: PartSide;
+  fitments?: NonNullable<ListingPatch['fitments']>;
+}
+
+/** How a moderator closes a listing's open reports. */
+export const REPORT_RESOLUTIONS = ['dismissed', 'actioned'] as const;
+export type ReportResolution = (typeof REPORT_RESOLUTIONS)[number];
+
+/** `POST /admin/listings/:id/reports/resolve` body: closes all open reports (`409 NO_OPEN_REPORTS` when none). */
+export interface AdminResolveReportsRequest {
+  outcome: ReportResolution;
+  note?: string | null;
+}
+
+/**
+ * Response of every single-listing admin action — approve, ask-for-changes, reject, hide, unhide, remove, `PATCH`,
+ * reports/resolve: the refreshed review screen, so the page re-renders without a second request.
+ */
+export type AdminListingActionResult = AdminListingDetail;
+
+/** `DELETE /admin/listings/:id/media/:mediaId` body: the reason (also the note when the last photo moves it to `rejected`, R52). */
+export type AdminMediaDeleteRequest = AdminReasonRequest;
+
+/** `DELETE /admin/listings/:id/media/:mediaId` response. On `failed` the page says "Deleted. The CDN copy may take a while to clear." */
+export interface AdminMediaDeleteResult {
+  purge: CdnPurgeResult;
+}
+
+/** Bulk actions on the all-listings page (§11.3, R34). */
+export const ADMIN_LISTING_BULK_ACTIONS = ['hide', 'remove'] as const;
+export type AdminListingBulkAction = (typeof ADMIN_LISTING_BULK_ACTIONS)[number];
+export const ADMIN_LISTING_BULK_MAX = 50;
+
+/** `POST /admin/listings/bulk` body: 1–`ADMIN_LISTING_BULK_MAX` ids. */
+export interface AdminListingBulkRequest {
+  action: AdminListingBulkAction;
+  ids: string[];
+  reason: string;
+}
+
+/** `POST /admin/listings/bulk` response: one transaction per listing; a skipped one carries its error code. */
+export interface AdminListingBulkResult {
+  done: string[];
+  skipped: Array<{ id: string; code: string }>;
+}
+
+/** `GET /admin/settings/expiry-impact?days=` (§11.5): live and rented listings the next job run would expire. */
+export interface SettingsExpiryImpact {
+  days: number;
+  count: number;
 }

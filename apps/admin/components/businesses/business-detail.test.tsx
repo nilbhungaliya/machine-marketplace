@@ -73,6 +73,7 @@ function business({ userStatus = 'active', verified = true, reviewOpen = false, 
     reviewOpen,
     history: { checks: [], proofs: [], verifications: [] },
     audit: [],
+    listingsCount: 0,
   };
 }
 

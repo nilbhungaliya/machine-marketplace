@@ -1,7 +1,9 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { CompositeScreenProps, NavigatorScreenParams } from '@react-navigation/native';
+import type { ListingStatus, MyListingsGroup } from '@mpm/shared-types';
 import type { FormMode } from '@/lib/onboarding-step';
+import type { SellStep } from '@/lib/sell-steps';
 
 export type RootStackParamList = {
   Welcome: undefined;
@@ -22,6 +24,28 @@ export type RootStackParamList = {
   /** `checkId`: "Can't get the code?" attaches the lookup; `gstin` prefills the field. */
   GstReviewForm: { checkId?: string; gstin?: string } | undefined;
   GstStatus: undefined;
+
+  // F2 + F3 listings (spec §15.1). Types only: each app task registers its own screens in root-navigator.tsx.
+  /** The sell wizard: one route pushed per step, so Back works naturally (Task 23; `preview` is Task 25). `mode: 'edit'` = a step opened from the Edit listing menu, with Save. */
+  Sell: { listingId: string; step: SellStep; mode?: 'create' | 'edit' };
+  /** After publish (Task 25): `outcome` is where it landed, `live` or `pending_review`. */
+  SellPublished: { listingId: string; outcome: ListingStatus };
+  /** The drafts list (Task 25), from the Post tab's "Drafts (n)" and My listings. */
+  MyDrafts: undefined;
+  /** The listing page (Task 26). */
+  Listing: { listingId: string };
+  /** Full-screen photo / video viewer of a listing, opened at `index` (Task 26). */
+  ListingMedia: { listingId: string; index: number };
+  /** A seller's public listings (Task 26). */
+  SellerListings: { businessId: string };
+  /** My listings (Task 27), opened on `group` (default `live`). */
+  MyListings: { group?: MyListingsGroup } | undefined;
+  /** The "Edit listing" menu of a published listing (Task 27). */
+  ListingEditMenu: { listingId: string };
+  /** Listings an admin removed in the last 30 days, read-only with the reason (Task 27). */
+  RemovedByTeam: undefined;
+  /** Other side matches (Task 28): from the listing page or from the seller's own listing (Published, manage sheet). */
+  OtherSide: { listingId: string; from: 'listing' | 'mine' };
 };
 
 export type AuthStackParamList = {

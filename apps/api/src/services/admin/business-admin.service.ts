@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, sql, type SQL } from 'drizzle-orm';
+import { and, count, desc, eq, inArray, ne, sql, type SQL } from 'drizzle-orm';
 import {
   normalizeGstin,
   type AccountStatus,
@@ -10,7 +10,7 @@ import {
   type VerificationStatus,
 } from '@mpm/shared-types';
 import type { Db, Tx } from '../../db/index.js';
-import { adminUsers, auditLog, businessVerifications, businesses, gstRepresentativeProofs, users } from '../../db/schema.js';
+import { adminUsers, auditLog, businessVerifications, businesses, gstRepresentativeProofs, listings, users } from '../../db/schema.js';
 import { ConflictError, NotFoundError } from '../../lib/errors.js';
 import { adminText } from '../../lib/admin-text.js';
 import { writeAudit } from '../audit.service.js';
@@ -194,6 +194,12 @@ export async function getBusinessDetail(conn: Db | Tx, id: string): Promise<Admi
     .orderBy(desc(auditLog.createdAt), desc(auditLog.id))
     .limit(AUDIT_LIMIT);
 
+  // Every status but `draft`: the set `/admin/listings?businessId=` shows by default (F2 spec §11.4, plan Task 16, I12).
+  const [listingTotal] = await conn
+    .select({ n: count() })
+    .from(listings)
+    .where(and(eq(listings.businessId, id), ne(listings.status, 'draft')));
+
   return {
     profile: await businessProfile(conn, id, owner?.name ?? null),
     verificationNote: b.verificationNote,
@@ -202,6 +208,7 @@ export async function getBusinessDetail(conn: Db | Tx, id: string): Promise<Admi
     reviewOpen: (await openReview(conn, id)) !== null,
     history: await gstHistory(conn, id),
     audit: audit.map((a) => ({ ...a, createdAt: a.createdAt.toISOString() })),
+    listingsCount: Number(listingTotal?.n ?? 0),
   };
 }
 

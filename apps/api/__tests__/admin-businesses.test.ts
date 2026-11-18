@@ -17,6 +17,7 @@ import {
   uniqueTestGstin,
   type TestBusinessUser,
 } from './_helpers/test-businesses.js';
+import { insertTestListing } from './_helpers/test-listings.js';
 
 // Admin businesses API (F1 + A2 spec §5.4, §5.4a, §8.2, §10; Task 11): list, detail, Revoke GST, Release GSTIN.
 
@@ -189,6 +190,24 @@ describe('admin businesses', () => {
 
     it('an unknown business → 404', async () => {
       expect((await call(officer.token, 'GET', `/admin/businesses/${randomUUID()}`)).status).toBe(404);
+    });
+
+    it("listingsCount: the business's listings in every status but draft (F2 plan Task 16, I12)", async () => {
+      const user = await newBusiness();
+      const other = await newBusiness();
+      const base = { businessId: user.businessId, userId: user.userId, kind: 'part' as const, categoryId: null };
+      await insertTestListing(db, { ...base, status: 'live' });
+      await insertTestListing(db, { ...base, status: 'sold' });
+      await insertTestListing(db, { ...base, status: 'removed' });
+      await insertTestListing(db, { ...base, status: 'draft' });
+      await insertTestListing(db, { businessId: other.businessId, userId: other.userId, kind: 'part', categoryId: null });
+
+      const res = await call(moderator.token, 'GET', `/admin/businesses/${user.businessId}`);
+      expect(res.status).toBe(200);
+      expect((res.body.data as AdminBusinessDetail).listingsCount).toBe(3);
+
+      const none = await call(moderator.token, 'GET', `/admin/businesses/${(await newBusiness()).businessId}`);
+      expect((none.body.data as AdminBusinessDetail).listingsCount).toBe(0);
     });
   });
 

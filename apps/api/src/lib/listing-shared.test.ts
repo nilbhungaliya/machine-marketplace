@@ -20,6 +20,7 @@ import {
   rentalDayEquivalent,
   sanityFlags,
   sellerActions,
+  adminActions,
   validateSettings,
   type Fitment,
   type ListingKind,
@@ -289,6 +290,14 @@ describe('LISTING_TRANSITIONS (§7.2)', () => {
     expect(sellerActions('live', 'machine')).not.toContain('mark_rented');
     expect(sellerActions('live', 'part')).toEqual(['pause', 'renew', 'mark_sold', 'mark_unavailable', 'remove']);
     expect(sellerActions('draft', 'part')).toEqual([]);
+  });
+
+  it('gives a moderator the actions of the status (admin action bar, §11.3)', () => {
+    expect(adminActions('pending_review', 'part')).toEqual(['approve', 'ask_for_changes', 'reject', 'remove']);
+    expect(adminActions('live', 'part')).toEqual(['hide', 'remove']);
+    expect(adminActions('hidden', 'machine')).toEqual(['unhide', 'remove']);
+    expect(adminActions('removed', 'part')).toEqual([]);
+    expect(adminActions('draft', 'part')).toEqual([]);
   });
 
   it('has no duplicate action anywhere (decision 8)', () => {

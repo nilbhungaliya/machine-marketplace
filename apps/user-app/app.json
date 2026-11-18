@@ -63,10 +63,12 @@
         {
           "photosPermission": "Machine Parts uses your photos when you add pictures of a part or machine you are listing.",
           "cameraPermission": "Machine Parts uses the camera to photograph a part or machine, its nameplate and its condition.",
-          "microphonePermission": false
+          "microphonePermission": "Machine Parts uses the microphone to record sound with a video of a machine you are listing."
         }
       ],
-      "expo-localization"
+      "expo-localization",
+      "expo-video",
+      "react-native-compressor"
     ]
   }
 }

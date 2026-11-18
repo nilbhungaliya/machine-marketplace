@@ -47,6 +47,26 @@ export const GST_EVENTS = {
   filesAddFailed: 'gst_files_add_failed',
 } as const;
 
+/**
+ * Sell wizard and listings (F2 + F3; spec §15.5). Properties: ids, kinds, steps, statuses and error codes only — never
+ * a title, part number, price or address.
+ * - `sellStarted` (`kind`), `sellStepCompleted` (`kind`, `step`), `sellMediaUploadFailed` (`type`, `code`)
+ * - `published` (`outcome`: `live` | `pending_review`), `publishFailed` (`reason`: the error code)
+ * - `actionDone` (`action`), `contactTapped`, `fitChecked` (`result`), `otherSideOpened` (`from`), `reported` (`reason`)
+ */
+export const LISTING_EVENTS = {
+  sellStarted: 'sell_started',
+  sellStepCompleted: 'sell_step_completed',
+  sellMediaUploadFailed: 'sell_media_upload_failed',
+  published: 'listing_published',
+  publishFailed: 'listing_publish_failed',
+  actionDone: 'listing_action_done',
+  contactTapped: 'listing_contact_tapped',
+  fitChecked: 'listing_fit_checked',
+  otherSideOpened: 'listing_other_side_opened',
+  reported: 'listing_reported',
+} as const;
+
 export const SETTINGS_EVENTS = {
   languageChanged: 'settings_language_changed',
   themeChanged: 'settings_theme_changed',
@@ -54,9 +74,10 @@ export const SETTINGS_EVENTS = {
 
 /**
  * Route params allowed onto screen events. Everything else is dropped, so a param
- * carrying a phone or a price never reaches analytics by accident.
+ * carrying a phone or a price never reaches analytics by accident. Ids only (plus `mode` and `category`): never the
+ * listing routes' `step`, `group`, `from`, `outcome` or `index`.
  */
-export const SCREEN_PARAM_ALLOWLIST = ['listingId', 'partRequestId', 'dealId', 'category', 'mode'] as const;
+export const SCREEN_PARAM_ALLOWLIST = ['listingId', 'businessId', 'partRequestId', 'dealId', 'category', 'mode'] as const;
 
 export function pickAllowedParams(params: unknown): Record<string, string | number> {
   if (!params || typeof params !== 'object') return {};
