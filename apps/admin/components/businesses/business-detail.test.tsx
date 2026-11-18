@@ -153,4 +153,10 @@ describe('BusinessDetail', () => {
     expect(screen.getByRole('link', { name: /Open in Google Maps/ }).getAttribute('href'))
       .toBe('https://www.google.com/maps?q=21.08,72.88');
   });
+
+  it('links "Listings (n)" to the all-listings page filtered to this business (F2 spec §11.4)', () => {
+    renderDetail('support', { ...business(), listingsCount: 2 });
+    const link = screen.getByRole('link', { name: 'Listings (2)' });
+    expect(link.getAttribute('href')).toMatch(/^\/listings\/?\?businessId=b1$/);
+  });
 });

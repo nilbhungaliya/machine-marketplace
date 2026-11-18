@@ -30,7 +30,7 @@ export const NAV_DASHBOARD: NavItem = { href: '/', label: 'Dashboard', icon: Lay
 // Mirrors the admin panel modules in the product scope (docs/product-scope.txt, "Admin Panel", A1–A6).
 export const NAV_GROUPS: NavGroup[] = [
   { id: 'queues', label: 'Queues', items: [
-    { href: '/moderation', label: 'Listing moderation', icon: ClipboardCheck, roles: ['moderator'] },
+    { href: '/moderation', label: 'Listing moderation', icon: ClipboardCheck, roles: ['moderator'], badgeKey: 'moderationWaiting' },
     { href: '/verification', label: 'Business verification', icon: ShieldCheck, roles: ['verification_officer'], badgeKey: 'verificationWaiting' },
     { href: '/reports', label: 'Reports & flags', icon: Flag, roles: ['moderator', 'support'] },
   ] },

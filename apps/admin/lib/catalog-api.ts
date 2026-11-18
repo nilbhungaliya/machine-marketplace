@@ -161,7 +161,8 @@ export const fetchAdminMasterData = () => api.get<MasterData>('/admin/master-dat
 
 export const createUnit = (input: { key: string; label: string; decimals: number }) =>
   api.post<Unit>('/admin/master-data/units', input);
-export const updateUnit = (id: string, patch: { label?: string; decimals?: number; isActive?: boolean }) =>
+/** `isMachineUnit` (F2): machines and rentals use the first active unit with it on. */
+export const updateUnit = (id: string, patch: { label?: string; decimals?: number; isActive?: boolean; isMachineUnit?: boolean }) =>
   api.patch<Unit>(`/admin/master-data/units/${id}`, patch);
 export const reorderUnits = (orderedIds: string[]) => api.post<null>('/admin/master-data/units/reorder', { orderedIds });
 

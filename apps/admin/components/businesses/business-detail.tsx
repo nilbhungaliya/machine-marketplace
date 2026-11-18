@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, type ReactNode } from 'react';
-import { ExternalLink, MapPin } from 'lucide-react';
+import Link from 'next/link';
+import { ExternalLink, MapPin, Package } from 'lucide-react';
 import type { AdminAuditEntry, AdminBusinessDetail, GstState } from '@mpm/shared-types';
 import StatusBadge from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
@@ -107,7 +108,17 @@ export function BusinessDetail({ business, categoryNames, onChanged }: {
   return (
     <div className="space-y-4">
       <div className="grid items-start gap-4 lg:grid-cols-2">
-        <Panel title="Business">
+        <Panel
+          title="Business"
+          action={
+            <Link
+              href={`/listings/?businessId=${p.id}`}
+              className="inline-flex items-center gap-1 text-sm font-bold text-brand-700 hover:underline"
+            >
+              <Package size={13} aria-hidden /> Listings ({business.listingsCount})
+            </Link>
+          }
+        >
           <Facts
             rows={[
               ['Shown as', p.displayName],

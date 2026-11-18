@@ -1,13 +1,16 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { fetchModerationWaiting } from './listings-api';
 import { fetchWaitingCount } from './verification-api';
 
 /** Counts a menu item can show beside its label (`NavItem.badgeKey`). */
-export type NavBadgeKey = 'verificationWaiting';
+export type NavBadgeKey = 'verificationWaiting' | 'moderationWaiting';
 
 const FETCHERS: Record<NavBadgeKey, () => Promise<number>> = {
   verificationWaiting: fetchWaitingCount,
+  /** Listings waiting for review plus listings with open reports (F2 spec §11.1). */
+  moderationWaiting: fetchModerationWaiting,
 };
 
 /** How often the counts are fetched again while the tab is visible. */
@@ -15,7 +18,7 @@ export const NAV_BADGE_POLL_MS = 60_000;
 
 const REFRESH_EVENT = 'mpm:nav-badges';
 
-/** Ask the sidebar to fetch its counts again, e.g. after a review is decided. */
+/** Ask the sidebar to fetch its counts again, e.g. after a review or a listing is decided. */
 export function refreshNavBadges(): void {
   if (typeof window !== 'undefined') window.dispatchEvent(new Event(REFRESH_EVENT));
 }

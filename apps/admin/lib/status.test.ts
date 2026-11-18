@@ -14,3 +14,23 @@ describe('statusTone', () => {
     expect(statusTone('something_new')).toBe('gray');
   });
 });
+
+describe('listing statuses (F2 spec §7.1, ruling (c))', () => {
+  it('every listing status has its own tone and label, hidden and expired included', async () => {
+    const { LISTING_STATUSES } = await import('@mpm/shared-types');
+    const { LISTING_STATUS_TONES, LISTING_STATUS_LABELS, statusLabel } = await import('./status');
+    for (const s of LISTING_STATUSES) {
+      expect(LISTING_STATUS_TONES[s], s).toBeDefined();
+      expect(LISTING_STATUS_LABELS[s], s).toBeTruthy();
+    }
+    expect(statusLabel('hidden')).toBe('Hidden');
+    expect(statusLabel('expired')).toBe('Expired');
+  });
+
+  it('hidden is red (taken down), expired grey, pending review amber, live green', () => {
+    expect(statusTone('hidden')).toBe('red');
+    expect(statusTone('expired')).toBe('gray');
+    expect(statusTone('pending_review')).toBe('amber');
+    expect(statusTone('live')).toBe('green');
+  });
+});

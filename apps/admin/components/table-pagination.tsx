@@ -11,6 +11,8 @@ interface TablePaginationProps {
   total: number;
   onPageChange: (page: number) => void;
   onPageSizeChange?: (size: number) => void;
+  /** Rows-per-page choices; the shared PAGE_SIZE_OPTIONS when absent. */
+  pageSizeOptions?: readonly number[];
   /** Plural noun for the count line, e.g. "customers". */
   itemLabel?: string;
 }
@@ -47,6 +49,7 @@ export default function TablePagination({
   total,
   onPageChange,
   onPageSizeChange,
+  pageSizeOptions = PAGE_SIZE_OPTIONS,
   itemLabel = 'records',
 }: TablePaginationProps) {
   const pages = Math.max(1, Math.ceil(total / pageSize));
@@ -82,7 +85,7 @@ export default function TablePagination({
               onChange={(e) => onPageSizeChange(Number(e.target.value))}
               className={cn(inputCls, 'h-8 w-auto py-0 pl-3 text-gray-600')}
             >
-              {PAGE_SIZE_OPTIONS.map((n) => (
+              {pageSizeOptions.map((n) => (
                 <option key={n} value={n}>
                   {n}
                 </option>

@@ -3,7 +3,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, renderHook, waitFor } from '@testing-library/react';
 
 vi.mock('./verification-api', () => ({ fetchWaitingCount: vi.fn() }));
+vi.mock('./listings-api', () => ({ fetchModerationWaiting: vi.fn() }));
 import { fetchWaitingCount } from './verification-api';
+import { fetchModerationWaiting } from './listings-api';
 import { NAV_BADGE_POLL_MS, badgeText, refreshNavBadges, useNavBadges } from './nav-badges';
 
 afterEach(() => {
@@ -41,5 +43,20 @@ describe('useNavBadges', () => {
     expect(fetchWaitingCount).toHaveBeenCalledTimes(3);
     act(() => { vi.advanceTimersByTime(NAV_BADGE_POLL_MS); });
     expect(fetchWaitingCount).toHaveBeenCalledTimes(4);
+  });
+});
+
+describe('moderationWaiting (F2 spec §11.1)', () => {
+  it('shows the Review + Reported count the API sums, nothing for zero', () => {
+    expect(badgeText('moderationWaiting', 7)).toBe('7');
+    expect(badgeText('moderationWaiting', 0)).toBeNull();
+  });
+
+  it('is fetched from the moderation counts only for the keys asked for', async () => {
+    vi.mocked(fetchModerationWaiting).mockResolvedValue(5);
+    vi.mocked(fetchWaitingCount).mockResolvedValue(2);
+    const { result } = renderHook(() => useNavBadges(['moderationWaiting']));
+    await waitFor(() => expect(result.current.moderationWaiting).toBe(5));
+    expect(fetchWaitingCount).not.toHaveBeenCalled();
   });
 });

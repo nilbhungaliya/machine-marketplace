@@ -48,6 +48,19 @@ export interface KeyedExtras<T, X> {
   same: (a: X, b: X) => boolean;
 }
 
+/** An on / off column besides Active, saved at once (e.g. a unit's machine-unit flag). */
+export interface KeyedSwitch<T> {
+  key: string;
+  header: string;
+  /** Tooltip on the header. */
+  headerTitle?: string;
+  /** The switch's name after the item's label: "Machines machine unit". */
+  name: string;
+  isOn: (item: T) => boolean;
+  /** Throw to show the error; the editor stays usable. */
+  onToggle: (item: T, next: boolean) => Promise<void>;
+}
+
 interface KeyedListEditorProps<T extends KeyedItem, X = undefined> {
   /** Singular, lower case: "unit", "condition". */
   noun: string;
@@ -68,6 +81,8 @@ interface KeyedListEditorProps<T extends KeyedItem, X = undefined> {
   /** Columns between the label/description and the active switch. */
   extraColumns?: Column<T>[];
   extras?: KeyedExtras<T, X>;
+  /** Switch columns after the extra columns, before Active. */
+  switches?: KeyedSwitch<T>[];
   emptyMessage?: string;
 }
 
@@ -101,9 +116,42 @@ export const unitDecimalsExtras: KeyedExtras<Unit, number> = {
   ),
 };
 
+/**
+ * Units: the "Machine unit" switch (F2 spec §4.2, R48). Machines and rentals are counted in the first active unit with
+ * it on; saved through the unit PATCH (`isMachineUnit`).
+ */
+export const unitMachineSwitch = (onToggle: (unit: Unit, next: boolean) => Promise<void>): KeyedSwitch<Unit> => ({
+  key: 'isMachineUnit',
+  header: 'Machine unit',
+  headerTitle: 'Machines and rentals are counted in the first active unit with this on',
+  name: 'machine unit',
+  isOn: (u) => !!u.isMachineUnit,
+  onToggle,
+});
+
+function SwitchButton({ on, label, disabled, onClick }: { on: boolean; label: string; disabled: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      aria-label={label}
+      disabled={disabled}
+      onClick={onClick}
+      className={cn(
+        'relative inline-flex h-6 w-10 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-1 disabled:opacity-50',
+        on ? 'bg-brand-600' : 'bg-gray-200',
+      )}
+    >
+      <span className={cn('inline-block h-[18px] w-[18px] rounded-full bg-white shadow-sm transition-transform', on ? 'translate-x-[19px]' : 'translate-x-[3px]')} />
+    </button>
+  );
+}
+
 /** An ordered master-data list: key, label, active switch, up/down; add and edit in a dialog. Keys never change. */
 export function KeyedListEditor<T extends KeyedItem, X = undefined>({
-  noun, items, onCreate, onUpdate, onReorder, onReload, withDescription = false, extraColumns = [], extras, emptyMessage,
+  noun, items, onCreate, onUpdate, onReorder, onReload, withDescription = false, extraColumns = [], extras, switches = [],
+  emptyMessage,
 }: KeyedListEditorProps<T, X>) {
   const [dialog, setDialog] = useState<null | { item: T | null }>(null);
   const [busy, setBusy] = useState(false);
@@ -147,24 +195,29 @@ export function KeyedListEditor<T extends KeyedItem, X = undefined>({
         }]
       : []),
     ...extraColumns,
+    ...switches.map((sw): Column<T> => ({
+      key: sw.key,
+      header: sw.header,
+      headerTitle: sw.headerTitle,
+      render: (r) => (
+        <SwitchButton
+          on={sw.isOn(r)}
+          label={`${r.label} ${sw.name}`}
+          disabled={busy}
+          onClick={() => void run(() => sw.onToggle(r, !sw.isOn(r)))}
+        />
+      ),
+    })),
     {
       key: 'isActive',
       header: 'Active',
       render: (r) => (
-        <button
-          type="button"
-          role="switch"
-          aria-checked={r.isActive}
-          aria-label={`${r.label} active`}
+        <SwitchButton
+          on={r.isActive}
+          label={`${r.label} active`}
           disabled={busy}
           onClick={() => void run(() => onUpdate(r, { isActive: !r.isActive }))}
-          className={cn(
-            'relative inline-flex h-6 w-10 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-1 disabled:opacity-50',
-            r.isActive ? 'bg-brand-600' : 'bg-gray-200',
-          )}
-        >
-          <span className={cn('inline-block h-[18px] w-[18px] rounded-full bg-white shadow-sm transition-transform', r.isActive ? 'translate-x-[19px]' : 'translate-x-[3px]')} />
-        </button>
+        />
       ),
     },
     {

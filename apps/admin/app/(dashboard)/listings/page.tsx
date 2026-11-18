@@ -1,15 +1,17 @@
-import ModulePlaceholder from '@/components/module-placeholder';
+'use client';
 
-export default function Page() {
+import { ListingsTable } from '@/components/listings/listings-table';
+import { PageHeader } from '@/components/ui/page-header';
+
+/** A3 Parts & machinery (F2 spec §11.4): every listing in every status but drafts; the sold / unavailable monitor is the status filter. */
+export default function ListingsPage() {
   return (
-    <ModulePlaceholder
-      title="Parts & machinery"
-      description="All listings across every status (scope A3)"
-      scope={[
-        "Filter by kind (part / machine / rental), status, category, brand, condition, side, city",
-        "Edit / hide / remove listings",
-        "Monitor sold / unavailable listings",
-      ]}
-    />
+    <div>
+      <PageHeader
+        title="Parts & machinery"
+        description="Every listing across every status. Search by title, part number, #ref or business; open one to review it, hide it or remove it."
+      />
+      <ListingsTable />
+    </div>
   );
 }
