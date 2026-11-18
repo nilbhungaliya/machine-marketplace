@@ -111,6 +111,23 @@ function isNotFound(err: unknown): boolean {
   return e?.$metadata?.httpStatusCode === 404 || e?.name === 'NotFound' || e?.name === 'NoSuchKey';
 }
 
+/** An `If-Match` / `x-amz-copy-source-if-match` condition failed: the object changed since its ETag was read. */
+function isPreconditionFailed(err: unknown): boolean {
+  const e = err as { name?: string; $metadata?: { httpStatusCode?: number } } | null;
+  return e?.$metadata?.httpStatusCode === 412 || e?.name === 'PreconditionFailed';
+}
+
+/**
+ * The object's bytes changed after they were checked (its ETag no longer matches). A presigned PUT can be replayed for
+ * its 300 s, so the listing media path reads and copies only the version it checked; the caller asks for a new upload.
+ */
+export class PreconditionFailedError extends Error {
+  constructor(public readonly key: string) {
+    super('The object changed since it was checked');
+    this.name = 'PreconditionFailedError';
+  }
+}
+
 /** R2 couldn't be reached or answered with a 5xx: the client may retry. A 4xx (a bug or a bad credential) is re-thrown. */
 function rethrowStorageError(err: unknown): never {
   const status = (err as { $metadata?: { httpStatusCode?: number } } | null)?.$metadata?.httpStatusCode;
@@ -190,7 +207,7 @@ async function readToEnd(body: Readable): Promise<Buffer> {
  */
 export async function getObjectBytes(
   key: string,
-  opts: { range?: { start: number; end: number }; timeoutMs?: number } = {},
+  opts: { range?: { start: number; end: number }; timeoutMs?: number; ifMatch?: string } = {},
 ): Promise<Buffer | null> {
   requireStorage();
   assertSafeKey(key);
@@ -200,6 +217,7 @@ export async function getObjectBytes(
         Bucket: privateBucket(),
         Key: key,
         ...(opts.range ? { Range: `bytes=${opts.range.start}-${opts.range.end}` } : {}),
+        ...(opts.ifMatch ? { IfMatch: opts.ifMatch } : {}),
       }),
       { abortSignal: AbortSignal.timeout(opts.timeoutMs ?? TRANSFER_TIMEOUT_MS) },
     );
@@ -207,6 +225,7 @@ export async function getObjectBytes(
     return await readToEnd(out.Body as unknown as Readable);
   } catch (err) {
     if (isNotFound(err)) return null;
+    if (isPreconditionFailed(err)) throw new PreconditionFailedError(key);
     // A range starting past the end of an empty object: there are no bytes, not an error.
     if ((err as { $metadata?: { httpStatusCode?: number } } | null)?.$metadata?.httpStatusCode === 416) return Buffer.alloc(0);
     rethrowStorageError(err);
@@ -299,7 +318,7 @@ function publicBucket(): string {
 export async function copyToPublic(
   fromPrivateKey: string,
   toPublicKey: string,
-  opts: { contentType: string; cacheControl?: string },
+  opts: { contentType: string; cacheControl?: string; ifMatch?: string },
 ): Promise<void> {
   requireMediaStorage();
   assertSafeKey(fromPrivateKey);
@@ -313,11 +332,13 @@ export async function copyToPublic(
         MetadataDirective: 'REPLACE',
         ContentType: opts.contentType,
         CacheControl: opts.cacheControl ?? PUBLIC_MEDIA_CACHE_CONTROL,
+        ...(opts.ifMatch ? { CopySourceIfMatch: opts.ifMatch } : {}),
       }),
       { abortSignal: AbortSignal.timeout(COPY_TIMEOUT_MS) },
     );
   } catch (err) {
     if (isNotFound(err)) throw new ObjectMissingError(fromPrivateKey);
+    if (isPreconditionFailed(err)) throw new PreconditionFailedError(fromPrivateKey);
     rethrowStorageError(err);
   }
 }

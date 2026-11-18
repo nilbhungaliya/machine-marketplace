@@ -37,19 +37,25 @@ export function sniffMedia(bytes: Uint8Array, role: MediaRole): SniffedMedia | n
  * What the header segments of a JPEG say about metadata, walking them in the first 64 KB until the image data starts
  * (`SOS`) or the image ends (`EOI`):
  * - `exif`: an `APP1` segment starts with `Exif\0\0` (the EXIF block that carries GPS);
- * - `clean`: the header ended without one;
+ * - `metadata`: any other application segment that can carry location or provenance data: every `APPn` except
+ *   `APP0` (JFIF), `APP2` (ICC profile) and `APP14` (Adobe colour transform) — so XMP and extended XMP (`APP1`),
+ *   JUMBF / C2PA (`APP11`) and Photoshop IPTC (`APP13`) among them (R46: location data is never public);
+ * - `clean`: the header ended with neither;
  * - `incomplete`: the walk ran out of bytes (truncated, malformed, or a header longer than 64 KB), so the answer is
  *   unknown. The attach path refuses that too; `jpegHasExif` answers false for it.
  * Not a JPEG → `clean` (nothing to walk; the sniff refuses it anyway).
  */
-export type JpegHeaderStatus = 'exif' | 'clean' | 'incomplete';
+export type JpegHeaderStatus = 'exif' | 'metadata' | 'clean' | 'incomplete';
 
 const EXIF_ID = [0x45, 0x78, 0x69, 0x66, 0x00, 0x00]; // "Exif\0\0"
+/** APP0 (JFIF), APP2 (ICC) and APP14 (Adobe): the application segments a manipulator-made JPEG may carry. */
+const ALLOWED_APP_MARKERS: ReadonlySet<number> = new Set([0xe0, 0xe2, 0xee]);
 
 export function jpegHeaderStatus(input: Uint8Array): JpegHeaderStatus {
   if (!isJpeg(input)) return 'clean';
   const b = input.subarray(0, MEDIA_SNIFF_BYTES);
   let i = 2; // past SOI (FF D8)
+  let metadata = false;
   while (i < b.length) {
     if (b[i] !== 0xff) return 'incomplete';
     // Fill bytes: any number of FF before the marker code.
@@ -57,13 +63,15 @@ export function jpegHeaderStatus(input: Uint8Array): JpegHeaderStatus {
     if (i >= b.length) return 'incomplete';
     const marker = b[i]!;
     i++;
-    if (marker === 0xda || marker === 0xd9) return 'clean'; // SOS: image data follows; EOI: the end
+    if (marker === 0xda || marker === 0xd9) return metadata ? 'metadata' : 'clean'; // SOS: image data follows; EOI: the end
     // Markers without a length: TEM and RST0–7 (SOI again would be malformed, treated the same way).
     if (marker === 0x01 || (marker >= 0xd0 && marker <= 0xd8)) continue;
     if (i + 2 > b.length) return 'incomplete';
     const length = (b[i]! << 8) | b[i + 1]!; // includes its own two bytes
     if (length < 2) return 'incomplete';
     if (marker === 0xe1 && i + 2 + EXIF_ID.length <= b.length && EXIF_ID.every((v, k) => b[i + 2 + k] === v)) return 'exif';
+    // Keep walking: an EXIF segment later in the header still answers `exif`.
+    if (marker >= 0xe0 && marker <= 0xef && !ALLOWED_APP_MARKERS.has(marker)) metadata = true;
     i += length;
   }
   return 'incomplete';

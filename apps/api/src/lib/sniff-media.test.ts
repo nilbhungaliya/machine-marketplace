@@ -110,3 +110,43 @@ describe('jpegHasExif', () => {
     expect(jpegHasExif(ftyp('isom'))).toBe(false);
   });
 });
+
+describe('jpegHeaderStatus: metadata segments (R46)', () => {
+  const APP1_XMP_EXT = segment(0xe1, bytes('http://ns.adobe.com/xmp/extension/\0', 'ABCDEF0123456789ABCDEF0123456789', [0, 0, 0, 9, 0, 0, 0, 0], '<gps/>'));
+  const APP2_ICC = segment(0xe2, bytes('ICC_PROFILE\0', [1, 1], Buffer.alloc(40)));
+  const APP11_JUMBF = segment(0xeb, bytes('JP', [0, 0, 0, 1], 'jumb', 'c2pa'));
+  const APP13_IPTC = segment(0xed, bytes('Photoshop 3.0\0', '8BIM', [4, 4], Buffer.alloc(12)));
+  const APP14_ADOBE = segment(0xee, bytes('Adobe', [0, 100, 0, 0, 0, 0, 1]));
+  const DHT = segment(0xc4, Buffer.alloc(30));
+  const SOF0 = segment(0xc0, bytes([8, 0, 16, 0, 16, 3, 1, 0x22, 0, 2, 0x11, 1, 3, 0x11, 1]));
+
+  it('an APP1 XMP or extended XMP packet → metadata (jpegHasExif stays false)', () => {
+    expect(jpegHeaderStatus(jpeg(APP0_JFIF, APP1_XMP))).toBe('metadata');
+    expect(jpegHeaderStatus(jpeg(APP0_JFIF, APP1_XMP_EXT))).toBe('metadata');
+    expect(jpegHasExif(jpeg(APP0_JFIF, APP1_XMP_EXT))).toBe(false);
+  });
+
+  it('APP11 (JUMBF / C2PA) and APP13 (Photoshop IPTC) → metadata', () => {
+    expect(jpegHeaderStatus(jpeg(APP0_JFIF, APP11_JUMBF))).toBe('metadata');
+    expect(jpegHeaderStatus(jpeg(APP0_JFIF, APP13_IPTC))).toBe('metadata');
+  });
+
+  it('every other APPn except APP0, APP2 and APP14 → metadata', () => {
+    for (const marker of [0xe3, 0xe4, 0xe5, 0xe6, 0xe7, 0xe8, 0xe9, 0xea, 0xec, 0xef]) {
+      expect(jpegHeaderStatus(jpeg(APP0_JFIF, segment(marker, 'anything'))), marker.toString(16)).toBe('metadata');
+    }
+  });
+
+  it('APP0 JFIF, APP2 ICC and APP14 Adobe are accepted', () => {
+    expect(jpegHeaderStatus(jpeg(APP0_JFIF, APP2_ICC, APP14_ADOBE))).toBe('clean');
+  });
+
+  it("expo-image-manipulator's output shape (SOI, APP0 JFIF, DQT, SOF0, DHT, SOS) is clean", () => {
+    expect(jpegHeaderStatus(jpeg(APP0_JFIF, DQT, DQT, SOF0, DHT, DHT, DHT, DHT))).toBe('clean');
+    expect(sniffMedia(jpeg(APP0_JFIF, DQT, SOF0, DHT), 'full')).toEqual({ ext: 'jpg', contentType: 'image/jpeg' });
+  });
+
+  it('EXIF still answers exif', () => {
+    expect(jpegHeaderStatus(jpeg(APP0_JFIF, APP1_EXIF))).toBe('exif');
+  });
+});

@@ -437,6 +437,42 @@ describe('POST /listings/:id/media (attach)', () => {
     expect((await attach(seller, id, body)).json().code).toBe('MEDIA_METADATA');
   });
 
+  it('a JPEG with an XMP packet (APP1) → 400 MEDIA_METADATA, nothing copied', async () => {
+    const id = await listingOf(seller);
+    const body = photoBody(seller, id);
+    bytesOf.set(body.keys.full, b([0xff, 0xd8], seg(0xe1, b('http://ns.adobe.com/xap/1.0/\0', '<exif:GPSLatitude>21,10N</exif:GPSLatitude>')).toString('latin1'), SOS.toString('latin1'), [0xff, 0xd9]));
+    const res = await attach(seller, id, body);
+    expect(res.statusCode).toBe(400);
+    expect(res.json()).toMatchObject({ code: 'MEDIA_METADATA', details: { role: 'full' } });
+    expect(m.copy).not.toHaveBeenCalled();
+  });
+
+  it("passes HEAD's ETag to the range read (IfMatch) and the copy (CopySourceIfMatch)", async () => {
+    const id = await listingOf(seller);
+    const body = photoBody(seller, id);
+    m.head.mockImplementation(async (key) => ({ contentLength: 50_000, contentType: null, etag: `"etag-${key.slice(-8)}"` }));
+    expect((await attach(seller, id, body)).statusCode).toBe(201);
+    for (const key of [body.keys.full, body.keys.thumb]) {
+      const etag = `"etag-${key.slice(-8)}"`;
+      expect(m.bytes).toHaveBeenCalledWith(key, { range: { start: 0, end: 65_535 }, ifMatch: etag });
+      expect(m.copy).toHaveBeenCalledWith(key, expect.stringMatching(/^listings\//), { contentType: 'image/jpeg', ifMatch: etag });
+    }
+  });
+
+  it('bytes changed after HEAD (a precondition failure on the read or the copy) → 400 MEDIA_MISSING, copies deleted', async () => {
+    const id = await listingOf(seller);
+    m.head.mockResolvedValue({ contentLength: 50_000, contentType: null, etag: '"v1"' });
+    m.bytes.mockRejectedValueOnce(new storage.PreconditionFailedError('x'));
+    expect((await attach(seller, id, photoBody(seller, id))).json().code).toBe('MEDIA_MISSING');
+
+    m.copy.mockResolvedValueOnce(undefined).mockRejectedValueOnce(new storage.PreconditionFailedError('x'));
+    const res = await attach(seller, id, photoBody(seller, id));
+    expect(res.statusCode).toBe(400);
+    expect(res.json().code).toBe('MEDIA_MISSING');
+    expect(m.delPublic).toHaveBeenCalledWith(m.copy.mock.calls[0]![1]);
+    expect(await mediaOf(id)).toHaveLength(1);
+  });
+
   it('a video over 60.5 s or without a duration → 400 VIDEO_TOO_LONG and no storage call', async () => {
     const id = await listingOf(seller);
     for (const durationMs of [61_000, 60_501, null]) {

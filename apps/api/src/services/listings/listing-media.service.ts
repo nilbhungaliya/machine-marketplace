@@ -31,6 +31,7 @@ import { Sentry } from '../../lib/sentry.js';
 import { MEDIA_SNIFF_BYTES, jpegHeaderStatus, sniffMedia, type SniffedMedia } from '../../lib/sniff-media.js';
 import {
   ObjectMissingError,
+  PreconditionFailedError,
   copyToPublic,
   deleteObject,
   deletePublicObject,
@@ -261,9 +262,15 @@ interface CheckedFile {
   incomingKey: string;
   size: number;
   sniffed: SniffedMedia;
+  /** HEAD's ETag: the range read and the copy are conditional on it, so only the checked bytes go public. */
+  etag: string | null;
 }
 
-/** Head, size, sniff and metadata check of one incoming file (§6.2 step 3, §6.3, §6.4). */
+/**
+ * Head, size, sniff and metadata check of one incoming file (§6.2 step 3, §6.3, §6.4). A presigned PUT can be
+ * replayed for its 300 s, so the range read is conditional on HEAD's ETag (and the copy later too): bytes changed in
+ * between → `400 MEDIA_MISSING`, and the app uploads again.
+ */
 async function checkIncoming(role: MediaRole, key: string): Promise<CheckedFile> {
   let head: Awaited<ReturnType<typeof headObject>>;
   try {
@@ -275,18 +282,28 @@ async function checkIncoming(role: MediaRole, key: string): Promise<CheckedFile>
   if (!head) throw mediaMissing(role);
   if (head.contentLength > MEDIA_MAX_BYTES[role]) throw tooLarge(role);
   if (head.contentLength <= 0) throw mediaType();
-  const first = await getObjectBytes(key, { range: { start: 0, end: MEDIA_SNIFF_BYTES - 1 } });
+  let first: Buffer | null;
+  try {
+    first = await getObjectBytes(key, {
+      range: { start: 0, end: MEDIA_SNIFF_BYTES - 1 },
+      ...(head.etag ? { ifMatch: head.etag } : {}),
+    });
+  } catch (err) {
+    if (err instanceof PreconditionFailedError) throw mediaMissing(role);
+    throw err;
+  }
   if (first === null) throw mediaMissing(role);
   const sniffed = sniffMedia(first, role);
   if (!sniffed) throw mediaType();
   if (sniffed.ext === 'jpg') {
     const header = jpegHeaderStatus(first);
-    // `incomplete`: the header didn't end in the first 64 KB (or is broken), so EXIF can't be ruled out: refused too.
+    // `exif` and `metadata` (XMP, IPTC, JUMBF / C2PA… R46); `incomplete`: the header didn't end in the first 64 KB (or
+    // is broken), so neither can be ruled out: refused too.
     if (header !== 'clean') {
       throw new ValidationError('This photo still carries its camera data. Take or pick it again in the app.', { role }, 'MEDIA_METADATA');
     }
   }
-  return { role, incomingKey: key, size: head.contentLength, sniffed };
+  return { role, incomingKey: key, size: head.contentLength, sniffed, etag: head.etag };
 }
 
 /**
@@ -343,9 +360,12 @@ export async function attachMedia(
     for (const file of checked) {
       const target = `listings/${listingId}/${mediaId}/${file.role}.${file.sniffed.ext}`;
       try {
-        await copyToPublic(file.incomingKey, target, { contentType: file.sniffed.contentType });
+        await copyToPublic(file.incomingKey, target, {
+          contentType: file.sniffed.contentType,
+          ...(file.etag ? { ifMatch: file.etag } : {}),
+        });
       } catch (err) {
-        if (err instanceof ObjectMissingError) throw mediaMissing(file.role);
+        if (err instanceof ObjectMissingError || err instanceof PreconditionFailedError) throw mediaMissing(file.role);
         throw err;
       }
       publicKeys.push(target);
