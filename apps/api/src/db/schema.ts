@@ -1,6 +1,11 @@
-import { pgTable, uuid, text, timestamp, pgEnum, boolean, jsonb, customType, index } from 'drizzle-orm/pg-core';
 import {
-  ADMIN_ROLES, BUSINESS_ROLES, LANGUAGES, MEMBER_ROLES, VERIFICATION_STATUSES,
+  pgTable, uuid, text, timestamp, pgEnum, boolean, jsonb, customType, index, uniqueIndex, unique, integer, smallint,
+  numeric, type AnyPgColumn,
+} from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
+import {
+  ADMIN_ROLES, BUSINESS_ROLES, CATALOG_LEVELS, CATALOG_STATUSES, FIELD_APPLIES_TO, FIELD_TYPES, LANGUAGES, MEMBER_ROLES,
+  VERIFICATION_STATUSES,
 } from '@mpm/shared-types';
 
 // Starting schema only: admin auth, the business/user core (scope F1, A2) and the audit log. Listings, enquiries,
@@ -15,6 +20,10 @@ export const businessRole = pgEnum('business_role', BUSINESS_ROLES);
 export const memberRole = pgEnum('member_role', MEMBER_ROLES);
 export const language = pgEnum('language', LANGUAGES);
 export const verificationStatus = pgEnum('verification_status', VERIFICATION_STATUSES);
+export const catalogLevel = pgEnum('catalog_level', CATALOG_LEVELS);
+export const fieldType = pgEnum('field_type', FIELD_TYPES);
+export const catalogStatus = pgEnum('catalog_status', CATALOG_STATUSES);
+export const fieldAppliesTo = pgEnum('field_applies_to', FIELD_APPLIES_TO);
 export const accountStatus = pgEnum('account_status', ['active', 'suspended', 'blocked']);
 
 export const adminUsers = pgTable('admin_users', {
@@ -85,3 +94,140 @@ export const auditLog = pgTable('audit_log', {
   after: jsonb('after'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+// ─── A4 machine catalogue ───
+// No ON DELETE CASCADE anywhere: deletes are guarded in services.
+
+/** `decimals` is checked 0-3 by `units_decimals_range` (custom migration; drizzle-kit 0.22 cannot emit CHECKs). */
+export const units = pgTable('units', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  key: text('key').notNull().unique(),
+  label: text('label').notNull(),
+  decimals: smallint('decimals').notNull().default(0),
+  sortOrder: integer('sort_order').notNull().default(0),
+  isActive: boolean('is_active').notNull().default(true),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const conditions = pgTable('conditions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  key: text('key').notNull().unique(),
+  label: text('label').notNull(),
+  description: text('description'),
+  sortOrder: integer('sort_order').notNull().default(0),
+  isActive: boolean('is_active').notNull().default(true),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** Category tree: machine category > machine type > part group. `path` is the unique slug path. */
+export const categories = pgTable(
+  'categories',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    parentId: uuid('parent_id').references((): AnyPgColumn => categories.id),
+    level: catalogLevel('level').notNull(),
+    name: text('name').notNull(),
+    slug: text('slug').notNull(),
+    path: text('path').notNull().unique(),
+    icon: text('icon'),
+    sortOrder: integer('sort_order').notNull().default(0),
+    isActive: boolean('is_active').notNull().default(true),
+    /** Null inherits from the parent. */
+    hasSides: boolean('has_sides'),
+    sideConvention: text('side_convention'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({ parentIdIdx: index('categories_parent_id_idx').on(t.parentId) }),
+);
+
+/** Listing-template field attached to a category node (inherited down the tree). */
+export const templateFields = pgTable(
+  'template_fields',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    categoryId: uuid('category_id')
+      .notNull()
+      .references(() => categories.id),
+    key: text('key').notNull(),
+    label: text('label').notNull(),
+    helpText: text('help_text'),
+    type: fieldType('type').notNull(),
+    appliesTo: fieldAppliesTo('applies_to').notNull().default('both'),
+    unit: text('unit'),
+    min: numeric('min', { precision: 14, scale: 3 }),
+    max: numeric('max', { precision: 14, scale: 3 }),
+    required: boolean('required').notNull().default(false),
+    filterable: boolean('filterable').notNull().default(false),
+    highlightRank: smallint('highlight_rank'),
+    sortOrder: integer('sort_order').notNull().default(0),
+    status: catalogStatus('status').notNull().default('active'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({ categoryKey: unique('template_fields_category_key_uq').on(t.categoryId, t.key) }),
+);
+
+export const templateFieldOptions = pgTable(
+  'template_field_options',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    fieldId: uuid('field_id')
+      .notNull()
+      .references(() => templateFields.id),
+    key: text('key').notNull(),
+    label: text('label').notNull(),
+    sortOrder: integer('sort_order').notNull().default(0),
+    status: catalogStatus('status').notNull().default('active'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({ fieldKey: unique('template_field_options_field_key_uq').on(t.fieldId, t.key) }),
+);
+
+export const brands = pgTable('brands', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  key: text('key').notNull().unique(),
+  name: text('name').notNull(),
+  slug: text('slug').notNull().unique(),
+  makesMachines: boolean('makes_machines').notNull().default(true),
+  makesParts: boolean('makes_parts').notNull().default(false),
+  needsReview: boolean('needs_review').notNull().default(false),
+  sortOrder: integer('sort_order').notNull().default(0),
+  isActive: boolean('is_active').notNull().default(true),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** A brand's model of one machine type. Names are unique per brand and type, ignoring case. */
+export const machineModels = pgTable(
+  'machine_models',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    key: text('key').notNull(),
+    brandId: uuid('brand_id')
+      .notNull()
+      .references(() => brands.id),
+    machineTypeId: uuid('machine_type_id')
+      .notNull()
+      .references(() => categories.id),
+    name: text('name').notNull(),
+    needsReview: boolean('needs_review').notNull().default(false),
+    sortOrder: integer('sort_order').notNull().default(0),
+    isActive: boolean('is_active').notNull().default(true),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    brandKey: unique('machine_models_brand_key_uq').on(t.brandId, t.key),
+    // drizzle-kit 0.22 emits an expression in the last position, but its types only accept columns there.
+    brandTypeName: uniqueIndex('machine_models_brand_type_name_uq').on(
+      t.brandId,
+      t.machineTypeId,
+      sql`lower(${t.name})` as unknown as typeof t.name,
+    ),
+    machineTypeIdx: index('machine_models_machine_type_id_idx').on(t.machineTypeId),
+  }),
+);

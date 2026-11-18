@@ -68,6 +68,7 @@ in the admin panel without a developer.
 | Everything editable | Machine categories, machine types, part groups, brands, models, fields, options, units, conditions and side settings: add, edit, rename, reorder, deactivate in the admin panel. |
 | Fitment | Brand + model is enough. No year ranges, no variants. A configuration (e.g. 12 heads) can be its own model. |
 | Tree follows Fibre2Fashion Machinery | Machine categories and machine types come from F2F's textile-machinery taxonomy (its 12 sub-categories and 465 product types, `docs/research/2026-11-16-fibre2fashion-machines.md`; the owner supplied the same list on 2026-11-18), cleaned and placed by us, as textile did with F2F's textile taxonomy. **Mirror F2F:** all of its categories are kept, including Leather & Footwear Machinery, Laundry and Testing & Inspection, and its grouping is kept (embroidery inside "Sewing, Embroidery & Garments"). The admin can switch off or split anything later. |
+| Parts for every machine type | Copy F2F: its process-wide parts entries ("Spinning machinery parts", "Weaving machinery parts", "Sewing machine parts & accessories", "Textile machine parts") become a part group under every machine type of that process, so every machine type can take part listings from launch (§4.1). Decided 2026-11-18. |
 | Approach | Textile's design extended: one fixed 3-level tree; part groups belong to (and repeat under) each machine type; brands and models are a separate list; each model belongs to a brand and a machine type. Chosen over a shared part-group list (two axes per listing) and an any-depth tree. |
 
 ## 4. The tree
@@ -115,10 +116,16 @@ textile built its tree from F2F's textile taxonomy:
   machine types they serve (e.g. "Sewing needles" and "Bobbins & Bobbins Case" → part groups under embroidery and sewing
   types; "Weft feelers" and "Cutting devices for weaving Machines" → part groups under looms; "Card Clothings" and
   "Pressure Rollers Cots Aprons and Condensors" → part groups under spinning types).
+- **F2F's process-wide parts entries become a part group under every machine type of that process** (owner: copy F2F),
+  so every machine type can take part listings from launch: "Spinning machinary parts" → **Spinning machinery parts**
+  under every Spinning type; "Weaving Machinary Parts" → **Weaving machinery parts** under every Weaving type except
+  Water Jet Loom (it has its full set); "Sewing Machine parts and accessories" → **Sewing machine parts & accessories**
+  under every Sewing, Embroidery & Garments type except the five embroidery types (full sets); "Textile Machine parts"
+  → **Textile machine parts** under every machine type in the other seven categories.
 - Every placement is a draft the client reviews in the export.
 
 **Node rules** (as textile §4): English `name`, `slug` (unique among siblings, editable), stored unique `path`
-(`sewing-embroidery-garments/multi-head-embroidery-machine/rotary-hooks`), `sort_order`, `is_active`. Machine categories also have an `icon`
+(`sewing-embroidery-and-garments/multi-head-embroidery-machine/rotary-hooks`), `sort_order`, `is_active`. Machine categories also have an `icon`
 (key from a fixed lucide list). Deactivating hides the node and its subtree from the app and sellers; existing
 references keep working. Delete only when nothing references it (no children, fields, models, and later listings,
 requirements); otherwise the admin is told to deactivate.
@@ -250,19 +257,20 @@ go-live the admin panel is.
 
 Contents (draft for client review; sources: `docs/research/2026-11-16-fibre2fashion-machines.md`, F2F's machinery list
 cleaned of duplicates, typos, non-machinery and "Others"):
-- **All machine categories and machine types from F2F** (§4.1): 10 categories and, after cleaning, roughly 250–300
-  machine types.
+- **All machine categories and machine types from F2F** (§4.1): 10 categories and, after cleaning, about 250 machine
+  types.
 - **Embroidery, in full:** F2F's embroidery machine types (multi head, single head, shuttle / Schiffli, plus sequin and
   chenille machines) with their part groups (e.g. needles; needle bars & presser feet; rotary hooks & bobbin cases; thread take-ups & tension; trimmers &
   cutters; frames, pantograph & hoops; control boards & electronics; motors & drives; sequin & cording devices; belts,
-  bearings & general spares), machine and part fields, side settings, brands and models.
+  bearings & general spares), machine and part fields, brands and models. No embroidery node has sides (no left / right
+  parts are listed for these machines; the admin can switch sides on later).
 - **Water-jet loom, in full:** part groups (e.g. nozzles & water pumps; weft measuring & feeders; shedding: cams, dobby,
   heald frames; reed & beat-up; take-up & let-off; temples & selvedge; cutters; electronics & sensors; motors &
   clutch-brake; side frames & structure; bearings, gears & belts), fields, side settings (e.g. temples and side frames
   have sides), brands and models.
-- **Everything else as outlines:** every other machine type exists (from F2F) but has no part groups, fields, brands or
-  models yet. Where F2F lists a spare-part type for it (needles, card clothing, cots and aprons, weft feelers), that
-  part group is seeded too.
+- **Everything else as outlines:** every other machine type exists (from F2F) with F2F's process-wide parts group
+  (§4.1) and, where F2F lists a spare-part type for it (needles, card clothing, cots and aprons, weft feelers), that part
+  group too; no fields, brands or models yet.
 - Every brand and model is marked in the export as **draft, to verify with the client** (model names drafted from
   public sources may be incomplete or wrong).
 
@@ -289,9 +297,10 @@ cleaned of duplicates, typos, non-machinery and "Others"):
 13. Moving nodes across parents (call 6) means clash checks must cover the destination's effective templates; the plan
     handles locking for that, since textile's per-section lock no longer covers it.
 14. Because embroidery stays inside "Sewing, Embroidery & Garments" (owner: mirror F2F), anything embroidery-wide
-    (fields such as maximum embroidery area or head type, and side settings) is set on **each embroidery machine type**
-    (multi head, single head, shuttle / Schiffli, sequin, chenille), not on the category, so it never reaches sewing
-    machines. The seed does this repetition. Splitting Embroidery into its own category is possible **only before
+    (fields such as maximum embroidery area or head type) is set on **each embroidery machine type** (multi head, single
+    head, shuttle / Schiffli, sequin, chenille), not on the category, so it never reaches sewing machines. The seed does
+    this repetition. No embroidery node has sides at launch; if the client later wants sides for embroidery, the same
+    rule applies (set them per embroidery type, never on the category). Splitting Embroidery into its own category is possible **only before
     launch**: moving machine types needs nothing to reference them (§4), and after embroidery listings exist it would
     need a migration tool we haven't scoped. It is a pre-launch decision for the client (§15).
 
@@ -299,11 +308,11 @@ cleaned of duplicates, typos, non-machinery and "Others"):
 
 Stack and conventions from `CLAUDE.md` (Fastify + Drizzle + Zod, `db:generate` migrations never hand-edited, Next.js
 admin with RHF + Zod, Vitest). Integration tests run against the local Docker `mpm_test` database and leave it exactly
-as found (fixtures unique per run, deleted in `afterAll`, never touching seeded rows). Size: 10 categories, ~250–300
-machine types, ~100–150 part groups (embroidery's ~10 groups repeat per embroidery type, water-jet adds ~11, outline
-types add needles, card clothing, cots and aprons, weft feelers), ~150 fields, ~20 brands, ~80 models. About 500 nodes
-is still small enough to return the public tree whole (names, paths and side settings only; templates are fetched per
-node, never inside the tree).
+as found (fixtures unique per run, deleted in `afterAll`, never touching seeded rows). Size: 10 categories, ~250
+machine types, ~330 part groups (~90 specific: embroidery's groups per embroidery type, water-jet's 11, F2F's spare-part
+types; plus ~245 process-wide parts groups, one per other machine type), ~80 fields, 14 brands, 19 models. About 600
+nodes is still small enough to return the public tree whole (names, paths and side settings only; templates are fetched
+per node, never inside the tree).
 
 ## 13. Related follow-up (separate from A4)
 
@@ -324,3 +333,6 @@ direction), all as in textile.
 3. Which other categories to fill in next, and who supplies their brands and models (D9).
 4. **Decide before launch:** keep embroidery inside "Sewing, Embroidery & Garments" (as F2F), or split it into its own
    category. After listings exist, a split needs a tool we haven't scoped (§11 call 14).
+5. **For the client's category manager:** a machine type added in the admin panel after launch does not get a
+   "… machinery parts" / "Textile machine parts" group automatically. Add at least one part group to it, or sellers
+   can't list parts for that machine.

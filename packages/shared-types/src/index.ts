@@ -56,10 +56,6 @@ export const LISTING_STATUSES = [
 ] as const;
 export type ListingStatus = (typeof LISTING_STATUSES)[number];
 
-/** Condition types (scope F2). Default list; admin manages the live list (A4). */
-export const CONDITIONS = ['new', 'used', 'unused', 'excess'] as const;
-export type Condition = (typeof CONDITIONS)[number];
-
 /** Left / Right / Pair matching (scope F3). `not_applicable` for parts that have no side. */
 export const PART_SIDES = ['left', 'right', 'pair', 'not_applicable'] as const;
 export type PartSide = (typeof PART_SIDES)[number];
@@ -71,10 +67,6 @@ export function complementarySide(side: PartSide): PartSide | null {
   return null;
 }
 
-/** Default unit list; the admin master data can extend it (scope A4). */
-export const UNITS = ['pcs', 'set', 'pair', 'kg', 'm', 'box', 'lot', 'unit'] as const;
-export type Unit = (typeof UNITS)[number];
-
 /** Price models (scope F2). */
 export const PRICE_MODELS = ['fixed', 'negotiable', 'on_request'] as const;
 export type PriceModel = (typeof PRICE_MODELS)[number];
@@ -83,6 +75,7 @@ export type PriceModel = (typeof PRICE_MODELS)[number];
 export const RENTAL_PERIODS = ['hour', 'day', 'week', 'month'] as const;
 export type RentalPeriod = (typeof RENTAL_PERIODS)[number];
 
+/** Replaced by GET /categories in M2. */
 /** Top-level browse chips on Home until the admin category tree (A4) serves them. */
 export const ROOT_CATEGORIES = [
   'spare_parts', 'machinery', 'machine_rental', 'tools', 'electrical', 'hydraulics', 'bearings_transmission',
@@ -153,3 +146,152 @@ export interface AdminUser {
   role: AdminRole;
 }
 
+// ─── catalogue ───
+export const CATALOG_LEVELS = ['machine_category', 'machine_type', 'part_group'] as const;
+export type CatalogLevel = (typeof CATALOG_LEVELS)[number];
+
+export const FIELD_TYPES = ['single_select', 'multi_select', 'number', 'text', 'date'] as const;
+export type FieldType = (typeof FIELD_TYPES)[number];
+
+export const CATALOG_STATUSES = ['active', 'retired'] as const;
+export type CatalogStatus = (typeof CATALOG_STATUSES)[number];
+
+/** Which listings a field applies to: spare parts, machines (for sale and for rent), or both. */
+export const FIELD_APPLIES_TO = ['parts', 'machines', 'both'] as const;
+export type FieldAppliesTo = (typeof FIELD_APPLIES_TO)[number];
+
+/** `machine` covers for-sale and for-rent listings. */
+export const TEMPLATE_KINDS = ['part', 'machine'] as const;
+export type TemplateKind = (typeof TEMPLATE_KINDS)[number];
+
+/** lucide kebab-case names; verified present in both lucide-react@0.359 and lucide-react-native. */
+export const CATEGORY_ICONS = [
+  'cog', 'factory', 'scissors', 'shirt', 'layers', 'droplets', 'printer', 'microscope', 'washing-machine',
+  'footprints', 'wrench', 'package',
+] as const;
+export type CategoryIcon = (typeof CATEGORY_ICONS)[number];
+
+export const MAX_HIGHLIGHT_RANK = 6;
+export const CARD_HIGHLIGHT_COUNT = 4;
+export const CATALOG_KEY_REGEX = /^[a-z][a-z0-9_]{1,39}$/;
+
+export const DEFAULT_SIDE_CONVENTION =
+  'Left and right as seen by the operator standing at the front of the machine, facing it.';
+
+export interface CategoryNode {
+  id: string;
+  parentId: string | null;
+  level: CatalogLevel;
+  name: string;
+  slug: string;
+  path: string;
+  icon: CategoryIcon | null;
+  sortOrder: number;
+  isActive: boolean;
+  hasSides: boolean | null;
+  sideConvention: string | null;
+  effectiveHasSides: boolean;
+  effectiveSideConvention: string;
+  children: CategoryNode[];
+}
+
+export interface FieldOption {
+  id: string;
+  key: string;
+  label: string;
+  sortOrder: number;
+  status: CatalogStatus;
+}
+
+export interface TemplateField {
+  id: string;
+  categoryId: string;
+  key: string;
+  label: string;
+  helpText: string | null;
+  type: FieldType;
+  appliesTo: FieldAppliesTo;
+  unit: string | null;
+  min: number | null;
+  max: number | null;
+  required: boolean;
+  filterable: boolean;
+  highlightRank: number | null;
+  sortOrder: number;
+  status: CatalogStatus;
+  options: FieldOption[];
+}
+
+/** Category fields, then machine type, then part group; each group by sortOrder. */
+export interface EffectiveTemplate {
+  nodeId: string;
+  kind: TemplateKind;
+  fields: TemplateField[];
+}
+
+export interface Brand {
+  id: string;
+  key: string;
+  name: string;
+  slug: string;
+  makesMachines: boolean;
+  makesParts: boolean;
+  needsReview: boolean;
+  sortOrder: number;
+  isActive: boolean;
+}
+
+export interface MachineModel {
+  id: string;
+  key: string;
+  brandId: string;
+  machineTypeId: string;
+  name: string;
+  needsReview: boolean;
+  sortOrder: number;
+  isActive: boolean;
+}
+
+/** Admin brands list: each brand with all its models (inactive included), models by sortOrder. */
+export interface BrandWithModels extends Brand {
+  models: MachineModel[];
+}
+
+export interface Unit {
+  id: string;
+  key: string;
+  label: string;
+  decimals: number;
+  sortOrder: number;
+  isActive: boolean;
+}
+
+export interface Condition {
+  id: string;
+  key: string;
+  label: string;
+  description: string | null;
+  sortOrder: number;
+  isActive: boolean;
+}
+
+export interface MasterData {
+  units: Unit[];
+  conditions: Condition[];
+}
+
+export type SpecValue = string | string[] | number;
+export type Specs = Record<string, SpecValue>;
+
+export const SPEC_ERROR_CODES = [
+  'required', 'unknown_field', 'invalid_option', 'not_a_number', 'below_min', 'above_max',
+  'invalid_date', 'invalid_text', 'retired', 'unsupported_type',
+] as const;
+export type SpecErrorCode = (typeof SPEC_ERROR_CODES)[number];
+
+/** Admin category detail: node (children empty), its own fields and those inherited; retired fields included. */
+export interface AdminCategoryDetail {
+  node: CategoryNode;
+  ownFields: TemplateField[];
+  inheritedFields: TemplateField[];
+}

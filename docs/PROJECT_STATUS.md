@@ -5,15 +5,17 @@ log whenever a session changes the project's state.
 
 ## What's built
 
-**Base setup only (2026-11-16).** No marketplace feature (F2–F9, A1–A6) is built yet; every admin module and the
-app's Post options are placeholders that list what the scope expects there.
+**Base setup + A4 machine catalogue (2026-11-18, merged into `develop`).** The admin-managed
+catalogue is built and seeded; no listing, search or deal feature (F2–F9) exists yet, and the other admin modules are
+still placeholders.
 
 | Area | State |
 |---|---|
 | Monorepo | pnpm 11 workspace: `apps/api`, `apps/admin`, `apps/user-app`, `packages/shared-types` |
 | API | Fastify 4 + Drizzle + Zod; `{ data }` / `{ error, code }` shapes; Redis rate limits; Sentry (opt-in); Socket.IO `/user` + `/admin`; job runner with graceful shutdown |
 | Auth | Admin email + password + JWT, 6 roles; user phone OTP (fixed dev code outside production, MSG91 not wired) + JWT; onboarding creates the business; suspended/blocked accounts refused (`ACCOUNT_SUSPENDED`) |
-| Database | `admin_users`, `businesses` (GST, address, industrial area, city, state, pincode, PostGIS `location`, verification status), `users` (status), `audit_log` |
+| Database | `admin_users`, `businesses` (GST, address, industrial area, city, state, pincode, PostGIS `location`, verification status), `users` (status), `audit_log`; catalogue (migrations 0002, 0003): `categories` (machine category › machine type › part group, `has_sides` / `side_convention` inherited), `template_fields` (`applies_to` parts/machines/both) + `template_field_options`, `brands`, `machine_models` (unique per brand + type, case-insensitive), `units`, `conditions` |
+| Catalogue (A4) | Spec `docs/superpowers/specs/2026-11-18-a4-machine-catalogue-design.md`, plan `docs/superpowers/plans/2026-11-18-a4-machine-catalogue.md`. Public API: `GET /categories`, `/categories/:id/template?kind=part\|machine`, `/brands`, `/models`, `/master-data`; admin APIs for nodes (create, edit, side settings, move with root locks and clash checks, reorder, delete), fields and options, brands and models, units and conditions, CSV export (`/admin/catalog/export/:sheet`); `validateSpecs` service for M5. Admin pages: Categories & machine types, Specifications & fields, Brands, models & fit, Units, conditions & sides. Seed (`pnpm --filter @mpm/api db:seed:catalog`, loaded into dev 2026-11-18): Fibre2Fashion Machinery's 465 product types cleaned into 10 categories, 248 machine types, 331 part groups; embroidery and water-jet looms in full (81 fields); 14 brands and 19 models marked "needs review"; 8 units, 4 conditions. **`--reset` deletes the whole catalogue including admin edits: use only before go-live.** |
 | Shared types | Listing kinds/statuses, conditions, Left/Right/Pair + `complementarySide()`, units, price models, rental periods, enquiry/offer/deal/rental/part-request/report statuses, notification types, admin roles |
 | Admin | Login, role-filtered sidebar, dashboard KPI tiles (A1), placeholder pages for every A1–A6 module; UI kit (dialogs, data table, filters, tabs, lightbox, URL state, keyboard nav, socket) |
 | User app | Welcome → phone OTP → name/business → 5 tabs (Home, Search, Post, Chats, Deals) + Profile (language, theme, logout); en/hi/gu with parity + audit tests; toasts, confirm sheet, skeletons |
@@ -41,8 +43,7 @@ The ten client decisions D1–D10 are listed at the end of `docs/product-scope.m
 
 ## Suggested build order
 
-1. **A4 machine configuration** — categories → machine types → part subcategories, brands/models/compatibility,
-   units, conditions, side options, listing field templates (everything else reads these).
+1. ~~**A4 machine configuration**~~ — built 2026-11-18 (see What's built). Client still reviews the seed (CSV export).
 2. **F1 business profile + A2 verification** — location/industrial area, GST submission, admin approve/reject.
 3. **F2 + F3 listings** — sell flow with specs, side, media upload (R2), preview, publish; A3 moderation.
 4. **F4 + F5 discovery** — search, filters, side filter, complementary parts, nearby (PostGIS).
@@ -87,3 +88,8 @@ The ten client decisions D1–D10 are listed at the end of `docs/product-scope.m
   fresh dev secrets, Docker infra, migrations (dev + test), seed admin. Verified: typecheck, lint, tests (app 106, admin 128,
   API 25). Periwinkle v2 chosen as the UI brief. Owner's standing rules added to CLAUDE.md: spec + plan before every
   feature, always the Superpowers skills, always start from the textile project's matching spec and code.
+- 2026-11-18 — Built A4 (machine catalogue) on `feat/a4-catalogue` with subagent-driven development, all subagents on
+  Opus, in 6 batches, each reviewed; whole-branch review + one fix wave. Seed loaded into the dev DB. Verified:
+  typecheck, lint, tests (app 106, admin 199, API 212), live API checks and CSV exports. Committed as one commit and
+  merged into `develop` (not pushed). Owner rule from now on: all feature work directly on `develop`, no feature branches.
+  Open for the client: seed review via the CSV exports, embroidery split decision before launch (spec §15).

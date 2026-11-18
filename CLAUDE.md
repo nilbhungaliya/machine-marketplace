@@ -275,6 +275,8 @@ machine type or listing field needs no schema change or app release.
 - **Always take inspiration from the textile project first** (`E:\textile-marketplace`): read its spec, plan and code for
   the matching module (its `docs/superpowers/specs/`, `docs/superpowers/plans/`, `apps/*`) and reuse its patterns,
   naming and structure, adapted to machine parts. Each spec names the textile spec and code it follows.
+- **Work on `develop` only:** build every feature directly on `develop`; no feature branches or worktrees (this overrides
+  the Superpowers worktree / branch steps). Ask before every commit and push.
 
 The `superpowers@claude-plugins-official` plugin is enabled for this repo (`.claude/settings.json`). Use its skills for every feature:
 

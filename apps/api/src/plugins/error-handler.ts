@@ -1,6 +1,7 @@
 import fp from 'fastify-plugin';
 import { ZodError } from 'zod';
 import { AppError } from '../lib/errors.js';
+import { isConcurrencyFailure } from '../lib/pg-errors.js';
 import { Sentry } from '../lib/sentry.js';
 
 /** Maps every thrown error to `{ error, code }`. Stack traces never reach clients. */
@@ -18,6 +19,11 @@ export default fp(async (fastify) => {
         error: error.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join(', '),
         code: 'VALIDATION_ERROR',
       });
+    }
+    // A deadlock or serialization failure between two concurrent edits: expected under load, so not reported.
+    if (isConcurrencyFailure(error)) {
+      request.log.warn({ err: error, route: request.routeOptions?.url }, 'concurrent edit aborted');
+      return reply.status(409).send({ error: 'This changed at the same time as another edit. Try again.', code: 'RETRY' });
     }
     if (error.statusCode === 429) {
       return reply.status(429).send({ error: 'Too many requests', code: 'RATE_LIMITED' });

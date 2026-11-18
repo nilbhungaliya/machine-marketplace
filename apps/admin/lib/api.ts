@@ -50,6 +50,30 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   return (json.data ?? json) as T;
 }
 
+/**
+ * GETs a file (e.g. a CSV export) and saves it as `filename`. Fetched rather than opened with
+ * `<a download>`: a plain link could not send the bearer token.
+ */
+async function download(path: string, filename: string): Promise<void> {
+  const token = getToken();
+  const res = await fetch(`${API_BASE}${path}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+  if (res.status === 401) clearSessionAndBounce();
+  if (!res.ok) {
+    const json = await res.json().catch(() => ({}));
+    throw new ApiError(json.error || 'Download failed', res.status, json.code, json.details);
+  }
+  const url = URL.createObjectURL(await res.blob());
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  // Revoke after the click has handed the blob to the browser's download.
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 const withBody = (method: string) => <T>(path: string, body?: unknown) =>
   request<T>(path, { method, body: body === undefined ? undefined : JSON.stringify(body) });
 
@@ -59,4 +83,5 @@ export const api = {
   put: withBody('PUT'),
   patch: withBody('PATCH'),
   delete: withBody('DELETE'),
+  download,
 };

@@ -15,8 +15,9 @@ export class AppError extends Error {
 }
 
 export class ValidationError extends AppError {
-  constructor(message: string, details?: Record<string, unknown>) {
-    super(message, 400, 'VALIDATION_ERROR', details);
+  /** `code` defaults to VALIDATION_ERROR; pass a specific one (e.g. INVALID_PARENT) when clients branch on it. */
+  constructor(message: string, details?: Record<string, unknown>, code = 'VALIDATION_ERROR') {
+    super(message, 400, code, details);
   }
 }
 
