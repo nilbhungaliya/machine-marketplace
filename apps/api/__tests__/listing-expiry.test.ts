@@ -1,11 +1,12 @@
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { FastifyInstance } from 'fastify';
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, sql } from 'drizzle-orm';
 import type { ListingKind, ListingStatus } from '@mpm/shared-types';
 import { db, pool } from '../src/db/index.js';
 import { appSettings, listingStatusHistory, listings } from '../src/db/schema.js';
 import { allJobs } from '../src/jobs/index.js';
 import { runListingExpiry } from '../src/services/listings/listing-jobs.service.js';
+import { applySystemTransition } from '../src/services/listings/listing-lifecycle.service.js';
 import { createTestCatalog, deleteTestCatalog, type TestCatalog } from './_helpers/test-catalog.js';
 import { deleteTestBusinesses } from './_helpers/test-businesses.js';
 import {
@@ -20,6 +21,13 @@ import {
 // The expiry job (F2 plan Task 15, spec §7.4, amendment 1): live and rented listings older than the expiry setting
 // expire (actor `system`); others wait; a listing another transaction holds is skipped; a held business lock never
 // blocks the job. Every run is scoped to this suite's businesses, so other suites' fixtures are never touched.
+
+// The real lifecycle, wrapped so one test can make a single row's transition fail inside the database.
+vi.mock('../src/services/listings/listing-lifecycle.service.js', async (importOriginal) => {
+  const real = await importOriginal<typeof import('../src/services/listings/listing-lifecycle.service.js')>();
+  return { ...real, applySystemTransition: vi.fn(real.applySystemTransition) };
+});
+const transition = vi.mocked(applySystemTransition);
 
 const DAY = 24 * 60 * 60 * 1000;
 let catalog: TestCatalog;
@@ -146,6 +154,45 @@ describe('runListingExpiry', () => {
       .from(listingStatusHistory)
       .where(and(eq(listingStatusHistory.listingId, id), eq(listingStatusHistory.action, 'expire')));
     expect(rows).toHaveLength(1);
+  });
+});
+
+describe('runListingExpiry: a failing row', () => {
+  it('is rolled back to its savepoint, logged and skipped; the rest of the batch expires', async () => {
+    const s = await seller();
+    const before = await listing(s, 'live', 90);
+    const bad = await listing(s, 'live', 80);
+    const after = await listing(s, 'live', 70);
+    const real = transition.getMockImplementation()!;
+    // The bad row's status write happens, then a statement fails: the database aborts what it is in (without a
+    // savepoint, the whole batch's transaction).
+    transition.mockImplementation(async (tx, row, action, opts) => {
+      const out = await real(tx, row, action, opts);
+      if (row.id === bad) await tx.execute(sql`SELECT 1 / 0`);
+      return out;
+    });
+    const errors: Array<{ obj: Record<string, unknown>; msg: string }> = [];
+    try {
+      const { expired } = await runListingExpiry(db, {
+        businessIds: [s.businessId],
+        log: { error: (obj, msg) => errors.push({ obj, msg }) },
+      });
+      expect(expired).toBe(2);
+    } finally {
+      transition.mockImplementation(real);
+    }
+    expect(await statusOf(before)).toBe('expired');
+    expect(await statusOf(after)).toBe('expired');
+    expect(await statusOf(bad)).toBe('live');
+    const badHistory = await db.select().from(listingStatusHistory).where(eq(listingStatusHistory.listingId, bad));
+    expect(badHistory).toEqual([]);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]!.obj).toMatchObject({ job: 'listing-expiry', listingId: bad });
+    expect(errors[0]!.obj.err).toBeInstanceOf(Error);
+
+    // The next run (the failure gone) expires it.
+    expect((await runListingExpiry(db, { businessIds: [s.businessId] })).expired).toBe(1);
+    expect(await statusOf(bad)).toBe('expired');
   });
 });
 
