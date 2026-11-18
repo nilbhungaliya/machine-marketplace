@@ -69,6 +69,8 @@ The ten client decisions D1–D10 are listed at the end of `docs/product-scope.m
   and content as direction A, with a new visual language (warm paper, machine green, signal orange, Archivo + IBM Plex,
   product-photo parts, L | R side token, floating tab bar, photo tiles). Checked in headless Chrome, light and dark.
   Nothing committed yet.
+- 2026-11-17 — First commit (`9b6b8c4`) pushed to `main` at https://github.com/nilbhungaliya/machine-marketplace;
+  `develop` branched from it and pushed. Work continues on `develop`.
 - 2026-11-17 — Theme pass, step 1: `docs/mockups/theme-options.html` (also published as an artifact) with six colour and
   font themes for the user to pick from. Next: 4–5 sample screens in the chosen theme, then every app screen in the style
   of the textile project's `user-app-mockup.html`. Nothing committed yet.
