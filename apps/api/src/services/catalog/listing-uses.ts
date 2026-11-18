@@ -3,8 +3,18 @@ import type { Db, Tx } from '../../db/index.js';
 import { listings } from '../../db/schema.js';
 
 // The catalogue guards' listing checks (F2 spec §16, A4's "M5 adds the check" points). Every listing counts, drafts
-// included. Callers hold a lock on the catalogue row first (FOR UPDATE), so a listing write that references it (FOR KEY
-// SHARE through the foreign key) waits for the guard's transaction and can't slip in after the check.
+// included.
+//
+// What protects what: each guard locks its catalogue row `FOR UPDATE` before it checks (moveCategory / deleteCategory
+// the node's subtree, deleteBrand the brand, moveModel / deleteModel the model, updateUnit the unit). Listing writes
+// (create and PATCH, `services/listings/listing-validate.service.ts`) read every category node, brand, model and unit
+// they reference `FOR KEY SHARE` inside their transaction **before** validating it, which conflicts with `FOR UPDATE`:
+// - a guard that locked first makes the write wait, and the write then validates the guard's result (a moved model of
+//   another machine type → MODEL_INVALID; a unit with fewer decimals → UNIT_DECIMALS; a deleted brand → BRAND_INVALID);
+// - a write that locked first makes the guard wait until it commits; the guard's check, a new statement under READ
+//   COMMITTED, then sees the new listing row and refuses.
+// The foreign keys' own `FOR KEY SHARE` alone wouldn't do: it is taken at the INSERT / UPDATE, after the write has
+// validated against the row as it was before the guard committed.
 
 const exists = async (conn: Db | Tx, query: ReturnType<typeof sql>): Promise<boolean> =>
   (await conn.execute(sql`SELECT EXISTS (${query}) AS used`)).rows[0]?.used === true;

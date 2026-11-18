@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import { eq } from 'drizzle-orm';
 import jwt from 'jsonwebtoken';
@@ -70,6 +70,22 @@ describe('fastify.optionalUser', () => {
   it('treats an admin token as a guest', async () => {
     const admin = signAdminToken({ adminId: randomUUID(), role: 'super_admin' });
     expect((await whoAmI(`Bearer ${admin}`)).user).toBeNull();
+  });
+
+  it('lets a database failure surface as a 500, never a guest', async () => {
+    const spy = vi.spyOn(app.db, 'select').mockImplementationOnce(() => {
+      throw new Error('connection terminated');
+    });
+    try {
+      const res = await app.inject({ method: 'GET', url: ROUTE, headers: { authorization: `Bearer ${active.token}` } });
+      expect(res.statusCode).toBe(500);
+      expect(res.json()).toMatchObject({ code: 'INTERNAL_ERROR' });
+      expect(spy).toHaveBeenCalledTimes(1);
+    } finally {
+      spy.mockRestore();
+    }
+    // The next request reads the user again.
+    expect((await whoAmI(`Bearer ${active.token}`)).user).toBe(active.userId);
   });
 
   it('treats a suspended or blocked user, or one that no longer exists, as a guest', async () => {

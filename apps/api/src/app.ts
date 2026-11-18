@@ -14,6 +14,7 @@ import businessRoutes from './routes/businesses.js';
 import gstRoutes from './routes/gst.js';
 import catalogRoutes from './routes/catalog.js';
 import locationRoutes from './routes/locations.js';
+import listingRoutes from './routes/listings.js';
 import adminCatalogCategoryRoutes from './routes/admin/catalog-categories.js';
 import adminCatalogFieldRoutes from './routes/admin/catalog-fields.js';
 import adminCatalogBrandRoutes from './routes/admin/catalog-brands.js';
@@ -74,6 +75,7 @@ export async function buildApp({ infra = true, logger = true }: BuildAppOptions 
     await app.register(gstRoutes);
     await app.register(catalogRoutes);
     await app.register(locationRoutes);
+    await app.register(listingRoutes);
     await app.register(adminAuthRoutes);
     await app.register(adminCatalogCategoryRoutes);
     await app.register(adminCatalogFieldRoutes);

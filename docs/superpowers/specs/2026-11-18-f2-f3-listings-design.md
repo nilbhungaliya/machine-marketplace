@@ -1214,3 +1214,10 @@ Found while planning (plan revision 2); they refine the rulings above where they
 4. **`return_status` is cleared on reject and ask for changes (§7.2, R44).** Only approve and unhide read it; a
    rejected listing comes back through resubmission, so a stale `return_status` from an earlier back-to-review must not
    survive into a later approval.
+5. **An edit after a report can't come back live through resume (§5.5, §7.3; owner decision 2026-11-18, after the
+   Batch 2a review).** §7.3 sends a `live` or `rented` listing back to review when its side or fitments change while it
+   has an open report. The same edit on a listing that isn't on view (`paused`, `expired`, `unavailable`, `sold`) is
+   now remembered on the listing (review reason `edited_after_report`, stored the way unaccepted flags are), and the
+   go-live gate sends **resume, renew, relist and end of rental** to `pending_review` with that reason while it is set.
+   Approval clears it. Without this, pause → change side or fit → resume would put the reported listing back on view
+   unreviewed.

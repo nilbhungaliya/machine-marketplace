@@ -2,6 +2,7 @@ import type { FastifyPluginAsync, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { GST_DOCUMENT_TYPES } from '@mpm/shared-types';
 import { TooManyRequestsError } from '../lib/errors.js';
+import { perUser } from '../lib/per-user-limit.js';
 import { presignDocumentUpload } from '../services/verification/gst-documents.service.js';
 import { declare, lookupGst, sendGstCode, verifyGstCode, type GstActor } from '../services/verification/gst-instant.service.js';
 import { addReviewFiles, submitReview } from '../services/verification/gst-review.service.js';
@@ -57,19 +58,6 @@ const reviewBody = z
   })
   .strict();
 const reviewFilesBody = z.object({ proofId: uuid, files: documentFiles }).strict();
-
-/**
- * A per-signed-in-user route limit over 10 minutes. Runs after `requireUser` (`hook: 'preHandler'`), so the key is
- * the user. Each route counts on its own.
- */
-const perUser = (max: number) => ({
-  rateLimit: {
-    max,
-    timeWindow: '10 minutes',
-    hook: 'preHandler' as const,
-    keyGenerator: (request: FastifyRequest) => (request.user ? `user:${request.user.userId}` : `ip:${request.ip}`),
-  },
-});
 
 /**
  * Lookups and code sends: 20 per user (spec §5.2 step 2: "plus the per-user … route rate limit"), on top of the

@@ -12,6 +12,7 @@ import { businesses, categories, industrialAreas, users } from '../../db/schema.
 import { AppError, ConflictError, NotFoundError, ValidationError } from '../../lib/errors.js';
 import { areasForPincode } from '../locations/industrial-areas.service.js';
 import { pincodeDistrict } from '../locations/pincode.service.js';
+import { syncBusinessListings } from '../listings/listing-validate.service.js';
 
 // The business profile and location (F1 spec §4.1, §4.2, §10). Ruling R1: a new user has no business row until their
 // first PATCH /businesses/me, which creates it; that is the only way a business is created (the old onboarding route
@@ -77,6 +78,18 @@ async function activeGst(conn: Db | Tx, businessId: string): Promise<{ tradeName
   return row ? { tradeName: filled(row.trade_name) ? row.trade_name!.trim() : null } : null;
 }
 
+/**
+ * The name buyers see (`BusinessProfile.displayName`): GST's trade name, else the legal name, while a `gst`
+ * verification is active; otherwise `trade_name`.
+ */
+export async function businessDisplayName(
+  conn: Db | Tx,
+  b: Pick<BusinessRow, 'id' | 'tradeName' | 'legalName'>,
+): Promise<string> {
+  const gst = await activeGst(conn, b.id);
+  return gst ? (gst.tradeName ?? b.legalName ?? b.tradeName) : b.tradeName;
+}
+
 /** The onboarding step for a signed-in user: `'profile'` while they have no business (R1). */
 export async function onboardingForUser(conn: Db | Tx, user: { name: string | null; businessId: string | null }): Promise<OnboardingStep> {
   if (!user.businessId) return 'profile';
@@ -136,7 +149,7 @@ export async function businessProfile(db: Db | Tx, businessId: string, userName:
     userName,
     tradeName: b.tradeName,
     legalName: b.legalName,
-    displayName: gst ? (gst.tradeName ?? b.legalName ?? b.tradeName) : b.tradeName,
+    displayName: gst ? (gst.tradeName ?? b.legalName ?? b.tradeName) : b.tradeName, // as businessDisplayName
     nameLocked: gst !== null,
     activities: b.activities,
     categories: categoryIds,
@@ -294,7 +307,8 @@ async function areaOfPincode(tx: Tx, areaId: string, pincode: string): Promise<b
  * PUT /businesses/me/location: replaces the whole location. Exactly one of a listed area and Other. A listed area must
  * be an active area of the pincode's district and state (`areasForPincode`), else `400 AREA_MISMATCH`; the area the
  * business already has stays allowed after an admin deactivates it (businesses keep it, spec §4.3). `lat` and `lng`
- * come together and set the pin; without them the pin is cleared.
+ * come together and set the pin; without them the pin is cleared. Every non-removed listing whose location is the
+ * business's moves with it (F2 spec §4.7, R19).
  */
 export async function setMyLocation(db: Db, userId: string, body: LocationInput): Promise<BusinessProfile> {
   const areaId = body.industrialAreaId ?? null;
@@ -330,6 +344,8 @@ export async function setMyLocation(db: Db, userId: string, body: LocationInput)
         updatedAt: new Date(),
       })
       .where(eq(businesses.id, b.id));
+    // F2 R19: business-sourced listings follow, in this transaction and after the business lock (the listing lock order).
+    await syncBusinessListings(tx, b.id);
   });
 
   return getMyBusiness(db, userId);
