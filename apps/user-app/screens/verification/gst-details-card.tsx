@@ -13,17 +13,17 @@ export default function GstDetailsCard({ details, gstin, style }: { details?: Gs
   const { colors } = useTheme();
   const s = useMemo(() => StyleSheet.create({
     card: {
-      padding: spacing.lg, borderRadius: radius.lg, backgroundColor: colors.card, gap: spacing.xs,
+      padding: spacing.lg, borderRadius: radius.lg, backgroundColor: colors.surface, gap: spacing.xs,
       borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border,
     },
-    name: { fontFamily: fonts.display, fontSize: 18, color: colors.text },
+    name: { fontFamily: fonts.bold, fontSize: 18, color: colors.text },
     line: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 20, color: colors.textSecondary },
     gstin: { fontFamily: fonts.semiBold, fontSize: 14, letterSpacing: 1, color: colors.text, marginTop: spacing.xs },
     badge: {
       flexDirection: 'row', alignItems: 'center', gap: spacing.xs, alignSelf: 'flex-start', marginTop: spacing.sm,
-      paddingHorizontal: spacing.sm, paddingVertical: 4, borderRadius: radius.full, backgroundColor: colors.greenMuted,
+      paddingHorizontal: spacing.sm, paddingVertical: 4, borderRadius: radius.full, backgroundColor: colors.okSoft,
     },
-    badgeText: { fontFamily: fonts.semiBold, fontSize: 12, color: colors.green },
+    badgeText: { fontFamily: fonts.semiBold, fontSize: 12, color: colors.ok },
   }), [colors]);
 
   // Officer-approved details carry a constitution key; a provider's lookup carries its own text.
@@ -48,7 +48,7 @@ export default function GstDetailsCard({ details, gstin, style }: { details?: Gs
       {gstin ? <Text style={s.gstin}>{t('verification.details.gstin', { gstin })}</Text> : null}
       {details?.status === 'active' ? (
         <View style={s.badge}>
-          <CircleCheck size={14} color={colors.green} />
+          <CircleCheck size={14} color={colors.ok} />
           <Text style={s.badgeText}>{t('verification.details.active')}</Text>
         </View>
       ) : null}

@@ -24,7 +24,7 @@ export default function PhoneScreen({ navigation }: AuthStackScreenProps<'Phone'
 
   const s = useMemo(() => StyleSheet.create({
     body: { flex: 1, paddingHorizontal: spacing.xxl, paddingTop: spacing.lg },
-    title: { fontFamily: fonts.display, fontSize: 26, color: colors.text },
+    title: { fontFamily: fonts.bold, fontSize: 26, color: colors.text },
     subtitle: { fontFamily: fonts.regular, fontSize: 15, color: colors.textSecondary, marginTop: spacing.sm, marginBottom: spacing.lg },
     safe: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.md },
     safeText: { fontFamily: fonts.regular, fontSize: 13, color: colors.textSecondary },
@@ -74,7 +74,7 @@ export default function PhoneScreen({ navigation }: AuthStackScreenProps<'Phone'
           autoFocus
         />
         <View style={s.safe}>
-          <ShieldCheck size={16} color={colors.green} />
+          <ShieldCheck size={16} color={colors.ok} />
           <Text style={s.safeText}>{t('auth.phone.safe')}</Text>
         </View>
       </View>

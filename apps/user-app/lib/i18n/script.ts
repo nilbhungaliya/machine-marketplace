@@ -1,6 +1,6 @@
 import type { Language } from '@/lib/i18n';
 
-// Montserrat has no Gujarati or Devanagari, so the system font draws them, and
+// Manrope has no Gujarati or Devanagari, so the system font draws them, and
 // its vowel signs above and below need a taller line than the design's.
 export const usesIndicScript = (lang: Language) => lang !== 'en';
 

@@ -145,13 +145,13 @@ describe('Profile', () => {
   });
 
   it('the GST chip follows the state', () => {
-    expect(gstChip('verified')).toEqual({ key: 'verification.chip.verified', tone: 'green' });
-    expect(gstChip('under_review')).toEqual({ key: 'verification.chip.underReview', tone: 'orange' });
-    expect(gstChip('needs_more')).toEqual({ key: 'verification.chip.needsMore', tone: 'orange' });
-    expect(gstChip('rejected')).toEqual({ key: 'verification.chip.rejected', tone: 'red' });
-    expect(gstChip('revoked')).toEqual({ key: 'verification.chip.revoked', tone: 'red' });
+    expect(gstChip('verified')).toEqual({ key: 'verification.chip.verified', tone: 'ok' });
+    expect(gstChip('under_review')).toEqual({ key: 'verification.chip.underReview', tone: 'warn' });
+    expect(gstChip('needs_more')).toEqual({ key: 'verification.chip.needsMore', tone: 'warn' });
+    expect(gstChip('rejected')).toEqual({ key: 'verification.chip.rejected', tone: 'danger' });
+    expect(gstChip('revoked')).toEqual({ key: 'verification.chip.revoked', tone: 'danger' });
     for (const s of ['none', 'found', 'code_sent'] as const) {
-      expect(gstChip(s)).toEqual({ key: 'verification.chip.notVerified', tone: 'muted' });
+      expect(gstChip(s)).toEqual({ key: 'verification.chip.notVerified', tone: 'neutral' });
     }
   });
 });

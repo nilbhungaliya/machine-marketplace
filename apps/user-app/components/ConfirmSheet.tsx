@@ -55,7 +55,7 @@ function ConfirmSheet({
   onSecondary: () => void;
   onCancel: () => void;
 }) {
-  const { colors, cardShadow } = useTheme();
+  const { colors, shadows } = useTheme();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { rendered, backdropOpacity, translateY } = useSheetAnimation(visible);
@@ -72,13 +72,13 @@ function ConfirmSheet({
   }, [visible, onCancel]);
 
   const s = useMemo(() => StyleSheet.create({
-    backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: '#000' },
+    backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: colors.scrim },
     sheetWrap: { flex: 1, justifyContent: 'flex-end' },
     card: {
-      backgroundColor: colors.card,
+      backgroundColor: colors.surface,
       borderTopLeftRadius: 20, borderTopRightRadius: 20,
       paddingHorizontal: spacing.xl, paddingTop: spacing.md,
-      ...cardShadow,
+      ...shadows.raised,
     },
     handle: { alignSelf: 'center', width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border, marginBottom: spacing.lg },
     title: { fontFamily: fonts.bold, fontSize: 18, color: colors.text, marginBottom: spacing.sm },
@@ -89,7 +89,7 @@ function ConfirmSheet({
     cancelText: { fontFamily: fonts.semiBold, fontSize: 15, color: colors.text, textAlign: 'center' },
     // Dark on the yellow button; destructive (red) swaps to white below.
     confirmText: { fontFamily: fonts.semiBold, fontSize: 15, color: colors.onPrimary, textAlign: 'center' },
-    confirmTextOnRed: { color: colors.white },
+    confirmTextOnRed: { color: colors.onDanger },
     // Three choices stack: their labels carry amounts and do not fit side by side.
     stack: { gap: spacing.sm },
     stackBtn: { paddingVertical: 14, paddingHorizontal: spacing.md, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
@@ -103,14 +103,14 @@ function ConfirmSheet({
     radioOn: { borderWidth: 5, borderColor: colors.text },
     pickTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: spacing.sm },
     pickTitle: { fontFamily: fonts.bold, fontSize: 14, color: colors.text, flexShrink: 1 },
-    pickAmount: { fontFamily: fonts.displayHeavy, fontSize: 15, color: colors.green },
+    pickAmount: { fontFamily: fonts.extraBold, fontSize: 15, color: colors.ok },
     pickNone: { fontFamily: fonts.semiBold, fontSize: 12.5, color: colors.textMuted },
     pickDetail: { fontFamily: fonts.regular, fontSize: 12.5, lineHeight: 18, color: colors.textSecondary, marginTop: 2 },
-  }), [colors, cardShadow]);
+  }), [colors, shadows]);
 
   if (!rendered || !options) return null;
 
-  const confirmBg = options.destructive ? colors.red : colors.primary;
+  const confirmBg = options.destructive ? colors.danger : colors.primary;
   const confirmText = [s.confirmText, options.destructive && s.confirmTextOnRed];
 
   return (

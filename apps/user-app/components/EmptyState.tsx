@@ -22,10 +22,10 @@ export default function EmptyState({ icon: Icon, title, subtitle, ctaTitle, onCt
     container: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 },
     iconWrap: {
       width: 80, height: 80, borderRadius: 40,
-      backgroundColor: colors.primaryMuted,
+      backgroundColor: colors.primaryWash,
       alignItems: 'center', justifyContent: 'center', marginBottom: 20,
     },
-    title: { fontFamily: fonts.display, fontSize: 20, color: colors.text, textAlign: 'center' },
+    title: { fontFamily: fonts.bold, fontSize: 20, color: colors.text, textAlign: 'center' },
     subtitle: {
       fontFamily: fonts.regular, fontSize: 14, color: colors.textSecondary,
       marginTop: 8, textAlign: 'center', lineHeight: 20,

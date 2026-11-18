@@ -8,23 +8,23 @@ import { fonts, radius, spacing, useTheme } from '@/lib/theme';
 
 export default function PostScreen() {
   const { t } = useTranslation();
-  const { colors, cardShadow } = useTheme();
+  const { colors, shadows } = useTheme();
 
   const s = useMemo(() => StyleSheet.create({
     body: { flex: 1, padding: spacing.lg, gap: spacing.md },
-    title: { fontFamily: fonts.display, fontSize: 24, color: colors.text, marginBottom: spacing.sm, marginTop: spacing.sm },
+    title: { fontFamily: fonts.bold, fontSize: 24, color: colors.text, marginBottom: spacing.sm, marginTop: spacing.sm },
     card: {
       flexDirection: 'row', alignItems: 'center', gap: spacing.lg, padding: spacing.lg,
-      borderRadius: radius.lg, backgroundColor: colors.card, ...cardShadow,
+      borderRadius: radius.lg, backgroundColor: colors.surface, ...shadows.raised,
     },
     iconWrap: {
-      width: 52, height: 52, borderRadius: radius.md, backgroundColor: colors.primaryMuted,
+      width: 52, height: 52, borderRadius: radius.md, backgroundColor: colors.primaryWash,
       alignItems: 'center', justifyContent: 'center',
     },
     text: { flex: 1 },
     cardTitle: { fontFamily: fonts.semiBold, fontSize: 17, color: colors.text },
     cardSubtitle: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 18, color: colors.textSecondary, marginTop: 4 },
-  }), [colors, cardShadow]);
+  }), [colors, shadows]);
 
   const comingSoon = () => Toast.show({ type: 'info', text1: t('common.comingSoon') });
 

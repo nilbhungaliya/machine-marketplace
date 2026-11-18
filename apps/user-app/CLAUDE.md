@@ -1,6 +1,6 @@
 # user-app — Design System & Build Rules
 
-Scope: `apps/user-app/` (React Native 0.81 + Expo SDK 54, Montserrat + Inter, light/dark theming, en/hi/gu).
+Scope: `apps/user-app/` (React Native 0.81 + Expo SDK 54, Manrope + JetBrains Mono, Periwinkle v2 light/dark theming, en/hi/gu).
 Use this for any new UI in this app, including when porting Figma designs via the Figma MCP.
 
 ---
@@ -8,25 +8,35 @@ Use this for any new UI in this app, including when porting Figma designs via th
 ## 1. Tokens
 
 ### 1.1 Where tokens live
+- `lib/palette.ts` — `lightColors` / `darkColors` (Periwinkle v2), `shadowValues`. **The only file with colour values**; `palette.test.ts` checks it against the mockup's CSS variables.
+- `lib/ThemeContext.tsx` — `ThemeProvider`, `useTheme()` → `{ colors, isDark, mode, setMode, shadows }`.
+- `lib/fonts.ts` — `fonts`; `lib/typography.ts` — the type scale (`TYPE_SCALE`, `typeStyle`), read through `useType()` (`hooks/use-type.ts`).
 - `lib/theme.ts` — re-exports + static tokens (`fonts`, `spacing`, `radius`).
-- `lib/ThemeContext.tsx` — `lightColors` / `darkColors`, `getCardShadow`, `getPrimaryGlow`, `ThemeProvider`, `useTheme()`.
 - Plain TS constants — no Style Dictionary, no NativeWind, no tokens.json.
 
 ### 1.2 Static tokens (extend, don't fork)
 ```ts
-fonts:   display 'Montserrat_700Bold' · displaySemi · displayHeavy · regular 'Inter_400Regular' · medium · semiBold · bold
+fonts:   regular 'Manrope_400Regular' · medium 500 · semiBold 600 · bold 700 · extraBold 800
+         mono 'JetBrainsMono_400Regular' · monoMedium 500 (identifiers only: GSTIN, PAN, part numbers, codes)
 spacing: xs 4 · sm 8 · md 12 · lg 16 · xl 20 · xxl 24 · xxxl 32
-radius:  sm 8 (chips) · md 12 (inputs) · lg 16 (cards) · xl 20 (hero) · full 999 (Button, avatars)
+radius:  xs 6 (mono tag) · sm 10 (segment) · md 14 (fields, wells) · lg 18 (callouts, toasts) · xl 24 (cards) · sheet 28 · full 999 (buttons, chips, pills)
 ```
-No central type scale: round Figma sizes to `12, 13, 14, 15, 16, 18, 20, 22, 24, 28, 32`; `lineHeight ≈ fontSize × 1.4`.
+**Type comes from the scale**, not hand-picked sizes: `const type = useType();` then `title: { ...type('title'), color: colors.text }`.
+Tokens: `display title sheetTitle appBar section cardTitle lead body bodyStrong fieldValue label caption button buttonSm chip
+badge price otp phone mono` (sizes in `lib/typography.ts`, spec §5.4). `typeStyle` applies the Hindi / Gujarati rules
+(taller line height, no negative tracking, 800 → 700). **Never `fontWeight`**: the family name picks the weight.
 
 ### 1.3 Colors
-Both palettes share token names. **Never put a hex literal in a component** — read `useTheme().colors`.
-Primary is indigo (`#4F46E5` light / `#818CF8` dark), the same brand as the admin's Tailwind `brand` scale. Text on primary is `colors.onPrimary`.
-Status: `green / red / blue / orange` + `*Muted` backgrounds.
+Both palettes share token names. **Never put a colour literal in a component** (hex, `rgb()`, or a named colour such as
+`'white'`) — read `useTheme().colors`. `lib/style-audit.test.ts` fails on one (allowlist: `lib/style-audit-allowlist.json`).
+Tokens: `background surface photo field text textSecondary textMuted border divider hairline primary primaryInk onPrimary
+primarySoft primaryWash sun onSun ok okSoft warn warnSoft danger dangerSoft onDanger star heroGlow scrim` (uses in spec §4.1).
+Violet (`primary`, `primaryInk`) only for actions and selection; `sun` only for badges; status colours on their `*Soft` fill.
 
 ### 1.4 Shadows
-`const { cardShadow, primaryGlow } = useTheme();` — cards/sheets use `cardShadow`, primary CTAs `primaryGlow`. Never hand-roll `shadowOffset`.
+`const { shadows } = useTheme();` — `shadows.raised` / `.float` / `.segment` are `{ boxShadow }` style objects, only for
+things that float (icon buttons, footer bar, tab bar, toast, selected segment). **Cards don't cast shadows**: `surface` +
+1 dp `hairline` border. Never hand-roll `shadowOffset` or `boxShadow`.
 
 ---
 
@@ -49,19 +59,20 @@ Status: `green / red / blue / orange` + `*Muted` backgrounds.
 Hooks: `useAuth` (session), `useSocket(onEvent)` (live `/user` events; filter by event-name prefix), `use-sheet-animation` (bottom-sheet enter/exit).
 
 ### 2.1 Component contract (mandatory)
-1. Read theme via `const { colors, cardShadow } = useTheme();`.
-2. Styles in `useMemo(() => StyleSheet.create({...}), [colors, cardShadow])`.
+1. Read theme via `const { colors, shadows } = useTheme();` and type via `const type = useType();`.
+2. Styles in `useMemo(() => StyleSheet.create({...}), [colors, shadows, type])` (only the ones you use).
 3. Accept a `style` override on the outermost element.
-4. Semantic color tokens only; `fonts.*` for `fontFamily`, never raw `'Inter_…'` strings.
+4. Semantic color tokens only; `type('…')` or `fonts.*` for `fontFamily`, never raw `'Manrope_…'` strings.
 5. No hard-coded copy — every string through `t()` (§8).
 
 ```tsx
 export function Foo({ title, style }: { title: string; style?: StyleProp<ViewStyle> }) {
-  const { colors, cardShadow } = useTheme();
+  const { colors } = useTheme();
+  const type = useType();
   const s = useMemo(() => StyleSheet.create({
-    box: { backgroundColor: colors.card, padding: spacing.lg, borderRadius: radius.lg, ...cardShadow },
-    title: { color: colors.text, fontFamily: fonts.semiBold, fontSize: 16 },
-  }), [colors, cardShadow]);
+    box: { backgroundColor: colors.surface, padding: spacing.lg, borderRadius: radius.xl, borderWidth: 1, borderColor: colors.hairline },
+    title: { ...type('cardTitle'), color: colors.text },
+  }), [colors, type]);
   return <View style={[s.box, style]}><Text style={s.title}>{title}</Text></View>;
 }
 ```
@@ -140,7 +151,8 @@ Every string you add or change must exist in **all three** languages in the same
 ### 8.1 Dates, digits and scripts
 - **Dates go through `lib/format-date.ts`** (IST wall clock, en/hi/gu month and day names) — never `toLocaleDateString` or hand-made month arrays. Today's Indian date: `istDateKey()` from `lib/ist-date.ts`.
 - **Numeric input:** Gujarati and Hindi keyboards type their own digits. Keep the raw text in the field and derive digits with `lib/auth-input.ts` / `lib/digits.ts` (`toAsciiDigits`) before validating or sending.
-- Montserrat has no Gujarati/Devanagari; use `scriptLineHeight` / `scriptTracking` from `lib/i18n/script.ts` for display text that may render in those scripts.
+- Manrope has no Gujarati/Devanagari (the system's Noto draws them on Android). `useType()` already applies
+  `scriptLineHeight` / `scriptTracking` from `lib/i18n/script.ts`; use them directly only for text outside the scale.
 
 ---
 

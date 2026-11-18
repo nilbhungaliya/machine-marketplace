@@ -68,14 +68,14 @@ export default function GstIntroScreen({ navigation }: RootStackScreenProps<'Gst
   const s = useMemo(() => StyleSheet.create({
     body: { flex: 1, paddingHorizontal: spacing.xxl, paddingTop: spacing.lg, gap: spacing.xl },
     badge: {
-      width: 72, height: 72, borderRadius: radius.full, backgroundColor: colors.primaryMuted,
+      width: 72, height: 72, borderRadius: radius.full, backgroundColor: colors.primaryWash,
       alignItems: 'center', justifyContent: 'center', alignSelf: 'center',
     },
-    title: { fontFamily: fonts.display, fontSize: 24, color: colors.text, textAlign: 'center' },
+    title: { fontFamily: fonts.bold, fontSize: 24, color: colors.text, textAlign: 'center' },
     stepsTitle: { fontFamily: fonts.semiBold, fontSize: 15, color: colors.text },
     step: { flexDirection: 'row', gap: spacing.md, alignItems: 'flex-start' },
     stepNo: {
-      width: 26, height: 26, borderRadius: radius.full, backgroundColor: colors.elevated, alignItems: 'center',
+      width: 26, height: 26, borderRadius: radius.full, backgroundColor: colors.field, alignItems: 'center',
       justifyContent: 'center',
     },
     stepNoText: { fontFamily: fonts.semiBold, fontSize: 13, color: colors.primary },

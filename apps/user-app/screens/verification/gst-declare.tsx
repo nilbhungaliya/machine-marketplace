@@ -58,10 +58,10 @@ export default function GstDeclareScreen({ navigation, route }: RootStackScreenP
 
   const s = useMemo(() => StyleSheet.create({
     body: { flex: 1, paddingHorizontal: spacing.xxl, paddingTop: spacing.sm, gap: spacing.lg },
-    title: { fontFamily: fonts.display, fontSize: 24, color: colors.text },
+    title: { fontFamily: fonts.bold, fontSize: 24, color: colors.text },
     subtitle: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 21, color: colors.textSecondary },
     card: {
-      flexDirection: 'row', gap: spacing.md, padding: spacing.lg, borderRadius: radius.lg, backgroundColor: colors.card,
+      flexDirection: 'row', gap: spacing.md, padding: spacing.lg, borderRadius: radius.lg, backgroundColor: colors.surface,
       borderWidth: 1.5, borderColor: agreed ? colors.primary : colors.border,
     },
     declaration: { flex: 1, fontFamily: fonts.medium, fontSize: 15, lineHeight: 22, color: colors.text },

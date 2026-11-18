@@ -1,5 +1,6 @@
-import React, { useEffect } from 'react';
-import { Animated, type StyleProp, type ViewStyle } from 'react-native';
+import React, { useEffect, useMemo } from 'react';
+import { Animated, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
+import { radius, useTheme } from '@/lib/theme';
 
 // One clock for every placeholder on screen, so they pulse together rather
 // than each on its own beat.
@@ -26,10 +27,12 @@ function stop() {
 
 /** A grey block in the shape of content that has not loaded yet. */
 export default function Skeleton({ style }: { style?: StyleProp<ViewStyle> }) {
+  const { colors } = useTheme();
+  const s = useMemo(() => StyleSheet.create({ block: { backgroundColor: colors.field, borderRadius: radius.md } }), [colors]);
   useEffect(() => {
     start();
     return stop;
   }, []);
   const opacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.55, 1] });
-  return <Animated.View style={[{ backgroundColor: '#ebe9f0', borderRadius: 12 }, style, { opacity }]} />;
+  return <Animated.View style={[s.block, style, { opacity }]} />;
 }

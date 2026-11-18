@@ -1,20 +1,10 @@
 // Re-export the theme system
 export { useTheme, darkColors, lightColors } from './ThemeContext';
-export type { ThemeColors, ThemeMode } from './ThemeContext';
+export type { ThemeColors, ThemeMode, ThemeShadows } from './ThemeContext';
 
-// ─── Fonts (static) — Montserrat display + Inter body ───
-export const fonts = {
-  // Display — Montserrat
-  display: 'Montserrat_700Bold',
-  displaySemi: 'Montserrat_600SemiBold',
-  displayHeavy: 'Montserrat_800ExtraBold',
-
-  // Body / UI — Inter
-  regular: 'Inter_400Regular',
-  medium: 'Inter_500Medium',
-  semiBold: 'Inter_600SemiBold',
-  bold: 'Inter_700Bold',
-};
+// ─── Fonts (static) — Manrope + JetBrains Mono (lib/fonts.ts; type scale in lib/typography.ts) ───
+export { fonts } from './fonts';
+export type { FontKey } from './fonts';
 
 // ─── Spacing (static) ───
 export const spacing = {
@@ -27,11 +17,13 @@ export const spacing = {
   xxxl: 32,
 };
 
-// ─── Radius (static) ───
+// ─── Radius (static, spec §3) ───
 export const radius = {
-  sm: 8, // chips, inline pills
-  md: 12, // inputs, secondary buttons
-  lg: 16, // cards
-  xl: 20, // large cards / hero panels
-  full: 999, // avatars, segmented pills, primary Button
+  xs: 6, // mono tag
+  sm: 10, // segment inside a segmented control
+  md: 14, // fields, segmented track, skeleton blocks, small thumbs, icon wells
+  lg: 18, // callouts, choice cards, toasts, map box
+  xl: 24, // cards, menus, list cards
+  sheet: 28, // bottom sheet top corners
+  full: 999, // buttons, chips, pills, tab bar, avatars
 };

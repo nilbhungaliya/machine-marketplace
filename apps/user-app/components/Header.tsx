@@ -44,7 +44,7 @@ export default function Header({ title, showBack = true, onBack, rightIcon }: He
     },
     title: {
       flex: 1,
-      fontFamily: fonts.display,
+      fontFamily: fonts.bold,
       fontSize: 20,
       color: colors.text,
       letterSpacing: -0.3,

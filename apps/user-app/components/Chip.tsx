@@ -22,9 +22,9 @@ export default function Chip({ label, selected = false, onPress, icon: Icon, dis
   const s = useMemo(() => StyleSheet.create({
     chip: {
       flexDirection: 'row', alignItems: 'center', gap: spacing.xs, minHeight: 40, paddingHorizontal: spacing.md,
-      borderRadius: radius.full, borderWidth: 1.5, borderColor: colors.elevated, backgroundColor: colors.elevated,
+      borderRadius: radius.full, borderWidth: 1.5, borderColor: colors.field, backgroundColor: colors.field,
     },
-    selected: { backgroundColor: colors.primaryMuted, borderColor: colors.primary },
+    selected: { backgroundColor: colors.primaryWash, borderColor: colors.primary },
     disabled: { opacity: 0.5 },
     label: { fontFamily: fonts.medium, fontSize: 14, color: colors.text },
     labelSelected: { color: colors.primary, fontFamily: fonts.semiBold },

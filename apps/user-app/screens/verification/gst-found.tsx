@@ -30,7 +30,7 @@ export default function GstFoundScreen({ navigation }: RootStackScreenProps<'Gst
 
   const s = useMemo(() => StyleSheet.create({
     body: { flex: 1, paddingHorizontal: spacing.xxl, paddingTop: spacing.sm, gap: spacing.lg },
-    title: { fontFamily: fonts.display, fontSize: 24, color: colors.text },
+    title: { fontFamily: fonts.bold, fontSize: 24, color: colors.text },
     subtitle: { fontFamily: fonts.regular, fontSize: 15, color: colors.textSecondary },
     footer: { paddingHorizontal: spacing.xxl, paddingBottom: spacing.xxl, gap: spacing.sm },
   }), [colors]);

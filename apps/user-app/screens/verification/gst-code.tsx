@@ -110,7 +110,7 @@ export default function GstCodeScreen({ navigation }: RootStackScreenProps<'GstC
 
   const s = useMemo(() => StyleSheet.create({
     body: { flex: 1, paddingHorizontal: spacing.xxl, paddingTop: spacing.sm },
-    title: { fontFamily: fonts.display, fontSize: 24, color: colors.text },
+    title: { fontFamily: fonts.bold, fontSize: 24, color: colors.text },
     subtitle: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 21, color: colors.textSecondary, marginTop: spacing.sm, marginBottom: spacing.sm },
     hint: { fontFamily: fonts.semiBold, color: colors.text },
     code: { fontFamily: fonts.semiBold, fontSize: 20, letterSpacing: 6 },

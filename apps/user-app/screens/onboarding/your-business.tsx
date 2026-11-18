@@ -95,14 +95,14 @@ export default function YourBusinessScreen({ navigation, route }: RootStackScree
       marginTop: spacing.xl, marginBottom: spacing.sm,
     },
     hint: { fontFamily: fonts.regular, fontSize: 13, color: colors.textMuted, marginTop: spacing.sm },
-    error: { fontFamily: fonts.regular, fontSize: 12, color: colors.red, marginTop: spacing.sm },
+    error: { fontFamily: fonts.regular, fontSize: 12, color: colors.danger, marginTop: spacing.sm },
     chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
     locked: {
-      marginTop: 10, borderRadius: 16, paddingHorizontal: 16, paddingVertical: 14, backgroundColor: colors.elevated,
+      marginTop: 10, borderRadius: 16, paddingHorizontal: 16, paddingVertical: 14, backgroundColor: colors.field,
     },
     lockedName: { fontFamily: fonts.semiBold, fontSize: 15, color: colors.text },
     lockedHint: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: spacing.xs },
-    lockedHintText: { fontFamily: fonts.medium, fontSize: 12, color: colors.green },
+    lockedHintText: { fontFamily: fonts.medium, fontSize: 12, color: colors.ok },
     section: { fontFamily: fonts.semiBold, fontSize: 16, color: colors.text, marginTop: spacing.xxl },
     retry: { fontFamily: fonts.semiBold, fontSize: 14, color: colors.primary, marginTop: spacing.sm },
     skeleton: { height: 52, borderRadius: radius.lg, marginTop: spacing.lg },
@@ -156,7 +156,7 @@ export default function YourBusinessScreen({ navigation, route }: RootStackScree
             <View style={s.locked}>
               <Text style={s.lockedName}>{profile.displayName}</Text>
               <View style={s.lockedHint}>
-                <ShieldCheck size={14} color={colors.green} />
+                <ShieldCheck size={14} color={colors.ok} />
                 <Text style={s.lockedHintText}>{t('onboarding.business.nameFromGst')}</Text>
               </View>
             </View>

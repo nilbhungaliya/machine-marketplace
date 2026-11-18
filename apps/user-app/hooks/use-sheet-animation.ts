@@ -43,7 +43,7 @@ export function useSheetAnimation(visible: boolean): SheetAnimation {
   // Memoised: interpolate() builds a native animated node, and a fresh one on
   // every render would be re-attached each time.
   const backdropOpacity = useMemo(
-    () => anim.interpolate({ inputRange: [0, 1], outputRange: [0, 0.5] }), [anim],
+    () => anim.interpolate({ inputRange: [0, 1], outputRange: [0, 1] }), [anim],
   );
   const translateY = useMemo(
     () => anim.interpolate({ inputRange: [0, 1], outputRange: [screenH, 0] }), [anim, screenH],

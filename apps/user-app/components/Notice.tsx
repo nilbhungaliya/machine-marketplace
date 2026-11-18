@@ -18,10 +18,10 @@ interface NoticeProps {
 export default function Notice({ text, title, tone = 'info', icon: Icon = Info, children, style }: NoticeProps) {
   const { colors } = useTheme();
   const tint = {
-    info: { fg: colors.primary, bg: colors.primaryMuted },
-    success: { fg: colors.green, bg: colors.greenMuted },
-    warning: { fg: colors.orange, bg: colors.orangeMuted },
-    danger: { fg: colors.red, bg: colors.redMuted },
+    info: { fg: colors.primary, bg: colors.primaryWash },
+    success: { fg: colors.ok, bg: colors.okSoft },
+    warning: { fg: colors.warn, bg: colors.warnSoft },
+    danger: { fg: colors.danger, bg: colors.dangerSoft },
   }[tone];
   const s = useMemo(() => StyleSheet.create({
     box: { flexDirection: 'row', gap: spacing.md, padding: spacing.lg, borderRadius: radius.lg, backgroundColor: tint.bg },

@@ -28,12 +28,12 @@ import GstLoadError from './gst-load-state';
 type StatusState = Extract<GstState, 'under_review' | 'needs_more' | 'rejected' | 'verified' | 'revoked'>;
 const STATUS_STATES: readonly GstState[] = ['under_review', 'needs_more', 'rejected', 'verified', 'revoked'];
 
-const HERO: Record<StatusState, { icon: LucideIcon; tone: 'green' | 'orange' | 'red'; key: string }> = {
-  under_review: { icon: Clock, tone: 'orange', key: 'underReview' },
-  needs_more: { icon: TriangleAlert, tone: 'orange', key: 'needsMore' },
-  rejected: { icon: TriangleAlert, tone: 'red', key: 'rejected' },
-  verified: { icon: ShieldCheck, tone: 'green', key: 'verified' },
-  revoked: { icon: ShieldAlert, tone: 'red', key: 'revoked' },
+const HERO: Record<StatusState, { icon: LucideIcon; tone: 'ok' | 'warn' | 'danger'; key: string }> = {
+  under_review: { icon: Clock, tone: 'warn', key: 'underReview' },
+  needs_more: { icon: TriangleAlert, tone: 'warn', key: 'needsMore' },
+  rejected: { icon: TriangleAlert, tone: 'danger', key: 'rejected' },
+  verified: { icon: ShieldCheck, tone: 'ok', key: 'verified' },
+  revoked: { icon: ShieldAlert, tone: 'danger', key: 'revoked' },
 };
 
 /** Under review, needs more (officer message + add files), rejected / revoked (reason + start again), verified. */
@@ -53,7 +53,7 @@ export default function GstStatusScreen({ navigation }: RootStackScreenProps<'Gs
     body: { flex: 1, paddingHorizontal: spacing.xxl, paddingTop: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xl },
     hero: { alignItems: 'center', gap: spacing.md },
     heroIcon: { width: 72, height: 72, borderRadius: radius.full, alignItems: 'center', justifyContent: 'center' },
-    title: { fontFamily: fonts.display, fontSize: 24, color: colors.text, textAlign: 'center' },
+    title: { fontFamily: fonts.bold, fontSize: 24, color: colors.text, textAlign: 'center' },
     text: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 22, color: colors.textSecondary, textAlign: 'center' },
     gstin: { fontFamily: fonts.semiBold, fontSize: 14, letterSpacing: 1, color: colors.text, textAlign: 'center' },
     skeleton: { height: 160, borderRadius: radius.lg },
@@ -79,7 +79,7 @@ export default function GstStatusScreen({ navigation }: RootStackScreenProps<'Gs
 
   const state = view.state as StatusState;
   const hero = HERO[state];
-  const tint = { green: [colors.green, colors.greenMuted], orange: [colors.orange, colors.orangeMuted], red: [colors.red, colors.redMuted] }[hero.tone];
+  const tint = { ok: [colors.ok, colors.okSoft], warn: [colors.warn, colors.warnSoft], danger: [colors.danger, colors.dangerSoft] }[hero.tone];
   const verifiedAt = view.verifiedAt ? Date.parse(view.verifiedAt) : NaN;
 
   return (
@@ -167,7 +167,7 @@ function AddFiles({ view }: { view: GstStateView }) {
   const s = useMemo(() => StyleSheet.create({
     section: { fontFamily: fonts.semiBold, fontSize: 16, color: colors.text, marginTop: spacing.sm },
     hint: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 19, color: colors.textMuted },
-    error: { fontFamily: fonts.regular, fontSize: 12, color: colors.red },
+    error: { fontFamily: fonts.regular, fontSize: 12, color: colors.danger },
   }), [colors]);
 
   return (

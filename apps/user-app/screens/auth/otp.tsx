@@ -39,11 +39,11 @@ export default function OtpScreen({ route }: AuthStackScreenProps<'OTP'>) {
 
   const s = useMemo(() => StyleSheet.create({
     body: { flex: 1, paddingHorizontal: spacing.xxl, paddingTop: spacing.lg },
-    title: { fontFamily: fonts.display, fontSize: 26, color: colors.text },
+    title: { fontFamily: fonts.bold, fontSize: 26, color: colors.text },
     subtitle: { fontFamily: fonts.regular, fontSize: 15, color: colors.textSecondary, marginTop: spacing.sm, marginBottom: spacing.lg },
     resend: { fontFamily: fonts.semiBold, fontSize: 14, color: colors.primary, marginTop: spacing.lg },
     resendWait: { color: colors.textMuted },
-    dev: { fontFamily: fonts.medium, fontSize: 13, color: colors.orange, marginTop: spacing.md },
+    dev: { fontFamily: fonts.medium, fontSize: 13, color: colors.warn, marginTop: spacing.md },
     footer: { paddingHorizontal: spacing.xxl, paddingBottom: spacing.xxl },
   }), [colors]);
 

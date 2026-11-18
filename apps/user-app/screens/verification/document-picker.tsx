@@ -99,11 +99,11 @@ export default function DocumentPickerField({ files, onChange, max, disabled = f
 
   const s = useMemo(() => StyleSheet.create({
     file: {
-      padding: spacing.md, borderRadius: radius.lg, backgroundColor: colors.card, gap: spacing.sm, marginBottom: spacing.sm,
+      padding: spacing.md, borderRadius: radius.lg, backgroundColor: colors.surface, gap: spacing.sm, marginBottom: spacing.sm,
       borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border,
     },
     fileHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-    thumb: { width: 44, height: 44, borderRadius: radius.sm, backgroundColor: colors.elevated, alignItems: 'center', justifyContent: 'center' },
+    thumb: { width: 44, height: 44, borderRadius: radius.sm, backgroundColor: colors.field, alignItems: 'center', justifyContent: 'center' },
     fileText: { flex: 1 },
     fileName: { fontFamily: fonts.medium, fontSize: 14, color: colors.text },
     fileSize: { fontFamily: fonts.regular, fontSize: 12, color: colors.textMuted, marginTop: 2 },
@@ -112,7 +112,7 @@ export default function DocumentPickerField({ files, onChange, max, disabled = f
     addRow: { flexDirection: 'row', gap: spacing.sm },
     add: {
       flex: 1, minHeight: 64, borderRadius: radius.lg, alignItems: 'center', justifyContent: 'center', gap: spacing.xs,
-      backgroundColor: colors.primaryMuted,
+      backgroundColor: colors.primaryWash,
     },
     addDisabled: { opacity: 0.5 },
     addText: { fontFamily: fonts.semiBold, fontSize: 13, color: colors.primary },

@@ -10,20 +10,20 @@ import type { TabScreenProps } from '@/navigation/types';
 
 export default function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
   const { t } = useTranslation();
-  const { colors, cardShadow } = useTheme();
+  const { colors, shadows } = useTheme();
 
   const s = useMemo(() => StyleSheet.create({
     header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.lg, paddingTop: spacing.sm, gap: spacing.md },
     city: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
     cityText: { fontFamily: fonts.semiBold, fontSize: 15, color: colors.text },
     avatar: {
-      width: 40, height: 40, borderRadius: radius.full, backgroundColor: colors.primaryMuted,
+      width: 40, height: 40, borderRadius: radius.full, backgroundColor: colors.primaryWash,
       alignItems: 'center', justifyContent: 'center',
     },
     search: {
       flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginHorizontal: spacing.lg, marginTop: spacing.lg,
       paddingHorizontal: spacing.lg, height: 48, borderRadius: radius.md, backgroundColor: colors.surface,
-      borderWidth: 1, borderColor: colors.border, ...cardShadow,
+      borderWidth: 1, borderColor: colors.border, ...shadows.raised,
     },
     searchText: { flex: 1, fontFamily: fonts.regular, fontSize: 14, color: colors.textMuted },
     chips: { paddingHorizontal: spacing.lg, paddingVertical: spacing.lg, gap: spacing.sm },
@@ -32,8 +32,8 @@ export default function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
       backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
     },
     chipText: { fontFamily: fonts.medium, fontSize: 13, color: colors.text },
-    sectionTitle: { fontFamily: fonts.display, fontSize: 20, color: colors.text, paddingHorizontal: spacing.lg },
-  }), [colors, cardShadow]);
+    sectionTitle: { fontFamily: fonts.bold, fontSize: 20, color: colors.text, paddingHorizontal: spacing.lg },
+  }), [colors, shadows]);
 
   return (
     <ScreenWrapper edges={['top']}>

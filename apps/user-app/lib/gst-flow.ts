@@ -102,23 +102,23 @@ export function secondsUntil(iso: string | undefined, now: number): number {
   return Math.max(0, Math.ceil((at - now) / 1000));
 }
 
-export type ChipTone = 'green' | 'orange' | 'red' | 'muted';
+export type ChipTone = 'ok' | 'warn' | 'danger' | 'neutral';
 
 /** The GST status chip on Profile. */
 export function gstChip(state: GstState): { key: string; tone: ChipTone } {
   switch (state) {
     case 'verified':
-      return { key: 'verification.chip.verified', tone: 'green' };
+      return { key: 'verification.chip.verified', tone: 'ok' };
     case 'under_review':
-      return { key: 'verification.chip.underReview', tone: 'orange' };
+      return { key: 'verification.chip.underReview', tone: 'warn' };
     case 'needs_more':
-      return { key: 'verification.chip.needsMore', tone: 'orange' };
+      return { key: 'verification.chip.needsMore', tone: 'warn' };
     case 'rejected':
-      return { key: 'verification.chip.rejected', tone: 'red' };
+      return { key: 'verification.chip.rejected', tone: 'danger' };
     case 'revoked':
-      return { key: 'verification.chip.revoked', tone: 'red' };
+      return { key: 'verification.chip.revoked', tone: 'danger' };
     default:
-      return { key: 'verification.chip.notVerified', tone: 'muted' };
+      return { key: 'verification.chip.notVerified', tone: 'neutral' };
   }
 }
 

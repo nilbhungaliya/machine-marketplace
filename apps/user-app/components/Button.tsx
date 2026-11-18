@@ -20,7 +20,7 @@ interface ButtonProps {
 export default function Button({
   title, onPress, loading = false, disabled = false, variant = 'primary', style, phLabel,
 }: ButtonProps) {
-  const { colors, primaryGlow } = useTheme();
+  const { colors } = useTheme();
   const reduced = useReducedMotion();
   const scale = useSharedValue(1);
   const pressStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
@@ -40,7 +40,7 @@ export default function Button({
     outline: { backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.border },
     ghost: { backgroundColor: 'transparent' },
     disabled: { opacity: 0.45 },
-    text: { fontFamily: fonts.display, fontSize: 16, letterSpacing: 0.2 },
+    text: { fontFamily: fonts.bold, fontSize: 16, letterSpacing: 0.2 },
     primaryText: { color: colors.onPrimary },
     outlineText: { color: colors.text },
     ghostText: { color: colors.primary },
@@ -60,7 +60,6 @@ export default function Button({
       style={[
         s.base,
         s[variant],
-        variant === 'primary' && !inactive && primaryGlow,
         inactive && s.disabled,
         style,
         pressStyle,

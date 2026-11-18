@@ -39,17 +39,17 @@ patchable.show = (params) => {
 function variantStyle(variant: Variant, colors: ThemeColors): { Glyph: LucideIcon; chip: string; icon: string; rail: string } {
   switch (variant) {
     case 'success':
-      return { Glyph: CircleCheck, chip: colors.primaryMuted, icon: colors.primaryDark, rail: colors.primary };
+      return { Glyph: CircleCheck, chip: colors.primaryWash, icon: colors.primaryInk, rail: colors.primary };
     case 'error':
-      return { Glyph: TriangleAlert, chip: colors.redMuted, icon: colors.red, rail: colors.red };
+      return { Glyph: TriangleAlert, chip: colors.dangerSoft, icon: colors.danger, rail: colors.danger };
     case 'info':
-      return { Glyph: Info, chip: colors.blueMuted, icon: colors.blue, rail: colors.blue };
+      return { Glyph: Info, chip: colors.primaryWash, icon: colors.primaryInk, rail: colors.primaryInk };
   }
 }
 
 /** The house card from `VehicleCard`, plus a status chip and a draining rail. */
 function ToastCard({ variant, text1, text2, isVisible, hide, onPress, props }: ToastConfigParams<ToastExtras> & { variant: Variant }) {
-  const { colors, cardShadow } = useTheme();
+  const { colors, shadows } = useTheme();
   const lang = useLanguage();
   const { Glyph, chip, icon, rail } = variantStyle(variant, colors);
   const durationMs = props?.durationMs ?? DEFAULT_VISIBLE_MS;
@@ -88,10 +88,11 @@ function ToastCard({ variant, text1, text2, isVisible, hide, onPress, props }: T
       borderRadius: 16,
       borderWidth: 1,
       borderColor: colors.border,
-      // Clips the rail to the radius. Safe alongside `cardShadow` — Android
-      // draws elevation outside the view, so this only affects children.
+      // Clips the rail (a child) to the radius. `overflow` clips children only;
+      // the outset `boxShadow` from `shadows.raised` is drawn outside the view's
+      // own box, so the shadow stays.
       overflow: 'hidden',
-      ...cardShadow,
+      ...shadows.raised,
     },
     chip: {
       width: 34,
@@ -105,7 +106,7 @@ function ToastCard({ variant, text1, text2, isVisible, hide, onPress, props }: T
     // Bottom padding clears the rail's 3px.
     copy: { flex: 1, paddingTop: 11, paddingBottom: 13, paddingLeft: 11, paddingRight: 14 },
     text1: {
-      fontFamily: fonts.display,
+      fontFamily: fonts.bold,
       fontSize: 14.5,
       lineHeight: scriptLineHeight(lang, 14.5, 19),
       color: colors.text,
@@ -128,7 +129,7 @@ function ToastCard({ variant, text1, text2, isVisible, hide, onPress, props }: T
       // lands just as a request settles, when the JS thread is busiest.
       transformOrigin: 'left center',
     },
-  }), [colors, cardShadow, chip, rail, lang]);
+  }), [colors, shadows, chip, rail, lang]);
 
   return (
     <Pressable

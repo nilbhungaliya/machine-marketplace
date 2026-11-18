@@ -238,7 +238,7 @@ function LocationForm({ mode, title, profile, onDone }: {
     mapHint: { fontFamily: fonts.regular, fontSize: 12, color: colors.textMuted, marginBottom: spacing.sm },
     locate: {
       flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, minHeight: 48,
-      borderRadius: radius.full, backgroundColor: colors.primaryMuted,
+      borderRadius: radius.full, backgroundColor: colors.primaryWash,
     },
     locateText: { fontFamily: fonts.semiBold, fontSize: 15, color: colors.primary },
     row: { flexDirection: 'row', gap: spacing.md },
@@ -249,7 +249,7 @@ function LocationForm({ mode, title, profile, onDone }: {
     half: { flex: 1 },
     notice: {
       flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start', padding: spacing.md, borderRadius: radius.md,
-      backgroundColor: colors.orangeMuted, marginTop: spacing.sm,
+      backgroundColor: colors.warnSoft, marginTop: spacing.sm,
     },
     noticeText: { flex: 1, fontFamily: fonts.regular, fontSize: 13, color: colors.text },
     label: {
@@ -257,17 +257,17 @@ function LocationForm({ mode, title, profile, onDone }: {
       marginTop: spacing.xl, marginBottom: spacing.xs,
     },
     hint: { fontFamily: fonts.regular, fontSize: 13, color: colors.textMuted, marginBottom: spacing.sm },
-    list: { borderRadius: radius.lg, backgroundColor: colors.card, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border, overflow: 'hidden' },
+    list: { borderRadius: radius.lg, backgroundColor: colors.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border, overflow: 'hidden' },
     option: {
       flexDirection: 'row', alignItems: 'center', minHeight: 48, paddingHorizontal: spacing.lg,
-      borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderLight,
+      borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.divider,
     },
     optionLast: { borderBottomWidth: 0 },
-    optionSelected: { backgroundColor: colors.primaryMuted },
+    optionSelected: { backgroundColor: colors.primaryWash },
     optionText: { flex: 1, fontFamily: fonts.medium, fontSize: 15, color: colors.text },
     optionTextSelected: { color: colors.primary, fontFamily: fonts.semiBold },
     empty: { fontFamily: fonts.regular, fontSize: 13, color: colors.textMuted, padding: spacing.lg },
-    error: { fontFamily: fonts.regular, fontSize: 12, color: colors.red, marginTop: spacing.sm },
+    error: { fontFamily: fonts.regular, fontSize: 12, color: colors.danger, marginTop: spacing.sm },
     retry: { fontFamily: fonts.semiBold, fontSize: 14, color: colors.primary },
     footer: { paddingHorizontal: spacing.xxl, paddingBottom: spacing.xxl, paddingTop: spacing.sm },
   }), [colors]);
@@ -296,7 +296,7 @@ function LocationForm({ mode, title, profile, onDone }: {
 
         {pin ? (
           <View style={s.pinRow}>
-            <MapPin size={16} color={colors.green} />
+            <MapPin size={16} color={colors.ok} />
             <Text style={s.pinText}>{t('onboarding.location.pinSet')}</Text>
             <Pressable
               onPress={removePin}
@@ -338,7 +338,7 @@ function LocationForm({ mode, title, profile, onDone }: {
         />
         {validPin && pincodeInfo.data === null ? (
           <View style={s.notice}>
-            <Info size={16} color={colors.orange} />
+            <Info size={16} color={colors.warn} />
             <Text style={s.noticeText}>{t('onboarding.location.unknownPincode')}</Text>
           </View>
         ) : null}

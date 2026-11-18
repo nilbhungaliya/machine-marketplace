@@ -1,0 +1,4 @@
+[
+  { "path": "lib/palette.ts", "reason": "The palette: the only place colour values live." },
+  { "path": "components/art/", "reason": "Illustration materials (metal, shadow) in product-shot art, not theme colours." }
+]

@@ -166,7 +166,7 @@ export default function GstReviewFormScreen({ navigation, route }: RootStackScre
 
   const s = useMemo(() => StyleSheet.create({
     body: { flex: 1, paddingHorizontal: spacing.xxl, paddingTop: spacing.sm, paddingBottom: spacing.xl },
-    title: { fontFamily: fonts.display, fontSize: 24, color: colors.text },
+    title: { fontFamily: fonts.bold, fontSize: 24, color: colors.text },
     subtitle: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 21, color: colors.textSecondary, marginTop: spacing.xs },
     section: { fontFamily: fonts.semiBold, fontSize: 16, color: colors.text, marginTop: spacing.xxl, marginBottom: spacing.xs },
     label: {
@@ -179,11 +179,11 @@ export default function GstReviewFormScreen({ navigation, route }: RootStackScre
     row: { flexDirection: 'row', gap: spacing.md },
     half: { flex: 1 },
     declare: {
-      flexDirection: 'row', gap: spacing.md, padding: spacing.lg, borderRadius: radius.lg, backgroundColor: colors.card,
+      flexDirection: 'row', gap: spacing.md, padding: spacing.lg, borderRadius: radius.lg, backgroundColor: colors.surface,
       borderWidth: 1.5, borderColor: form.values.declared ? colors.primary : colors.border, marginTop: spacing.xxl,
     },
     declareText: { flex: 1, fontFamily: fonts.medium, fontSize: 14, lineHeight: 21, color: colors.text },
-    error: { fontFamily: fonts.regular, fontSize: 12, color: colors.red, marginTop: spacing.sm },
+    error: { fontFamily: fonts.regular, fontSize: 12, color: colors.danger, marginTop: spacing.sm },
     footer: { paddingHorizontal: spacing.xxl, paddingBottom: spacing.xxl, paddingTop: spacing.sm, gap: spacing.sm },
     progress: { fontFamily: fonts.medium, fontSize: 13, color: colors.textSecondary, textAlign: 'center' },
   }), [colors, form.values.declared]);

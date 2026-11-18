@@ -17,7 +17,7 @@ export default function WelcomeScreen({ navigation }: RootStackScreenProps<'Welc
       width: 72, height: 72, borderRadius: 20, backgroundColor: colors.primary,
       alignItems: 'center', justifyContent: 'center', marginBottom: spacing.xxl,
     },
-    title: { fontFamily: fonts.displayHeavy, fontSize: 32, lineHeight: 40, color: colors.text },
+    title: { fontFamily: fonts.extraBold, fontSize: 32, lineHeight: 40, color: colors.text },
     subtitle: { fontFamily: fonts.regular, fontSize: 16, lineHeight: 24, color: colors.textSecondary, marginTop: spacing.md },
     footer: { paddingHorizontal: spacing.xxl, paddingBottom: spacing.xxl },
   }), [colors]);

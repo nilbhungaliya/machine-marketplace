@@ -25,7 +25,7 @@ const THEME_KEY = { light: 'profile.themeLight', dark: 'profile.themeDark', syst
 
 export default function ProfileScreen({ navigation }: RootStackScreenProps<'Profile'>) {
   const { t } = useTranslation();
-  const { colors, cardShadow, mode, setMode } = useTheme();
+  const { colors, shadows, mode, setMode } = useTheme();
   const language = useLanguage();
   const { logout, name } = useAuth();
   const confirm = useConfirm();
@@ -67,50 +67,50 @@ export default function ProfileScreen({ navigation }: RootStackScreenProps<'Prof
   };
 
   const toneColor = (tone: ChipTone) => ({
-    green: [colors.green, colors.greenMuted],
-    orange: [colors.orange, colors.orangeMuted],
-    red: [colors.red, colors.redMuted],
-    muted: [colors.textSecondary, colors.elevated],
+    ok: [colors.ok, colors.okSoft],
+    warn: [colors.warn, colors.warnSoft],
+    danger: [colors.danger, colors.dangerSoft],
+    neutral: [colors.textSecondary, colors.field],
   })[tone];
 
   const s = useMemo(() => StyleSheet.create({
     body: { padding: spacing.lg, gap: spacing.xl },
     head: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
     avatar: {
-      width: 64, height: 64, borderRadius: radius.lg, backgroundColor: colors.primaryMuted, alignItems: 'center', justifyContent: 'center',
+      width: 64, height: 64, borderRadius: radius.lg, backgroundColor: colors.primaryWash, alignItems: 'center', justifyContent: 'center',
     },
     headText: { flex: 1, gap: 2 },
-    person: { fontFamily: fonts.display, fontSize: 22, color: colors.text },
+    person: { fontFamily: fonts.bold, fontSize: 22, color: colors.text },
     businessName: { fontFamily: fonts.medium, fontSize: 15, color: colors.textSecondary },
     chip: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', marginTop: spacing.xs, paddingHorizontal: spacing.sm, paddingVertical: 3, borderRadius: radius.full },
     chipText: { fontFamily: fonts.semiBold, fontSize: 12 },
-    meterCard: { padding: spacing.lg, borderRadius: radius.lg, backgroundColor: colors.card, gap: spacing.md, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
+    meterCard: { padding: spacing.lg, borderRadius: radius.lg, backgroundColor: colors.surface, gap: spacing.md, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
     meterTitle: { fontFamily: fonts.semiBold, fontSize: 15, color: colors.text },
     meter: { flexDirection: 'row', gap: spacing.xs },
-    segment: { flex: 1, height: 6, borderRadius: radius.full, backgroundColor: colors.elevated },
+    segment: { flex: 1, height: 6, borderRadius: radius.full, backgroundColor: colors.field },
     segmentDone: { backgroundColor: colors.primary },
     prompt: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
     promptText: { flex: 1, fontFamily: fonts.semiBold, fontSize: 14, color: colors.primary },
     sectionTitle: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm },
     sectionText: { fontFamily: fonts.semiBold, fontSize: 15, color: colors.text },
-    card: { borderRadius: radius.lg, backgroundColor: colors.card, ...cardShadow },
+    card: { borderRadius: radius.lg, backgroundColor: colors.surface, ...shadows.raised },
     row: {
       flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.md, minHeight: 56,
-      borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderLight,
+      borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.divider,
     },
     rowLast: { borderBottomWidth: 0 },
     rowText: { flex: 1 },
     rowLabel: { fontFamily: fonts.medium, fontSize: 15, color: colors.text },
     rowHint: { fontFamily: fonts.regular, fontSize: 12, color: colors.textMuted, marginTop: 2 },
     retry: { fontFamily: fonts.semiBold, fontSize: 14, color: colors.primary, marginTop: spacing.xs },
-  }), [colors, cardShadow]);
+  }), [colors, shadows]);
 
   const chipView = (state: Parameters<typeof gstChip>[0]) => {
     const chip = gstChip(state);
     const [fg, bg] = toneColor(chip.tone);
     return (
       <View style={[s.chip, { backgroundColor: bg }]}>
-        {chip.tone === 'green' ? <ShieldCheck size={12} color={fg} /> : null}
+        {chip.tone === 'ok' ? <ShieldCheck size={12} color={fg} /> : null}
         <Text style={[s.chipText, { color: fg }]}>{t(chip.key)}</Text>
       </View>
     );
