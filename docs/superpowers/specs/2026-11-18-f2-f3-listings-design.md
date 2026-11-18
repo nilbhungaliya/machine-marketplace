@@ -1196,9 +1196,8 @@ test layout.
 
 ---
 
-## Amendments after plan review (2026-11-18, pending the owner's OK)
-Found while planning (plan revision 2). The rulings above stay as approved until the owner accepts these; the plan
-builds them.
+## Amendments after plan review (2026-11-18, approved by the owner 2026-11-18)
+Found while planning (plan revision 2); they refine the rulings above where they differ, and the plan builds them.
 
 1. **Lock order of the expiry job (§7.2, §7.4).** The rule "every write locks the business then the listing" has one
    exception: the system `expire` transition takes only the listing (`FOR UPDATE SKIP LOCKED` in the job) and relies on
