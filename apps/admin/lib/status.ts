@@ -8,14 +8,16 @@ export const TONE_CLASSES: Record<StatusTone, string> = {
   gray: 'bg-gray-100 text-gray-600',
 };
 
-// Listing (F2, A3), enquiry and offer (F6), deal and rental booking (F7), part request (F8), verification (A2) and report (A6) statuses.
+// Listing (F2, A3), enquiry and offer (F6), deal and rental booking (F7), part request (F8), verification and GST review
+// (A2), account (A2) and report (A6) statuses.
 const TONE_BY_STATUS: Record<string, StatusTone> = {
   live: 'green', sold: 'green', rented: 'green', accepted: 'green', completed: 'green', fulfilled: 'green',
   verified: 'green', approved: 'green', active: 'green', agreed: 'green', confirmed: 'green', returned: 'green',
-  actioned: 'green',
+  actioned: 'green', passed: 'green',
   reserved: 'blue', countered: 'blue', matched: 'blue', replied: 'blue', converted: 'blue', reviewing: 'blue',
-  pending_review: 'amber', pending: 'amber', open: 'amber', disputed: 'amber', requested: 'amber',
-  rejected: 'red', cancelled: 'red', suspended: 'red', banned: 'red', failed: 'red',
+  needs_more: 'blue', code_sent: 'blue',
+  pending_review: 'amber', pending: 'amber', open: 'amber', disputed: 'amber', requested: 'amber', waiting: 'amber',
+  rejected: 'red', cancelled: 'red', suspended: 'red', banned: 'red', failed: 'red', blocked: 'red', revoked: 'red',
   draft: 'gray', paused: 'gray', expired: 'gray', removed: 'gray', withdrawn: 'gray', closed: 'gray',
   unavailable: 'gray', dismissed: 'gray', not_submitted: 'gray',
 };

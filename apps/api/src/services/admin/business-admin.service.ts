@@ -51,15 +51,25 @@ const OWNER_JOIN = sql`LEFT JOIN LATERAL (
   LIMIT 1
 ) o ON true`;
 
+/** The business's listed industrial area (`ia`), for the list's area column and its search. */
+const AREA_JOIN = sql`LEFT JOIN industrial_areas ia ON ia.id = b.industrial_area_id`;
+
 /**
- * `search` matches the trade or legal name (contains, any case), the owner's phone (when the search is only digits and
- * phone punctuation: its digits, contained in the phone's digits) and the GSTIN (prefix, any case or spacing).
+ * `search` matches the trade or legal name, the city, the linked industrial area's name and the typed "Other" area
+ * (contains, any case; spec §8.2), the owner's phone (when the search is only digits and phone punctuation: its digits,
+ * contained in the phone's digits) and the GSTIN (prefix, any case or spacing). Needs the `ia` join (AREA_JOIN).
  */
 function searchCondition(raw: string): SQL | null {
   const q = raw.trim();
   if (q === '') return null;
   const contains = `%${escapeLike(q)}%`;
-  const parts: SQL[] = [sql`b.trade_name ILIKE ${contains}`, sql`b.legal_name ILIKE ${contains}`];
+  const parts: SQL[] = [
+    sql`b.trade_name ILIKE ${contains}`,
+    sql`b.legal_name ILIKE ${contains}`,
+    sql`b.city ILIKE ${contains}`,
+    sql`ia.name ILIKE ${contains}`,
+    sql`b.industrial_area_other ILIKE ${contains}`,
+  ];
   const gstin = normalizeGstin(q);
   if (/^[0-9A-Z]{1,15}$/.test(gstin)) parts.push(sql`b.gstin LIKE ${`${gstin}%`}`);
   const digits = q.replace(/\D/g, '');
@@ -83,7 +93,7 @@ export async function listBusinesses(conn: Db | Tx, q: BusinessListQuery): Promi
   const where = conditions.length > 0 ? sql`WHERE ${sql.join(conditions, sql` AND `)}` : sql``;
 
   const { rows: countRows } = await conn.execute<{ total: number }>(sql`
-    SELECT count(*)::int AS total FROM businesses b ${OWNER_JOIN} ${where}
+    SELECT count(*)::int AS total FROM businesses b ${OWNER_JOIN} ${AREA_JOIN} ${where}
   `);
   const { rows } = await conn.execute<{
     id: string;
@@ -108,7 +118,7 @@ export async function listBusinesses(conn: Db | Tx, q: BusinessListQuery): Promi
            o.id AS owner_id, o.name AS owner_name, o.phone AS owner_phone, o.status AS owner_status
     FROM businesses b
     ${OWNER_JOIN}
-    LEFT JOIN industrial_areas ia ON ia.id = b.industrial_area_id
+    ${AREA_JOIN}
     ${where}
     ORDER BY b.created_at DESC, b.id DESC
     LIMIT ${pageSize} OFFSET ${(page - 1) * pageSize}

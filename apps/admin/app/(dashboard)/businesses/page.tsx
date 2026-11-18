@@ -1,15 +1,17 @@
-import ModulePlaceholder from '@/components/module-placeholder';
+'use client';
 
-export default function Page() {
+import { BusinessTable } from '@/components/businesses/business-table';
+import { PageHeader } from '@/components/ui/page-header';
+
+/** A2 Users & businesses (F1 + A2 spec §8.2). */
+export default function BusinessesPage() {
   return (
-    <ModulePlaceholder
-      title="Users & businesses"
-      description="Every registered user and business (scope A2)"
-      scope={[
-        "Search and filter businesses by city, industrial area, verification",
-        "Business detail: GST, location, listings, activity and deal history",
-        "Suspend / block users; manage reported users",
-      ]}
-    />
+    <div>
+      <PageHeader
+        title="Users & businesses"
+        description="Every registered business and its people. Open one to see its profile, GST history and account actions."
+      />
+      <BusinessTable />
+    </div>
   );
 }

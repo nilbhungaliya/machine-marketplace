@@ -6,6 +6,7 @@ import { ChevronDown, ChevronsLeft, ChevronsRight, Layers, LogOut } from 'lucide
 import { useAuth } from '@/lib/auth-context';
 import { cn } from '@/lib/utils';
 import { NAV_DASHBOARD, NAV_GROUPS, canSee, findActiveNav, type NavItem } from '@/lib/nav';
+import { badgeText, useNavBadges, type NavBadgeKey } from '@/lib/nav-badges';
 import { useSidebarState } from './sidebar-state';
 
 const FOCUS = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400';
@@ -28,10 +29,13 @@ export default function Sidebar() {
   const groups = NAV_GROUPS
     .map((g) => ({ ...g, items: g.items.filter((i) => canSee(i, user?.role)) }))
     .filter((g) => g.items.length > 0);
+  const badgeKeys = groups.flatMap((g) => g.items.flatMap((i) => (i.badgeKey ? [i.badgeKey] : [] as NavBadgeKey[])));
+  const badges = useNavBadges(badgeKeys, pathname);
 
   const row = (item: NavItem) => {
     const isActive = active?.item.href === item.href;
     const Icon = item.icon;
+    const badge = item.badgeKey ? badgeText(item.badgeKey, badges[item.badgeKey]) : null;
     return (
       <li key={item.href}>
         <Link
@@ -49,6 +53,13 @@ export default function Sidebar() {
         >
           <Icon size={18} aria-hidden className="shrink-0" />
           <span className={collapsed ? 'sr-only' : 'min-w-0 flex-1 truncate'}>{item.label}</span>
+          {badge && (collapsed ? (
+            <span className="absolute right-2.5 top-1.5 h-2 w-2 rounded-full bg-amber-400"><span className="sr-only">, {badge} waiting</span></span>
+          ) : (
+            <span className="shrink-0 rounded-full bg-amber-400 px-1.5 text-[11px] font-bold text-gray-900 tnum">
+              {badge}<span className="sr-only"> waiting</span>
+            </span>
+          ))}
         </Link>
       </li>
     );

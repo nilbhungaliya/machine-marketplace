@@ -1,11 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import type { FastifyInstance } from 'fastify';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import type { AdminBusinessDetail, AdminBusinessList, GstStateView } from '@mpm/shared-types';
 import { buildApp } from '../src/app.js';
 import { db } from '../src/db/index.js';
-import { auditLog, businessVerifications, businesses, users } from '../src/db/schema.js';
+import { auditLog, businessVerifications, businesses, industrialAreas, users } from '../src/db/schema.js';
 import { resetGstProvider } from '../src/services/verification/gst-provider.js';
 import { resetStubGstins } from '../src/services/verification/gst-stub.js';
 import { createTestAdmin, deleteTestAdmins } from './_helpers/test-admins.js';
@@ -26,6 +26,7 @@ describe('admin businesses', () => {
   let app: FastifyInstance;
   const businessIds: string[] = [];
   const adminIds: string[] = [];
+  const areaIds: string[] = [];
   let officer: { id: string; token: string };
   let moderator: { id: string; token: string };
   let support: { id: string; token: string };
@@ -71,6 +72,7 @@ describe('admin businesses', () => {
 
   afterAll(async () => {
     await deleteTestBusinesses(businessIds);
+    if (areaIds.length > 0) await db.delete(industrialAreas).where(inArray(industrialAreas.id, areaIds));
     await deleteTestAdmins(adminIds);
     await app.close();
   });
@@ -99,6 +101,30 @@ describe('admin businesses', () => {
       expect(byName.rows.map((r) => r.id)).toEqual([b.businessId]);
       const byLegal = await list(`search=${encodeURIComponent(`sample engineering ${gstin.slice(2, 12)}`)}`);
       expect(byLegal.rows.map((r) => r.id)).toEqual([b.businessId]);
+    });
+
+    it('searches the city, the linked industrial area name and the typed "Other" area (spec §8.2)', async () => {
+      const stamp = Date.now();
+      const [area] = await db
+        .insert(industrialAreas)
+        .values({ name: `Searcharea GIDC ${stamp}`, city: `Areacity ${stamp}`, state: 'Gujarat', sortOrder: 10 })
+        .returning();
+      areaIds.push(area!.id);
+      const linked = await newBusiness();
+      await db.update(businesses).set({ industrialAreaId: area!.id }).where(eq(businesses.id, linked.businessId));
+      const typed = await newBusiness();
+      await db.update(businesses).set({ industrialAreaOther: `Typedplace Estate ${stamp}` }).where(eq(businesses.id, typed.businessId));
+      const searchCity = `Searchcity_${stamp}`;
+      const inCity = await newBusiness({ city: searchCity });
+
+      const ids = async (search: string) => (await list(`search=${encodeURIComponent(search)}`)).rows.map((r) => r.id);
+      expect(await ids(`searcharea gidc ${stamp}`)).toEqual([linked.businessId]);
+      expect(await ids(`TYPEDPLACE estate ${stamp}`)).toEqual([typed.businessId]);
+      expect(await ids(`searchcity_${stamp}`)).toEqual([inCity.businessId]);
+      // LIKE wildcards in the search are literal: "_" matches only an underscore.
+      expect(await ids(`Searchcity-${stamp}`)).toEqual([]);
+      // The total counts the same matches (the count query joins the areas too).
+      expect((await list(`search=${encodeURIComponent(`Searcharea GIDC ${stamp}`)}`)).total).toBe(1);
     });
 
     it('filters by city, verification and account status; pages with a total', async () => {

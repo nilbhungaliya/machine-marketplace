@@ -3,8 +3,9 @@ import type { AdminRole } from '@mpm/shared-types';
 import {
   LayoutDashboard, ShieldCheck, ClipboardCheck, Building2, Package, Handshake, MessagesSquare, FolderTree,
   ListChecks, Megaphone, Flag, Bell, UserCog, ScrollText, BarChart3, BellRing, MessageSquareQuote, CalendarClock,
-  Factory, SlidersHorizontal,
+  Factory, SlidersHorizontal, MapPin,
 } from 'lucide-react';
+import type { NavBadgeKey } from './nav-badges';
 
 export interface NavItem {
   href: string;
@@ -14,6 +15,8 @@ export interface NavItem {
   also?: string[];
   /** Roles that see it besides super_admin. Absent = every admin. */
   roles?: AdminRole[];
+  /** A count shown beside the label (`lib/nav-badges.ts`), fetched only for admins who see the item. */
+  badgeKey?: NavBadgeKey;
 }
 
 export interface NavGroup {
@@ -28,11 +31,11 @@ export const NAV_DASHBOARD: NavItem = { href: '/', label: 'Dashboard', icon: Lay
 export const NAV_GROUPS: NavGroup[] = [
   { id: 'queues', label: 'Queues', items: [
     { href: '/moderation', label: 'Listing moderation', icon: ClipboardCheck, roles: ['moderator'] },
-    { href: '/verification', label: 'Business verification', icon: ShieldCheck, roles: ['verification_officer'] },
+    { href: '/verification', label: 'Business verification', icon: ShieldCheck, roles: ['verification_officer'], badgeKey: 'verificationWaiting' },
     { href: '/reports', label: 'Reports & flags', icon: Flag, roles: ['moderator', 'support'] },
   ] },
   { id: 'marketplace', label: 'Marketplace', items: [
-    { href: '/businesses', label: 'Users & businesses', icon: Building2, roles: ['support', 'verification_officer'] },
+    { href: '/businesses', label: 'Users & businesses', icon: Building2, roles: ['support', 'verification_officer', 'moderator'] },
     { href: '/listings', label: 'Parts & machinery', icon: Package, roles: ['moderator', 'support'] },
     { href: '/part-requests', label: 'Part requests', icon: BellRing, roles: ['moderator', 'support'] },
     { href: '/enquiries', label: 'Enquiries & offers', icon: MessageSquareQuote, roles: ['support', 'operations'] },
@@ -45,6 +48,7 @@ export const NAV_GROUPS: NavGroup[] = [
     { href: '/brands-models', label: 'Brands, models & fit', icon: Factory, roles: ['category_manager'] },
     { href: '/listing-fields', label: 'Specifications & fields', icon: SlidersHorizontal, roles: ['category_manager'] },
     { href: '/master-data', label: 'Units, conditions & sides', icon: ListChecks, roles: ['category_manager'] },
+    { href: '/industrial-areas', label: 'Industrial areas', icon: MapPin, roles: ['category_manager'] },
   ] },
   { id: 'growth', label: 'Insights & growth', items: [
     { href: '/analytics', label: 'Activity & KPIs', icon: BarChart3, roles: ['operations'] },

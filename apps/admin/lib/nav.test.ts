@@ -47,3 +47,23 @@ describe('canSee', () => {
     expect(canSee(moderation, undefined)).toBe(false);
   });
 });
+
+describe('F1 + A2 menu entries', () => {
+  const item = (href: string) => NAV_GROUPS.flatMap((g) => g.items).find((i) => i.href === href)!;
+
+  it('moderators see Users & businesses', () => {
+    expect(canSee(item('/businesses'), 'moderator')).toBe(true);
+    expect(canSee(item('/businesses'), 'category_manager')).toBe(false);
+  });
+
+  it('Industrial areas sits with Units, conditions & sides, for category managers', () => {
+    const group = NAV_GROUPS.find((g) => g.items.some((i) => i.href === '/master-data'))!;
+    expect(group.items.map((i) => i.href)).toContain('/industrial-areas');
+    expect(canSee(item('/industrial-areas'), 'category_manager')).toBe(true);
+    expect(canSee(item('/industrial-areas'), 'support')).toBe(false);
+  });
+
+  it('Business verification shows the Waiting count', () => {
+    expect(item('/verification').badgeKey).toBe('verificationWaiting');
+  });
+});
