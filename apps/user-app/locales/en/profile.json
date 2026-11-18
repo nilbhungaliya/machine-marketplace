@@ -11,7 +11,10 @@
   "rows": {
     "business": "Business profile",
     "location": "Location and industrial area",
-    "gst": "GST verification"
+    "gst": "GST verification",
+    "listings": "My listings",
+    "listingsLive_one": "{{count}} live",
+    "listingsLive_other": "{{count}} live"
   },
   "completion": {
     "title": "Profile {{done}} of {{total}} complete",

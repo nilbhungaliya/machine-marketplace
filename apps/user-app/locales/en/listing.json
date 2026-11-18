@@ -277,5 +277,190 @@
     "uploadFailed": "The upload didn't finish. Tap to retry.",
     "photoPrepare": "Couldn't prepare this photo. Try another.",
     "videoPrepare": "Couldn't prepare this video. Try another."
+  },
+  "page": {
+    "loadErrorTitle": "Couldn't load this listing",
+    "loadErrorBody": "Check your connection and try again.",
+    "notFoundTitle": "This listing isn't available",
+    "notFoundBody": "It may have been sold or taken down.",
+    "ownerPublic": "Your listing. This is how buyers see it.",
+    "ownerHiddenFromBuyers": "Your listing. Buyers can't see it now.",
+    "moreTitle": "More from this seller"
+  },
+  "contact": {
+    "enquire": "Enquire",
+    "make_offer": "Make offer",
+    "ask_price": "Ask price"
+  },
+  "owner": {
+    "manage": "Manage",
+    "edit": "Edit"
+  },
+  "otherSide": {
+    "title": "Other side",
+    "thisListing": "This listing",
+    "notListed": "Not listed",
+    "short": {
+      "left": "Left",
+      "right": "Right",
+      "pair": "Pair"
+    },
+    "available_left": "Left side also available: {{what}}",
+    "available_right": "Right side also available: {{what}}",
+    "availablePair": "Pair also available: {{what}}",
+    "possible": "Possibly the other side: {{what}}",
+    "none_left": "No left side listed yet",
+    "none_right": "No right side listed yet",
+    "seeAll": "See all",
+    "screenTitle_left": "Left side for this part",
+    "screenTitle_right": "Right side for this part",
+    "fromMine_left": "You have the right side. These sellers have the left one.",
+    "fromMine_right": "You have the left side. These sellers have the right one.",
+    "emptyBody": "We'll show it here when one is listed.",
+    "possibleTag": "Possibly the other side",
+    "noSide": "This listing has no left or right side.",
+    "possibleShort": "Possibly",
+    "seeAllCount": "See all ({{count}})",
+    "loadError": "Couldn't load the other side."
+  },
+  "fitCheck": {
+    "title": "Check my machine",
+    "subtitle": "Pick your machine to see if the seller says this part fits.",
+    "brand": "Machine brand",
+    "brandSearch": "Search brands",
+    "change": "Change",
+    "noBrands": "No brands found.",
+    "loadError": "Couldn't load the brands.",
+    "model": "Model",
+    "modelOther": "Not in the list",
+    "year": "Year (optional)",
+    "yearInvalid": "Enter a year between 1950 and {{max}}.",
+    "check": "Check",
+    "fits": "Seller says it fits",
+    "fitsBody": "The seller lists your machine. Confirm with them before you buy.",
+    "notListed": "Not listed by the seller",
+    "notListedBody": "The seller hasn't listed your machine. Ask them before you buy."
+  },
+  "report": {
+    "title": "Report this listing",
+    "details": "Details",
+    "detailsHint": "Optional. Our team reviews every report.",
+    "detailsRequired": "Tell us what's wrong.",
+    "detailsTooLong": "Keep it under 500 characters.",
+    "reasonRequired": "Choose a reason.",
+    "send": "Send report",
+    "sent": "Thanks. Our team will look at it."
+  },
+  "seller": {
+    "title": "Seller's listings",
+    "emptyTitle": "No live listings",
+    "emptyBody": "This seller has nothing on sale right now."
+  },
+  "viewer": {
+    "close": "Close"
+  },
+  "mine": {
+    "title": "My listings",
+    "sell": "Sell",
+    "drafts": "Drafts",
+    "continue": "Continue",
+    "segment": "{{label}} {{count}}",
+    "expiringSoon": "Expiring soon",
+    "stillAvailable": "Still available?",
+    "renew": "Renew",
+    "moderatorSays": "Our team: {{note}}",
+    "changesRequested": "Our team asked for changes. Open Edit to fix them.",
+    "hiddenReason": "Hidden by our team: {{reason}}",
+    "inReview": "Our team is checking it.",
+    "needsAttention": "Some details need your attention.",
+    "emptyTitle": {
+      "live": "Nothing live yet",
+      "review": "Nothing in review",
+      "paused": "Nothing paused",
+      "sold": "Nothing sold yet"
+    },
+    "emptyBody": "Listings you post show here.",
+    "loadMore": "Show more",
+    "loadError": "Couldn't load your listings."
+  },
+  "removed": {
+    "intro": "Listings our team removed in the last 30 days. They can't be edited or relisted.",
+    "reason": "Reason: {{reason}}",
+    "noReason": "No reason given.",
+    "on": "Removed {{date}}",
+    "emptyTitle": "Nothing removed",
+    "emptyBody": "Listings our team removes show here for 30 days."
+  },
+  "manage": {
+    "edit": "Edit listing",
+    "quantity": "Update quantity",
+    "other_side": "Find the other side",
+    "view": "View listing",
+    "action": {
+      "pause": "Pause, hide from buyers",
+      "resume": "Resume",
+      "renew": "Renew",
+      "mark_sold": "Mark sold",
+      "mark_unavailable": "Mark unavailable",
+      "relist": "Relist",
+      "mark_rented": "Mark rented out",
+      "end_rental": "Available again",
+      "remove": "Remove listing"
+    },
+    "confirm": {
+      "removeTitle": "Remove this listing?",
+      "removeMessage": "Buyers won't see it again. This can't be undone.",
+      "mark_soldTitle": "Mark as sold?",
+      "mark_soldMessage": "Buyers won't see it. You can relist it later.",
+      "delete_draftTitle": "Delete this draft?",
+      "delete_draftMessage": "This can't be undone."
+    },
+    "sentForReview": "Sent to our team for a quick check",
+    "done": {
+      "pause": "Paused. Buyers can't see it now.",
+      "resume": "Live again.",
+      "renew": "Renewed.",
+      "mark_sold": "Marked sold.",
+      "mark_unavailable": "Marked unavailable.",
+      "relist": "Live again.",
+      "mark_rented": "Marked rented out.",
+      "end_rental": "Available again.",
+      "remove": "Listing removed.",
+      "delete_draft": "Draft deleted."
+    },
+    "verifyGst": "Verify GST",
+    "delete_draft": "Delete draft"
+  },
+  "editMenu": {
+    "title": "Edit listing",
+    "hint": "Pick what to change. Most changes show to buyers at once.",
+    "needsAttention": "Needs attention",
+    "reportWarning": "Changes to side or fit will be checked by our team.",
+    "step": {
+      "category": "Category",
+      "part_details": "Part details",
+      "machine": "Machine details",
+      "quantity": "Quantity and condition",
+      "rates": "Rental rates",
+      "fit": "Machines it fits",
+      "side": "Side",
+      "media": "Photos",
+      "price": "Price",
+      "location": "Location and delivery"
+    }
+  },
+  "quantitySheet": {
+    "title": "Update quantity",
+    "label": "Quantity",
+    "labelUnit": "Quantity ({{unit}})",
+    "save": "Save",
+    "saved": "Quantity updated.",
+    "problem": {
+      "empty": "Enter the quantity.",
+      "invalid": "Enter a number.",
+      "decimals": "Too many decimals for this unit.",
+      "zero": "Sold out? Use Mark sold instead.",
+      "tooLarge": "That's more than a listing can hold."
+    }
   }
 }

@@ -11,7 +11,10 @@
   "rows": {
     "business": "बिज़नेस प्रोफ़ाइल",
     "location": "लोकेशन और इंडस्ट्रियल एरिया",
-    "gst": "GST वेरिफ़िकेशन"
+    "gst": "GST वेरिफ़िकेशन",
+    "listings": "मेरी लिस्टिंग",
+    "listingsLive_one": "{{count}} लाइव",
+    "listingsLive_other": "{{count}} लाइव"
   },
   "completion": {
     "title": "प्रोफ़ाइल {{total}} में से {{done}} पूरी",
