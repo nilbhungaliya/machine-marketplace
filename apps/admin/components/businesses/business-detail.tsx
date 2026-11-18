@@ -97,6 +97,8 @@ export function BusinessDetail({ business, categoryNames, onChanged }: {
   const canSuspend = hasRole('verification_officer', 'moderator');
   const canBlock = isSuperAdmin;
   const canGst = hasRole('verification_officer');
+  // The same roles as Parts & machinery in the nav (F2 spec §11.6).
+  const canSeeListings = hasRole('moderator', 'support');
   const verified = gst.state === 'verified';
   const showRevoke = canGst && verified;
   const showRelease = canGst && !verified && p.gstin !== null;
@@ -110,14 +112,14 @@ export function BusinessDetail({ business, categoryNames, onChanged }: {
       <div className="grid items-start gap-4 lg:grid-cols-2">
         <Panel
           title="Business"
-          action={
+          action={canSeeListings && (
             <Link
               href={`/listings/?businessId=${p.id}`}
               className="inline-flex items-center gap-1 text-sm font-bold text-brand-700 hover:underline"
             >
               <Package size={13} aria-hidden /> Listings ({business.listingsCount})
             </Link>
-          }
+          )}
         >
           <Facts
             rows={[

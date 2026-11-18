@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import {
   LISTING_FITMENTS_MAX, PART_SIDES, type AdminListingDetail, type AdminListingPatch, type BrandWithModels,
@@ -76,8 +76,12 @@ export function fitProblem(rows: FitRow[]): string | null {
  * page adds the version. A new category must accept the listing's specs (`400 SPECS_INVALID`, R33); edited fit rows
  * are stored with `source = 'admin'`. Side and fit are for parts only. Mount only while open.
  */
-export function ListingEditDialog({ detail, onClose, onSubmit }: {
+export function ListingEditDialog({ detail, notice, blocked = false, onClose, onSubmit }: {
   detail: AdminListingDetail;
+  /** Above the form, e.g. the stale-listing message with Reload. */
+  notice?: ReactNode;
+  /** Save stays disabled, e.g. until a stale listing is reloaded. */
+  blocked?: boolean;
   onClose: () => void;
   /** Resolves true when the dialog should close. */
   onSubmit: (patch: Omit<AdminListingPatch, 'version'>) => Promise<boolean>;
@@ -127,7 +131,7 @@ export function ListingEditDialog({ detail, onClose, onSubmit }: {
       description={<>{l.title}. The seller sees the corrected listing; its status doesn&apos;t change.</>}
       dirty={changed}
       submitLabel="Save"
-      submitDisabled={!changed || !tree}
+      submitDisabled={blocked || !changed || !tree}
       onSubmit={async () => {
         const p = isPart ? fitProblem(rows) : null;
         setProblem(p);
@@ -135,6 +139,7 @@ export function ListingEditDialog({ detail, onClose, onSubmit }: {
         if (await onSubmit(patch)) onClose();
       }}
     >
+      {notice}
       {loadError ? (
         <p role="alert" className="rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold text-red-800">{loadError}</p>
       ) : !tree ? (

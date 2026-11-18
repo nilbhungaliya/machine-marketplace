@@ -159,4 +159,9 @@ describe('BusinessDetail', () => {
     const link = screen.getByRole('link', { name: 'Listings (2)' });
     expect(link.getAttribute('href')).toMatch(/^\/listings\/?\?businessId=b1$/);
   });
+
+  it('roles without listing access see no "Listings (n)" link', () => {
+    renderDetail('verification_officer', { ...business(), listingsCount: 2 });
+    expect(screen.queryByRole('link', { name: 'Listings (2)' })).toBeNull();
+  });
 });

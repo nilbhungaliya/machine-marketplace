@@ -47,6 +47,11 @@ export default function ModerationPage() {
     void load();
   }, [ready, load]);
 
+  // The page emptied under us (its last listing was decided, or the link was old): step back a page.
+  useEffect(() => {
+    if (ready && queue && queue.rows.length === 0 && queue.page > 1) setUrl({ page: String(queue.page - 1) });
+  }, [ready, queue, setUrl]);
+
   // Nothing picked: open the first listing, as the queue reads top-down.
   useEffect(() => {
     if (ready && queue && queue.rows.length > 0 && !selectedId) setUrl({ id: queue.rows[0].id });
@@ -61,7 +66,12 @@ export default function ModerationPage() {
 
   const countFor = (t: ModerationTab) => (t === 'decided' ? undefined : counts?.[t]);
   const tabs = MODERATION_TABS.map((value) => ({ value, label: MODERATION_TAB_LABELS[value], count: countFor(value) }));
-  const here = `/moderation/?${tab === 'review' ? '' : `tab=${tab}&`}id=${selectedId}`;
+  // The business link comes back to this tab, page and listing.
+  const backQuery = new URLSearchParams();
+  if (tab !== 'review') backQuery.set('tab', tab);
+  if (page !== '1') backQuery.set('page', page);
+  if (selectedId) backQuery.set('id', selectedId);
+  const here = `/moderation/?${backQuery.toString()}`;
 
   return (
     <div>

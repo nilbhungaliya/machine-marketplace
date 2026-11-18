@@ -9,10 +9,11 @@ import { ReasonDialog } from '@/components/ui/reason-dialog';
 import { ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 import {
-  approveListing, askForChanges, editListing, explainListingError, hideListing, rejectListing, removeListing,
-  unhideListing,
+  LISTING_CHANGED_MESSAGE, REFUSAL_CODES, approveListing, askForChanges, editListing, explainListingError, hideListing,
+  rejectListing, removeListing, unhideListing,
 } from '@/lib/listings-api';
 import { refreshNavBadges } from '@/lib/nav-badges';
+import { LISTING_STATUS_LABELS } from '@/lib/status';
 import { ListingEditDialog } from './listing-edit-dialog';
 
 type TextAction = 'ask_for_changes' | 'reject' | 'hide' | 'remove';
@@ -71,8 +72,11 @@ const ORDER: AdminListingAction[] = ['remove', 'reject', 'hide', 'ask_for_change
  * plus Edit category / side / fit. Approve, ask for changes, reject and edit send the loaded `version`; hide, unhide
  * and remove don't (R53). Moderators only: support reads the listing with no buttons.
  */
-export function ListingActions({ detail, onResult, onConflict }: {
+export function ListingActions({ detail, stale, onReload, onResult, onConflict }: {
   detail: AdminListingDetail;
+  /** The seller changed the listing since it was loaded (`409 LISTING_CHANGED`): every action waits for Reload. */
+  stale: boolean;
+  onReload: () => void;
   /** The refreshed listing an action answered with. */
   onResult: (next: AdminListingDetail) => void;
   /** A 409 the page handles: `LISTING_CHANGED` (stale warning) or another (reload). */
@@ -92,7 +96,10 @@ export function ListingActions({ detail, onResult, onConflict }: {
   const canEdit = l.status !== 'draft' && l.status !== 'removed';
   if (actions.length === 0 && !canEdit) return null;
 
-  /** Runs an action; resolves true when its dialog should close. */
+  /**
+   * Runs an action; resolves true when its dialog should close. A stale version (`409 LISTING_CHANGED`) keeps the
+   * dialog open with what was typed: the moderator reloads inside it and sends again with the fresh version.
+   */
   const run = async (work: () => Promise<AdminListingDetail>, success: string): Promise<boolean> => {
     setRefusal(null);
     try {
@@ -106,9 +113,9 @@ export function ListingActions({ detail, onResult, onConflict }: {
       if (err instanceof ApiError && err.status === 409) {
         toast.error(message);
         onConflict(err.code ?? 'CONFLICT');
-        return true;
+        return err.code !== 'LISTING_CHANGED';
       }
-      if (err instanceof ApiError && err.code === 'LISTING_INCOMPLETE') {
+      if (err instanceof ApiError && err.code && REFUSAL_CODES.includes(err.code)) {
         setRefusal(message);
         toast.error(message);
         return true;
@@ -129,7 +136,7 @@ export function ListingActions({ detail, onResult, onConflict }: {
     if (action === 'unhide') {
       const ok = await confirm({
         title: 'Unhide this listing?',
-        message: `It goes back to ${l.returnStatus ? l.returnStatus.replace(/_/g, ' ') : 'where it was'} and counts as freshly updated.`,
+        message: `It goes back to ${l.returnStatus ? LISTING_STATUS_LABELS[l.returnStatus] : 'where it was'} and counts as freshly updated.`,
         confirmLabel: 'Unhide',
       });
       if (!ok) return;
@@ -151,14 +158,22 @@ export function ListingActions({ detail, onResult, onConflict }: {
     }
   };
 
+  // Inside an open dialog, so the typed text survives the reload.
+  const staleNotice = stale ? (
+    <div role="alert" className="mb-3 flex flex-wrap items-center gap-2 rounded-xl bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800">
+      <span className="flex-1">{LISTING_CHANGED_MESSAGE}</span>
+      <Button variant="secondary" size="sm" onClick={onReload}>Reload</Button>
+    </div>
+  ) : null;
+
   return (
     <div>
       <div className="flex flex-wrap justify-end gap-2">
         {canEdit && (
-          <Button variant="ghost" onClick={() => setDialog('edit')}>Edit category, side or fit</Button>
+          <Button variant="ghost" disabled={stale} onClick={() => setDialog('edit')}>Edit category, side or fit</Button>
         )}
         {actions.map((a) => (
-          <Button key={a} variant={BUTTONS[a].variant} loading={busy === a} disabled={busy !== null} onClick={() => void click(a)}>
+          <Button key={a} variant={BUTTONS[a].variant} loading={busy === a} disabled={busy !== null || stale} onClick={() => void click(a)}>
             {BUTTONS[a].label}
           </Button>
         ))}
@@ -174,13 +189,18 @@ export function ListingActions({ detail, onResult, onConflict }: {
           label={TEXT_COPY[dialog].label}
           submitLabel={TEXT_COPY[dialog].submit}
           submitVariant={TEXT_COPY[dialog].danger ? 'danger' : 'primary'}
+          submitBlocked={stale}
           onClose={() => setDialog(null)}
           onSubmit={(text) => submitText(dialog, text)}
-        />
+        >
+          {staleNotice}
+        </ReasonDialog>
       )}
       {dialog === 'edit' && (
         <ListingEditDialog
           detail={detail}
+          notice={staleNotice}
+          blocked={stale}
           onClose={() => setDialog(null)}
           onSubmit={(patch) => run(() => editListing(l.id, { version: l.version, ...patch }), 'Listing corrected')}
         />

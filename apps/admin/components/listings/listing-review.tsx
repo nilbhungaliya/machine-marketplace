@@ -178,7 +178,7 @@ export function ListingReview({ id, onChanged, onLoaded, from }: {
         )}
 
         <div className="mt-4 border-t border-gray-100 pt-3">
-          <ListingActions detail={shown} onResult={onResult} onConflict={onConflict} />
+          <ListingActions detail={shown} stale={stale} onReload={() => void load()} onResult={onResult} onConflict={onConflict} />
         </div>
       </div>
 

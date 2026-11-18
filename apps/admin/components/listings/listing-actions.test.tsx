@@ -42,10 +42,10 @@ afterEach(() => {
   auth.role = 'moderator';
 });
 
-function renderActions(status: ListingStatus = 'pending_review', role: AdminRole = 'moderator') {
+function renderActions(status: ListingStatus = 'pending_review', role: AdminRole = 'moderator', over: Parameters<typeof detailFixture>[0] = {}) {
   auth.role = role;
-  const detail = detailFixture({ status });
-  const handlers = { onResult: vi.fn(), onConflict: vi.fn() };
+  const detail = detailFixture({ status, ...over });
+  const handlers = { onResult: vi.fn(), onConflict: vi.fn(), onReload: vi.fn(), stale: false };
   render(<ConfirmProvider><ListingActions detail={detail} {...handlers} /></ConfirmProvider>);
   return { detail, ...handlers };
 }
@@ -134,5 +134,20 @@ describe('ListingActions', () => {
   it('support sees no actions', () => {
     renderActions('pending_review', 'support');
     expect(screen.queryAllByRole('button')).toHaveLength(0);
+  });
+
+  it('Approve of a rental whose seller lost GST shows the refusal beside the buttons', async () => {
+    const user = userEvent.setup();
+    vi.mocked(approveListing).mockRejectedValue(new ApiError('No GST', 403, 'RENTAL_NEEDS_GST'));
+    renderActions('pending_review', 'moderator', { kind: 'machine_rental' });
+    await user.click(screen.getByRole('button', { name: 'Approve' }));
+    expect((await screen.findByRole('alert')).textContent).toMatch(/GST/);
+  });
+
+  it('the unhide confirm names the status it returns to', async () => {
+    const user = userEvent.setup();
+    renderActions('hidden', 'moderator', { returnStatus: 'rented' });
+    await user.click(screen.getByRole('button', { name: 'Unhide' }));
+    expect(await screen.findByText(/goes back to On rent/)).not.toBeNull();
   });
 });

@@ -42,6 +42,7 @@ afterEach(() => {
   auth.role = 'moderator';
 });
 
+const SELLER = '7d1f3c2a-5b6e-4f80-9a1b-2c3d4e5f6a7b';
 const param = (name: string) => new URLSearchParams(window.location.search).get(name);
 
 function renderTable(role: AdminRole = 'moderator') {
@@ -72,14 +73,25 @@ describe('ListingsTable', () => {
 
   it('shows the seller filter as a removable chip with the business name', async () => {
     const user = userEvent.setup();
-    window.history.replaceState(null, '', '/listings?businessId=b1');
-    vi.mocked(fetchAdminListings).mockResolvedValue(listFixture([listingRow('l1')], { business: { id: 'b1', name: 'Shree Ambica Engineering' } }));
+    window.history.replaceState(null, '', `/listings?businessId=${SELLER}`);
+    vi.mocked(fetchAdminListings).mockResolvedValue(listFixture([listingRow('l1')], { business: { id: SELLER, name: 'Shree Ambica Engineering' } }));
     renderTable();
-    await waitFor(() => expect(fetchAdminListings).toHaveBeenCalledWith(expect.objectContaining({ businessId: 'b1' })));
+    await waitFor(() => expect(fetchAdminListings).toHaveBeenCalledWith(expect.objectContaining({ businessId: SELLER })));
     const remove = await screen.findByRole('button', { name: 'Remove Seller' });
     expect(remove.parentElement?.textContent).toContain('Shree Ambica Engineering');
     await user.click(remove);
     expect(param('businessId')).toBeNull();
+  });
+
+  it('ignores a seller or category in the URL that is not a uuid, and caps the search', async () => {
+    window.history.replaceState(null, '', '/listings?businessId=b1&machineCategoryId=nope');
+    vi.mocked(fetchAdminListings).mockResolvedValue(listFixture([listingRow('l1')]));
+    renderTable();
+    await screen.findByText('Listing l1');
+    const filters = vi.mocked(fetchAdminListings).mock.calls.at(-1)![0]!;
+    expect(filters.businessId).toBeUndefined();
+    expect(filters.machineCategoryId).toBeUndefined();
+    expect(screen.getByRole('searchbox').getAttribute('maxlength')).toBe('100');
   });
 
   it('support sees no checkboxes and no bulk actions', async () => {
@@ -108,7 +120,7 @@ describe('ListingsTable', () => {
     expect(bulkListings).toHaveBeenCalledWith({ action: 'hide', ids: ['l1', 'l2'], reason: 'Fake stock from one seller' });
     const result = await screen.findByRole('dialog', { name: /Hid 1 listing/ });
     expect(within(result).getByText('Listing l2')).not.toBeNull();
-    expect(within(result).getByText(/status changed/i)).not.toBeNull();
+    expect(within(result).getByText("Can't be hidden or removed in its status")).not.toBeNull();
   });
 
   it('a row opens the listing page', async () => {

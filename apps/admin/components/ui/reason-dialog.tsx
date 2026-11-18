@@ -12,7 +12,7 @@ import { inputCls, labelCls } from '@/components/ui/field-classes';
  */
 export function ReasonDialog({
   title, description, label = 'Reason', hint, minLength = ADMIN_REASON_MIN, maxLength = ADMIN_REASON_MAX, submitLabel, submitVariant,
-  onClose, onSubmit, children,
+  submitBlocked = false, onClose, onSubmit, children,
 }: {
   title: string;
   description?: ReactNode;
@@ -23,6 +23,8 @@ export function ReasonDialog({
   submitLabel: string;
   /** `danger` when the action is destructive. */
   submitVariant?: 'primary' | 'danger';
+  /** Keeps the submit disabled whatever is typed, e.g. while the record is stale and must be reloaded first. */
+  submitBlocked?: boolean;
   onClose: () => void;
   onSubmit: (text: string) => Promise<boolean>;
   /** Above the field, e.g. what happens next. */
@@ -41,7 +43,7 @@ export function ReasonDialog({
       dirty={text !== ''}
       submitLabel={submitLabel}
       submitVariant={submitVariant}
-      submitDisabled={length < minLength || tooLong}
+      submitDisabled={submitBlocked || length < minLength || tooLong}
       onSubmit={async () => {
         if (await onSubmit(text.trim())) onClose();
       }}

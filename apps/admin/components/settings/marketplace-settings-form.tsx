@@ -124,7 +124,7 @@ export function MarketplaceSettingsForm({ view, onSaved }: {
       </div>
       <div className="flex justify-end gap-2">
         <Button variant="secondary" disabled={!isDirty || isSubmitting} onClick={() => reset(view.values)}>Undo changes</Button>
-        <Button type="submit" loading={isSubmitting}>Save</Button>
+        <Button type="submit" loading={isSubmitting} disabled={!isDirty}>Save</Button>
       </div>
     </form>
   );

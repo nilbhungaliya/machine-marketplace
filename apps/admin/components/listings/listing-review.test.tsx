@@ -17,6 +17,7 @@ vi.mock('@/lib/listings-api', async (importOriginal) => ({
   fetchAdminListing: vi.fn(),
   fetchListingTemplate: vi.fn().mockRejectedValue(new Error('offline')),
   approveListing: vi.fn(),
+  askForChanges: vi.fn(),
   deleteListingMedia: vi.fn(),
   resolveReports: vi.fn(),
 }));
@@ -25,7 +26,7 @@ vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 import { toast } from 'sonner';
 import { ApiError } from '@/lib/api';
 import {
-  approveListing, deleteListingMedia, fetchAdminListing, fetchListingTemplate, resolveReports,
+  approveListing, askForChanges, deleteListingMedia, fetchAdminListing, fetchListingTemplate, resolveReports,
 } from '@/lib/listings-api';
 import { ListingReview } from './listing-review';
 import { FULL_PHOTO_URL, detailFixture, machineFixture } from './test-fixtures';
@@ -144,5 +145,60 @@ describe('ListingReview', () => {
     expect(screen.queryByRole('button', { name: 'Approve' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Delete photo 1' })).toBeNull();
     expect(screen.getByText('Shed 14, Road B')).not.toBeNull();
+  });
+
+  it('a stale decision keeps the typed message; Reload, then Send goes with the fresh version', async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetchAdminListing)
+      .mockResolvedValueOnce(detailFixture())
+      .mockResolvedValue(detailFixture({ version: 5 }));
+    vi.mocked(askForChanges)
+      .mockRejectedValueOnce(new ApiError('Changed', 409, 'LISTING_CHANGED'))
+      .mockResolvedValue(detailFixture({ status: 'rejected', version: 6 }));
+    renderReview();
+    await user.click(await screen.findByRole('button', { name: 'Ask for changes' }));
+    const dialog = screen.getByRole('dialog');
+    await user.type(within(dialog).getByLabelText('Message to the seller'), 'Add a photo of the part number');
+    await user.click(within(dialog).getByRole('button', { name: 'Send' }));
+    expect(askForChanges).toHaveBeenCalledWith('l1', 4, 'Add a photo of the part number');
+
+    // The dialog stays, with what was typed and the stale message; Send waits for Reload.
+    expect(await within(dialog).findByText(/seller changed this listing/i)).not.toBeNull();
+    expect((within(dialog).getByLabelText('Message to the seller') as HTMLTextAreaElement).value).toBe('Add a photo of the part number');
+    expect((within(dialog).getByRole('button', { name: 'Send' }) as HTMLButtonElement).disabled).toBe(true);
+
+    await user.click(within(dialog).getByRole('button', { name: 'Reload' }));
+    await waitFor(() => expect(fetchAdminListing).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(within(dialog).queryByText(/seller changed this listing/i)).toBeNull());
+    await user.click(within(dialog).getByRole('button', { name: 'Send' }));
+    expect(askForChanges).toHaveBeenLastCalledWith('l1', 5, 'Add a photo of the part number');
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  });
+
+  it('while the listing is stale the action buttons wait for Reload', async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetchAdminListing).mockResolvedValue(detailFixture());
+    vi.mocked(approveListing).mockRejectedValue(new ApiError('Changed', 409, 'LISTING_CHANGED'));
+    renderReview();
+    await user.click(await screen.findByRole('button', { name: 'Approve' }));
+    await screen.findByRole('alert');
+    expect((screen.getByRole('button', { name: 'Approve' }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole('button', { name: 'Reject' }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole('button', { name: 'Edit category, side or fit' }) as HTMLButtonElement).disabled).toBe(true);
+    await user.click(screen.getByRole('button', { name: 'Reload' }));
+    await waitFor(() => expect((screen.getByRole('button', { name: 'Approve' }) as HTMLButtonElement).disabled).toBe(false));
+  });
+
+  it('a photo someone already deleted (404 MEDIA_NOT_FOUND) closes the dialog and reloads', async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetchAdminListing).mockResolvedValue(detailFixture());
+    vi.mocked(deleteListingMedia).mockRejectedValue(new ApiError('Gone', 404, 'MEDIA_NOT_FOUND'));
+    renderReview();
+    await user.click(await screen.findByRole('button', { name: 'Delete photo 1' }));
+    const dialog = screen.getByRole('dialog');
+    await user.type(within(dialog).getByLabelText('Reason'), 'Shows a phone number');
+    await user.click(within(dialog).getByRole('button', { name: 'Delete' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    await waitFor(() => expect(fetchAdminListing).toHaveBeenCalledTimes(2));
   });
 });

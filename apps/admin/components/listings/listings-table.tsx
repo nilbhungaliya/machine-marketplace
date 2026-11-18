@@ -20,6 +20,7 @@ import { backLinkQuery } from '@/lib/back-link';
 import { fetchAdminTree } from '@/lib/catalog-api';
 import {
   FLAG_LABELS, KIND_LABELS, RENTAL_PERIOD_LABELS, SIDE_LABELS, fetchAdminListings, filtersFromUrl, formatPaise, formatRef,
+  isUuid,
 } from '@/lib/listings-api';
 import { LISTING_STATUS_LABELS } from '@/lib/status';
 import { positiveInt, useUrlState } from '@/lib/use-url-state';
@@ -28,6 +29,9 @@ import { BulkActionDialog } from './bulk-action-dialog';
 import { ListingFilterDialog, NO_LISTING_FILTERS, type ListingFilterDraft } from './listings-filters';
 
 const SEARCH_DELAY_MS = 300;
+const SEARCH_MAX = 100;
+
+const uuidOrEmpty = (v: string) => v === '' || isUuid(v);
 
 const listOf = (allowed: readonly string[]) => (v: string) => v.split(',').every((x) => allowed.includes(x));
 
@@ -55,6 +59,8 @@ export function ListingsTable() {
     validate: {
       status: listOf(LISTING_STATUSES),
       kind: ['', ...LISTING_KINDS],
+      machineCategoryId: uuidOrEmpty,
+      businessId: uuidOrEmpty,
       side: ['', ...PART_SIDES],
       flags: listOf(LISTING_FLAGS),
       reported: ['', '1'],
@@ -239,6 +245,7 @@ export function ListingsTable() {
                 onChange={setSearch}
                 placeholder="Search by title, part number, #ref or business"
                 label="Search listings by title, part number, reference or business name"
+                maxLength={SEARCH_MAX}
               />
               <FiltersButton count={chips.filter((c) => c.key !== 'businessId').length} onClick={() => setFiltering(true)} />
             </div>

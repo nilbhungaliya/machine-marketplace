@@ -51,6 +51,16 @@ describe('MarketplaceSettingsForm', () => {
     expect(screen.getByText(/Must be less than the expiry/)).not.toBeNull();
   });
 
+  it('Save waits for a change', async () => {
+    const user = userEvent.setup();
+    renderForm();
+    const save = screen.getByRole('button', { name: 'Save' }) as HTMLButtonElement;
+    expect(save.disabled).toBe(true);
+    await user.clear(field('Unverified listing cap'));
+    await user.type(field('Unverified listing cap'), '5');
+    await waitFor(() => expect(save.disabled).toBe(false));
+  });
+
   it('blocks Save while the reminder is not shorter than the expiry', async () => {
     const user = userEvent.setup();
     renderForm();

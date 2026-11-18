@@ -60,7 +60,7 @@ export function filtersFromUrl(raw: Partial<Record<keyof AdminListingFilters, st
   if (status.length) out.status = status;
   const kind = one<ListingKind>(raw.kind, LISTING_KINDS);
   if (kind) out.kind = kind;
-  if (raw.machineCategoryId) out.machineCategoryId = raw.machineCategoryId;
+  if (raw.machineCategoryId && isUuid(raw.machineCategoryId)) out.machineCategoryId = raw.machineCategoryId;
   const city = raw.city?.trim();
   if (city) out.city = city;
   const side = one<PartSide>(raw.side, PART_SIDES);
@@ -68,7 +68,7 @@ export function filtersFromUrl(raw: Partial<Record<keyof AdminListingFilters, st
   const flags = list<ListingFlag>(raw.flags, LISTING_FLAGS);
   if (flags.length) out.flags = flags;
   if (raw.reported === '1') out.reported = true;
-  if (raw.businessId) out.businessId = raw.businessId;
+  if (raw.businessId && isUuid(raw.businessId)) out.businessId = raw.businessId;
   const q = raw.q?.trim();
   if (q) out.q = q;
   const page = Number(raw.page);
@@ -130,16 +130,34 @@ const ERROR_WORDS: Record<string, string> = {
   LISTING_TRANSITION_NOT_ALLOWED: "This listing's status changed: that action isn't possible now",
   SPECS_INVALID: "The listing's specifications don't fit that category",
   LISTING_NOT_FOUND: 'This listing no longer exists',
+  MEDIA_NOT_FOUND: 'That photo or video was already deleted',
+  STORAGE_UNAVAILABLE: "Media storage isn't set up, so media can't be deleted",
+  RENTAL_NEEDS_GST: "The seller's GST verification is gone: a machine for rent can't go live without it",
 };
 
+/** A bulk action's skipped row says why in its own terms. */
+const SKIP_WORDS: Record<string, string> = {
+  LISTING_TRANSITION_NOT_ALLOWED: "Can't be hidden or removed in its status",
+};
+
+/** Codes the action bar shows as a refusal beside the buttons (the listing stays as it was). */
+export const REFUSAL_CODES: readonly string[] = ['LISTING_INCOMPLETE', 'RENTAL_NEEDS_GST'];
+
 /** An error code in words (a bulk action's skipped row); the code itself when unknown. */
-export const codeWords = (code: string) => ERROR_WORDS[code] ?? code;
+export const codeWords = (code: string) => SKIP_WORDS[code] ?? ERROR_WORDS[code] ?? code;
 
 /** The message an admin reads for a failed call; the API's own wording otherwise. */
 export function explainListingError(err: unknown, fallback = 'Something went wrong'): string {
+  if (err instanceof ApiError && err.code === 'SPECS_INVALID' && err.details && Object.keys(err.details).length > 0) {
+    // `details` maps each refusing field key to its code (the A4 validator's errors).
+    return `${ERROR_WORDS.SPECS_INVALID}: ${Object.keys(err.details).join(', ')}`;
+  }
   if (err instanceof ApiError && err.code && ERROR_WORDS[err.code]) return ERROR_WORDS[err.code];
   return err instanceof Error && err.message ? err.message : fallback;
 }
+
+/** A uuid, as every listing, business and category id is; other values in a URL are dropped. */
+export const isUuid = (value: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 
 /** Integer paise as rupees, Indian grouping: 4200000 → ₹42,000. */
 export const formatPaise = (paise: number) => formatCurrency(paise / 100);

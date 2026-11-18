@@ -104,6 +104,7 @@ export function ListingFilterDialog({ start, base, categories, onClose, onApply 
           id="filter-city"
           className={inputCls}
           placeholder="e.g. Surat"
+          maxLength={80}
           value={draft.city}
           onChange={(e) => setDraft({ ...draft, city: e.target.value })}
         />

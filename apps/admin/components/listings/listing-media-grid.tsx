@@ -5,6 +5,7 @@ import { ImageOff, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { ListingMediaItem, ListingStatus } from '@mpm/shared-types';
 import ImageLightbox from '@/components/image-lightbox';
+import { ApiError } from '@/lib/api';
 import { ReasonDialog } from '@/components/ui/reason-dialog';
 import { deleteListingMedia, explainListingError, PURGE_FAILED_MESSAGE } from '@/lib/listings-api';
 
@@ -128,6 +129,11 @@ export function ListingMediaGrid({ listingId, title, status, media, canDelete, o
               return true;
             } catch (err) {
               toast.error(explainListingError(err, 'Could not delete it'));
+              // Someone deleted it first: nothing left to do here but show the listing as it is now.
+              if (err instanceof ApiError && err.code === 'MEDIA_NOT_FOUND') {
+                onDeleted();
+                return true;
+              }
               return false;
             }
           }}
