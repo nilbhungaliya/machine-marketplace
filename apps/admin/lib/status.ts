@@ -1,3 +1,5 @@
+import type { ListingStatus } from '@mpm/shared-types';
+
 export type StatusTone = 'green' | 'blue' | 'amber' | 'red' | 'gray';
 
 export const TONE_CLASSES: Record<StatusTone, string> = {
@@ -9,25 +11,43 @@ export const TONE_CLASSES: Record<StatusTone, string> = {
   gray: 'bg-gray-100 text-gray-600',
 };
 
-// Listing (F2, A3), enquiry and offer (F6), deal and rental booking (F7), part request (F8), verification and GST review
-// (A2), account (A2) and report (A6) statuses.
+/**
+ * Listing statuses (F2 spec §7.1, ruling (c)): one tone each, typed so a new status can't slip in without one. `hidden`
+ * (taken down by a moderator) is red; `expired` (not refreshed in time) is grey, as paused.
+ */
+export const LISTING_STATUS_TONES: Record<ListingStatus, StatusTone> = {
+  draft: 'gray', pending_review: 'amber', rejected: 'red', live: 'green', paused: 'gray', reserved: 'blue', sold: 'green',
+  rented: 'green', unavailable: 'gray', expired: 'gray', hidden: 'red', removed: 'gray',
+};
+
+/** Listing statuses in words, for the admin's badges, filters and history. */
+export const LISTING_STATUS_LABELS: Record<ListingStatus, string> = {
+  draft: 'Draft', pending_review: 'Pending review', rejected: 'Rejected', live: 'Live', paused: 'Paused',
+  reserved: 'Reserved', sold: 'Sold', rented: 'On rent', unavailable: 'Unavailable', expired: 'Expired', hidden: 'Hidden',
+  removed: 'Removed',
+};
+
+// Listing statuses (above), enquiry and offer (F6), deal and rental booking (F7), part request (F8), verification and GST
+// review (A2), account (A2) and report (A6) statuses. A word several domains share (rejected, expired…) keeps one tone.
 const TONE_BY_STATUS: Record<string, StatusTone> = {
-  live: 'green', sold: 'green', rented: 'green', accepted: 'green', completed: 'green', fulfilled: 'green',
+  ...LISTING_STATUS_TONES,
+  accepted: 'green', completed: 'green', fulfilled: 'green',
   verified: 'green', approved: 'green', active: 'green', agreed: 'green', confirmed: 'green', returned: 'green',
   actioned: 'green', passed: 'green',
-  reserved: 'blue', countered: 'blue', matched: 'blue', replied: 'blue', converted: 'blue', reviewing: 'blue',
+  countered: 'blue', matched: 'blue', replied: 'blue', converted: 'blue', reviewing: 'blue',
   code_sent: 'blue',
   // needs_more is amber, as the app's orange "Needs more" chip: an open review (its business summary is `pending`,
   // amber) that waits on the business's action.
-  pending_review: 'amber', pending: 'amber', open: 'amber', disputed: 'amber', requested: 'amber', waiting: 'amber',
+  pending: 'amber', open: 'amber', disputed: 'amber', requested: 'amber', waiting: 'amber',
   needs_more: 'amber',
-  rejected: 'red', cancelled: 'red', suspended: 'red', banned: 'red', failed: 'red', blocked: 'red', revoked: 'red',
-  draft: 'gray', paused: 'gray', expired: 'gray', removed: 'gray', withdrawn: 'gray', closed: 'gray',
-  unavailable: 'gray', dismissed: 'gray', not_submitted: 'gray',
+  cancelled: 'red', suspended: 'red', banned: 'red', failed: 'red', blocked: 'red', revoked: 'red',
+  withdrawn: 'gray', closed: 'gray', dismissed: 'gray', not_submitted: 'gray',
 };
 
 /** Wording an admin reads; anything not listed is the status with underscores as spaces, first letter capital. */
 const LABELS: Record<string, string> = {
+  hidden: 'Hidden',
+  expired: 'Expired',
   pending_review: 'Pending review',
   not_submitted: 'Not submitted',
 };

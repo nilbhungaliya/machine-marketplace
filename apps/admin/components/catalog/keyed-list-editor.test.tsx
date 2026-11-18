@@ -6,7 +6,7 @@ import { ConfirmProvider } from '@/components/confirm-provider';
 
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 import { ApiError } from '@/lib/api';
-import { KeyedListEditor, unitDecimalsColumn, unitDecimalsExtras, type KeyedItem } from './keyed-list-editor';
+import { KeyedListEditor, unitDecimalsColumn, unitDecimalsExtras, unitMachineSwitch, type KeyedItem } from './keyed-list-editor';
 
 // jsdom has no layout, so offsetParent is always null (see dialog.test.tsx).
 beforeAll(() => {
@@ -190,5 +190,30 @@ describe('KeyedListEditor for units', () => {
     await user.selectOptions(within(dialog).getByLabelText('Decimals'), '1');
     await user.click(within(dialog).getByRole('button', { name: 'Save' }));
     expect(onUpdate).toHaveBeenCalledWith(units[1], { extra: 1 });
+  });
+
+  it('the Machine unit switch sends isMachineUnit for that unit (F2 spec §4.2, R48)', async () => {
+    const user = userEvent.setup();
+    const onToggle = vi.fn().mockResolvedValue(undefined);
+    const flagged: Unit[] = [{ ...units[0], isMachineUnit: false }, { ...units[1], key: 'machines', label: 'Machines', isMachineUnit: true }];
+    render(
+      <ConfirmProvider>
+        <KeyedListEditor<Unit, number>
+          noun="unit"
+          items={flagged}
+          extraColumns={[unitDecimalsColumn]}
+          extras={unitDecimalsExtras}
+          switches={[unitMachineSwitch(onToggle)]}
+          onCreate={vi.fn()}
+          onUpdate={vi.fn()}
+          onReorder={vi.fn()}
+        />
+      </ConfirmProvider>,
+    );
+    expect(screen.getByRole('columnheader', { name: 'Machine unit' })).not.toBeNull();
+    const on = screen.getByRole('switch', { name: 'Machines machine unit' });
+    expect(on.getAttribute('aria-checked')).toBe('true');
+    await user.click(screen.getByRole('switch', { name: 'Pieces machine unit' }));
+    expect(onToggle).toHaveBeenCalledWith(flagged[0], true);
   });
 });

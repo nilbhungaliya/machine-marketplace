@@ -25,10 +25,11 @@ export function FiltersButton({ count, onClick }: { count: number; onClick: () =
   );
 }
 
-export function SearchBox({ value, onChange, placeholder, label }: {
+export function SearchBox({ value, onChange, placeholder, label, maxLength }: {
   value: string; onChange: (v: string) => void; placeholder: string;
   /** Accessible name; the placeholder otherwise. */
   label?: string;
+  maxLength?: number;
 }) {
   return (
     <div className="relative min-w-[16rem] flex-1">
@@ -41,6 +42,7 @@ export function SearchBox({ value, onChange, placeholder, label }: {
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         aria-label={label ?? placeholder}
+        maxLength={maxLength}
         className={cn(inputCls, 'py-2 pl-9 pr-3')}
       />
     </div>

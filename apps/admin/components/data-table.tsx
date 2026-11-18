@@ -36,6 +36,8 @@ interface DataTableProps<T> {
   total?: number;
   onPageChange?: (page: number) => void;
   onPageSizeChange?: (size: number) => void;
+  /** Rows-per-page choices; the shared PAGE_SIZE_OPTIONS when absent. */
+  pageSizeOptions?: readonly number[];
   /** Plural noun for the pagination count line, e.g. "customers". */
   itemLabel?: string;
   emptyMessage?: string;
@@ -60,6 +62,7 @@ export default function DataTable<T extends Record<string, any>>({
   total,
   onPageChange,
   onPageSizeChange,
+  pageSizeOptions,
   itemLabel,
   emptyMessage = 'Nothing here yet',
   loading,
@@ -174,6 +177,7 @@ export default function DataTable<T extends Record<string, any>>({
           total={total}
           onPageChange={onPageChange}
           onPageSizeChange={onPageSizeChange}
+          pageSizeOptions={pageSizeOptions}
           itemLabel={itemLabel}
         />
       )}

@@ -7,7 +7,9 @@ import { Tabs } from '@/components/ui/tabs';
 import { ErrorState, TableSkeleton } from '@/components/ui/states';
 import { ExportButton } from '@/components/catalog/export-button';
 import { FixedLists } from '@/components/catalog/fixed-lists';
-import { KeyedListEditor, unitDecimalsColumn, unitDecimalsExtras } from '@/components/catalog/keyed-list-editor';
+import {
+  KeyedListEditor, unitDecimalsColumn, unitDecimalsExtras, unitMachineSwitch,
+} from '@/components/catalog/keyed-list-editor';
 import {
   createCondition, createUnit, fetchAdminMasterData, reorderConditions, reorderUnits, updateCondition, updateUnit,
 } from '@/lib/catalog-api';
@@ -67,6 +69,7 @@ export default function MasterDataPage() {
           items={data.units}
           extraColumns={[unitDecimalsColumn]}
           extras={unitDecimalsExtras}
+          switches={[unitMachineSwitch((u, next) => write(() => updateUnit(u.id, { isMachineUnit: next })))]}
           onCreate={(v) => write(() => createUnit({ key: v.key, label: v.label, decimals: v.extra }))}
           onUpdate={(item, p) => write(() => updateUnit(item.id, { label: p.label, isActive: p.isActive, decimals: p.extra }))}
           onReorder={(ids) => write(() => reorderUnits(ids))}
