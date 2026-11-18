@@ -99,7 +99,7 @@ export function FieldsPanel({ detail, tree, onChanged }: {
               </h3>
               <p className="mt-0.5 text-[13px] text-gray-500">Inherited, so sellers see these first. Edit them on {from?.name ?? 'the parent'}.</p>
             </div>
-            <ul className="divide-y divide-gray-200 overflow-hidden rounded-[10px] border border-gray-200 bg-gray-50">
+            <ul className="divide-y divide-gray-200 overflow-hidden rounded-2xl border border-gray-200 bg-gray-50">
               {g.fields.map((f) => <FieldRow key={f.id} field={f} />)}
             </ul>
           </section>
@@ -118,12 +118,12 @@ export function FieldsPanel({ detail, tree, onChanged }: {
           <Button size="sm" onClick={() => setDialog({ mode: 'create' })}><Plus size={14} /> Add field</Button>
         </div>
         {ownFields.length === 0 ? (
-          <div className="rounded-[10px] border border-dashed border-gray-300 px-4 py-8 text-center">
+          <div className="rounded-[20px] border border-dashed border-gray-300 px-4 py-8 text-center">
             <p className="text-base font-bold text-gray-900">No fields on this {LEVEL_LABELS[node.level].toLowerCase()} yet</p>
             <p className="mt-1 text-sm text-gray-500">Add one for each detail a seller should give, e.g. number of heads, hook type or needle size.</p>
           </div>
         ) : (
-          <ul className="divide-y divide-gray-200 overflow-hidden rounded-[10px] border border-gray-200">
+          <ul className="divide-y divide-gray-200 overflow-hidden rounded-2xl border border-gray-200">
             {ownFields.map((f, i) => (
               <FieldRow key={f.id} field={f}>
                 <Button variant="ghost" size="sm" disabled={busy} onClick={() => setDialog({ mode: 'edit', fieldId: f.id })}>
@@ -221,12 +221,12 @@ function FieldRow({ field: f, children }: { field: TemplateField; children?: Rea
 function Badge({ children, tone, title }: { children: React.ReactNode; tone: 'brand' | 'red' | 'blue' | 'grey' | 'amber'; title?: string }) {
   return (
     <span title={title} className={cn(
-      'rounded-[10px] px-2 text-xs font-bold',
-      tone === 'brand' && 'bg-brand-50 text-brand-800',
-      tone === 'red' && 'bg-red-50 text-red-700',
-      tone === 'blue' && 'bg-blue-50 text-blue-700',
+      'rounded-full px-[9px] py-px text-[11px] font-extrabold',
+      tone === 'brand' && 'bg-brand-50 text-brand-700',
+      tone === 'red' && 'bg-red-50 text-red-600',
+      tone === 'blue' && 'bg-brand-50 text-brand-700',
       tone === 'grey' && 'bg-gray-100 text-gray-600',
-      tone === 'amber' && 'bg-amber-50 text-amber-800',
+      tone === 'amber' && 'bg-amber-50 text-amber-600',
     )}>
       {children}
     </span>

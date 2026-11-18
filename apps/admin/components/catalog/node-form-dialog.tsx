@@ -9,6 +9,7 @@ import { FormDialog } from '@/components/ui/form-dialog';
 import { ApiError } from '@/lib/api';
 import { createCategory, updateCategory, type UpdateCategoryPatch } from '@/lib/catalog-api';
 import { LEVEL_LABELS, childLevel } from '@/lib/category-tree';
+import { inputCls, labelCls } from '@/components/ui/field-classes';
 
 const SLUG_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 const SLUG_MSG = 'Lowercase letters, digits and single hyphens';
@@ -30,9 +31,6 @@ const schemaFor = (mode: 'create' | 'edit') =>
 export type NodeFormDialogProps =
   | { mode: 'create'; parent: CategoryNode | null; onClose: () => void; onSaved: (node: CategoryNode) => void }
   | { mode: 'edit'; node: CategoryNode; onClose: () => void; onSaved: (node: CategoryNode) => void };
-
-const inputCls = 'w-full rounded-lg border-gray-300 text-sm';
-const labelCls = 'mb-1.5 block text-[13.5px] font-semibold text-gray-900';
 
 /** Add a category / machine type / part group, or edit a node's name and slug. Mount it to open it. */
 export function NodeFormDialog(props: NodeFormDialogProps) {
@@ -94,7 +92,7 @@ export function NodeFormDialog(props: NodeFormDialogProps) {
         <div>
           <label htmlFor="node-name" className={labelCls}>Name</label>
           <input id="node-name" className={inputCls} autoComplete="off" {...register('name')} />
-          {errors.name && <p className="mt-1 text-xs text-red-700">{errors.name.message}</p>}
+          {errors.name && <p className="mt-1 text-xs font-semibold text-red-600">{errors.name.message}</p>}
         </div>
         <div>
           <label htmlFor="node-slug" className={labelCls}>Slug</label>
@@ -106,7 +104,7 @@ export function NodeFormDialog(props: NodeFormDialogProps) {
             {...register('slug')}
           />
           {errors.slug
-            ? <p className="mt-1 text-xs text-red-700">{errors.slug.message}</p>
+            ? <p className="mt-1 text-xs font-semibold text-red-600">{errors.slug.message}</p>
             : mode === 'edit' && <p className="mt-1 text-[12.5px] text-gray-500">Changing it changes the path of this node and everything under it.</p>}
         </div>
         {mode === 'create' && isCategory && (

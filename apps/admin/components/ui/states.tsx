@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import { Button } from './button';
 
 export function Skeleton({ className }: { className?: string }) {
-  return <div aria-hidden className={cn('animate-pulse rounded-md bg-gray-200/70', className)} />;
+  return <div aria-hidden className={cn('animate-pulse rounded-xl bg-gray-100', className)} />;
 }
 
 export function TableSkeleton({ rows = 5, cols = 4 }: { rows?: number; cols?: number }) {
@@ -26,7 +26,7 @@ export function TableSkeleton({ rows = 5, cols = 4 }: { rows?: number; cols?: nu
 export function EmptyState({ title, description, action }: { title: string; description?: string; action?: ReactNode }) {
   return (
     <div className="flex flex-col items-center px-6 py-12 text-center">
-      <p className="text-sm font-semibold text-gray-900">{title}</p>
+      <p className="text-sm font-bold text-gray-900">{title}</p>
       {description && <p className="mt-1 max-w-sm text-sm text-gray-500">{description}</p>}
       {action && <div className="mt-4">{action}</div>}
     </div>
@@ -35,10 +35,10 @@ export function EmptyState({ title, description, action }: { title: string; desc
 
 export function ErrorState({ title = "Couldn't load this page", message, onRetry }: { title?: string; message: string; onRetry?: () => void }) {
   return (
-    <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50/60 p-4">
+    <div className="flex items-start gap-3 rounded-2xl border-0 bg-red-50 p-4">
       <AlertTriangle size={18} className="mt-0.5 shrink-0 text-red-600" />
       <div className="flex-1">
-        <p className="text-sm font-semibold text-gray-900">{title}</p>
+        <p className="text-sm font-bold text-gray-900">{title}</p>
         <p className="mt-0.5 text-sm text-gray-600">{message}</p>
         {onRetry && <Button variant="secondary" size="sm" className="mt-3" onClick={onRetry}>Try again</Button>}
       </div>

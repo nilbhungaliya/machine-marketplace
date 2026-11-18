@@ -17,12 +17,12 @@ export function TreePanel({ tree, selectedId, onSelect, onReordered, reorderable
   return (
     <section
       aria-label="Category tree"
-      className="flex flex-col overflow-hidden rounded-[10px] border border-gray-200 bg-white lg:sticky lg:top-0 lg:max-h-[calc(100vh-8rem)]"
+      className="flex flex-col overflow-hidden rounded-[20px] border border-gray-200 bg-white lg:sticky lg:top-0 lg:max-h-[calc(100vh-8rem)]"
     >
       <div className="space-y-2 border-b border-gray-200 px-3 pb-2.5 pt-3">
         <div className="flex items-center justify-between px-1">
           <h2 className="flex items-center gap-2 text-sm font-bold text-gray-900">
-            <FolderTree size={16} className="text-brand-800" aria-hidden /> Catalogue
+            <FolderTree size={16} className="text-brand-700" aria-hidden /> Catalogue
           </h2>
           <span className="text-[13px] text-gray-500 tnum">{tree.length} categories</span>
         </div>
@@ -34,7 +34,7 @@ export function TreePanel({ tree, selectedId, onSelect, onReordered, reorderable
             placeholder="Search categories, machine types, part groups…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="h-[34px] w-full rounded-lg border-gray-300 bg-gray-50 pl-9 pr-8 text-sm placeholder:text-gray-400 focus:bg-white [&::-webkit-search-cancel-button]:hidden"
+            className="h-[34px] w-full rounded-xl border-0 bg-gray-100 pl-9 pr-8 text-sm font-semibold text-gray-900 placeholder:text-gray-400 focus:bg-white focus:ring-2 focus:ring-brand-600 [&::-webkit-search-cancel-button]:hidden"
           />
           {query && (
             <button

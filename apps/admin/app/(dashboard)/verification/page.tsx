@@ -79,11 +79,11 @@ export default function VerificationPage() {
               {ready && selectedId ? (
                 <ReviewDetail key={selectedId} id={selectedId} onChanged={() => void load()} />
               ) : rows && rows.length > 0 ? (
-                <div className="rounded-[10px] border border-gray-200 bg-white">
+                <div className="rounded-[20px] border border-gray-200 bg-white">
                   <EmptyState title="Pick a review" description="Its details, documents and history open here." />
                 </div>
               ) : (
-                <div className="hidden rounded-[10px] border border-dashed border-gray-300 p-10 text-center text-sm text-gray-500 lg:block">
+                <div className="hidden rounded-[20px] border border-dashed border-gray-300 p-10 text-center text-sm text-gray-500 lg:block">
                   <MousePointerClick size={18} aria-hidden className="mx-auto mb-2 text-gray-400" />
                   Reviews open here.
                 </div>

@@ -19,11 +19,11 @@ export function ActiveSwitch({ checked, label, disabled, onToggle }: {
       disabled={disabled}
       onClick={onToggle}
       className={cn(
-        'relative inline-flex h-5 w-[34px] shrink-0 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 disabled:opacity-50',
-        checked ? 'bg-brand-600' : 'bg-gray-300',
+        'relative inline-flex h-6 w-10 shrink-0 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-1 disabled:opacity-50',
+        checked ? 'bg-brand-600' : 'bg-gray-200',
       )}
     >
-      <span className={cn('inline-block h-4 w-4 rounded-full bg-white transition-transform', checked ? 'translate-x-4' : 'translate-x-0.5')} />
+      <span className={cn('inline-block h-[18px] w-[18px] rounded-full bg-white shadow-sm transition-transform', checked ? 'translate-x-[19px]' : 'translate-x-[3px]')} />
     </button>
   );
 }
@@ -38,12 +38,12 @@ export function Tag({ children, tone = 'grey', title }: {
     <span
       title={title}
       className={cn(
-        'inline-flex h-6 items-center whitespace-nowrap rounded-full px-[9px] text-[12.5px] font-semibold',
+        'inline-flex h-6 items-center whitespace-nowrap rounded-full px-[9px] text-[12.5px] font-bold',
         tone === 'grey' && 'bg-gray-100 text-gray-600',
-        tone === 'brand' && 'bg-brand-50 text-brand-800',
-        tone === 'amber' && 'bg-amber-50 text-amber-800',
-        tone === 'blue' && 'bg-blue-50 text-blue-700',
-        tone === 'green' && 'bg-green-50 text-green-700',
+        tone === 'brand' && 'bg-brand-50 text-brand-700',
+        tone === 'amber' && 'bg-amber-50 text-amber-600',
+        tone === 'blue' && 'bg-brand-50 text-brand-700',
+        tone === 'green' && 'bg-green-50 text-green-600',
       )}
     >
       {children}

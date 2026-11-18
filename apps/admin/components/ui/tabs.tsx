@@ -14,20 +14,20 @@ function TabLabel({ label, count, badge }: { label: string; count?: number | str
       {label}
       {badge}
       {count !== undefined && (
-        <span className="ml-1.5 rounded-full bg-gray-100 px-1.5 py-px text-[11px] font-semibold text-gray-500 tnum">{count}</span>
+        <span className="ml-1.5 rounded-full bg-white/70 px-1.5 py-px text-[11px] font-bold text-gray-600 tnum">{count}</span>
       )}
     </>
   );
 }
 
-// The grey line is an inset shadow, not a border: a tab pulled over a border
-// with -mb-px overflows the strip by 1px, which shows a scroll bar.
-const STRIP = 'mb-5 flex gap-6 overflow-x-auto overflow-y-hidden shadow-[inset_0_-1px_0_theme(colors.gray.200)]';
+// Segmented control (spec §10.2, R13; the mockup's `.segmented` v2): a grey track, the selected tab a white chip.
+// `max-w-full` + `overflow-x-auto` keep a long strip scrolling inside the page instead of widening it.
+const STRIP = 'mb-5 flex w-fit max-w-full gap-0.5 overflow-x-auto overflow-y-hidden rounded-xl bg-gray-100 p-[3px]';
 
 const tabClass = (active: boolean) =>
   cn(
-    'whitespace-nowrap border-b-2 px-0.5 pb-2.5 pt-1 text-sm transition-colors',
-    active ? 'border-brand-500 font-semibold text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-800',
+    'inline-flex items-center whitespace-nowrap rounded-[9px] px-3 py-1.5 text-[13px] font-bold transition-colors',
+    active ? 'bg-white text-gray-900 shadow-[0_1px_3px_rgb(28_20_70/0.14)]' : 'text-gray-600 hover:text-gray-900',
   );
 
 export function LinkTabs({ tabs, className }: {

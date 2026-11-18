@@ -24,7 +24,7 @@ export function FixedLists() {
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
       {LISTS.map((list) => (
-        <section key={list.title} aria-label={list.title} className="rounded-[10px] border border-gray-200 bg-white p-4">
+        <section key={list.title} aria-label={list.title} className="rounded-[20px] border border-gray-200 bg-white p-4">
           <h3 className="flex items-center gap-2 text-base font-bold text-gray-900">
             <Lock size={14} aria-hidden className="text-gray-500" /> {list.title}
           </h3>

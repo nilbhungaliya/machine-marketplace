@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from 'react';
 import { ADMIN_REASON_MAX, ADMIN_REASON_MIN } from '@mpm/shared-types';
 import { FormDialog } from '@/components/ui/form-dialog';
+import { inputCls, labelCls } from '@/components/ui/field-classes';
 
 /**
  * A popup asking for one piece of text: a reason, or a message the business reads. The submit button stays disabled
@@ -48,15 +49,15 @@ export function ReasonDialog({
       <div className="space-y-3">
         {children}
         <div>
-          <label htmlFor="reason-text" className="mb-1.5 block text-[13.5px] font-semibold text-gray-900">{label}</label>
+          <label htmlFor="reason-text" className={labelCls}>{label}</label>
           <textarea
             id="reason-text"
             rows={4}
-            className="w-full rounded-lg border-gray-300 text-sm"
+            className={inputCls}
             value={text}
             onChange={(e) => setText(e.target.value)}
           />
-          <p className={`mt-1 flex justify-between gap-3 text-[12.5px] ${tooLong ? 'text-red-700' : 'text-gray-500'}`}>
+          <p className={`mt-1 flex justify-between gap-3 text-[12.5px] ${tooLong ? 'font-semibold text-red-600' : 'text-gray-500'}`}>
             <span>{hint ?? `${minLength} to ${maxLength} characters.`}</span>
             <span className="tnum">{length} / {maxLength}</span>
           </p>

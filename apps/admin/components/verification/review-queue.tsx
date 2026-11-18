@@ -32,19 +32,19 @@ export function ReviewQueue({ queue, rows, selectedId, onSelect }: {
 }) {
   if (!rows) {
     return (
-      <div className="space-y-3 rounded-[10px] border border-gray-200 bg-white p-4" role="status" aria-label="Loading">
+      <div className="space-y-3 rounded-[20px] border border-gray-200 bg-white p-4" role="status" aria-label="Loading">
         {Array.from({ length: 5 }, (_, i) => <Skeleton key={i} className="h-10" />)}
       </div>
     );
   }
   if (rows.length === 0) {
-    return <div className="rounded-[10px] border border-gray-200 bg-white"><EmptyState {...EMPTY[queue]} /></div>;
+    return <div className="rounded-[20px] border border-gray-200 bg-white"><EmptyState {...EMPTY[queue]} /></div>;
   }
 
   return (
-    <nav aria-label="Reviews" className="overflow-hidden rounded-[10px] border border-gray-200 bg-white lg:sticky lg:top-0">
+    <nav aria-label="Reviews" className="overflow-hidden rounded-[20px] border border-gray-200 bg-white lg:sticky lg:top-0">
       {rows.length >= REVIEW_LIST_CAP && (
-        <p className="border-b border-gray-200 bg-gray-50 px-3 py-2 text-[13px] text-gray-600">
+        <p className="border-b border-gray-100 bg-gray-50 px-3 py-2 text-[13px] font-semibold text-gray-600">
           Showing the {queue === 'decided' ? 'latest' : 'oldest'} {REVIEW_LIST_CAP}
         </p>
       )}
@@ -59,7 +59,7 @@ export function ReviewQueue({ queue, rows, selectedId, onSelect }: {
                 aria-current={on ? 'true' : undefined}
                 onClick={() => onSelect(row.id)}
                 className={cn(
-                  'flex w-full items-start gap-3 px-3 py-2.5 text-left transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-400',
+                  'flex w-full items-start gap-3 px-3 py-2.5 text-left transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-600',
                   on && 'bg-brand-50 shadow-[inset_3px_0_0_theme(colors.brand.600)] hover:bg-brand-50',
                 )}
               >

@@ -81,7 +81,7 @@ export default function CategoriesPage() {
       />
 
       {stats && (
-        <div className="mb-4 grid grid-cols-2 gap-px overflow-hidden rounded-[10px] border border-gray-200 bg-gray-200 xl:grid-cols-4">
+        <div className="mb-4 grid grid-cols-2 gap-px overflow-hidden rounded-[20px] border border-gray-200 bg-gray-200 xl:grid-cols-4">
           <StatCard title="Categories" value={stats.machine_category.toLocaleString('en-IN')} className={FIG} />
           <StatCard title="Machine types" value={stats.machine_type.toLocaleString('en-IN')} className={FIG} />
           <StatCard
@@ -102,9 +102,9 @@ export default function CategoriesPage() {
       {error ? (
         <ErrorState message={error} onRetry={() => void load()} />
       ) : !tree ? (
-        <div className="rounded-[10px] border border-gray-200 bg-white"><TableSkeleton rows={8} cols={2} /></div>
+        <div className="rounded-[20px] border border-gray-200 bg-white"><TableSkeleton rows={8} cols={2} /></div>
       ) : tree.length === 0 ? (
-        <div className="rounded-[10px] border border-gray-200 bg-white">
+        <div className="rounded-[20px] border border-gray-200 bg-white">
           <EmptyState
             title="No categories yet"
             description="Add the first machine category, then its machine types and part groups."
@@ -124,8 +124,8 @@ export default function CategoriesPage() {
                 onSelect={select}
               />
             ) : (
-              <div className="flex flex-col items-center rounded-[10px] border border-dashed border-gray-300 bg-white px-6 py-16 text-center">
-                <span className="mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-brand-50 text-brand-800">
+              <div className="flex flex-col items-center rounded-[20px] border border-dashed border-gray-300 bg-white px-6 py-16 text-center">
+                <span className="mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-brand-50 text-brand-700">
                   <MousePointerClick size={20} aria-hidden />
                 </span>
                 <p className="text-base font-bold text-gray-900">Pick a node</p>

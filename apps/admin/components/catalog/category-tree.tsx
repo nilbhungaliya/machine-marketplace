@@ -10,7 +10,7 @@ import { LEVEL_LABELS, ancestorsOf, filterTree, siblingsOf } from '@/lib/categor
 import { CATEGORY_ICON_COMPONENTS } from '@/lib/category-icons';
 import { cn } from '@/lib/utils';
 
-const REORDER_BTN = 'rounded-md p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-900 disabled:opacity-40';
+const REORDER_BTN = 'rounded-full p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-900 disabled:opacity-40';
 
 interface CategoryTreeProps {
   nodes: CategoryNode[];
@@ -108,8 +108,8 @@ export function CategoryTree({ nodes, selectedId, onSelect, query, onReordered, 
               data-tree-row
               title={LEVEL_LABELS[n.level]}
               className={cn(
-                'group relative flex items-center gap-1 rounded-[7px] pl-1 pr-1 transition-colors',
-                selected ? 'bg-brand-50 ring-1 ring-inset ring-brand-200' : 'hover:bg-gray-50',
+                'group relative flex items-center gap-1 rounded-lg pl-1 pr-1 transition-colors',
+                selected ? 'bg-brand-50 shadow-[inset_3px_0_0_theme(colors.brand.600)]' : 'hover:bg-gray-50',
               )}
             >
               <button
@@ -131,7 +131,7 @@ export function CategoryTree({ nodes, selectedId, onSelect, query, onReordered, 
                   if (hasChildren && !open.has(n.id)) toggle(n.id);
                 }}
                 className={cn(
-                  'flex min-w-0 flex-1 items-center gap-2.5 rounded text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400',
+                  'flex min-w-0 flex-1 items-center gap-2.5 rounded text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600',
                   n.level === 'part_group' ? 'py-1' : 'py-1.5',
                 )}
               >
@@ -140,9 +140,9 @@ export function CategoryTree({ nodes, selectedId, onSelect, query, onReordered, 
                   className={cn(
                     'truncate',
                     n.level === 'machine_category' && 'text-sm font-bold text-gray-900',
-                    n.level === 'machine_type' && 'text-sm font-medium text-gray-600',
-                    n.level === 'part_group' && 'text-[13.5px] text-gray-600',
-                    selected && 'text-gray-900',
+                    n.level === 'machine_type' && 'text-sm font-semibold text-gray-600',
+                    n.level === 'part_group' && 'text-[13.5px] font-semibold text-gray-600',
+                    selected && 'font-extrabold text-brand-700',
                     !n.isActive && 'text-gray-500 line-through decoration-gray-300',
                   )}
                 >
@@ -152,7 +152,7 @@ export function CategoryTree({ nodes, selectedId, onSelect, query, onReordered, 
                   {sided && (
                     <span
                       title="Parts here have a left and a right side"
-                      className="inline-flex h-5 items-center rounded-md bg-amber-50 px-1.5 font-mono text-[11px] font-bold text-amber-800 ring-1 ring-inset ring-amber-200"
+                      className="inline-flex h-5 items-center rounded-full bg-amber-50 px-[7px] font-mono text-[11px] font-bold text-amber-700"
                     >
                       L | R
                     </span>
@@ -161,7 +161,7 @@ export function CategoryTree({ nodes, selectedId, onSelect, query, onReordered, 
                     <span
                       className={cn(
                         'rounded-full px-[7px] text-xs font-bold tnum',
-                        selected ? 'bg-white text-brand-800 ring-1 ring-brand-200' : 'bg-gray-100 text-gray-500',
+                        selected ? 'bg-white text-brand-700' : 'bg-gray-100 text-gray-500',
                       )}
                     >
                       {n.children.length}
@@ -229,7 +229,7 @@ function LevelMark({ node, selected }: { node: CategoryNode; selected: boolean }
         aria-hidden
         className={cn(
           'flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-[7px]',
-          !node.isActive ? 'bg-gray-100 text-gray-500' : selected ? 'bg-brand-600 text-white' : 'bg-brand-50 text-brand-800',
+          !node.isActive ? 'bg-gray-100 text-gray-500' : selected ? 'bg-brand-600 text-white' : 'bg-brand-50 text-brand-700',
         )}
       >
         <Icon size={15} />
@@ -237,7 +237,7 @@ function LevelMark({ node, selected }: { node: CategoryNode; selected: boolean }
     );
   }
   if (node.level === 'machine_type') {
-    return <Factory aria-hidden size={14} className={cn('shrink-0', selected ? 'text-brand-800' : 'text-gray-500')} />;
+    return <Factory aria-hidden size={14} className={cn('shrink-0', selected ? 'text-brand-700' : 'text-gray-500')} />;
   }
   return <span aria-hidden className={cn('h-1.5 w-1.5 shrink-0 rounded-full', selected ? 'bg-brand-600' : 'bg-gray-300')} />;
 }

@@ -9,8 +9,7 @@ import { ApiError } from '@/lib/api';
 import { createOption, reorderOptions, updateOption } from '@/lib/catalog-api';
 import { cn } from '@/lib/utils';
 import { KEY_MESSAGE, toCatalogKey } from '@/lib/catalog-key';
-
-const inputCls = 'w-full rounded-lg border-gray-300 text-sm';
+import { inputCls } from '@/components/ui/field-classes';
 
 /** Enter here acts on this row; it must not submit the field form around it. */
 function onEnter(run: () => void) {
@@ -87,7 +86,7 @@ export function OptionsEditor({ field, onChanged }: {
   };
 
   return (
-    <section data-enter="ignore" aria-label="Options" className="rounded-[10px] border border-gray-200">
+    <section data-enter="ignore" aria-label="Options" className="rounded-2xl border border-gray-200">
       <h3 className="border-b border-gray-200 px-4 py-2.5 text-[15px] font-bold text-gray-900">
         Options <span className="text-[13px] font-normal text-gray-500">· saved as you go</span>
       </h3>
@@ -136,7 +135,7 @@ export function OptionsEditor({ field, onChanged }: {
         />
         <Button variant="secondary" onClick={() => void add()} disabled={busy}><Plus size={14} /> Add</Button>
       </div>
-      {problem && <p className="px-4 pb-3 text-xs text-red-700">{problem}</p>}
+      {problem && <p className="px-4 pb-3 text-xs font-semibold text-red-600">{problem}</p>}
     </section>
   );
 }

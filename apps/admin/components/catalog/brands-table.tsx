@@ -199,17 +199,17 @@ export function BrandsTable({ brands, machineTypes, selectedId, onSelect, onChan
         columns={columns}
         data={shown}
         onRowClick={(b) => onSelect(b.id)}
-        rowClassName={(b) => (b.id === selectedId ? 'bg-brand-50/70' : '')}
+        rowClassName={(b) => (b.id === selectedId ? 'bg-brand-50' : '')}
         emptyMessage={filtering ? 'No brand matches these filters' : 'No brands yet'}
         toolbar={
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-2">
-              <label htmlFor="brands-machine-type" className="text-[13px] font-semibold text-gray-700">Machine type</label>
+              <label htmlFor="brands-machine-type" className="text-[12.5px] font-bold text-gray-600">Machine type</label>
               <select
                 id="brands-machine-type"
                 value={machineTypeId}
                 onChange={(e) => setMachineTypeId(e.target.value)}
-                className="h-8 max-w-[260px] rounded-lg border-gray-300 py-0 text-sm"
+                className="h-8 max-w-[260px] rounded-xl border-0 bg-gray-100 py-0 text-sm font-semibold text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-600"
               >
                 <option value="">All</option>
                 {machineTypes.map((t) => <option key={t.id} value={t.id}>{t.label}{t.isActive ? '' : ' (off)'}</option>)}

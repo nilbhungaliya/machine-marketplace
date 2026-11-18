@@ -15,6 +15,7 @@ import { FormDialog } from '@/components/ui/form-dialog';
 import { ApiError } from '@/lib/api';
 import { createArea, deleteArea, reorderAreas, updateArea } from '@/lib/industrial-areas-api';
 import { cn } from '@/lib/utils';
+import { inputCls, labelCls } from '@/components/ui/field-classes';
 
 const IN_USE_MESSAGE = 'Businesses use this area. Turn it off instead.';
 
@@ -162,9 +163,6 @@ const placeField = (what: string) => z.string().trim().min(1, `Enter the ${what}
 const schema = z.object({ name: nameField, city: placeField('city'), state: placeField('state') });
 type Values = z.infer<typeof schema>;
 
-const inputCls = 'w-full rounded-lg border-gray-300 text-sm';
-const labelCls = 'mb-1.5 block text-[13.5px] font-semibold text-gray-900';
-
 /**
  * Add an area (name, city, state: a new city starts its own list) or rename one (name only). City and state follow
  * the pincode directory's spelling, e.g. "Surat", "Gujarat", so the app's picker finds the area by pincode.
@@ -215,19 +213,19 @@ export function AreaFormDialog({ area, start, onClose, onSaved }: {
         <div>
           <label htmlFor="area-name" className={labelCls}>Name</label>
           <input id="area-name" className={inputCls} autoComplete="off" {...register('name')} />
-          {errors.name && <p className="mt-1 text-xs text-red-700">{errors.name.message}</p>}
+          {errors.name && <p className="mt-1 text-xs font-semibold text-red-600">{errors.name.message}</p>}
         </div>
         {!area && (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label htmlFor="area-city" className={labelCls}>City (district)</label>
               <input id="area-city" className={inputCls} autoComplete="off" {...register('city')} />
-              {errors.city && <p className="mt-1 text-xs text-red-700">{errors.city.message}</p>}
+              {errors.city && <p className="mt-1 text-xs font-semibold text-red-600">{errors.city.message}</p>}
             </div>
             <div>
               <label htmlFor="area-state" className={labelCls}>State</label>
               <input id="area-state" className={inputCls} autoComplete="off" {...register('state')} />
-              {errors.state && <p className="mt-1 text-xs text-red-700">{errors.state.message}</p>}
+              {errors.state && <p className="mt-1 text-xs font-semibold text-red-600">{errors.state.message}</p>}
             </div>
           </div>
         )}

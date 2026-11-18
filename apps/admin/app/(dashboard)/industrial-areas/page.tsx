@@ -79,7 +79,7 @@ export default function IndustrialAreasPage() {
       {error && !areas ? (
         <ErrorState message={error} onRetry={() => void load()} />
       ) : !areas || !others || !ready ? (
-        <div className="rounded-[10px] border border-gray-200 bg-white"><TableSkeleton rows={6} cols={3} /></div>
+        <div className="rounded-[20px] border border-gray-200 bg-white"><TableSkeleton rows={6} cols={3} /></div>
       ) : (
         <>
           {error && <StaleWarning thing="list" onRetry={() => void load()} />}
@@ -92,7 +92,7 @@ export default function IndustrialAreasPage() {
               <OtherValues rows={others} onAdopted={() => void load()} />
             </>
           ) : !selected ? (
-            <div className="rounded-[10px] border border-gray-200 bg-white">
+            <div className="rounded-[20px] border border-gray-200 bg-white">
               <EmptyState
                 title="No industrial areas yet"
                 description="Add the first area of a city. Businesses in that city's pincodes then pick from the list."
@@ -105,7 +105,7 @@ export default function IndustrialAreasPage() {
                 <label htmlFor="area-city-picker" className="text-sm font-semibold text-gray-700">City</label>
                 <select
                   id="area-city-picker"
-                  className="min-w-[14rem] rounded-lg border-gray-300 text-sm"
+                  className="min-w-[14rem] rounded-xl border-0 bg-gray-100 text-sm font-semibold text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-600"
                   value={selected.key}
                   onChange={(e) => setUrl({ city: e.target.value })}
                 >

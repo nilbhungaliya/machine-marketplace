@@ -72,7 +72,7 @@ export function ModelsPanel({ brand, brands, tree, onChanged }: {
   const target = dialog && dialog.kind !== 'create' ? models.find((m) => m.id === dialog.id) ?? null : null;
 
   return (
-    <div className="rounded-[10px] border border-gray-200 bg-white">
+    <div className="rounded-[20px] border border-gray-200 bg-white">
       <div className="flex flex-wrap items-start justify-between gap-3 border-b border-gray-200 px-4 py-3">
         <div className="min-w-0">
           <h2 className="truncate text-lg font-extrabold text-gray-900">{brand.name}</h2>
@@ -167,7 +167,7 @@ function ModelList({ models, busy, typeName, onEdit, onMoveTo, onReorder, onRemo
 }) {
   if (models.length === 0) return <p className="px-1 py-6 text-center text-sm text-gray-500">{emptyMessage}</p>;
   return (
-    <ul aria-label="Models" className="divide-y divide-gray-200 overflow-hidden rounded-[10px] border border-gray-200">
+    <ul aria-label="Models" className="divide-y divide-gray-200 overflow-hidden rounded-2xl border border-gray-200">
       {models.map((m, i) => {
         const type = typeName(m.machineTypeId);
         return (
@@ -271,17 +271,17 @@ function MoveModelDialog({ model, brands, choices, onClose, onMoved }: {
     >
       <div className="space-y-4">
         <div>
-          <label htmlFor="move-model-brand" className="mb-1.5 block text-[13.5px] font-semibold text-gray-900">Brand</label>
+          <label htmlFor="move-model-brand" className="mb-1.5 block text-[12.5px] font-bold text-gray-600">Brand</label>
           <select
             id="move-model-brand"
-            className="w-full rounded-lg border-gray-300 text-sm"
+            className="w-full rounded-xl border-0 bg-gray-100 text-sm font-semibold text-gray-900 placeholder:text-gray-400 focus:bg-white focus:ring-2 focus:ring-brand-600"
             value={brandId}
             aria-describedby={errors.brand ? 'move-model-brand-error' : undefined}
             onChange={(e) => { setBrandId(e.target.value); setErrors({}); }}
           >
             {makers.map((b) => <option key={b.id} value={b.id}>{b.name}{b.isActive ? '' : ' (off)'}</option>)}
           </select>
-          {errors.brand && <p id="move-model-brand-error" className="mt-1 text-xs text-red-700">{errors.brand}</p>}
+          {errors.brand && <p id="move-model-brand-error" className="mt-1 text-xs font-semibold text-red-600">{errors.brand}</p>}
         </div>
         <div>
           <SearchableSelect
@@ -293,9 +293,9 @@ function MoveModelDialog({ model, brands, choices, onClose, onMoved }: {
             invalid={!!errors.machineType}
             describedBy={errors.machineType ? 'move-model-type-error' : undefined}
           />
-          {errors.machineType && <p id="move-model-type-error" className="mt-1 text-xs text-red-700">{errors.machineType}</p>}
+          {errors.machineType && <p id="move-model-type-error" className="mt-1 text-xs font-semibold text-red-600">{errors.machineType}</p>}
         </div>
-        {errors.form && <p role="alert" className="text-xs text-red-700">{errors.form}</p>}
+        {errors.form && <p role="alert" className="text-xs font-semibold text-red-600">{errors.form}</p>}
       </div>
     </FormDialog>
   );

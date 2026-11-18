@@ -230,7 +230,7 @@ function BusinessFilterDialog({ start, search, onClose, onApply }: {
       <Section title={<label htmlFor="filter-city">City</label>}>
         <input
           id="filter-city"
-          className="w-full rounded-lg border-gray-300 text-sm"
+          className="w-full rounded-xl border-0 bg-gray-100 text-sm font-semibold text-gray-900 placeholder:text-gray-400 focus:bg-white focus:ring-2 focus:ring-brand-600"
           placeholder="e.g. Surat"
           value={draft.city}
           onChange={(e) => setDraft({ ...draft, city: e.target.value })}

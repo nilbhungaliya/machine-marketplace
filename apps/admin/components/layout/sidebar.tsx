@@ -2,14 +2,17 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ChevronDown, ChevronsLeft, ChevronsRight, Layers, LogOut } from 'lucide-react';
+import { ChevronDown, ChevronsLeft, ChevronsRight, LogOut } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { cn } from '@/lib/utils';
 import { NAV_DASHBOARD, NAV_GROUPS, canSee, findActiveNav, type NavItem } from '@/lib/nav';
 import { badgeText, useNavBadges, type NavBadgeKey } from '@/lib/nav-badges';
 import { useSidebarState } from './sidebar-state';
 
-const FOCUS = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400';
+const FOCUS = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600';
+
+/** One half of the L | R lockup mark (the mockup's `.tok i.on`). */
+const HALF = 'grid h-[18px] w-[18px] place-items-center bg-brand-600 text-[9.5px] font-extrabold not-italic leading-none text-white';
 
 const ROLE_LABEL: Record<string, string> = {
   super_admin: 'Super admin',
@@ -43,20 +46,20 @@ export default function Sidebar() {
           aria-current={isActive ? 'page' : undefined}
           title={collapsed ? item.label : undefined}
           className={cn(
-            'relative flex items-center gap-3 rounded-lg py-2 text-sm font-medium transition-colors',
-            collapsed ? 'justify-center px-0' : 'px-3',
+            'relative flex items-center gap-[9px] rounded-full py-2 text-[12.5px] transition-colors',
+            collapsed ? 'justify-center px-0' : 'px-2.5',
             isActive
-              ? 'bg-side-hover text-white before:absolute before:left-0 before:top-1/2 before:h-5 before:w-[3px] before:-translate-y-1/2 before:rounded-r before:bg-brand-400'
-              : 'hover:bg-side-hover hover:text-white',
+              ? 'bg-brand-50 font-extrabold text-brand-700'
+              : 'font-semibold text-gray-600 hover:bg-gray-100 hover:text-gray-900',
             FOCUS,
           )}
         >
-          <Icon size={18} aria-hidden className="shrink-0" />
+          <Icon size={16} aria-hidden className="shrink-0" />
           <span className={collapsed ? 'sr-only' : 'min-w-0 flex-1 truncate'}>{item.label}</span>
           {badge && (collapsed ? (
-            <span className="absolute right-2.5 top-1.5 h-2 w-2 rounded-full bg-amber-400"><span className="sr-only">, {badge} waiting</span></span>
+            <span className="absolute right-2.5 top-1.5 h-2 w-2 rounded-full bg-brand-600"><span className="sr-only">, {badge} waiting</span></span>
           ) : (
-            <span className="shrink-0 rounded-full bg-amber-400 px-1.5 text-[11px] font-bold text-gray-900 tnum">
+            <span className="shrink-0 rounded-full bg-brand-600 px-[7px] py-px text-[10.5px] font-extrabold text-white tnum">
               {badge}<span className="sr-only"> waiting</span>
             </span>
           ))}
@@ -69,18 +72,25 @@ export default function Sidebar() {
     <aside
       data-nav-sidebar
       className={cn(
-        'fixed left-0 top-0 z-30 flex h-screen flex-col bg-side text-side-text transition-[width] duration-200',
+        'fixed left-0 top-0 z-30 flex h-screen flex-col border-r border-gray-200 bg-white text-gray-600 transition-[width] duration-200',
         collapsed ? 'w-16' : 'w-60',
       )}
     >
-      <div className={cn('flex h-16 shrink-0 items-center gap-2.5 border-b border-side-line', collapsed ? 'justify-center' : 'px-5')}>
-        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-600 text-white">
-          <Layers size={16} aria-hidden />
+      {/* The mockup's `.a-logo` lockup (R14): an L | R mark, the app's name and a yellow "Admin" badge. */}
+      <div className={cn('flex h-16 shrink-0 items-center gap-2', collapsed ? 'justify-center' : 'px-[18px]')}>
+        <span aria-hidden className="inline-flex shrink-0 gap-[2px]">
+          <i className={cn(HALF, 'rounded-l-full rounded-r-[4px]')}>L</i>
+          <i className={cn(HALF, 'rounded-l-[4px] rounded-r-full')}>R</i>
         </span>
-        {!collapsed && <span className="truncate text-base font-bold tracking-tight text-white">MPM Admin</span>}
+        {!collapsed && (
+          <>
+            <span className="truncate text-base font-extrabold tracking-[-0.01em] text-gray-900">Machine Parts</span>
+            <span className="ml-auto shrink-0 rounded-full bg-sun px-[7px] py-px text-[10.5px] font-extrabold text-sun-ink">Admin</span>
+          </>
+        )}
       </div>
 
-      <nav aria-label="Main" className="flex-1 overflow-y-auto overflow-x-hidden px-2 py-3 [scrollbar-width:thin]">
+      <nav aria-label="Main" className="flex-1 overflow-y-auto overflow-x-hidden px-2.5 pb-3 [scrollbar-width:thin]">
         <ul className="space-y-0.5">{row(NAV_DASHBOARD)}</ul>
 
         {groups.map((g) => {
@@ -89,7 +99,7 @@ export default function Sidebar() {
           const open = collapsed || holdsActive || !isGroupFolded(g.id);
           const listId = `nav-group-${g.id}`;
           return (
-            <div key={g.id} className={collapsed ? 'mt-2 border-t border-side-line pt-2' : 'mt-4'}>
+            <div key={g.id} className={collapsed ? 'mt-2 border-t border-gray-200 pt-2' : 'mt-4'}>
               {!collapsed && (
                 <button
                   type="button"
@@ -98,7 +108,7 @@ export default function Sidebar() {
                   aria-controls={listId}
                   disabled={holdsActive}
                   className={cn(
-                    'flex w-full items-center justify-between rounded-md px-3 py-1 text-xs font-semibold text-side-dim transition-colors enabled:hover:text-side-text',
+                    'flex w-full items-center justify-between rounded-md px-2.5 py-1 text-xs font-semibold text-gray-400 transition-colors enabled:hover:text-gray-600',
                     FOCUS,
                   )}
                 >
@@ -116,12 +126,12 @@ export default function Sidebar() {
         })}
       </nav>
 
-      <div className="shrink-0 border-t border-side-line p-2">
+      <div className="shrink-0 border-t border-gray-200 p-2">
         <div className={cn('flex items-center gap-2', collapsed ? 'justify-center' : 'pl-3')}>
           {!collapsed && (
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-white">{user?.name}</p>
-              <p className="truncate text-xs text-side-dim">{user ? ROLE_LABEL[user.role] : ''}</p>
+              <p className="truncate text-sm font-bold text-gray-900">{user?.name}</p>
+              <p className="truncate text-xs font-semibold text-gray-400">{user ? ROLE_LABEL[user.role] : ''}</p>
             </div>
           )}
           <button
@@ -129,7 +139,7 @@ export default function Sidebar() {
             onClick={logout}
             aria-label="Log out"
             title="Log out"
-            className={cn('rounded-lg p-2 text-side-dim transition-colors hover:bg-side-hover hover:text-white', FOCUS)}
+            className={cn('rounded-full p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-900', FOCUS)}
           >
             <LogOut size={18} aria-hidden />
           </button>
@@ -140,7 +150,7 @@ export default function Sidebar() {
           aria-label={collapsed ? 'Expand menu' : 'Collapse menu'}
           title={collapsed ? 'Expand menu' : 'Collapse menu'}
           className={cn(
-            'mt-1 hidden w-full items-center rounded-lg py-2 text-side-dim transition-colors hover:bg-side-hover hover:text-white lg:flex',
+            'mt-1 hidden w-full items-center rounded-full py-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-900 lg:flex',
             collapsed ? 'justify-center' : 'px-3',
             FOCUS,
           )}

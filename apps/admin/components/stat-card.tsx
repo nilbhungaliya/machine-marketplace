@@ -25,28 +25,28 @@ export default function StatCard({
   title, value, subtitle, icon, className, onClick, active, href, link,
 }: StatCardProps) {
   const classes = cn(
-    'rounded-xl bg-white p-5 shadow-sm border border-gray-200/70 transition-shadow hover:shadow-md',
+    'rounded-[20px] border border-gray-200 bg-white px-4 py-3 transition-colors hover:border-gray-300',
     onClick && 'w-full text-left',
-    href && 'block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500',
-    active && 'ring-2 ring-brand-500 ring-offset-1',
+    href && 'block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600',
+    active && 'ring-2 ring-brand-600 ring-offset-1',
     className,
   );
   const body = (
     <div className="flex items-start justify-between">
       <div>
-        <p className="text-sm font-medium text-gray-500">{title}</p>
-        <p className="mt-1 text-2xl font-bold text-gray-900">{value}</p>
+        <p className="text-xs font-semibold text-gray-400">{title}</p>
+        <p className="mt-1 text-[26px] font-extrabold leading-tight tracking-[-0.03em] text-gray-900">{value}</p>
         {subtitle && (
-          <p className="mt-1 text-xs text-gray-400">{subtitle}</p>
+          <p className="mt-1 text-[11.5px] font-bold text-green-600">{subtitle}</p>
         )}
         {link && !href && !onClick && (
-          <Link href={link.href} className="mt-2 inline-block text-xs font-medium text-brand-600 hover:underline">
+          <Link href={link.href} className="mt-2 inline-block text-xs font-bold text-brand-600 hover:underline">
             {link.label}
           </Link>
         )}
       </div>
       {icon && (
-        <div className="rounded-lg bg-brand-50 p-2.5 text-brand-600 ring-1 ring-brand-100">
+        <div className="rounded-full bg-brand-50 p-2.5 text-brand-700">
           {icon}
         </div>
       )}

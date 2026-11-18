@@ -13,6 +13,7 @@ import { FormDialog } from '@/components/ui/form-dialog';
 import { ApiError } from '@/lib/api';
 import { KEY_MESSAGE, toCatalogKey } from '@/lib/catalog-key';
 import { cn } from '@/lib/utils';
+import { inputCls, labelCls } from '@/components/ui/field-classes';
 
 /** A master-data row: unit or condition (A4). */
 export interface KeyedItem {
@@ -86,10 +87,10 @@ export const unitDecimalsExtras: KeyedExtras<Unit, number> = {
   same: (a, b) => a === b,
   render: (value, onChange) => (
     <div>
-      <label htmlFor="unit-decimals" className="mb-1.5 block text-[13.5px] font-semibold text-gray-900">Decimals</label>
+      <label htmlFor="unit-decimals" className="mb-1.5 block text-[12.5px] font-bold text-gray-600">Decimals</label>
       <select
         id="unit-decimals"
-        className="w-full rounded-lg border-gray-300 text-sm"
+        className={inputCls}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
       >
@@ -158,11 +159,11 @@ export function KeyedListEditor<T extends KeyedItem, X = undefined>({
           disabled={busy}
           onClick={() => void run(() => onUpdate(r, { isActive: !r.isActive }))}
           className={cn(
-            'relative inline-flex h-5 w-[34px] items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 disabled:opacity-50',
-            r.isActive ? 'bg-brand-600' : 'bg-gray-300',
+            'relative inline-flex h-6 w-10 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-1 disabled:opacity-50',
+            r.isActive ? 'bg-brand-600' : 'bg-gray-200',
           )}
         >
-          <span className={cn('inline-block h-4 w-4 rounded-full bg-white transition-transform', r.isActive ? 'translate-x-4' : 'translate-x-0.5')} />
+          <span className={cn('inline-block h-[18px] w-[18px] rounded-full bg-white shadow-sm transition-transform', r.isActive ? 'translate-x-[19px]' : 'translate-x-[3px]')} />
         </button>
       ),
     },
@@ -235,9 +236,6 @@ const schemaFor = (creating: boolean) =>
   });
 type Values = z.infer<ReturnType<typeof schemaFor>>;
 
-const inputCls = 'w-full rounded-lg border-gray-300 text-sm';
-const labelCls = 'mb-1.5 block text-[13.5px] font-semibold text-gray-900';
-
 function KeyedItemDialog<T extends KeyedItem, X>({
   noun, item, withDescription, extras, onClose, onSubmit,
 }: {
@@ -296,7 +294,7 @@ function KeyedItemDialog<T extends KeyedItem, X>({
               },
             })}
           />
-          {errors.label && <p className="mt-1 text-xs text-red-700">{errors.label.message}</p>}
+          {errors.label && <p className="mt-1 text-xs font-semibold text-red-600">{errors.label.message}</p>}
         </div>
         {creating && (
           <div>
@@ -308,14 +306,14 @@ function KeyedItemDialog<T extends KeyedItem, X>({
               spellCheck={false}
               {...register('key', { onChange: () => { keyTouched.current = true; } })}
             />
-            {errors.key && <p className="mt-1 text-xs text-red-700">{errors.key.message}</p>}
+            {errors.key && <p className="mt-1 text-xs font-semibold text-red-600">{errors.key.message}</p>}
           </div>
         )}
         {withDescription && (
           <div>
             <label htmlFor="keyed-description" className={labelCls}>Description <span className="font-normal text-gray-500">(optional)</span></label>
             <textarea id="keyed-description" rows={3} className={inputCls} {...register('description')} />
-            {errors.description && <p className="mt-1 text-xs text-red-700">{errors.description.message}</p>}
+            {errors.description && <p className="mt-1 text-xs font-semibold text-red-600">{errors.description.message}</p>}
           </div>
         )}
         {extras?.render(extra, setExtra)}

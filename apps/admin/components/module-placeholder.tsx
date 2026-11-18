@@ -15,9 +15,9 @@ export default function ModulePlaceholder({ title, description, scope }: {
   return (
     <>
       <PageHeader title={title} description={description} />
-      <div className="rounded-xl border border-dashed border-gray-300 bg-white p-6">
-        <div className="flex items-center gap-2 text-sm font-semibold text-gray-900">
-          <Construction size={16} className="text-brand-600" aria-hidden />
+      <div className="rounded-[20px] border border-gray-200 bg-white p-6">
+        <div className="flex items-center gap-2 text-sm font-extrabold text-gray-900">
+          <Construction size={16} className="text-brand-700" aria-hidden />
           Not built yet — planned screens and actions
         </div>
         <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-gray-600">

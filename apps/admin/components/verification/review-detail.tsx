@@ -35,11 +35,11 @@ const LOAD_MESSAGES = {
 function CompareRow({ field, business, gst, mismatch = false }: { field: string; business: ReactNode; gst: ReactNode; mismatch?: boolean }) {
   return (
     <tr data-mismatch={mismatch ? 'true' : undefined} className={cn(mismatch && 'bg-amber-50')}>
-      <th scope="row" className="w-32 px-3 py-2.5 text-left align-top text-[13px] font-semibold text-gray-500">
+      <th scope="row" className="w-32 px-3 py-2.5 text-left align-top text-[13px] font-semibold text-gray-400">
         {field}
       </th>
-      <td className="px-3 py-2.5 align-top text-sm text-gray-900">{business}</td>
-      <td className="px-3 py-2.5 align-top text-sm text-gray-900">
+      <td className="px-3 py-2.5 align-top text-sm font-extrabold text-gray-900">{business}</td>
+      <td className="px-3 py-2.5 align-top text-sm font-extrabold text-gray-900">
         {gst}
         {mismatch && (
           <span className="mt-1 flex items-center gap-1 text-xs font-semibold text-amber-800">
@@ -113,7 +113,7 @@ export function ReviewDetail({ id, onChanged }: { id: string; onChanged: () => v
     return error ? (
       <ErrorState title="Couldn't open this review" message={LOAD_MESSAGES[classifyLoadError(error)]} onRetry={() => void load()} />
     ) : (
-      <div className="space-y-3 rounded-[10px] border border-gray-200 bg-white p-4" role="status" aria-label="Loading">
+      <div className="space-y-3 rounded-[20px] border border-gray-200 bg-white p-4" role="status" aria-label="Loading">
         <Skeleton className="h-6 w-1/2" />
         <Skeleton className="h-4 w-1/3" />
         <Skeleton className="h-40" />
@@ -138,11 +138,11 @@ export function ReviewDetail({ id, onChanged }: { id: string; onChanged: () => v
     <div className="space-y-4">
       {error !== null && <StaleWarning thing="review" onRetry={() => void load()} />}
 
-      <div className="rounded-[10px] border border-gray-200 bg-white p-4">
+      <div className="rounded-[20px] border border-gray-200 bg-white p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-lg font-bold text-gray-900">{b.tradeName}</h2>
+              <h2 className="text-[19px] font-extrabold tracking-[-0.02em] text-gray-900">{b.tradeName}</h2>
               <StatusBadge status={r.status} label={PROOF_STATUS_LABELS[r.status]} />
             </div>
             <p className="mt-1 text-sm text-gray-600">
@@ -152,7 +152,7 @@ export function ReviewDetail({ id, onChanged }: { id: string; onChanged: () => v
             </p>
             <Link
               href={`/businesses/${b.id}/?${backLinkQuery('/verification/', 'Business verification')}`}
-              className="mt-1 inline-block text-sm font-medium text-brand-700 hover:underline"
+              className="mt-1 inline-block text-sm font-bold text-brand-700 hover:underline"
             >
               Open business
             </Link>
@@ -167,25 +167,25 @@ export function ReviewDetail({ id, onChanged }: { id: string; onChanged: () => v
         </div>
 
         {refusal && (
-          <p role="alert" className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{refusal}</p>
+          <p role="alert" className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold text-red-800">{refusal}</p>
         )}
         {b.gstin && b.gstin !== r.gstin && (
-          <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900">
             The business holds another GSTIN, <span className="font-mono">{b.gstin}</span>. Approving replaces it.
           </p>
         )}
         {r.status === 'needs_more' && (
-          <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900">
             Waiting for the business to add files. You asked: {r.officerMessage}
           </p>
         )}
         {r.status === 'rejected' && r.reason && (
-          <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-900">
+          <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-900">
             Rejected{r.decidedAt ? ` on ${formatDate(r.decidedAt)}` : ''}: <span>{r.reason}</span>
           </p>
         )}
         {r.status === 'approved' && (
-          <div className="mt-3 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-900">
+          <div className="mt-3 rounded-xl bg-green-50 px-3 py-2 text-sm text-green-900">
             Approved{r.decidedAt ? ` on ${formatDate(r.decidedAt)}` : ''}.
             {r.lookupAtApproval && ` ${LOOKUP_AT_APPROVAL_LABELS[r.lookupAtApproval]}.`}
             {r.approvedDetails && (
@@ -208,7 +208,7 @@ export function ReviewDetail({ id, onChanged }: { id: string; onChanged: () => v
               href={GST_PORTAL_SEARCH_URL}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-1 text-sm font-medium text-brand-700 hover:underline"
+              className="inline-flex items-center gap-1 text-sm font-bold text-brand-700 hover:underline"
             >
               Search on the GST portal <ExternalLink size={13} aria-hidden />
             </a>
@@ -220,19 +220,19 @@ export function ReviewDetail({ id, onChanged }: { id: string; onChanged: () => v
             No GST provider is connected: check the GSTIN on the GST portal before approving.
           </p>
         )}
-        <div className="overflow-x-auto rounded-lg border border-gray-200">
-          <table aria-label="Business and GST details" className="min-w-full divide-y divide-gray-100">
-            <thead className="bg-gray-50/80">
+        <div className="overflow-x-auto rounded-2xl border border-gray-200">
+          <table aria-label="Business and GST details" className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
               <tr>
-                <th className="px-3 py-2 text-left text-xs font-semibold text-gray-500"><span className="sr-only">Field</span></th>
-                <th className="px-3 py-2 text-left text-xs font-semibold text-gray-500">From the business</th>
-                <th className="px-3 py-2 text-left text-xs font-semibold text-gray-500">
+                <th className="px-3 py-2 text-left text-xs font-bold text-gray-600"><span className="sr-only">Field</span></th>
+                <th className="px-3 py-2 text-left text-xs font-bold text-gray-600">From the business</th>
+                <th className="px-3 py-2 text-left text-xs font-bold text-gray-600">
                   {r.lookup ? 'From the GST lookup' : 'Typed for the review'}
                   {r.lookup?.resolvedAt && <span className="ml-1 font-normal tnum">· {formatDateTime(r.lookup.resolvedAt)}</span>}
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-gray-200">
               <CompareRow
                 field="Name"
                 mismatch={r.mismatches.legalName}

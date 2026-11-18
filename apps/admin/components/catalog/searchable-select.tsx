@@ -42,7 +42,7 @@ export function SearchableSelect({ id, label, choices, value, onChange, placehol
           onChange={(e) => setFilter(e.target.value)}
           // Enter filters; it must not submit the dialog around it.
           onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault(); }}
-          className="h-8 w-full rounded-lg border-gray-300 bg-gray-50 pl-8 text-sm placeholder:text-gray-400 focus:bg-white"
+          className="h-8 w-full rounded-xl border-0 bg-gray-100 pl-8 text-sm font-semibold text-gray-900 placeholder:text-gray-400 focus:bg-white focus:ring-2 focus:ring-brand-600"
         />
       </div>
       <select
@@ -52,7 +52,7 @@ export function SearchableSelect({ id, label, choices, value, onChange, placehol
         aria-invalid={invalid || undefined}
         aria-describedby={describedBy}
         onChange={(e) => onChange(e.target.value)}
-        className={cn('w-full rounded-lg border-gray-300 text-sm', invalid && 'border-red-400')}
+        className={cn('w-full rounded-xl border-0 bg-gray-100 text-sm font-semibold text-gray-900 focus:bg-white focus:ring-2 focus:ring-brand-600', invalid && 'ring-2 ring-red-600')}
       >
         <option value="">{shown.length ? placeholder : 'No matches'}</option>
         {shown.map((c) => (

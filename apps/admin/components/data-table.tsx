@@ -91,7 +91,7 @@ export default function DataTable<T extends Record<string, any>>({
 
   if (loading) {
     return (
-      <div className="rounded-xl border border-gray-200 bg-white">
+      <div className="rounded-[20px] border border-gray-200 bg-white">
         {toolbarRow}
         <TableSkeleton rows={5} cols={Math.min(columns.length, 6)} />
       </div>
@@ -99,11 +99,11 @@ export default function DataTable<T extends Record<string, any>>({
   }
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
+    <div className="rounded-[20px] border border-gray-200 bg-white overflow-hidden">
       {toolbarRow}
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50/80">
+          <thead className="bg-gray-50">
             <tr>
               {columns.map((col) => {
                 const canSort = col.sortable && onSortChange;
@@ -114,13 +114,13 @@ export default function DataTable<T extends Record<string, any>>({
                     key={col.key}
                     title={col.headerTitle}
                     aria-sort={canSort ? (dir === 'asc' ? 'ascending' : dir === 'desc' ? 'descending' : 'none') : undefined}
-                    className={`px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 ${col.className || ''}`}
+                    className={`px-4 py-3 text-left text-xs font-bold text-gray-600 ${col.className || ''}`}
                   >
                     {canSort ? (
                       <button
                         type="button"
                         onClick={() => onSortChange(nextSort(sort, col.key))}
-                        className="-mx-1 inline-flex items-center gap-1 rounded px-1 uppercase tracking-wider hover:text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+                        className="-mx-1 inline-flex items-center gap-1 rounded px-1 hover:text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
                       >
                         {col.header}
                         <Icon size={12} aria-hidden className={dir ? 'text-gray-700' : 'text-gray-300'} />
@@ -150,7 +150,7 @@ export default function DataTable<T extends Record<string, any>>({
                   data-row-link={onRowClick ? '' : undefined}
                   onFocus={onRowClick ? (e) => { if (e.target === e.currentTarget) setActiveRow(idx); } : undefined}
                   onKeyDown={onRowClick ? (e) => onRowKey(e, row) : undefined}
-                  className={`${onRowClick ? 'cursor-pointer hover:bg-brand-50/40' : ''} ${rowClassName?.(row) || ''} transition-colors`}
+                  className={`${onRowClick ? 'cursor-pointer hover:bg-brand-50/60' : ''} ${rowClassName?.(row) || ''} transition-colors`}
                 >
                   {columns.map((col) => (
                     <td

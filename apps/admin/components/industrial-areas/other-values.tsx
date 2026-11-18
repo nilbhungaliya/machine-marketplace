@@ -81,10 +81,10 @@ function AdoptDialog({ value, onClose, onAdopted }: { value: OtherValue; onClose
       submitLabel="Add to list"
       onSubmit={handleSubmit(save)}
     >
-      <label htmlFor="adopt-name" className="mb-1.5 block text-[13.5px] font-semibold text-gray-900">Area name</label>
-      <input id="adopt-name" className="w-full rounded-lg border-gray-300 text-sm" autoComplete="off" {...register('name')} />
+      <label htmlFor="adopt-name" className="mb-1.5 block text-[12.5px] font-bold text-gray-600">Area name</label>
+      <input id="adopt-name" className="w-full rounded-xl border-0 bg-gray-100 text-sm font-semibold text-gray-900 placeholder:text-gray-400 focus:bg-white focus:ring-2 focus:ring-brand-600" autoComplete="off" {...register('name')} />
       {errors.name
-        ? <p className="mt-1 text-xs text-red-700">{errors.name.message}</p>
+        ? <p className="mt-1 text-xs font-semibold text-red-600">{errors.name.message}</p>
         : <p className="mt-1 text-[12.5px] text-gray-500">As the app shows it in the picker.</p>}
     </FormDialog>
   );

@@ -37,7 +37,7 @@ function pageSlots(page: number, pages: number): (number | 'gap')[] {
 }
 
 const BTN =
-  'inline-flex h-8 min-w-8 items-center justify-center rounded-lg border border-gray-200 px-2 text-sm tabular-nums text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900 disabled:pointer-events-none disabled:opacity-40';
+  'inline-flex h-8 min-w-8 items-center justify-center rounded-full border border-gray-200 px-2 text-sm font-semibold tabular-nums text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900 disabled:pointer-events-none disabled:opacity-40';
 
 export default function TablePagination({
   page,
@@ -78,7 +78,7 @@ export default function TablePagination({
             <select
               value={pageSize}
               onChange={(e) => onPageSizeChange(Number(e.target.value))}
-              className="h-8 rounded-lg border border-gray-200 bg-white py-0 pl-2 text-sm text-gray-600 focus:border-brand-400 focus:ring-1 focus:ring-brand-400"
+              className="h-8 rounded-xl border-0 bg-gray-100 py-0 pl-3 text-sm font-semibold text-gray-600 focus:bg-white focus:ring-2 focus:ring-brand-600"
             >
               {PAGE_SIZE_OPTIONS.map((n) => (
                 <option key={n} value={n}>
@@ -114,7 +114,7 @@ export default function TablePagination({
                   aria-current={slot === current ? 'page' : undefined}
                   className={
                     slot === current
-                      ? `${BTN} border-brand-500 bg-brand-500 font-semibold text-white hover:bg-brand-600 hover:text-white`
+                      ? `${BTN} border-brand-600 bg-brand-600 font-bold text-white hover:bg-brand-700 hover:text-white`
                       : BTN
                   }
                 >

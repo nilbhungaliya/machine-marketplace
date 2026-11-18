@@ -60,7 +60,7 @@ export default function MasterDataPage() {
       ) : error ? (
         <ErrorState message={error} onRetry={() => void load()} />
       ) : !data || !ready ? (
-        <div className="rounded-[10px] border border-gray-200 bg-white"><TableSkeleton rows={6} cols={4} /></div>
+        <div className="rounded-[20px] border border-gray-200 bg-white"><TableSkeleton rows={6} cols={4} /></div>
       ) : tab === 'units' ? (
         <KeyedListEditor<Unit, number>
           noun="unit"

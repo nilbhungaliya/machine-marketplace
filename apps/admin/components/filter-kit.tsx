@@ -10,15 +10,15 @@ export function FiltersButton({ count, onClick }: { count: number; onClick: () =
     <button
       type="button"
       onClick={onClick}
-      className={`flex items-center gap-2 rounded-md border px-3 py-2 text-sm ${count
-        ? 'border-brand-300 bg-brand-50 font-semibold text-brand-800'
-        : 'border-gray-300 bg-white font-medium text-gray-700 hover:bg-gray-50'}`}
+      className={`flex items-center gap-2 rounded-full border-[1.5px] px-3.5 py-2 text-sm font-bold ${count
+        ? 'border-brand-100 bg-brand-100 text-brand-700'
+        : 'border-gray-200 bg-white text-gray-900 hover:bg-gray-50'}`}
     >
       <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden>
         <path d="M3 5h18M6 12h12M10 19h4" />
       </svg>
       Filters
-      {count > 0 && <span className="rounded-full bg-brand-500 px-1.5 text-xs font-bold text-white">{count}</span>}
+      {count > 0 && <span className="rounded-full bg-brand-600 px-1.5 text-xs font-extrabold text-white">{count}</span>}
     </button>
   );
 }
@@ -39,7 +39,7 @@ export function SearchBox({ value, onChange, placeholder, label }: {
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         aria-label={label ?? placeholder}
-        className="w-full rounded-md border-0 bg-gray-50 py-2 pl-9 pr-3 text-sm placeholder:text-gray-400 focus:ring-2 focus:ring-brand-400"
+        className="w-full rounded-xl border-0 bg-gray-100 py-2 pl-9 pr-3 text-sm font-semibold text-gray-900 placeholder:text-gray-400 focus:bg-white focus:ring-2 focus:ring-brand-600"
       />
     </div>
   );
@@ -51,11 +51,11 @@ export function ActiveChipsRow({ chips, onClearAll }: { chips: ActiveChip[]; onC
   if (!chips.length) return null;
   return (
     <div className="flex flex-wrap items-center gap-2 border-t border-gray-100 px-3 py-2.5">
-      <span className="text-xs font-medium text-gray-500">Showing</span>
+      <span className="text-xs font-semibold text-gray-500">Showing</span>
       {chips.map((c) => (
-        <span key={c.key} className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 py-1 pl-3 pr-1.5 text-xs text-gray-700">
+        <span key={c.key} className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 py-1 pl-3 pr-1.5 text-xs font-semibold text-gray-700">
           {c.label && <span className="text-gray-500">{c.label}</span>}
-          <b className="font-semibold">{c.text}</b>
+          <b className="font-bold">{c.text}</b>
           <button
             type="button"
             onClick={c.remove}
@@ -69,7 +69,7 @@ export function ActiveChipsRow({ chips, onClearAll }: { chips: ActiveChip[]; onC
       <button
         type="button"
         onClick={onClearAll}
-        className="ml-1 text-xs font-medium text-gray-500 underline-offset-2 hover:text-gray-800 hover:underline"
+        className="ml-1 text-xs font-semibold text-gray-500 underline-offset-2 hover:text-gray-800 hover:underline"
       >
         Clear all
       </button>
@@ -80,7 +80,7 @@ export function ActiveChipsRow({ chips, onClearAll }: { chips: ActiveChip[]; onC
 export function Section({ title, children }: { title: ReactNode; children: ReactNode }) {
   return (
     <section>
-      <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">{title}</h4>
+      <h4 className="mb-2 text-xs font-bold text-gray-600">{title}</h4>
       {children}
     </section>
   );
@@ -99,9 +99,9 @@ export function ChipGroup({ items, selected, onToggle, small }: {
             type="button"
             aria-pressed={on}
             onClick={() => onToggle(v)}
-            className={`rounded-full border px-2.5 py-1 ${small ? 'text-xs' : 'text-sm'} ${on
-              ? 'border-brand-300 bg-brand-50 text-brand-800'
-              : 'border-gray-200 text-gray-700 hover:bg-gray-50'}`}
+            className={`rounded-full px-2.5 py-1 font-bold ${small ? 'text-xs' : 'text-sm'} ${on
+              ? 'bg-brand-100 text-brand-700'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
           >
             {on && '✓ '}{l}
           </button>
@@ -115,14 +115,14 @@ export function Segmented({ items, value, onChange }: {
   items: [string, ReactNode][]; value: string; onChange: (v: string) => void;
 }) {
   return (
-    <div className="flex rounded-md bg-gray-100 p-0.5 text-sm text-gray-600">
+    <div className="flex gap-0.5 rounded-xl bg-gray-100 p-[3px] text-[13px] font-bold text-gray-600">
       {items.map(([v, l]) => (
         <button
           key={v}
           type="button"
           aria-pressed={value === v}
           onClick={() => onChange(v)}
-          className={`flex-1 whitespace-nowrap rounded px-2 py-1.5 ${value === v ? 'bg-white text-gray-900 shadow-sm' : 'hover:text-gray-900'}`}
+          className={`flex-1 whitespace-nowrap rounded-[9px] px-2 py-1.5 ${value === v ? 'bg-white text-gray-900 shadow-sm' : 'hover:text-gray-900'}`}
         >
           {l}
         </button>

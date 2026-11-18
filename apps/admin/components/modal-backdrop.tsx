@@ -28,7 +28,7 @@ function unlockScroll() {
   if (--locks === 0) document.body.style.overflow = savedOverflow;
 }
 
-export default function ModalBackdrop({ onClose, className = 'bg-gray-900/40', position = 'center', children }: {
+export default function ModalBackdrop({ onClose, className = 'bg-scrim', position = 'center', children }: {
   onClose?: () => void;
   className?: string;
   /** 'top': the popup sits near the top of the screen, e.g. the search palette. */

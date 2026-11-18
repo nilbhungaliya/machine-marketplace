@@ -15,6 +15,7 @@ import { ApiError } from '@/lib/api';
 import { createField, updateField, type UpdateFieldPatch } from '@/lib/catalog-api';
 import { KEY_MESSAGE, toCatalogKey } from '@/lib/catalog-key';
 import { OptionsEditor } from './options-editor';
+import { inputCls, labelCls, errorCls } from '@/components/ui/field-classes';
 
 export const FIELD_TYPE_LABELS: Record<FieldType, string> = {
   single_select: 'Single select',
@@ -102,10 +103,6 @@ export type FieldFormDialogProps =
       /** An option was added, renamed, retired or moved (saved at once, not with the form). */
       onOptionsChanged: () => Promise<void> | void;
     };
-
-const inputCls = 'w-full rounded-lg border-gray-300 text-sm';
-const labelCls = 'mb-1.5 block text-[13.5px] font-semibold text-gray-900';
-const errorCls = 'mt-1 text-xs text-red-700';
 
 const num = (s: string) => (s.trim() === '' ? null : Number(s));
 const blankToNull = (s: string) => (s.trim() === '' ? null : s.trim());

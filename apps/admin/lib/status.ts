@@ -1,10 +1,11 @@
 export type StatusTone = 'green' | 'blue' | 'amber' | 'red' | 'gray';
 
 export const TONE_CLASSES: Record<StatusTone, string> = {
-  green: 'bg-green-50 text-green-700',
-  blue: 'bg-blue-50 text-blue-700',
-  amber: 'bg-amber-50 text-amber-700',
-  red: 'bg-red-50 text-red-700',
+  // Periwinkle v2 (spec §10.2): status colour on its soft fill; `blue` (in progress) is the brand lavender.
+  green: 'bg-green-50 text-green-600',
+  blue: 'bg-brand-50 text-brand-700',
+  amber: 'bg-amber-50 text-amber-600',
+  red: 'bg-red-50 text-red-600',
   gray: 'bg-gray-100 text-gray-600',
 };
 

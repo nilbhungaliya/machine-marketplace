@@ -3,7 +3,7 @@
 import { CARD_HIGHLIGHT_COUNT, type TemplateField, type TemplateKind } from '@mpm/shared-types';
 import { hasNoActiveOptions } from './field-form-dialog';
 
-const disabledInput = 'w-full rounded-lg border-gray-300 bg-gray-50 text-sm text-gray-500';
+const disabledInput = 'w-full rounded-xl border-0 bg-gray-100 text-sm font-semibold text-gray-400';
 
 /** Whether a field is asked on a listing of this kind: parts read parts + both, machines read machines + both. */
 export const appliesToKind = (f: Pick<TemplateField, 'appliesTo'>, kind: TemplateKind) =>
@@ -31,7 +31,7 @@ export function SpecFormPreview({ fields, kind }: { fields: TemplateField[]; kin
                 {f.required && !hasNoActiveOptions(f) && <span className="ml-0.5 text-red-700">*</span>}
               </label>
               {f.highlightRank !== null && (
-                <span className="rounded-[10px] bg-brand-50 px-2 text-xs font-bold text-brand-800">
+                <span className="rounded-full bg-brand-50 px-2 text-xs font-bold text-brand-700">
                   {f.highlightRank <= CARD_HIGHLIGHT_COUNT ? 'On card' : 'Listing page'}
                 </span>
               )}
@@ -54,7 +54,7 @@ function Control({ field: f, id }: { field: TemplateField; id: string }) {
         <div id={id} role="group" aria-label={f.label} className="flex flex-wrap gap-1.5">
           {options.length === 0 && <span className="text-xs text-gray-500">No options yet</span>}
           {options.map((o) => (
-            <span key={o.id} className="rounded-full border border-gray-300 px-[11px] py-[3px] text-[13px] text-gray-900">{o.label}</span>
+            <span key={o.id} className="rounded-full bg-gray-100 px-[11px] py-[3px] text-[13px] font-bold text-gray-900">{o.label}</span>
           ))}
           {f.type === 'multi_select' && options.length > 0 && <span className="self-center text-xs text-gray-500">Pick any</span>}
         </div>

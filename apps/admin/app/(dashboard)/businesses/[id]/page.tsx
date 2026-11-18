@@ -49,7 +49,7 @@ export default function BusinessPage() {
     return error ? (
       <ErrorState title="Couldn't open this business" message={LOAD_MESSAGES[classifyLoadError(error)]} onRetry={() => void load()} />
     ) : (
-      <div className="rounded-[10px] border border-gray-200 bg-white"><TableSkeleton rows={6} cols={3} /></div>
+      <div className="rounded-[20px] border border-gray-200 bg-white"><TableSkeleton rows={6} cols={3} /></div>
     );
   }
 

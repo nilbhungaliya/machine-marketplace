@@ -76,7 +76,7 @@ export function SideSettingsForm({ node, ancestors, onSave }: {
     }
   };
 
-  const radio = 'h-4 w-4 border-gray-300 text-brand-600 focus:ring-brand-400';
+  const radio = 'h-4 w-4 border-gray-300 text-brand-600 focus:ring-brand-600';
   const legend = 'mb-2 text-[13.5px] font-semibold text-gray-900';
 
   return (
@@ -108,7 +108,7 @@ export function SideSettingsForm({ node, ancestors, onSave }: {
           <label className="flex items-center gap-2 text-sm text-gray-900">
             <input type="radio" value="inherit" className={radio} {...register('conventionMode')} /> Inherit
           </label>
-          <div className="ml-6 rounded-lg bg-gray-50 px-3 py-2 text-[13px]">
+          <div className="ml-6 rounded-xl bg-gray-50 px-3 py-2 text-[13px]">
             <p className="text-gray-700">{inheritedConvention}</p>
             <span className="text-gray-500">{conventionSource ? `From ${conventionSource.name}` : 'Default'}</span>
           </div>
@@ -121,11 +121,11 @@ export function SideSettingsForm({ node, ancestors, onSave }: {
                 aria-label="Own side convention"
                 rows={2}
                 maxLength={CONVENTION_MAX}
-                className="w-full rounded-lg border-gray-300 text-sm"
+                className="w-full rounded-xl border-0 bg-gray-100 text-sm font-semibold text-gray-900 placeholder:text-gray-400 focus:bg-white focus:ring-2 focus:ring-brand-600"
                 placeholder={DEFAULT_SIDE_CONVENTION}
                 {...register('convention')}
               />
-              {errors.convention && <p className="mt-1 text-xs text-red-700">{errors.convention.message}</p>}
+              {errors.convention && <p className="mt-1 text-xs font-semibold text-red-600">{errors.convention.message}</p>}
             </div>
           )}
         </div>

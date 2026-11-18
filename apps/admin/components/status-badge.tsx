@@ -15,7 +15,7 @@ interface StatusBadgeProps {
 export default function StatusBadge({ status, label, tone, className }: StatusBadgeProps) {
   if (!status) return null;
   return (
-    <span className={cn('inline-flex items-center whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-semibold', TONE_CLASSES[tone ?? statusTone(status)], className)}>
+    <span className={cn('inline-flex items-center whitespace-nowrap rounded-full px-[9px] py-[3px] text-[11px] font-extrabold', TONE_CLASSES[tone ?? statusTone(status)], className)}>
       {label ?? statusLabel(status)}
     </span>
   );

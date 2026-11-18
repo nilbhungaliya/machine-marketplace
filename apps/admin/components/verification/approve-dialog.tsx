@@ -8,6 +8,7 @@ import { ExternalLink } from 'lucide-react';
 import { CONSTITUTIONS, type AdminGstReviewDetail, type GstApprovalEdits } from '@mpm/shared-types';
 import { FormDialog } from '@/components/ui/form-dialog';
 import { CONSTITUTION_LABELS, GST_PORTAL_SEARCH_URL } from '@/lib/verification-api';
+import { inputCls, labelCls } from '@/components/ui/field-classes';
 
 const schema = z.object({
   legalName: z.string().trim().min(1, 'Enter the legal name').max(200, 'At most 200 characters'),
@@ -51,15 +52,12 @@ export function approvalEdits(start: Values, v: Values): GstApprovalEdits {
   return edits;
 }
 
-const inputCls = 'w-full rounded-lg border-gray-300 text-sm';
-const labelCls = 'mb-1.5 block text-[13.5px] font-semibold text-gray-900';
-
 function Field({ id, label, error, children }: { id: string; label: string; error?: string; children: ReactNode }) {
   return (
     <div>
       <label htmlFor={id} className={labelCls}>{label}</label>
       {children}
-      {error && <p className="mt-1 text-xs text-red-700">{error}</p>}
+      {error && <p className="mt-1 text-xs font-semibold text-red-600">{error}</p>}
     </div>
   );
 }

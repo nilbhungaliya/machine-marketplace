@@ -158,10 +158,9 @@ export default function ImageLightbox({ urls, index, onIndex, onClose, label }: 
       aria-label={label ?? 'Photo'}
       tabIndex={-1}
       data-arrows="native"
-      className="fixed inset-0 z-50 flex flex-col outline-none"
-      style={{ backgroundColor: 'rgba(0,0,0,0.9)' }}
+      className="fixed inset-0 z-50 flex flex-col bg-black/90 outline-none"
     >
-      <div className="flex items-center gap-3 px-4 py-3 text-white" style={{ backgroundColor: 'rgba(0,0,0,0.55)' }}>
+      <div className="flex items-center gap-3 bg-black/55 px-4 py-3 text-white">
         <p className="min-w-0 truncate text-sm font-semibold">
           {label ? `${label} · ` : ''}{index + 1} of {urls.length}
         </p>
@@ -169,7 +168,7 @@ export default function ImageLightbox({ urls, index, onIndex, onClose, label }: 
           <button className={btn} onClick={() => zoomTo(scale / BUTTON_FACTOR)} disabled={scale <= MIN_SCALE} title="Zoom out (−)">
             <ZoomOut size={18} />
           </button>
-          <span className="w-12 text-center text-xs tabular-nums" style={{ color: 'rgba(255,255,255,0.7)' }}>
+          <span className="w-12 text-center text-xs tabular-nums text-white/70">
             {Math.round(scale * 100)}%
           </span>
           <button className={btn} onClick={() => zoomTo(scale * BUTTON_FACTOR)} disabled={scale >= MAX_SCALE} title="Zoom in (+)">
@@ -199,7 +198,7 @@ export default function ImageLightbox({ urls, index, onIndex, onClose, label }: 
           onDoubleClick={(e) => (scale > 1 ? reset() : zoomTo(2.5, toStage(e.clientX, e.clientY)))}
         >
           {broken ? (
-            <p className="max-w-sm text-center text-sm" style={{ color: 'rgba(255,255,255,0.75)' }}>
+            <p className="max-w-sm text-center text-sm text-white/75">
               This photo could not be loaded.
             </p>
           ) : (

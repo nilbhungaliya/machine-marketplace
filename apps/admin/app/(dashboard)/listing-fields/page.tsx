@@ -53,9 +53,9 @@ export default function ListingFieldsPage() {
       {error ? (
         <ErrorState message={error} onRetry={() => void load()} />
       ) : !tree ? (
-        <div className="rounded-[10px] border border-gray-200 bg-white"><TableSkeleton rows={8} cols={2} /></div>
+        <div className="rounded-[20px] border border-gray-200 bg-white"><TableSkeleton rows={8} cols={2} /></div>
       ) : tree.length === 0 ? (
-        <div className="rounded-[10px] border border-gray-200 bg-white">
+        <div className="rounded-[20px] border border-gray-200 bg-white">
           <EmptyState title="No categories yet" description="Add categories on Categories & machine types first; fields belong to a node." />
         </div>
       ) : (
@@ -65,8 +65,8 @@ export default function ListingFieldsPage() {
             {selected ? (
               <NodeFields key={selected.id} node={selected} tree={tree} />
             ) : (
-              <div className="flex flex-col items-center rounded-[10px] border border-dashed border-gray-300 bg-white px-6 py-16 text-center">
-                <span className="mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-brand-50 text-brand-800">
+              <div className="flex flex-col items-center rounded-[20px] border border-dashed border-gray-300 bg-white px-6 py-16 text-center">
+                <span className="mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-brand-50 text-brand-700">
                   <MousePointerClick size={20} aria-hidden />
                 </span>
                 <p className="text-base font-bold text-gray-900">Pick a node</p>
@@ -114,7 +114,7 @@ function NodeFields({ node, tree }: { node: CategoryNode; tree: CategoryNode[] }
   if (error) return <ErrorState title="Couldn't load the fields" message={error} onRetry={() => setAttempt((n) => n + 1)} />;
   if (!detail) {
     return (
-      <div className="space-y-3 rounded-[10px] border border-gray-200 bg-white p-6" role="status" aria-label="Loading">
+      <div className="space-y-3 rounded-[20px] border border-gray-200 bg-white p-6" role="status" aria-label="Loading">
         <Skeleton className="h-6 w-1/3" />
         <Skeleton className="h-4 w-1/2" />
         <Skeleton className="h-4 w-2/3" />
@@ -130,19 +130,19 @@ function NodeFields({ node, tree }: { node: CategoryNode; tree: CategoryNode[] }
 
   return (
     <div className="grid grid-cols-1 items-start gap-4 2xl:grid-cols-[minmax(0,1fr)_420px]">
-      <div className="rounded-[10px] border border-gray-200 bg-white p-4">
+      <div className="rounded-[20px] border border-gray-200 bg-white p-4">
         <div className="mb-4">
           <p className="text-[13px] text-gray-500">{LEVEL_LABELS[node.level]} · {path}</p>
           <h2 className="text-[22px] font-extrabold leading-tight text-gray-900">{node.name}</h2>
         </div>
         <FieldsPanel detail={detail} tree={tree} onChanged={reload} />
       </div>
-      <div className="rounded-[10px] border border-gray-200 bg-white p-4">
+      <div className="rounded-[20px] border border-gray-200 bg-white p-4">
         <h3 className="mb-2 text-base font-bold text-gray-900">Seller&apos;s form preview</h3>
         {kinds.length > 1 && (
           <Tabs items={kinds.map((k) => ({ value: k, label: KIND_LABELS[k] }))} value={kind} onChange={setKind} className="mb-3" />
         )}
-        <p className="mb-3 flex items-start gap-2 rounded-lg bg-blue-50 px-3 py-2.5 text-[13.5px] text-blue-700">
+        <p className="mb-3 flex items-start gap-2 rounded-lg bg-brand-50 px-3 py-2.5 text-[13.5px] text-brand-700">
           <Info size={16} aria-hidden className="mt-0.5 shrink-0" />
           {partsNote ?? (kind === 'part'
             ? 'The specs a seller fills in for a part here: fields from its category and machine type, then its own.'

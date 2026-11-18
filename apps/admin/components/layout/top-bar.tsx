@@ -30,14 +30,14 @@ function Breadcrumb() {
           {item.label}
         </Link>
       ) : (
-        <span aria-current="page" className={cn(PART, 'font-semibold text-gray-900')}>{item.label}</span>
+        <span aria-current="page" className={cn(PART, 'font-bold text-gray-900')}>{item.label}</span>
       )}
       {trail.map((part, i) => {
         const last = i === trail.length - 1;
         return (
           <Fragment key={i}>
             {sep}
-            <span aria-current={last ? 'page' : undefined} className={cn(PART, last ? 'min-w-0 font-semibold text-gray-900' : 'shrink-0 text-gray-500')}>
+            <span aria-current={last ? 'page' : undefined} className={cn(PART, last ? 'min-w-0 font-bold text-gray-900' : 'shrink-0 text-gray-500')}>
               {part}
             </span>
           </Fragment>
@@ -49,14 +49,14 @@ function Breadcrumb() {
 
 export default function TopBar() {
   return (
-    <header className="relative z-20 flex h-14 shrink-0 items-center justify-between gap-4 border-b border-gray-200 bg-white px-4 lg:px-6">
+    <header className="relative z-20 flex h-14 shrink-0 items-center justify-between gap-4 bg-gray-50 px-4 lg:px-6">
       <Breadcrumb />
       <div className="ml-auto flex shrink-0 items-center gap-4">
         {/* Placeholder until the notifications module lands. */}
         <button
           type="button"
           aria-label="Notifications"
-          className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-900"
+          className="grid h-9 w-9 place-items-center rounded-full border border-gray-200 bg-white text-gray-600 hover:bg-gray-100 hover:text-gray-900"
         >
           <Bell size={18} aria-hidden />
         </button>

@@ -63,7 +63,7 @@ export function NodeDetails({ id, tree, onChanged, onDeleted, onSelect }: NodeDe
   if (error) return <ErrorState title="Couldn't load this node" message={error} onRetry={() => setReload((n) => n + 1)} />;
   if (!node || !detail) {
     return (
-      <div className="space-y-3 rounded-[10px] border border-gray-200 bg-white p-6" role="status" aria-label="Loading">
+      <div className="space-y-3 rounded-[20px] border border-gray-200 bg-white p-6" role="status" aria-label="Loading">
         <div className="flex items-center gap-3"><Skeleton className="h-11 w-11 rounded-[10px]" /><Skeleton className="h-6 w-1/3" /></div>
         <Skeleton className="h-4 w-1/2" />
         <Skeleton className="h-4 w-2/3" />
@@ -142,7 +142,7 @@ export function NodeDetails({ id, tree, onChanged, onDeleted, onSelect }: NodeDe
   const fieldCount = detail.ownFields.length;
 
   return (
-    <div className="overflow-hidden rounded-[10px] border border-gray-200 bg-white">
+    <div className="overflow-hidden rounded-[20px] border border-gray-200 bg-white">
       <div className="border-b border-gray-200 px-[18px] pb-4 pt-4">
         {ancestors.length > 0 && (
           <nav aria-label="Breadcrumb" className="mb-2 flex flex-wrap items-center gap-1 text-[13px] text-gray-500">
@@ -151,7 +151,7 @@ export function NodeDetails({ id, tree, onChanged, onDeleted, onSelect }: NodeDe
                 <button
                   type="button"
                   onClick={() => onSelect(a.id)}
-                  className="rounded px-1 py-0.5 text-gray-600 hover:bg-gray-100 hover:text-brand-800"
+                  className="rounded px-1 py-0.5 text-gray-600 hover:bg-gray-100 hover:text-brand-700"
                 >
                   {a.name}
                 </button>
@@ -167,7 +167,7 @@ export function NodeDetails({ id, tree, onChanged, onDeleted, onSelect }: NodeDe
               aria-hidden
               className={cn(
                 'flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px]',
-                node.isActive ? 'bg-brand-50 text-brand-800' : 'bg-gray-100 text-gray-500',
+                node.isActive ? 'bg-brand-50 text-brand-700' : 'bg-gray-100 text-gray-500',
               )}
             >
               <LevelIcon size={22} />
@@ -210,11 +210,11 @@ export function NodeDetails({ id, tree, onChanged, onDeleted, onSelect }: NodeDe
                 disabled={saving}
                 onClick={() => void toggleActive()}
                 className={cn(
-                  'relative inline-flex h-5 w-[34px] shrink-0 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 disabled:opacity-50',
-                  node.isActive ? 'bg-brand-600' : 'bg-gray-300',
+                  'relative inline-flex h-6 w-10 shrink-0 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-1 disabled:opacity-50',
+                  node.isActive ? 'bg-brand-600' : 'bg-gray-200',
                 )}
               >
-                <span className={cn('inline-block h-4 w-4 rounded-full bg-white transition-transform', node.isActive ? 'translate-x-4' : 'translate-x-0.5')} />
+                <span className={cn('inline-block h-[18px] w-[18px] rounded-full bg-white shadow-sm transition-transform', node.isActive ? 'translate-x-[19px]' : 'translate-x-[3px]')} />
               </button>
               <div>
                 <p className="text-sm font-bold text-gray-900">{node.isActive ? 'Shown in the app' : 'Hidden from the app'}</p>
@@ -268,10 +268,10 @@ export function NodeDetails({ id, tree, onChanged, onDeleted, onSelect }: NodeDe
                     disabled={saving}
                     onClick={() => { if (!on) void patch({ icon: key as CategoryIcon }, 'Icon saved'); }}
                     className={cn(
-                      'flex h-10 w-10 items-center justify-center rounded-lg border transition-all disabled:opacity-50',
+                      'flex h-10 w-10 items-center justify-center rounded-xl border-[1.5px] transition-all disabled:opacity-50',
                       on
-                        ? 'border-brand-600 bg-brand-50 text-brand-800 ring-2 ring-brand-200'
-                        : 'border-gray-300 bg-white text-gray-500 hover:border-gray-500 hover:text-gray-900',
+                        ? 'border-brand-600 bg-brand-50 text-brand-700'
+                        : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300 hover:text-gray-900',
                     )}
                   >
                     <Icon size={18} aria-hidden />
@@ -310,7 +310,7 @@ export function NodeDetails({ id, tree, onChanged, onDeleted, onSelect }: NodeDe
                       </span>
                       {!c.isActive && <span className="rounded-full bg-gray-100 px-2 text-xs font-semibold text-gray-500">Off</span>}
                       {c.children.length > 0 && <span className="text-xs font-bold text-gray-500 tnum">{c.children.length}</span>}
-                      <ChevronRight size={14} aria-hidden className="text-gray-500 group-hover:text-brand-800" />
+                      <ChevronRight size={14} aria-hidden className="text-gray-500 group-hover:text-brand-700" />
                     </button>
                   </li>
                 ))}
@@ -367,7 +367,7 @@ function Card({ title, icon, hint, action, children }: {
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-[10px] border border-gray-200 p-4">
+    <section className="rounded-2xl border border-gray-200 p-4">
       <div className="mb-3 flex items-start justify-between gap-2">
         <div>
           <h3 className="flex items-center gap-2 text-base font-bold text-gray-900">
@@ -387,12 +387,12 @@ function Pill({ children, tone = 'plain' }: { children: ReactNode; tone?: 'plain
   return (
     <span
       className={cn(
-        'inline-flex h-6 items-center gap-1.5 whitespace-nowrap rounded-full px-[9px] text-[13px] font-semibold',
+        'inline-flex h-6 items-center gap-1.5 whitespace-nowrap rounded-full px-[9px] text-[13px] font-bold',
         tone === 'plain' && 'bg-gray-100 text-gray-500',
-        tone === 'brand' && 'bg-brand-50 text-brand-800',
-        tone === 'green' && 'bg-green-50 text-green-700',
+        tone === 'brand' && 'bg-brand-50 text-brand-700',
+        tone === 'green' && 'bg-green-50 text-green-600',
         tone === 'grey' && 'bg-gray-100 text-gray-500',
-        tone === 'amber' && 'bg-amber-50 font-mono text-amber-800',
+        tone === 'amber' && 'bg-amber-50 font-mono text-amber-600',
       )}
     >
       {tone === 'green' && <span aria-hidden className="h-[7px] w-[7px] rounded-full bg-current opacity-80" />}
@@ -457,10 +457,10 @@ function MoveDialog({ node, targets, targetLabel, searchable, onClose, onMoved }
         />
       ) : (
         <div>
-          <label htmlFor="move-target" className="mb-1.5 block text-[13.5px] font-semibold text-gray-900">{label}</label>
+          <label htmlFor="move-target" className="mb-1.5 block text-[12.5px] font-bold text-gray-600">{label}</label>
           <select
             id="move-target"
-            className="w-full rounded-lg border-gray-300 text-sm"
+            className="w-full rounded-xl border-0 bg-gray-100 text-sm font-semibold text-gray-900 placeholder:text-gray-400 focus:bg-white focus:ring-2 focus:ring-brand-600"
             value={parentId}
             onChange={(e) => choose(e.target.value)}
           >
@@ -469,7 +469,7 @@ function MoveDialog({ node, targets, targetLabel, searchable, onClose, onMoved }
           </select>
         </div>
       )}
-      {problem && <p id="move-problem" className="mt-2 text-xs text-red-700">{problem}</p>}
+      {problem && <p id="move-problem" className="mt-2 text-xs font-semibold text-red-600">{problem}</p>}
     </FormDialog>
   );
 }

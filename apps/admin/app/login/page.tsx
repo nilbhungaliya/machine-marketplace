@@ -43,33 +43,33 @@ export default function LoginPage() {
           <p className="mt-2 text-sm text-gray-500">Sign in to run the marketplace</p>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} noValidate className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-          {error && <div role="alert" className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
+        <form onSubmit={handleSubmit(onSubmit)} noValidate className="rounded-[24px] border border-gray-200 bg-white p-6">
+          {error && <div role="alert" className="mb-4 rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-600">{error}</div>}
 
           <div className="mb-4">
-            <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-gray-700">Email</label>
+            <label htmlFor="email" className="mb-1.5 block text-[12.5px] font-bold text-gray-600">Email</label>
             <input
               id="email"
               type="email"
               autoComplete="username"
               {...register('email')}
-              className="w-full rounded-lg border-gray-300 text-sm"
+              className="w-full rounded-xl border-0 bg-gray-100 text-sm font-semibold text-gray-900 placeholder:text-gray-400 focus:bg-white focus:ring-2 focus:ring-brand-600"
               placeholder="admin@example.com"
             />
-            {errors.email && <p className="mt-1 text-xs text-red-600">{errors.email.message}</p>}
+            {errors.email && <p className="mt-1 text-xs font-semibold text-red-600">{errors.email.message}</p>}
           </div>
 
           <div className="mb-6">
-            <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-gray-700">Password</label>
+            <label htmlFor="password" className="mb-1.5 block text-[12.5px] font-bold text-gray-600">Password</label>
             <input
               id="password"
               type="password"
               autoComplete="current-password"
               {...register('password')}
-              className="w-full rounded-lg border-gray-300 text-sm"
+              className="w-full rounded-xl border-0 bg-gray-100 text-sm font-semibold text-gray-900 placeholder:text-gray-400 focus:bg-white focus:ring-2 focus:ring-brand-600"
               placeholder="••••••••"
             />
-            {errors.password && <p className="mt-1 text-xs text-red-600">{errors.password.message}</p>}
+            {errors.password && <p className="mt-1 text-xs font-semibold text-red-600">{errors.password.message}</p>}
           </div>
 
           <Button type="submit" loading={isSubmitting} className="w-full">

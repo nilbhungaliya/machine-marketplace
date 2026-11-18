@@ -26,7 +26,7 @@ export default function DashboardPage() {
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {KPIS.map((k) => <StatCard key={k.title} title={k.title} value="—" icon={k.icon} />)}
       </div>
-      <div className="mt-6 rounded-xl border border-gray-200/70 bg-white shadow-sm">
+      <div className="mt-6 rounded-[20px] border border-gray-200 bg-white">
         <EmptyState
           title="No data yet"
           description="Marketplace activity (listings, enquiries, offers, deals, rental bookings) by city and category appears here once the API serves it."

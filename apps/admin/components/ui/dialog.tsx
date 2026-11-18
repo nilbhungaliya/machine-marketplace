@@ -223,14 +223,14 @@ export function Dialog({ open, onClose, title, description, children, footer, si
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
-        className={cn('relative flex max-h-[90vh] w-full flex-col rounded-2xl bg-white shadow-xl outline-none', WIDTH[size])}
+        className={cn('relative flex max-h-[90vh] w-full flex-col rounded-[24px] bg-white shadow-xl outline-none', WIDTH[size])}
       >
         <div className="flex items-start justify-between gap-4 px-6 pt-5">
           <div>
-            <h2 id={titleId} className="text-lg font-bold text-gray-900">{title}</h2>
+            <h2 id={titleId} className="text-lg font-bold tracking-[-0.02em] text-gray-900">{title}</h2>
             {description && <div className="mt-1 text-sm text-gray-500">{description}</div>}
           </div>
-          <button type="button" data-dialog-close onClick={onClose} aria-label="Close" className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700">
+          <button type="button" data-dialog-close onClick={onClose} aria-label="Close" className="rounded-full p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-900">
             <X size={18} />
           </button>
         </div>

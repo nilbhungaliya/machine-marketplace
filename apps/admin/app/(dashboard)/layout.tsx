@@ -16,12 +16,12 @@ import { cn } from '@/lib/utils';
 function Shell({ children }: { children: React.ReactNode }) {
   const { collapsed } = useSidebarState();
   return (
-    // The page is a rounded card on the sidebar's colour, inset on every side.
-    <div className="flex h-screen overflow-hidden bg-side">
+    // The page is a rounded card on the sidebar's white, inset on every side (spec §10.2).
+    <div className="flex h-screen overflow-hidden bg-white">
       <KeyboardNav />
       <Sidebar />
       <div className={cn('flex min-w-0 flex-1 p-2 transition-[padding] duration-200', collapsed ? 'pl-16' : 'pl-60')}>
-        <div className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-2xl bg-gray-50 shadow-sm">
+        <div className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-[24px] border border-gray-200 bg-gray-50">
           <TopBar />
           <main id="admin-main" data-nav-main className="min-h-0 flex-1 overflow-y-auto p-4 lg:p-6">{children}</main>
         </div>
@@ -55,7 +55,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <Shell>{children}</Shell>
         </PageTrailProvider>
       </SidebarStateProvider>
-      <Toaster richColors position="top-right" visibleToasts={3} />
+      <Toaster
+        position="top-right"
+        visibleToasts={3}
+        // v2 toast: white card, hairline, soft shadow, status-coloured icon (spec §10.2). `!` beats sonner's own
+        // attribute selectors.
+        toastOptions={{
+          classNames: {
+            toast: '!rounded-2xl !border-gray-200 !bg-white font-sans !text-gray-900 !shadow-lg',
+            success: '[&_[data-icon]]:text-green-600',
+            error: '[&_[data-icon]]:text-red-600',
+          },
+        }}
+      />
     </ConfirmProvider>
   );
 }

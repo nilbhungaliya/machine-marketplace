@@ -10,6 +10,7 @@ import { FormDialog } from '@/components/ui/form-dialog';
 import { ApiError } from '@/lib/api';
 import { createBrand, updateBrand, type UpdateBrandPatch } from '@/lib/catalog-api';
 import { KEY_MESSAGE, toCatalogKey } from '@/lib/catalog-key';
+import { inputCls, labelCls, errorCls, checkCls } from '@/components/ui/field-classes';
 
 const SLUG_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
@@ -39,11 +40,6 @@ type Values = z.infer<ReturnType<typeof schemaFor>>;
 export type BrandFormDialogProps =
   | { mode: 'create'; brand?: undefined; onClose: () => void; onSaved: (brand: Brand) => void }
   | { mode: 'edit'; brand: Brand; onClose: () => void; onSaved: (brand: Brand) => void };
-
-const inputCls = 'w-full rounded-lg border-gray-300 text-sm';
-const labelCls = 'mb-1.5 block text-[13.5px] font-semibold text-gray-900';
-const errorCls = 'mt-1 text-xs text-red-700';
-const checkCls = 'rounded border-gray-300 text-brand-600';
 
 /** Add or edit a brand (A4). The key is set once, on create. Mount it to open it. */
 export function BrandFormDialog({ mode, brand, onClose, onSaved }: BrandFormDialogProps) {

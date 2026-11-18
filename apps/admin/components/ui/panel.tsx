@@ -13,9 +13,9 @@ export function Panel({
   children: ReactNode;
 }) {
   return (
-    <section aria-label={title} className="rounded-[10px] border border-gray-200 bg-white p-4">
+    <section aria-label={title} className="rounded-[20px] border border-gray-200 bg-white p-4">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <Heading className="text-sm font-bold text-gray-900">{title}</Heading>
+        <Heading className="text-sm font-extrabold text-gray-900">{title}</Heading>
         {action}
       </div>
       {children}

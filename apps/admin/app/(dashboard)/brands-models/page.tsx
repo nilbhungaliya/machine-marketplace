@@ -66,7 +66,7 @@ export default function BrandsModelsPage() {
       {error ? (
         <ErrorState message={error} onRetry={() => void load()} />
       ) : !brands || !tree ? (
-        <div className="rounded-[10px] border border-gray-200 bg-white"><TableSkeleton rows={8} cols={5} /></div>
+        <div className="rounded-[20px] border border-gray-200 bg-white"><TableSkeleton rows={8} cols={5} /></div>
       ) : (
         <div className="grid grid-cols-1 items-start gap-4 2xl:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
           <section aria-label="Brands">
@@ -82,8 +82,8 @@ export default function BrandsModelsPage() {
             {selected ? (
               <ModelsPanel key={selected.id} brand={selected} brands={brands} tree={tree} onChanged={reloadBrands} />
             ) : (
-              <div className="flex flex-col items-center rounded-[10px] border border-dashed border-gray-300 bg-white px-6 py-16 text-center">
-                <span className="mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-brand-50 text-brand-800">
+              <div className="flex flex-col items-center rounded-[20px] border border-dashed border-gray-300 bg-white px-6 py-16 text-center">
+                <span className="mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-brand-50 text-brand-700">
                   <MousePointerClick size={20} aria-hidden />
                 </span>
                 <p className="text-base font-bold text-gray-900">Pick a brand</p>
