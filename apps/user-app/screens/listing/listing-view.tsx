@@ -10,8 +10,9 @@ import { MapPin, Package, Play, ShieldCheck, TriangleAlert, Truck } from '@/lib/
 import { radius, spacing, useTheme } from '@/lib/theme';
 import { useType } from '@/hooks/use-type';
 import {
-  availabilityText, conditionLabel, deliveryLabel, distanceText, fitLine, galleryOrder, placeText, priceNote, quantityText, refText,
-  rentalRateCards, rentalTermRows, sideLabel, sideTokenKind, specRows, unitPer, updatedAgo,
+  availabilityText, conditionLabel, deliveryLabel, distanceText, fitLine, galleryOrder, headlinePrice, hoursRunText,
+  placeText, priceNote, quantityText, refText, rentalRateCards, rentalTermRows, sideLabel, sideTokenKind, specRows,
+  unitPer, updatedAgo,
 } from '@/lib/listing-format';
 import { formatMonthYear } from '@/lib/format-date';
 import Button from '@/components/Button';
@@ -171,12 +172,13 @@ export default function ListingView({
     ...(machine && (machine.modelName || machine.modelOther)
       ? [{ key: 'model', label: t('listing.view.model'), value: (machine.modelName ?? machine.modelOther)! }] : []),
     ...(machine?.year != null ? [{ key: 'year', label: t('listing.view.year'), value: String(machine.year) }] : []),
-    ...(machine?.hoursRun != null ? [{ key: 'hours', label: t('listing.view.hoursRun'), value: String(machine.hoursRun) }] : []),
+    ...(machine?.hoursRun != null ? [{ key: 'hours', label: t('listing.view.hoursRun'), value: hoursRunText(machine.hoursRun) }] : []),
     ...(machine?.underPower ? [{ key: 'running', label: t('listing.view.running'), value: t('listing.view.yes') }] : []),
     ...(machine?.inspectionByAppointment ? [{ key: 'inspection', label: t('listing.view.inspection'), value: t('listing.view.yes') }] : []),
     { key: 'ref', label: t('listing.view.reference'), value: refText(listing.ref), mono: true },
   ];
 
+  const price = headlinePrice(listing);
   const rateCards = isRental && listing.rental ? rentalRateCards(listing.rental) : [];
   const termRows = isRental && listing.rental ? rentalTermRows(listing.rental) : [];
   const updated = updatedAgo(listing.refreshedAt ?? listing.publishedAt, now);
@@ -232,16 +234,16 @@ export default function ListingView({
           </View>
           <Text style={s.title} testID="Listing-title">{listing.title}</Text>
           {updated ? <Text style={s.meta}>{updated}</Text> : null}
-          {isRental ? null : (
+          {price ? (
             <PriceText
               size="xl"
-              paise={listing.priceModel === 'on_request' ? null : listing.pricePaise}
+              paise={price.type === 'amount' ? price.paise : null}
               suffix={isPart ? unitPer(listing.unit) : undefined}
               note={priceNote(listing)}
               fallback={t('listing.price.onRequest')}
               testID="Listing-price"
             />
-          )}
+          ) : null}
           {!isRental && listing.minOrderQty ? (
             <Text style={s.small}>{t('listing.view.minOrder', { qty: quantityText(listing.minOrderQty, listing.unit) })}</Text>
           ) : null}

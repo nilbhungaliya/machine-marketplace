@@ -10,47 +10,20 @@
 //   gps.jpg        3000x2000 JPEG with an APP1 Exif segment holding a GPS IFD (lat / long rationals)
 //
 // Usage: node apps/user-app/scripts/spike/make-gps-fixtures.mjs <outDir>
+//        node apps/user-app/scripts/spike/make-gps-fixtures.mjs --check-jpeg <file>   (pulled photo / poster: prints
+//        { jpegHasExif, gps }, exit 1 if the file still carries Exif)
+// Importable: `import { jpegHasExif, readGps } from './make-gps-fixtures.mjs'` runs nothing (main only as the entry).
 // Needs ffmpeg and ffprobe on PATH. No npm dependencies (exiftool isn't installed on this machine). Exit code 1 when a
 // fixture doesn't carry its metadata.
 
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 const LOCATION = '+21.1702+072.8311/'; // Surat, ISO 6709
 const LAT = 21.1702;
 const LNG = 72.8311;
-
-const outArg = process.argv[2];
-if (!outArg) {
-  console.error('usage: node make-gps-fixtures.mjs <outDir>');
-  process.exit(2);
-}
-const out = resolve(outArg);
-if (existsSync(out) && readdirSync(out).length > 0) {
-  console.error(`refusing: ${out} is not empty (use a new, empty directory)`);
-  process.exit(2);
-}
-mkdirSync(out, { recursive: true });
-
-const ffmpeg = (args) => execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', ...args], { stdio: 'inherit' });
-const ffprobeFormat = (file) =>
-  JSON.parse(execFileSync('ffprobe', ['-v', 'quiet', '-print_format', 'json', '-show_format', '-show_streams', file], { encoding: 'utf8' }));
-
-// ─── videos ───
-const videoArgs = (seconds, size) => [
-  '-f', 'lavfi', '-i', `testsrc=duration=${seconds}:size=${size}:rate=30`,
-  '-f', 'lavfi', '-i', `sine=duration=${seconds}`,
-  '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-shortest',
-  '-metadata', `location=${LOCATION}`,
-];
-ffmpeg([...videoArgs(20, '1920x1080'), '-movflags', 'use_metadata_tags', join(out, 'gps.mp4')]);
-ffmpeg([...videoArgs(20, '1920x1080'), '-f', 'mov', join(out, 'gps.mov')]);
-ffmpeg([...videoArgs(3, '1280x720'), '-b:v', '2M', '-movflags', 'use_metadata_tags', join(out, 'gps-small.mp4')]);
-
-// ─── photo: a plain JPEG, then an APP1 Exif segment with a GPS IFD inserted after SOI ───
-const base = join(out, 'base.jpg');
-ffmpeg(['-f', 'lavfi', '-i', 'testsrc=size=3000x2000', '-frames:v', '1', '-q:v', '3', base]);
 
 /** Degrees → three unsigned rationals (deg/1, min/1, sec*100/100), big-endian. */
 function dmsRationals(value) {
@@ -107,15 +80,6 @@ function exifGpsTiff(lat, lng) {
   return tiff;
 }
 
-const jpeg = readFileSync(base);
-if (jpeg[0] !== 0xff || jpeg[1] !== 0xd8) throw new Error('base.jpg is not a JPEG');
-const payload = Buffer.concat([Buffer.from('Exif\0\0', 'latin1'), exifGpsTiff(LAT, LNG)]);
-const app1 = Buffer.alloc(4);
-app1.writeUInt16BE(0xffe1, 0);
-app1.writeUInt16BE(payload.length + 2, 2);
-writeFileSync(join(out, 'gps.jpg'), Buffer.concat([jpeg.subarray(0, 2), app1, payload, jpeg.subarray(2)]));
-unlinkSync(base);
-
 // ─── checks ───
 
 /**
@@ -140,7 +104,7 @@ export function jpegHasExif(buf) {
 }
 
 /** Reads the GPS latitude / longitude back out of the first Exif segment (big-endian TIFFs only: what we wrote). */
-function readGps(buf) {
+export function readGps(buf) {
   const at = buf.indexOf(Buffer.from('Exif\0\0', 'latin1'));
   if (at < 0) return null;
   const t = buf.subarray(at + 6);
@@ -167,35 +131,95 @@ function readGps(buf) {
   return { lat: vals[2], lng: vals[4] };
 }
 
-const results = [];
-let failed = false;
-for (const name of ['gps.mp4', 'gps.mov', 'gps-small.mp4']) {
-  const file = join(out, name);
-  const probe = ffprobeFormat(file);
-  const tags = probe.format.tags ?? {};
-  const location = tags.location ?? tags['location-eng'] ?? tags['com.apple.quicktime.location.ISO6709'] ?? null;
-  const v = probe.streams.find((s) => s.codec_type === 'video');
-  const row = {
-    file: name,
-    bytes: statSync(file).size,
-    formatName: probe.format.format_name,
-    majorBrand: tags.major_brand ?? null,
-    durationS: Number(probe.format.duration),
-    video: v ? `${v.codec_name} ${v.width}x${v.height}` : null,
-    audio: probe.streams.some((s) => s.codec_type === 'audio'),
-    location,
-  };
-  if (!location) failed = true;
-  results.push(row);
-}
-{
-  const buf = readFileSync(join(out, 'gps.jpg'));
-  const gps = readGps(buf);
-  const row = { file: 'gps.jpg', bytes: buf.length, jpegHasExif: jpegHasExif(buf), gps };
-  if (!row.jpegHasExif || !gps || Math.abs(gps.lat - LAT) > 1e-3 || Math.abs(gps.lng - LNG) > 1e-3) failed = true;
-  results.push(row);
-}
-if (statSync(join(out, 'gps-small.mp4')).size >= 2 * 1024 * 1024) failed = true;
+/** Makes the fixtures in a new, empty `outArg` and checks them. */
+function makeFixtures(outArg) {
+  if (!outArg) {
+    console.error('usage: node make-gps-fixtures.mjs <outDir> | --check-jpeg <file>');
+    process.exit(2);
+  }
+  const out = resolve(outArg);
+  if (existsSync(out) && readdirSync(out).length > 0) {
+    console.error(`refusing: ${out} is not empty (use a new, empty directory)`);
+    process.exit(2);
+  }
+  mkdirSync(out, { recursive: true });
 
-console.log(JSON.stringify({ outDir: out, results, ok: !failed }, null, 2));
-process.exit(failed ? 1 : 0);
+  const ffmpeg = (args) => execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', ...args], { stdio: 'inherit' });
+  const ffprobeFormat = (file) =>
+    JSON.parse(execFileSync('ffprobe', ['-v', 'quiet', '-print_format', 'json', '-show_format', '-show_streams', file], { encoding: 'utf8' }));
+
+  // ─── videos ───
+  const videoArgs = (seconds, size) => [
+    '-f', 'lavfi', '-i', `testsrc=duration=${seconds}:size=${size}:rate=30`,
+    '-f', 'lavfi', '-i', `sine=duration=${seconds}`,
+    '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-shortest',
+    '-metadata', `location=${LOCATION}`,
+  ];
+  ffmpeg([...videoArgs(20, '1920x1080'), '-movflags', 'use_metadata_tags', join(out, 'gps.mp4')]);
+  ffmpeg([...videoArgs(20, '1920x1080'), '-f', 'mov', join(out, 'gps.mov')]);
+  ffmpeg([...videoArgs(3, '1280x720'), '-b:v', '2M', '-movflags', 'use_metadata_tags', join(out, 'gps-small.mp4')]);
+
+  // ─── photo: a plain JPEG, then an APP1 Exif segment with a GPS IFD inserted after SOI ───
+  const base = join(out, 'base.jpg');
+  ffmpeg(['-f', 'lavfi', '-i', 'testsrc=size=3000x2000', '-frames:v', '1', '-q:v', '3', base]);
+
+  const jpeg = readFileSync(base);
+  if (jpeg[0] !== 0xff || jpeg[1] !== 0xd8) throw new Error('base.jpg is not a JPEG');
+  const payload = Buffer.concat([Buffer.from('Exif\0\0', 'latin1'), exifGpsTiff(LAT, LNG)]);
+  const app1 = Buffer.alloc(4);
+  app1.writeUInt16BE(0xffe1, 0);
+  app1.writeUInt16BE(payload.length + 2, 2);
+  writeFileSync(join(out, 'gps.jpg'), Buffer.concat([jpeg.subarray(0, 2), app1, payload, jpeg.subarray(2)]));
+  unlinkSync(base);
+
+  const results = [];
+  let failed = false;
+  for (const name of ['gps.mp4', 'gps.mov', 'gps-small.mp4']) {
+    const file = join(out, name);
+    const probe = ffprobeFormat(file);
+    const tags = probe.format.tags ?? {};
+    const location = tags.location ?? tags['location-eng'] ?? tags['com.apple.quicktime.location.ISO6709'] ?? null;
+    const v = probe.streams.find((s) => s.codec_type === 'video');
+    const row = {
+      file: name,
+      bytes: statSync(file).size,
+      formatName: probe.format.format_name,
+      majorBrand: tags.major_brand ?? null,
+      durationS: Number(probe.format.duration),
+      video: v ? `${v.codec_name} ${v.width}x${v.height}` : null,
+      audio: probe.streams.some((s) => s.codec_type === 'audio'),
+      location,
+    };
+    if (!location) failed = true;
+    results.push(row);
+  }
+  {
+    const buf = readFileSync(join(out, 'gps.jpg'));
+    const gps = readGps(buf);
+    const row = { file: 'gps.jpg', bytes: buf.length, jpegHasExif: jpegHasExif(buf), gps };
+    if (!row.jpegHasExif || !gps || Math.abs(gps.lat - LAT) > 1e-3 || Math.abs(gps.lng - LNG) > 1e-3) failed = true;
+    results.push(row);
+  }
+  if (statSync(join(out, 'gps-small.mp4')).size >= 2 * 1024 * 1024) failed = true;
+
+  console.log(JSON.stringify({ outDir: out, results, ok: !failed }, null, 2));
+  process.exit(failed ? 1 : 0);
+}
+
+/** `--check-jpeg <file>`: the pulled photo or poster must carry no Exif. */
+function checkJpeg(file) {
+  if (!file) {
+    console.error('usage: node make-gps-fixtures.mjs --check-jpeg <file>');
+    process.exit(2);
+  }
+  const buf = readFileSync(resolve(file));
+  const hasExif = jpegHasExif(buf);
+  console.log(JSON.stringify({ file, bytes: buf.length, jpegHasExif: hasExif, gps: hasExif ? readGps(buf) : null }, null, 2));
+  if (hasExif) process.exit(1);
+}
+
+const isEntry = process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href;
+if (isEntry) {
+  if (process.argv[2] === '--check-jpeg') checkJpeg(process.argv[3]);
+  else makeFixtures(process.argv[2]);
+}

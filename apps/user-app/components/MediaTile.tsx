@@ -4,13 +4,15 @@ import { Image } from 'expo-image';
 import { ImagePlus, Play, RotateCcw, Star, X } from '@/lib/icons';
 import { radius, spacing, useTheme } from '@/lib/theme';
 import { useType } from '@/hooks/use-type';
+import type { MediaTileState } from '@/lib/media-upload';
 
-export type MediaTileState = 'done' | 'queued' | 'uploading' | 'failed';
+export type { MediaTileState };
 
 interface MediaTileProps {
   /** The photo's thumb or the video's poster (a remote URL, or the local file while uploading). */
   uri: string | null;
   type: 'photo' | 'video';
+  /** An upload item's status maps with `tileState()` (`lib/media-upload.ts`): `attaching` draws as `uploading`. */
   state?: MediaTileState;
   /** 0–1 while uploading. */
   progress?: number;

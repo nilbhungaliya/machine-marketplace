@@ -45,7 +45,8 @@
     "delete": "Delete",
     "retry": "Retry",
     "uploading": "Uploading {{percent}}%",
-    "failed": "Upload failed"
+    "failed": "Upload failed",
+    "unreadable": "Couldn't read this file. Try another."
   },
   "side": {
     "diagramTitle": "Seen from behind, facing forward",

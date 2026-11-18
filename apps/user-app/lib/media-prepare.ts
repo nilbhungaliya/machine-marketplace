@@ -53,7 +53,7 @@ export function resizeAction(width: number, height: number, longEdge: number): {
   return width >= height ? { width: longEdge } : { height: longEdge };
 }
 
-export type MediaProblem = 'photoLimit' | 'videoLimit' | 'videoTooLong' | 'tooLarge' | 'videoOff';
+export type MediaProblem = 'photoLimit' | 'videoLimit' | 'videoTooLong' | 'tooLarge' | 'unreadable';
 
 /** i18n keys of the problems (`sell.media.*`). */
 export const MEDIA_PROBLEM_KEYS: Record<MediaProblem, string> = {
@@ -61,7 +61,7 @@ export const MEDIA_PROBLEM_KEYS: Record<MediaProblem, string> = {
   videoLimit: 'sell.media.videoLimit',
   videoTooLong: 'sell.media.videoTooLong',
   tooLarge: 'sell.media.tooLarge',
-  videoOff: 'sell.media.videoLimit',
+  unreadable: 'sell.media.unreadable',
 };
 
 const MAX: Record<MediaType, number> = { photo: LISTING_PHOTOS_MAX, video: LISTING_VIDEOS_MAX };
@@ -90,9 +90,23 @@ export function videoDurationProblem(ms: number | null | undefined): MediaProble
   return ms > LISTING_VIDEO_MAX_MS ? 'videoTooLong' : null;
 }
 
-/** A prepared file over its role's cap (`full` 4 MB, `thumb` / `poster` 1 MB, `video` 50 MB). */
+/**
+ * A prepared file over its role's cap (`full` 4 MB, `thumb` / `poster` 1 MB, `video` 50 MB), or empty / unreadable
+ * (`fileSize` answers 0): refused here, before a presign is spent on it.
+ */
 export function sizeProblem(role: MediaRole, bytes: number): MediaProblem | null {
+  if (!(bytes > 0)) return 'unreadable';
   return bytes > MEDIA_MAX_BYTES[role] ? 'tooLarge' : null;
+}
+
+/**
+ * The compressor handed back a new file. `Video.compress` can return its input unchanged (e.g. when it decides the
+ * source needs no work), and that file still carries its location metadata (R47): refuse it.
+ */
+export function compressedOutputOk(input: string, output: string | null | undefined): boolean {
+  if (!output) return false;
+  const path = (u: string) => u.replace(/^file:\/\//, '');
+  return path(output) !== path(input);
 }
 
 /** The `Content-Type` a prepared file is presigned and PUT with: JPEG for images, MP4 (or QuickTime for `.mov`) for video. */

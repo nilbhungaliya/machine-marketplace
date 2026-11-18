@@ -112,8 +112,12 @@ export function attachRequest(item: Pick<UploadItem, 'type' | 'durationMs'>, pre
     return f.key;
   };
   if (item.type === 'photo') return { type: 'photo', uploadId: presigned.uploadId, keys: { full: key('full'), thumb: key('thumb') } };
+  // The compressed file's duration is measured in `prepareVideo`; a video without one never reaches attach (no `0`).
+  if (item.durationMs == null || !Number.isFinite(item.durationMs)) {
+    throw Object.assign(new Error('video_duration_missing'), { code: 'VIDEO_PREPARE_FAILED' });
+  }
   return {
-    type: 'video', uploadId: presigned.uploadId, keys: { video: key('video'), poster: key('poster') }, durationMs: item.durationMs ?? 0,
+    type: 'video', uploadId: presigned.uploadId, keys: { video: key('video'), poster: key('poster') }, durationMs: item.durationMs,
   };
 }
 
@@ -153,5 +157,22 @@ export async function runUpload(
     const code = errorCode(err);
     dispatch({ type: 'failed', localId, code });
     return { ok: false, code };
+  }
+}
+
+/** The states `MediaTile` draws. */
+export type MediaTileState = 'done' | 'queued' | 'uploading' | 'failed';
+
+/**
+ * An upload item's status as a `MediaTile` state and bar progress. `attaching` (the files are up, the server is
+ * checking them) draws as `uploading` with a full bar.
+ */
+export function tileState(item: Pick<UploadItem, 'status' | 'progress'>): { state: MediaTileState; progress: number } {
+  switch (item.status) {
+    case 'queued': return { state: 'queued', progress: 0 };
+    case 'uploading': return { state: 'uploading', progress: item.progress };
+    case 'attaching': return { state: 'uploading', progress: 1 };
+    case 'failed': return { state: 'failed', progress: item.progress };
+    case 'done': return { state: 'done', progress: 1 };
   }
 }

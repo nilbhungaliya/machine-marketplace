@@ -11,14 +11,54 @@
     "excess": "अतिरिक्त स्टॉक"
   },
   "unit": {
-    "pcs": { "label": "पीस", "per": "/पीस", "count_one": "{{qty}} पीस", "count_other": "{{qty}} पीस" },
-    "pairs": { "label": "जोड़ी", "per": "/जोड़ी", "count_one": "{{qty}} जोड़ी", "count_other": "{{qty}} जोड़ी" },
-    "sets": { "label": "सेट", "per": "/सेट", "count_one": "{{qty}} सेट", "count_other": "{{qty}} सेट" },
-    "kg": { "label": "किलोग्राम", "per": "/किलो", "count_one": "{{qty}} किलो", "count_other": "{{qty}} किलो" },
-    "metres": { "label": "मीटर", "per": "/मीटर", "count_one": "{{qty}} मीटर", "count_other": "{{qty}} मीटर" },
-    "litres": { "label": "लीटर", "per": "/लीटर", "count_one": "{{qty}} लीटर", "count_other": "{{qty}} लीटर" },
-    "boxes": { "label": "डिब्बे", "per": "/डिब्बा", "count_one": "{{qty}} डिब्बा", "count_other": "{{qty}} डिब्बे" },
-    "machines": { "label": "मशीनें", "per": "/मशीन", "count_one": "{{qty}} मशीन", "count_other": "{{qty}} मशीनें" }
+    "pcs": {
+      "label": "पीस",
+      "per": "/पीस",
+      "count_one": "{{qty}} पीस",
+      "count_other": "{{qty}} पीस"
+    },
+    "pairs": {
+      "label": "जोड़ी",
+      "per": "/जोड़ी",
+      "count_one": "{{qty}} जोड़ी",
+      "count_other": "{{qty}} जोड़ी"
+    },
+    "sets": {
+      "label": "सेट",
+      "per": "/सेट",
+      "count_one": "{{qty}} सेट",
+      "count_other": "{{qty}} सेट"
+    },
+    "kg": {
+      "label": "किलोग्राम",
+      "per": "/किलो",
+      "count_one": "{{qty}} किलो",
+      "count_other": "{{qty}} किलो"
+    },
+    "metres": {
+      "label": "मीटर",
+      "per": "/मीटर",
+      "count_one": "{{qty}} मीटर",
+      "count_other": "{{qty}} मीटर"
+    },
+    "litres": {
+      "label": "लीटर",
+      "per": "/लीटर",
+      "count_one": "{{qty}} लीटर",
+      "count_other": "{{qty}} लीटर"
+    },
+    "boxes": {
+      "label": "डिब्बे",
+      "per": "/डिब्बा",
+      "count_one": "{{qty}} डिब्बा",
+      "count_other": "{{qty}} डिब्बे"
+    },
+    "machines": {
+      "label": "मशीनें",
+      "per": "/मशीन",
+      "count_one": "{{qty}} मशीन",
+      "count_other": "{{qty}} मशीनें"
+    }
   },
   "unitFallback": {
     "per": "/ {{unit}}",
@@ -181,6 +221,8 @@
     "model": "मॉडल",
     "year": "साल",
     "hoursRun": "चले हुए घंटे",
+    "hoursRunValue_one": "{{hours}} घंटा",
+    "hoursRunValue_other": "{{hours}} घंटे",
     "running": "चलती हुई देख सकते हैं",
     "inspection": "अपॉइंटमेंट से जाँच",
     "yes": "हाँ",

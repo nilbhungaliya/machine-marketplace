@@ -75,6 +75,23 @@ export function priceLine(card: Pick<ListingCard, 'kind' | 'priceModel' | 'price
   return [priceText(card), priceNote(card)].filter(Boolean).join(' · ');
 }
 
+/**
+ * The listing page's headline price (§8.1 item 3): an amount, "Price on request", or nothing. A draft in Preview may
+ * have no price model or no amount yet: it shows nothing rather than a wrong "Price on request". Rentals use their
+ * rate cards instead (null).
+ */
+export function headlinePrice(l: { kind: ListingCard['kind']; priceModel: PriceModel | null; pricePaise: number | null }):
+  { type: 'amount'; paise: number } | { type: 'on_request' } | null {
+  if (l.kind === 'machine_rental' || !l.priceModel) return null;
+  if (l.priceModel === 'on_request') return { type: 'on_request' };
+  return l.pricePaise == null ? null : { type: 'amount', paise: l.pricePaise };
+}
+
+/** A machine's hours run: "12,000 hours" (Indian grouping). */
+export function hoursRunText(hours: number): string {
+  return i18n.t('listing.view.hoursRunValue', { count: hours, hours: formatQuantity(String(hours)) });
+}
+
 /** Year range of a fit row: "2012–2020", "2012 on", "up to 2020", or ''. */
 export function yearRange(from: number | null, to: number | null): string {
   if (from != null && to != null) return from === to ? String(from) : `${from}–${to}`;

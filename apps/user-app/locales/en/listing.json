@@ -11,14 +11,54 @@
     "excess": "Excess"
   },
   "unit": {
-    "pcs": { "label": "Pieces", "per": "/pc", "count_one": "{{qty}} pc", "count_other": "{{qty}} pcs" },
-    "pairs": { "label": "Pairs", "per": "/pair", "count_one": "{{qty}} pair", "count_other": "{{qty}} pairs" },
-    "sets": { "label": "Sets", "per": "/set", "count_one": "{{qty}} set", "count_other": "{{qty}} sets" },
-    "kg": { "label": "Kilograms", "per": "/kg", "count_one": "{{qty}} kg", "count_other": "{{qty}} kg" },
-    "metres": { "label": "Metres", "per": "/m", "count_one": "{{qty}} m", "count_other": "{{qty}} m" },
-    "litres": { "label": "Litres", "per": "/L", "count_one": "{{qty}} L", "count_other": "{{qty}} L" },
-    "boxes": { "label": "Boxes", "per": "/box", "count_one": "{{qty}} box", "count_other": "{{qty}} boxes" },
-    "machines": { "label": "Machines", "per": "/machine", "count_one": "{{qty}} machine", "count_other": "{{qty}} machines" }
+    "pcs": {
+      "label": "Pieces",
+      "per": "/pc",
+      "count_one": "{{qty}} pc",
+      "count_other": "{{qty}} pcs"
+    },
+    "pairs": {
+      "label": "Pairs",
+      "per": "/pair",
+      "count_one": "{{qty}} pair",
+      "count_other": "{{qty}} pairs"
+    },
+    "sets": {
+      "label": "Sets",
+      "per": "/set",
+      "count_one": "{{qty}} set",
+      "count_other": "{{qty}} sets"
+    },
+    "kg": {
+      "label": "Kilograms",
+      "per": "/kg",
+      "count_one": "{{qty}} kg",
+      "count_other": "{{qty}} kg"
+    },
+    "metres": {
+      "label": "Metres",
+      "per": "/m",
+      "count_one": "{{qty}} m",
+      "count_other": "{{qty}} m"
+    },
+    "litres": {
+      "label": "Litres",
+      "per": "/L",
+      "count_one": "{{qty}} L",
+      "count_other": "{{qty}} L"
+    },
+    "boxes": {
+      "label": "Boxes",
+      "per": "/box",
+      "count_one": "{{qty}} box",
+      "count_other": "{{qty}} boxes"
+    },
+    "machines": {
+      "label": "Machines",
+      "per": "/machine",
+      "count_one": "{{qty}} machine",
+      "count_other": "{{qty}} machines"
+    }
   },
   "unitFallback": {
     "per": "/ {{unit}}",
@@ -181,6 +221,8 @@
     "model": "Model",
     "year": "Year",
     "hoursRun": "Hours run",
+    "hoursRunValue_one": "{{hours}} hour",
+    "hoursRunValue_other": "{{hours}} hours",
     "running": "Can be seen running",
     "inspection": "Inspection by appointment",
     "yes": "Yes",

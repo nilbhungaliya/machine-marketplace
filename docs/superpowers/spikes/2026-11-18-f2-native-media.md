@@ -57,6 +57,8 @@ node apps/user-app/scripts/spike/make-gps-fixtures.mjs <new empty dir>
 The script refuses a non-empty directory, makes the files with `ffmpeg`, writes the JPEG's `APP1 Exif` segment itself
 (big-endian TIFF, IFD0 → GPS IFD with latitude / longitude rationals), and checks every file (`ffprobe`, and its own
 `jpegHasExif` / GPS reader, which walks the JPEG segments up to SOS). It prints JSON and exits 1 if a check fails.
+Importing the script runs nothing (main runs only when it is the entry module), so `jpegHasExif` and `readGps` can be
+imported; `--check-jpeg <file>` checks one pulled JPEG from the command line.
 
 | File | Size | Check |
 |---|---|---|
@@ -102,7 +104,11 @@ Result: `ok: true`. Each fixture carries the metadata that the app pipeline must
 7. Check on the host:
    - each video output: `ffprobe -v quiet -show_format -show_streams <f>` shows codec `h264`, long edge ≤ 1280 and
      **no `location` tag** (the fixture has one);
-   - `photo.jpg`: `jpegHasExif` false (import it from `make-gps-fixtures.mjs`);
+   - `photo.jpg` and `poster.jpg`: `node apps/user-app/scripts/spike/make-gps-fixtures.mjs --check-jpeg <f>` prints
+     `"jpegHasExif": false` and exits 0 (exit 1 when Exif survives). The script's reader only looks for an Exif APP1.
+     Once F2 is merged, the reference check is the API's `apps/api/src/lib/sniff-media.ts` (`jpegHasExif`, and
+     `jpegHeaderStatus`, which also refuses XMP and the other APPn segments the server rejects): run it on the pulled
+     files too, e.g. `pnpm --filter @mpm/api exec tsx -e "…"` importing it;
    - `poster.jpg` exists; the compressor's `getVideoMetaData` reported a duration; the upload logged progress events
      and status 200 (the sink also prints bytes and content type).
 8. Decide (plan Task 20 Step 5):

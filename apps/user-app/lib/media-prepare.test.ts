@@ -5,7 +5,7 @@ vi.mock('react-native', () => ({ Platform: platform }));
 
 import { i18n } from '@/lib/i18n';
 import {
-  checkAdd, contentTypeFor, MEDIA_PROBLEM_KEYS, remainingSlots, resizeAction, sizeProblem, VIDEO_SPIKE_PASSED,
+  checkAdd, compressedOutputOk, contentTypeFor, MEDIA_PROBLEM_KEYS, remainingSlots, resizeAction, sizeProblem, VIDEO_SPIKE_PASSED,
   videoDurationProblem, videoUploadAllowed, videoUploadEnabled,
 } from './media-prepare';
 
@@ -53,6 +53,17 @@ describe('checks', () => {
     expect(sizeProblem('thumb', 1_048_577)).toBe('tooLarge');
     expect(sizeProblem('video', 52_428_800)).toBeNull();
   });
+  it('an empty or unreadable file (size 0) is refused locally, before any presign', () => {
+    expect(sizeProblem('full', 0)).toBe('unreadable');
+    expect(sizeProblem('video', 0)).toBe('unreadable');
+    expect(sizeProblem('poster', -1)).toBe('unreadable');
+  });
+  it('the compressor must return a new file (the input back means nothing was stripped)', () => {
+    expect(compressedOutputOk('file:///cache/in.mp4', 'file:///cache/out.mp4')).toBe(true);
+    expect(compressedOutputOk('file:///cache/in.mp4', 'file:///cache/in.mp4')).toBe(false);
+    expect(compressedOutputOk('file:///cache/in.mp4', '/cache/in.mp4')).toBe(false);
+    expect(compressedOutputOk('file:///cache/in.mp4', '')).toBe(false);
+  });
   it('resize targets keep the long edge', () => {
     expect(resizeAction(4000, 3000, 1600)).toEqual({ width: 1600 });
     expect(resizeAction(3000, 4000, 1600)).toEqual({ height: 1600 });
@@ -63,6 +74,9 @@ describe('checks', () => {
     expect(contentTypeFor('full', 'file:///a.png')).toBe('image/jpeg');
     expect(contentTypeFor('video', 'file:///a.MOV')).toBe('video/quicktime');
     expect(contentTypeFor('video', 'file:///a.mp4')).toBe('video/mp4');
+  });
+  it('no unused problem (videoOff was dropped)', () => {
+    expect(Object.keys(MEDIA_PROBLEM_KEYS).sort()).toEqual(['photoLimit', 'tooLarge', 'unreadable', 'videoLimit', 'videoTooLong']);
   });
   it('every problem has an en key', () => {
     for (const key of Object.values(MEDIA_PROBLEM_KEYS)) expect(i18n.exists(key), key).toBe(true);

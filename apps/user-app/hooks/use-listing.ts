@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import type {
   ListingActionResult, ListingKind, ListingOwnerView, ListingReportRequest, SellerListingAction,
 } from '@mpm/shared-types';
@@ -18,7 +18,11 @@ export const listingKeys = {
   detail: (id: string) => ['listings', 'detail', id] as const,
   owner: (id: string) => ['listings', 'owner', id] as const,
   otherSide: (id: string) => ['listings', 'other-side', id] as const,
+  /** Every Other side list: a listing's change can show in the lists of the listings it pairs with. */
+  otherSideAll: ['listings', 'other-side'] as const,
   seller: (businessId: string, exclude?: string) => ['listings', 'seller', businessId, exclude ?? ''] as const,
+  /** Every "More from this seller" / seller listings page of one business. */
+  sellerAll: (businessId: string) => ['listings', 'seller', businessId] as const,
   mine: ['listings', 'mine'] as const,
   mineGroup: (group: string, page: number) => ['listings', 'mine', group, page] as const,
 };
@@ -103,14 +107,24 @@ export function useModels(brandId: string | null, machineTypeId?: string | null)
   });
 }
 
-/** Writes a fresh owner view into the caches that show it, and marks My listings and the public page stale. */
+/**
+ * Writes a fresh owner view into the caches that show it, and marks stale every list it can appear in: My listings
+ * (drafts included, `listingKeys.mine`), the public page, the seller's listings and the Other side lists.
+ */
 export function useStoreOwnerView() {
   const qc = useQueryClient();
   return (listing: ListingOwnerView) => {
     qc.setQueryData(listingKeys.owner(listing.id), listing);
-    void qc.invalidateQueries({ queryKey: listingKeys.mine });
-    void qc.invalidateQueries({ queryKey: listingKeys.detail(listing.id) });
+    invalidateListingLists(qc, listing.id, listing.businessId);
   };
+}
+
+/** The lists and pages a listing change can show in (owner view excluded: the caller writes or refetches it). */
+export function invalidateListingLists(qc: QueryClient, listingId: string, businessId?: string | null) {
+  void qc.invalidateQueries({ queryKey: listingKeys.mine });
+  void qc.invalidateQueries({ queryKey: listingKeys.detail(listingId) });
+  void qc.invalidateQueries({ queryKey: listingKeys.otherSideAll });
+  if (businessId) void qc.invalidateQueries({ queryKey: listingKeys.sellerAll(businessId) });
 }
 
 /**

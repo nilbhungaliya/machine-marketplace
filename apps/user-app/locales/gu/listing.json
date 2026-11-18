@@ -11,14 +11,54 @@
     "excess": "વધારાનો સ્ટોક"
   },
   "unit": {
-    "pcs": { "label": "પીસ", "per": "/પીસ", "count_one": "{{qty}} પીસ", "count_other": "{{qty}} પીસ" },
-    "pairs": { "label": "જોડી", "per": "/જોડી", "count_one": "{{qty}} જોડી", "count_other": "{{qty}} જોડી" },
-    "sets": { "label": "સેટ", "per": "/સેટ", "count_one": "{{qty}} સેટ", "count_other": "{{qty}} સેટ" },
-    "kg": { "label": "કિલોગ્રામ", "per": "/કિલો", "count_one": "{{qty}} કિલો", "count_other": "{{qty}} કિલો" },
-    "metres": { "label": "મીટર", "per": "/મીટર", "count_one": "{{qty}} મીટર", "count_other": "{{qty}} મીટર" },
-    "litres": { "label": "લિટર", "per": "/લિટર", "count_one": "{{qty}} લિટર", "count_other": "{{qty}} લિટર" },
-    "boxes": { "label": "બોક્સ", "per": "/બોક્સ", "count_one": "{{qty}} બોક્સ", "count_other": "{{qty}} બોક્સ" },
-    "machines": { "label": "મશીનો", "per": "/મશીન", "count_one": "{{qty}} મશીન", "count_other": "{{qty}} મશીનો" }
+    "pcs": {
+      "label": "પીસ",
+      "per": "/પીસ",
+      "count_one": "{{qty}} પીસ",
+      "count_other": "{{qty}} પીસ"
+    },
+    "pairs": {
+      "label": "જોડી",
+      "per": "/જોડી",
+      "count_one": "{{qty}} જોડી",
+      "count_other": "{{qty}} જોડી"
+    },
+    "sets": {
+      "label": "સેટ",
+      "per": "/સેટ",
+      "count_one": "{{qty}} સેટ",
+      "count_other": "{{qty}} સેટ"
+    },
+    "kg": {
+      "label": "કિલોગ્રામ",
+      "per": "/કિલો",
+      "count_one": "{{qty}} કિલો",
+      "count_other": "{{qty}} કિલો"
+    },
+    "metres": {
+      "label": "મીટર",
+      "per": "/મીટર",
+      "count_one": "{{qty}} મીટર",
+      "count_other": "{{qty}} મીટર"
+    },
+    "litres": {
+      "label": "લિટર",
+      "per": "/લિટર",
+      "count_one": "{{qty}} લિટર",
+      "count_other": "{{qty}} લિટર"
+    },
+    "boxes": {
+      "label": "બોક્સ",
+      "per": "/બોક્સ",
+      "count_one": "{{qty}} બોક્સ",
+      "count_other": "{{qty}} બોક્સ"
+    },
+    "machines": {
+      "label": "મશીનો",
+      "per": "/મશીન",
+      "count_one": "{{qty}} મશીન",
+      "count_other": "{{qty}} મશીનો"
+    }
   },
   "unitFallback": {
     "per": "/ {{unit}}",
@@ -181,6 +221,8 @@
     "model": "મોડલ",
     "year": "વર્ષ",
     "hoursRun": "ચાલેલા કલાક",
+    "hoursRunValue_one": "{{hours}} કલાક",
+    "hoursRunValue_other": "{{hours}} કલાક",
     "running": "ચાલતું જોઈ શકાય",
     "inspection": "એપોઇન્ટમેન્ટથી તપાસ",
     "yes": "હા",

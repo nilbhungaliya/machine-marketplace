@@ -4,7 +4,7 @@ import * as LegacyFS from 'expo-file-system/legacy';
 import { Video, getVideoMetaData } from 'react-native-compressor';
 import { errorCode } from './api-error';
 import {
-  contentTypeFor, PHOTO_TARGETS, POSTER_TARGET, resizeAction, sizeProblem, VIDEO_COMPRESS_OPTIONS,
+  compressedOutputOk, contentTypeFor, PHOTO_TARGETS, POSTER_TARGET, resizeAction, sizeProblem, VIDEO_COMPRESS_OPTIONS,
   videoDurationProblem,
 } from './media-prepare';
 import type { PreparedFile, UploadIO } from './media-upload';
@@ -24,27 +24,49 @@ export async function fileSize(uri: string): Promise<number> {
   return info.exists ? info.size : 0;
 }
 
-/** One manipulator pass: resized to `longEdge` when larger, re-encoded as JPEG (which writes no EXIF, R46). */
+/**
+ * One manipulator pass: resized to `longEdge` when larger, re-encoded as JPEG (which writes no EXIF, R46). The context
+ * and every rendered `ImageRef` are native objects: released here, not left to the garbage collector (a full-size
+ * bitmap each).
+ */
 async function toJpeg(uri: string, longEdge: number, compress: number, size?: { width: number; height: number }) {
   const ctx = ImageManipulator.manipulate(uri);
-  let width = size?.width ?? 0;
-  let height = size?.height ?? 0;
-  if (!(width > 0 && height > 0)) {
-    const probe = await ctx.renderAsync();
-    width = probe.width;
-    height = probe.height;
-    ctx.reset();
+  try {
+    let width = size?.width ?? 0;
+    let height = size?.height ?? 0;
+    if (!(width > 0 && height > 0)) {
+      const probe = await ctx.renderAsync();
+      try {
+        width = probe.width;
+        height = probe.height;
+      } finally {
+        probe.release();
+      }
+      ctx.reset();
+    }
+    const resize = resizeAction(width, height, longEdge);
+    if (resize) ctx.resize(resize);
+    const ref = await ctx.renderAsync();
+    try {
+      const out = await ref.saveAsync({ compress, format: SaveFormat.JPEG });
+      return out.uri;
+    } finally {
+      ref.release();
+    }
+  } finally {
+    ctx.release();
   }
-  const resize = resizeAction(width, height, longEdge);
-  if (resize) ctx.resize(resize);
-  const ref = await ctx.renderAsync();
-  const out = await ref.saveAsync({ compress, format: SaveFormat.JPEG });
-  return out.uri;
 }
 
+/**
+ * A prepared file with its size and content type. Refused locally (before any presign) when it is empty or unreadable
+ * (`PHOTO_PREPARE_FAILED` / `VIDEO_PREPARE_FAILED`) or over its role's cap (`MEDIA_TOO_LARGE`).
+ */
 async function prepared(role: PreparedFile['role'], uri: string): Promise<PreparedFile> {
   const size = await fileSize(uri);
-  if (sizeProblem(role, size)) throw coded('MEDIA_TOO_LARGE');
+  const problem = sizeProblem(role, size);
+  if (problem === 'unreadable') throw coded(role === 'full' || role === 'thumb' ? 'PHOTO_PREPARE_FAILED' : 'VIDEO_PREPARE_FAILED');
+  if (problem) throw coded('MEDIA_TOO_LARGE');
   return { role, uri, contentType: contentTypeFor(role, uri), size };
 }
 
@@ -73,6 +95,8 @@ export async function prepareVideo(uri: string, pickerDurationMs: number | null)
   let durationMs: number;
   try {
     out = await Video.compress(uri, { ...VIDEO_COMPRESS_OPTIONS });
+    // The input handed back means nothing was re-muxed: its location metadata would ship (R47).
+    if (!compressedOutputOk(uri, out)) throw coded('VIDEO_PREPARE_FAILED');
     const meta = await getVideoMetaData(out);
     // The library reports seconds.
     durationMs = Math.round(Number(meta.duration) * 1000);

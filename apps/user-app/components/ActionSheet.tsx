@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo } from 'react';
 import { Animated, BackHandler, Modal, Pressable, ScrollView, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import type { LucideIcon } from '@/lib/icons';
 import { radius, spacing, useTheme } from '@/lib/theme';
 import { useType } from '@/hooks/use-type';
@@ -32,6 +33,8 @@ interface ActionSheetProps {
   onClose: () => void;
   /** Content under the rows (report details input, a submit button). */
   children?: React.ReactNode;
+  /** The backdrop's accessibility label (it closes the sheet); "Cancel" when omitted. */
+  closeLabel?: string;
   style?: StyleProp<ViewStyle>;
 }
 
@@ -40,7 +43,10 @@ interface ActionSheetProps {
  * Animated with `use-sheet-animation` in a transparent Modal; the backdrop and hardware Back close it. Labels come
  * from the caller (no copy inside).
  */
-export default function ActionSheet({ visible, title, subtitle, items, onSelect, onClose, children, style }: ActionSheetProps) {
+export default function ActionSheet({
+  visible, title, subtitle, items, onSelect, onClose, children, closeLabel, style,
+}: ActionSheetProps) {
+  const { t } = useTranslation();
   const { colors } = useTheme();
   const type = useType();
   const insets = useSafeAreaInsets();
@@ -76,7 +82,13 @@ export default function ActionSheet({ visible, title, subtitle, items, onSelect,
     <Modal transparent visible={rendered} animationType="none" onRequestClose={onClose}>
       <View style={s.wrap}>
         <Animated.View style={[s.backdrop, { opacity: backdropOpacity }]}>
-          <Pressable style={s.fill} onPress={onClose} testID="Action-sheet-backdrop" accessibilityRole="button" />
+          <Pressable
+            style={s.fill}
+            onPress={onClose}
+            testID="Action-sheet-backdrop"
+            accessibilityRole="button"
+            accessibilityLabel={closeLabel ?? t('common.cancel')}
+          />
         </Animated.View>
         <Animated.View style={[s.card, { paddingBottom: insets.bottom + spacing.lg, transform: [{ translateY }] }, style]}>
           <View style={s.handle} />
@@ -102,7 +114,7 @@ export default function ActionSheet({ visible, title, subtitle, items, onSelect,
                     onPress={() => onSelect(item.key)}
                     testID={item.testID}
                     accessibilityRole={item.selected !== undefined ? 'radio' : 'button'}
-                    accessibilityState={item.selected !== undefined ? { selected: item.selected } : undefined}
+                    accessibilityState={item.selected !== undefined ? { checked: item.selected } : undefined}
                   />
                 ))}
               </View>

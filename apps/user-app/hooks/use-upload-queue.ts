@@ -7,13 +7,20 @@ import { listingUploadIO } from '@/lib/media-device';
 import {
   nextToUpload, pendingCount, runUpload, uploadReducer, type NewUploadItem, type UploadIO,
 } from '@/lib/media-upload';
-import { listingKeys } from './use-listing';
+import { invalidateListingLists, listingKeys } from './use-listing';
 
 /**
  * The media step's upload queue (§6.2) for one listing: add prepared items, and they upload one at a time; a failed
  * item stays with its error code until `retry` (a re-presign with the same `uploadId`) or `remove`. Each attached item
- * is appended to the owner view's `media` in the cache, then dropped from the queue. Tracks
- * `sell_media_upload_failed { type, code }`. `io` is injectable for a dev screen.
+ * is appended to the owner view's `media` in the cache, then dropped from the queue; My listings (drafts too), the
+ * public page and the seller / Other side lists are marked stale. Tracks `sell_media_upload_failed { type, code }`.
+ * `io` is injectable for a dev screen.
+ *
+ * **The queue lives in the component.** On unmount, queued and failed items are dropped and an upload in flight is
+ * finished but no longer reported (its attach still lands on the server and shows on the next owner-view fetch). So
+ * the caller keeps the seller on the media step while `busy`: Next / Back / the hardware back are held, or leaving asks
+ * first (`useConfirm`, "Uploads in progress will stop"). Status mapping for `MediaTile`: `queued` → `queued`,
+ * `uploading` and `attaching` → `uploading` (attaching shows a full bar), `failed` → `failed` (`tileState()` in `lib/media-upload.ts`).
  */
 export function useUploadQueue(listingId: string, io?: UploadIO) {
   const qc = useQueryClient();
@@ -32,6 +39,8 @@ export function useUploadQueue(listingId: string, io?: UploadIO) {
         qc.setQueryData<ListingOwnerView>(listingKeys.owner(listingId), (prev) =>
           prev ? { ...prev, media: appendMedia(prev.media, res.media) } : prev);
         void qc.invalidateQueries({ queryKey: listingKeys.owner(listingId) });
+        const owner = qc.getQueryData<ListingOwnerView>(listingKeys.owner(listingId));
+        invalidateListingLists(qc, listingId, owner?.businessId);
         safeDispatch({ type: 'remove', localId: next.localId });
       } else {
         track(LISTING_EVENTS.sellMediaUploadFailed, { type: next.type, code: res.code });

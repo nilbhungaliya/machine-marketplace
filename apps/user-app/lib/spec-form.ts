@@ -113,10 +113,16 @@ export function buildSpecSchema(fields: readonly TemplateField[], t: Translate, 
 
 /**
  * Form values → the `specs` of a PATCH: numbers parsed, text trimmed, dates in ASCII digits, empty values left out
- * (a key left out is cleared). Only the template's active fields.
+ * (a key left out is cleared). The form edits only the template's active fields; PATCH replaces `specs` whole, so every
+ * stored key the form doesn't edit (a retired field, which the public template no longer serves, or a key gone from
+ * the template) is carried over from `previous` unchanged (spec §7.3: untouched retired values pass).
  */
-export function toSpecs(values: SpecFormValues, fields: readonly TemplateField[]): Specs {
+export function toSpecs(values: SpecFormValues, fields: readonly TemplateField[], previous?: Specs | null): Specs {
+  const editable = new Set(editableFields(fields).map((f) => f.key));
   const specs: Specs = {};
+  for (const [key, value] of Object.entries(previous ?? {})) {
+    if (!editable.has(key)) specs[key] = value;
+  }
   for (const f of editableFields(fields)) {
     const v = values[f.key];
     if (v === undefined) continue;

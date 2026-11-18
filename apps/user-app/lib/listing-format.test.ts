@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import type { RentalTerms, TemplateField } from '@mpm/shared-types';
 import { i18n } from '@/lib/i18n';
 import {
-  availabilityText, conditionLabel, distanceText, galleryOrder, rentalRateCards, rentalTermRows, expiresText, fitLine, placeText, priceLine, priceNote, priceText, quantityText,
+  availabilityText, conditionLabel, distanceText, galleryOrder, headlinePrice, hoursRunText, rentalRateCards, rentalTermRows, expiresText, fitLine, placeText, priceLine, priceNote, priceText, quantityText,
   rateText, sideLabel, sideTokenKind, specRows, unitLabel, unitPer, updatedAgo, yearRange,
 } from './listing-format';
 import { cardFixture } from './listing-fixtures.test-helper';
@@ -162,5 +162,20 @@ describe('galleryOrder', () => {
   it('photos by sort order (cover first), then videos', () => {
     const m = (id: string, type: 'photo' | 'video', sortOrder: number) => ({ id, type, sortOrder });
     expect(galleryOrder([m('v', 'video', 0), m('p2', 'photo', 3), m('p1', 'photo', 1)]).map((x) => x.id)).toEqual(['p1', 'p2', 'v']);
+  });
+});
+
+describe('listing page price and hours', () => {
+  it('headlinePrice: an amount, Price on request, or nothing for a draft without a price model or price', () => {
+    expect(headlinePrice({ kind: 'part', priceModel: 'fixed', pricePaise: 42_000 })).toEqual({ type: 'amount', paise: 42_000 });
+    expect(headlinePrice({ kind: 'part', priceModel: 'on_request', pricePaise: null })).toEqual({ type: 'on_request' });
+    expect(headlinePrice({ kind: 'part', priceModel: null, pricePaise: null })).toBeNull();
+    expect(headlinePrice({ kind: 'machine', priceModel: 'negotiable', pricePaise: null })).toBeNull();
+    expect(headlinePrice({ kind: 'machine_rental', priceModel: null, pricePaise: null })).toBeNull();
+  });
+  it('hoursRunText: Indian grouping and a counted unit', () => {
+    expect(hoursRunText(12_000)).toBe('12,000 hours');
+    expect(hoursRunText(1)).toBe('1 hour');
+    expect(hoursRunText(1_25_000)).toBe('1,25,000 hours');
   });
 });

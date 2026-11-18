@@ -48,6 +48,15 @@ describe('values', () => {
       width: 190.5, shed: 'cam', made: '2020-03-05', note: 'hi',
     });
   });
+  it('toSpecs keeps the stored values of fields the form does not edit (retired, or gone from the template)', () => {
+    const previous = { width: 180, shed: 'dobby', note: 'old', gone: 'kept', legacy: ['x'] };
+    expect(toSpecs({ width: '200', shed: 'cam', feeds: [], made: '', note: '' }, FIELDS, previous)).toEqual({
+      width: 200, shed: 'cam', gone: 'kept', legacy: ['x'],
+    });
+  });
+  it('toSpecs: an editable field cleared in the form is cleared even when stored before', () => {
+    expect(toSpecs({ width: '', shed: '', feeds: [], made: '', note: '' }, FIELDS, { note: 'old', width: 190 })).toEqual({});
+  });
   it('number and date parsing', () => {
     expect(parseSpecNumber('1,200')).toBe(1200);
     expect(parseSpecNumber('abc')).toBeNull();

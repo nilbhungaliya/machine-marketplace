@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { ListingMediaItem, MediaPresignRequest, MediaPresignResult } from '@mpm/shared-types';
 import {
-  attachRequest, nextToUpload, pendingCount, presignRequest, runUpload, uploadReducer, type UploadAction, type UploadIO,
+  attachRequest, nextToUpload, tileState, pendingCount, presignRequest, runUpload, uploadReducer, type UploadAction, type UploadIO,
   type UploadItem,
 } from './media-upload';
 
@@ -139,5 +139,27 @@ describe('runUpload', () => {
       ],
     });
     expect(req).toEqual({ type: 'video', uploadId: 'v1', keys: { video: 'kv', poster: 'kp' }, durationMs: 42_000 });
+  });
+
+  it('a video attach without a duration throws (never sends 0)', () => {
+    const presigned = {
+      uploadId: 'v1',
+      files: [
+        { role: 'video' as const, key: 'kv', url: 'x', expiresAt: 'x' },
+        { role: 'poster' as const, key: 'kp', url: 'x', expiresAt: 'x' },
+      ],
+    };
+    expect(() => attachRequest({ type: 'video', durationMs: null }, presigned)).toThrow();
+    expect(() => attachRequest({ type: 'video', durationMs: Number.NaN }, presigned)).toThrow();
+  });
+});
+
+describe('tileState', () => {
+  it('maps each upload status to a MediaTile state; attaching shows as uploading with a full bar', () => {
+    expect(tileState({ status: 'queued', progress: 0 })).toEqual({ state: 'queued', progress: 0 });
+    expect(tileState({ status: 'uploading', progress: 0.4 })).toEqual({ state: 'uploading', progress: 0.4 });
+    expect(tileState({ status: 'attaching', progress: 1 })).toEqual({ state: 'uploading', progress: 1 });
+    expect(tileState({ status: 'failed', progress: 0.3 })).toEqual({ state: 'failed', progress: 0.3 });
+    expect(tileState({ status: 'done', progress: 1 })).toEqual({ state: 'done', progress: 1 });
   });
 });

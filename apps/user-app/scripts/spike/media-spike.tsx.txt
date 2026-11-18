@@ -18,7 +18,10 @@
 //   5. Run all checks on the screen, then pull the outputs:
 //        adb exec-out run-as com.machineparts.app cat files/spike/out/<f> > <f>
 //      and check them on the host: ffprobe -v quiet -show_format -show_streams <video> (codec h264, long edge <= 1280,
-//      NO `location` tag), the photo has no Exif APP1 (make-gps-fixtures.mjs's jpegHasExif), the poster exists.
+//      NO `location` tag); photo.jpg and poster.jpg carry no Exif:
+//        node apps/user-app/scripts/spike/make-gps-fixtures.mjs --check-jpeg <f>   (exit 0 = no Exif)
+//      and, once F2 is merged, the API's apps/api/src/lib/sniff-media.ts (jpegHasExif + jpegHeaderStatus, which also
+//      refuses XMP and other APPn) is the reference check.
 //   6. Remove the screen and its navigation entry again.
 //
 // Fixture paths (the app's files dir): files/spike/{gps.jpg,gps.mp4,gps.mov,gps-small.mp4}; outputs in files/spike/out/:
