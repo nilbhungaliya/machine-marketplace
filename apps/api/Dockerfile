@@ -43,10 +43,13 @@ COPY --from=builder /out/package.json ./
 
 # Migrations (source of truth) — applied on start by dist/db/migrate.js.
 COPY infra/migrations ./migrations
+# The pincode directory, read by dist/db/seed-locations.js.
+COPY infra/seed ./seed
 
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV MIGRATIONS_DIR=/app/migrations
+ENV SEED_DATA_DIR=/app/seed
 EXPOSE 3000
 
 # Apply pending migrations, then start. A failed migration stops the container

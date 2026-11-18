@@ -11,12 +11,15 @@ import healthRoutes from './routes/health.js';
 import adminAuthRoutes from './routes/admin/auth.js';
 import authOtpRoutes from './routes/auth-otp.js';
 import usersRoutes from './routes/users.js';
+import businessRoutes from './routes/businesses.js';
 import catalogRoutes from './routes/catalog.js';
+import locationRoutes from './routes/locations.js';
 import adminCatalogCategoryRoutes from './routes/admin/catalog-categories.js';
 import adminCatalogFieldRoutes from './routes/admin/catalog-fields.js';
 import adminCatalogBrandRoutes from './routes/admin/catalog-brands.js';
 import adminCatalogMasterRoutes from './routes/admin/catalog-master.js';
 import adminCatalogExportRoutes from './routes/admin/catalog-export.js';
+import adminIndustrialAreaRoutes from './routes/admin/industrial-areas.js';
 
 export interface BuildAppOptions {
   /** false in unit tests that must not touch Postgres/Redis. */
@@ -48,13 +51,16 @@ export async function buildApp({ infra = true, logger = true }: BuildAppOptions 
     await app.register(rateLimitPlugin);
     await app.register(authOtpRoutes);
     await app.register(usersRoutes);
+    await app.register(businessRoutes);
     await app.register(catalogRoutes);
+    await app.register(locationRoutes);
     await app.register(adminAuthRoutes);
     await app.register(adminCatalogCategoryRoutes);
     await app.register(adminCatalogFieldRoutes);
     await app.register(adminCatalogBrandRoutes);
     await app.register(adminCatalogMasterRoutes);
     await app.register(adminCatalogExportRoutes);
+    await app.register(adminIndustrialAreaRoutes);
   }
 
   return app;

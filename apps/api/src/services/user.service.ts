@@ -3,9 +3,11 @@ import type { Db } from '../db/index.js';
 import { businesses, users } from '../db/schema.js';
 import { ForbiddenError, NotFoundError } from '../lib/errors.js';
 import { signUserToken } from '../plugins/auth.js';
+import { onboardingForUser } from './business/profile.service.js';
 
 /**
- * Signs in (creating the user on first login). New = no name yet, so the app shows onboarding.
+ * Signs in (creating the user on first login). New = no name yet, so the app shows onboarding; `onboarding` says
+ * which step it resumes at (`'profile'` while the user has no business, ruling R1).
  * A suspended or blocked account (scope A2) is refused with `ACCOUNT_SUSPENDED`.
  */
 export async function signInWithPhone(db: Db, phone: string) {
@@ -18,6 +20,7 @@ export async function signInWithPhone(db: Db, phone: string) {
     token: signUserToken({ userId: user.id, businessId: user.businessId }),
     user: { id: user.id, name: user.name, phone: user.phone },
     isNewUser: !user.name,
+    onboarding: await onboardingForUser(db, user),
   };
 }
 
