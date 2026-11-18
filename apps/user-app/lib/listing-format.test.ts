@@ -125,6 +125,15 @@ describe('specRows', () => {
       { key: 'made', label: 'Made on', value: '5 Mar 2020' },
     ]);
   });
+  it('retired fields and options (includeRetired=1) keep their labels', () => {
+    const fields = [
+      field({
+        key: 'drive', label: 'Drive', type: 'single_select', status: 'retired',
+        options: [{ id: 'o9', key: 'belt', label: 'Belt', sortOrder: 0, status: 'retired' }],
+      }),
+    ];
+    expect(specRows(fields, { drive: 'belt' })).toEqual([{ key: 'drive', label: 'Drive', value: 'Belt' }]);
+  });
 });
 
 describe('rentals', () => {

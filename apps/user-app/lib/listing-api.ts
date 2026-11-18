@@ -125,3 +125,12 @@ export function fetchMasterData(): Promise<MasterData> {
 export function templateKindOf(kind: ListingKind): TemplateKind {
   return kind === 'part' ? 'part' : 'machine';
 }
+
+/**
+ * GET /categories/:id/template?kind=&includeRetired=1 → the node's template with retired fields and options too
+ * (marked `status: 'retired'`, in template order; 200 under a deactivated node): the listing page's and Preview's
+ * Specifications block, so values a listing still holds keep their labels.
+ */
+export function fetchListingTemplate(nodeId: string, kind: TemplateKind): Promise<EffectiveTemplate> {
+  return data(api.get<ApiSuccess<EffectiveTemplate>>(`/categories/${nodeId}/template`, { params: { kind, includeRetired: 1 } }));
+}

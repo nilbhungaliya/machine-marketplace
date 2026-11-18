@@ -3,7 +3,7 @@ import type {
   ListingActionResult, ListingKind, ListingOwnerView, ListingReportRequest, SellerListingAction,
 } from '@mpm/shared-types';
 import {
-  fetchBrands, fetchCategoryTree, fetchListing, fetchMasterData, fetchModels, fetchOtherSide, fetchOwnerListing,
+  fetchBrands, fetchCategoryTree, fetchListing, fetchListingTemplate, fetchMasterData, fetchModels, fetchOtherSide, fetchOwnerListing,
   fetchSellerListings, fetchTemplate, listingAction, reportListing, templateKindOf,
 } from '@/lib/listing-api';
 import { track } from '@/lib/analytics';
@@ -30,6 +30,8 @@ export const listingKeys = {
 export const catalogKeys = {
   tree: ['catalog', 'tree'] as const,
   template: (nodeId: string, kind: string) => ['catalog', 'template', nodeId, kind] as const,
+  /** With retired fields and options (the listing page's Specifications). */
+  listingTemplate: (nodeId: string, kind: string) => ['catalog', 'template', nodeId, kind, 'with-retired'] as const,
   brands: (role: string, machineTypeId: string) => ['catalog', 'brands', role, machineTypeId] as const,
   models: (brandId: string, machineTypeId: string) => ['catalog', 'models', brandId, machineTypeId] as const,
   master: ['catalog', 'master-data'] as const,
@@ -78,6 +80,21 @@ export function useTemplate(nodeId: string | null | undefined, kind: ListingKind
   return useQuery({
     queryKey: catalogKeys.template(nodeId ?? '', tk),
     queryFn: () => fetchTemplate(nodeId!, tk),
+    enabled: !!nodeId,
+    staleTime: CATALOG_STALE,
+  });
+}
+
+/**
+ * The template of a listing's Specifications block (listing page, Preview): `includeRetired=1`, so the values a listing
+ * still holds for retired fields and options keep their labels. The one place listing screens read it.
+ */
+export function useListingTemplate(listing: { categoryId: string | null; kind: ListingKind } | null | undefined) {
+  const nodeId = listing?.categoryId ?? null;
+  const tk = templateKindOf(listing?.kind ?? 'part');
+  return useQuery({
+    queryKey: catalogKeys.listingTemplate(nodeId ?? '', tk),
+    queryFn: () => fetchListingTemplate(nodeId!, tk),
     enabled: !!nodeId,
     staleTime: CATALOG_STALE,
   });

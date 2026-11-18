@@ -18,6 +18,14 @@ import GstStatusScreen from '@/screens/verification/gst-status';
 import SellStepScreen from '@/screens/sell/sell-step';
 import SellPublishedScreen from '@/screens/sell/published';
 import MyDraftsScreen from '@/screens/my-listings/drafts';
+// F2 listing (L6)
+import ListingScreen from '@/screens/listing/listing';
+import MediaViewerScreen from '@/screens/listing/media-viewer';
+import SellerListingsScreen from '@/screens/listing/seller-listings';
+import OtherSideScreen from '@/screens/listing/other-side';
+import MyListingsScreen from '@/screens/my-listings/my-listings';
+import EditMenuScreen from '@/screens/my-listings/edit-menu';
+import RemovedByTeamScreen from '@/screens/my-listings/removed-by-team';
 import AuthStack from './auth-stack';
 import TabNavigator from './tab-navigator';
 import type { RootStackParamList } from './types';
@@ -103,6 +111,14 @@ export default function RootNavigator() {
           <Stack.Screen name="Sell" component={SellStepScreen} />
           <Stack.Screen name="SellPublished" component={SellPublishedScreen} />
           <Stack.Screen name="MyDrafts" component={MyDraftsScreen} />
+          {/* F2 listing (L6) */}
+          <Stack.Screen name="Listing" component={ListingScreen} />
+          <Stack.Screen name="ListingMedia" component={MediaViewerScreen} options={{ animation: 'fade' }} />
+          <Stack.Screen name="SellerListings" component={SellerListingsScreen} />
+          <Stack.Screen name="OtherSide" component={OtherSideScreen} />
+          <Stack.Screen name="MyListings" component={MyListingsScreen} />
+          <Stack.Screen name="ListingEditMenu" component={EditMenuScreen} />
+          <Stack.Screen name="RemovedByTeam" component={RemovedByTeamScreen} />
         </Stack.Group>
       )}
     </Stack.Navigator>

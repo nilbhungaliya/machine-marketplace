@@ -176,6 +176,16 @@ describe('tiers 2 and 3: name and fit', () => {
     expect(r.items.map((c) => [c.id, c.tier])).toEqual([[right, 2]]);
   });
 
+  it('overlaps on "Other" model texts that differ only in case and spacing (tier 2); another text does not', async () => {
+    const s = await seller();
+    const group = await newGroup();
+    const left = await part(s, group, 'left', { title: 'Heald frame hook left', fitments: [fit({ modelOther: ' ZW  408\tXL ' })] });
+    const right = await part(s, group, 'right', { title: 'Heald frame hook right', fitments: [fit({ modelOther: 'zw 408 xl' })] });
+    await part(s, group, 'right', { title: 'Heald frame hook right', fitments: [fit({ modelOther: 'zw 4080 xl' })] });
+    const r = await result(left);
+    expect(r.items.map((c) => [c.id, c.tier])).toEqual([[right, 2]]);
+  });
+
   it('excludes both-fitted listings that do not overlap (other years or other model)', async () => {
     const s = await seller();
     const group = await newGroup();
