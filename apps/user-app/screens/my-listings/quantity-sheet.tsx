@@ -10,9 +10,10 @@ import { useStoreOwnerView } from '@/hooks/use-listing';
 import { patchListing } from '@/lib/listing-api';
 import { listingErrorMessage } from '@/lib/listing-errors';
 import { unitLabel } from '@/lib/listing-format';
+import { quantityToastKey } from '@/lib/my-listings';
 import { formatQuantity, parseMachineCount, parseQuantity } from '@/lib/quantity';
 
-export type QuantityTarget = Pick<ListingCard, 'id' | 'kind' | 'quantity' | 'unit' | 'title'>;
+export type QuantityTarget = Pick<ListingCard, 'id' | 'kind' | 'status' | 'quantity' | 'unit' | 'title'>;
 
 interface QuantitySheetProps {
   listing: QuantityTarget | null;
@@ -34,11 +35,14 @@ export default function QuantitySheet({ listing, visible, onClose }: QuantityShe
     onSuccess: (view) => store(view),
   });
 
+  // Reset when the sheet opens for a listing (not when a refetch hands over a new object of the same listing).
+  const listingId = listing?.id ?? null;
+  const current = listing?.quantity ?? null;
   useEffect(() => {
-    if (!visible || !listing) return;
-    setText(formatQuantity(listing.quantity).replace(/,/g, ''));
+    if (!visible || !listingId) return;
+    setText(formatQuantity(current).replace(/,/g, ''));
     setError(undefined);
-  }, [visible, listing]);
+  }, [visible, listingId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const submit = () => {
     if (!listing) return;
@@ -51,9 +55,11 @@ export default function QuantitySheet({ listing, visible, onClose }: QuantityShe
     save.mutate(
       { id: listing.id, quantity: parsed.value },
       {
-        onSuccess: () => {
+        onSuccess: (view) => {
           onClose();
-          Toast.show({ type: 'success', text1: t('listing.quantitySheet.saved') });
+          // An unaccepted sanity flag sends a public listing back to review (§7.3): say so.
+          const key = quantityToastKey(listing.status, view.status);
+          Toast.show({ type: key === 'listing.quantitySheet.saved' ? 'success' : 'info', text1: t(key) });
         },
         onError: (err) => setError(listingErrorMessage(err)),
       },

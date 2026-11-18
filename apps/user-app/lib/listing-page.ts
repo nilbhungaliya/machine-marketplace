@@ -1,6 +1,7 @@
 import type {
   ListingKind, ListingReportReason, ListingReportRequest, OtherSideCard, OtherSideResult, PartSide, PriceModel,
 } from '@mpm/shared-types';
+import { errorCode } from './api-error';
 import { toAsciiDigits } from './digits';
 
 // The listing page's decisions (F2 spec §8, §9; plan Task 26): which contact buttons a buyer sees, the Other side
@@ -111,4 +112,12 @@ export function parseFitYear(text: string, now: number = Date.now()): { ok: true
   const year = Number(clean);
   const max = new Date(now).getUTCFullYear() + 1;
   return year >= FIT_YEAR_MIN && year <= max ? { ok: true, year } : { ok: false };
+}
+
+/**
+ * A listing that answered `404 LISTING_NOT_FOUND` on its last fetch is gone for this viewer (removed, hidden, sold to
+ * nobody), even while React Query still holds the old data: the page shows "not available".
+ */
+export function isListingGone(isError: boolean, error: unknown): boolean {
+  return isError && errorCode(error) === 'LISTING_NOT_FOUND';
 }

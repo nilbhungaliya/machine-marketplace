@@ -15,6 +15,9 @@ interface OtherSideBlockProps {
   side: PartSide | null;
   result: OtherSideResult | undefined;
   loading: boolean;
+  /** The matches couldn't be loaded: a line with Retry (`onRetry`). */
+  error?: boolean;
+  onRetry?: () => void;
   /** Opens a matching listing. */
   onOpen: (listingId: string) => void;
   /** "See all" → the Other side screen. */
@@ -33,7 +36,7 @@ const leadText = (c: OtherSideCard) =>
  * ("Right side also available: …", or "Possibly the other side: …" for a tier-3 match) and See all. No match: "No right
  * side listed yet". The "Post a requirement" link waits for F8 (R22).
  */
-export default function OtherSideBlock({ side, result, loading, onOpen, onSeeAll, style }: OtherSideBlockProps) {
+export default function OtherSideBlock({ side, result, loading, error = false, onRetry, onOpen, onSeeAll, style }: OtherSideBlockProps) {
   const { t } = useTranslation();
   const { colors } = useTheme();
   const type = useType();
@@ -48,6 +51,9 @@ export default function OtherSideBlock({ side, result, loading, onOpen, onSeeAll
     optOn: { borderColor: colors.primary, backgroundColor: colors.primaryWash },
     optLabel: { ...type('label'), color: colors.text },
     optSmall: { ...type('caption'), color: colors.textMuted, textAlign: 'center' },
+    optPossible: { ...type('badge'), color: colors.onSun, backgroundColor: colors.sun, borderRadius: radius.full, paddingHorizontal: spacing.sm, overflow: 'hidden' },
+    optSkeleton: { height: 14, width: '70%', borderRadius: radius.sm },
+    errorRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
     line: { ...type('body'), color: colors.text },
     none: { ...type('body'), color: colors.textSecondary },
     skeleton: { height: 20, borderRadius: radius.sm },
@@ -59,12 +65,15 @@ export default function OtherSideBlock({ side, result, loading, onOpen, onSeeAll
   const option = (key: 'this' | 'want' | 'pair') => {
     const kind = key === 'this' ? block.side : key === 'want' ? block.want : 'pair';
     const card = key === 'want' ? block.wantBest : key === 'pair' ? block.pairBest : null;
+    // While loading (or after an error) the other tiles stay neutral rather than saying "Not listed".
+    const unknown = key !== 'this' && !card && (loading || error);
     const small = key === 'this' ? t('listing.otherSide.thisListing') : card ? optionText(card) : t('listing.otherSide.notListed');
     const content = (
       <>
         <SideToken kind={kind} size="lg" />
         <Text style={s.optLabel}>{t(`listing.otherSide.short.${kind}`)}</Text>
-        <Text style={s.optSmall} numberOfLines={2}>{small}</Text>
+        {card?.possible ? <Text style={s.optPossible}>{t('listing.otherSide.possibleShort')}</Text> : null}
+        {unknown ? (loading ? <Skeleton style={s.optSkeleton} /> : null) : <Text style={s.optSmall} numberOfLines={2}>{small}</Text>}
       </>
     );
     if (!card) {
@@ -98,10 +107,21 @@ export default function OtherSideBlock({ side, result, loading, onOpen, onSeeAll
         {option('want')}
         {option('pair')}
       </View>
-      {loading ? <Skeleton style={s.skeleton} /> : <Text style={lead ? s.line : s.none}>{line}</Text>}
-      {lead ? (
+      {loading ? (
+        <Skeleton style={s.skeleton} />
+      ) : error ? (
+        <View style={s.errorRow}>
+          <Text style={s.none}>{t('listing.otherSide.loadError')}</Text>
+          {onRetry ? (
+            <Button title={t('common.retry')} onPress={onRetry} variant="ghost" size="sm" phLabel="Listing-other-side-retry" />
+          ) : null}
+        </View>
+      ) : (
+        <Text style={lead ? s.line : s.none}>{line}</Text>
+      )}
+      {lead && !loading && !error ? (
         <Button
-          title={t('listing.otherSide.seeAll')}
+          title={t('listing.otherSide.seeAllCount', { count: block.wantCount + block.pairCount })}
           onPress={onSeeAll}
           variant="outline"
           size="sm"

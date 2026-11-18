@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import Toast from 'react-native-toast-message';
 import { PUBLIC_LISTING_STATUSES, type ListingStatus } from '@mpm/shared-types';
@@ -11,17 +12,16 @@ import FooterBar from '@/components/FooterBar';
 import Notice from '@/components/Notice';
 import Skeleton from '@/components/Skeleton';
 import StatusChip from '@/components/StatusChip';
-import { useListing, useListingTemplate, useOtherSide, useSellerListings } from '@/hooks/use-listing';
+import { listingKeys, useListing, useListingTemplate, useOtherSide, useSellerListings } from '@/hooks/use-listing';
 import { useType } from '@/hooks/use-type';
 import { track } from '@/lib/analytics';
 import { LISTING_EVENTS } from '@/lib/analytics-events';
-import { errorCode } from '@/lib/api-error';
 import { Info, Package, TriangleAlert } from '@/lib/icons';
-import { contactActions, hasOtherSide } from '@/lib/listing-page';
-import { editEntry, statusChip } from '@/lib/my-listings';
+import { contactActions, hasOtherSide, isListingGone } from '@/lib/listing-page';
+import { editEntry, manageItems, ownerNote, statusChip, type ManageAction } from '@/lib/my-listings';
 import { radius, spacing, useTheme } from '@/lib/theme';
 import type { RootStackScreenProps } from '@/navigation/types';
-import ManageSheet from '@/screens/my-listings/manage-sheet';
+import ManageSheet, { openEdit } from '@/screens/my-listings/manage-sheet';
 import CheckMyMachineSheet from './check-my-machine-sheet';
 import ListingCardItem from './listing-card-item';
 import ListingView from './listing-view';
@@ -40,6 +40,7 @@ const MORE_LIMIT = 6;
 export default function ListingScreen({ navigation, route }: RootStackScreenProps<'Listing'>) {
   const { listingId } = route.params;
   const { t } = useTranslation();
+  const qc = useQueryClient();
   const { colors } = useTheme();
   const type = useType();
   const query = useListing(listingId);
@@ -56,6 +57,7 @@ export default function ListingScreen({ navigation, route }: RootStackScreenProp
     lineSkeleton: { height: 28, borderRadius: radius.sm },
     owner: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm },
     ownerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+    ownerNote: { ...type('caption'), color: colors.text },
     more: { gap: spacing.md },
     section: { ...type('section'), color: colors.text },
     footer: { paddingTop: spacing.sm },
@@ -63,8 +65,10 @@ export default function ListingScreen({ navigation, route }: RootStackScreenProp
 
   const kindTitle = listing ? t(`listing.kind.${listing.kind}`) : '';
 
-  if (!listing) {
-    const missing = query.isError && errorCode(query.error) === 'LISTING_NOT_FOUND';
+  // A refetch that answers 404 (removed, hidden, sold elsewhere) leaves the old data cached: the page is gone anyway.
+  const gone = isListingGone(query.isError, query.error);
+  if (!listing || gone) {
+    const missing = gone;
     return (
       <ScreenWrapper>
         <Header title={kindTitle} />
@@ -93,11 +97,14 @@ export default function ListingScreen({ navigation, route }: RootStackScreenProp
   const isOwner = listing.isOwner;
   const isPublic = (PUBLIC_LISTING_STATUSES as readonly ListingStatus[]).includes(listing.status);
   const chip = statusChip(listing.status);
+  const note = isOwner && 'version' in listing ? ownerNote(listing) : null;
+  const canManage = isOwner && manageItems(listing).length > 0;
 
   const ownerHeader = isOwner ? (
     <View style={s.owner}>
       <Notice tone={isPublic ? 'info' : 'warning'} icon={isPublic ? Info : TriangleAlert} text={t(isPublic ? 'listing.page.ownerPublic' : 'listing.page.ownerHiddenFromBuyers')}>
         <View style={s.ownerRow}><StatusChip label={t(chip.key)} tone={chip.tone} /></View>
+        {note ? <Text style={s.ownerNote}>{t(note.key, note.values)}</Text> : null}
       </Notice>
     </View>
   ) : null;
@@ -107,6 +114,8 @@ export default function ListingScreen({ navigation, route }: RootStackScreenProp
       side={listing.side}
       result={otherSide.data}
       loading={otherSide.isLoading}
+      error={otherSide.isError}
+      onRetry={() => void otherSide.refetch()}
       onOpen={(id) => navigation.push('Listing', { listingId: id })}
       onSeeAll={() => navigation.navigate('OtherSide', { listingId, from: isOwner ? 'mine' : 'listing' })}
     />
@@ -132,10 +141,13 @@ export default function ListingScreen({ navigation, route }: RootStackScreenProp
     Toast.show({ type: 'info', text1: t('common.comingSoon') });
   };
 
-  const edit = () => {
-    const entry = editEntry(listing.status);
-    if (entry === 'wizard') navigation.navigate('Sell', { listingId, step: 'category', mode: 'create' });
-    else if (entry === 'menu') navigation.navigate('ListingEditMenu', { listingId });
+  const edit = () => void openEdit(navigation, qc, listing);
+
+  // Removed or deleted from this page: there's nothing left to show, so drop it and go back.
+  const actionDone = (a: ManageAction) => {
+    if (a !== 'remove' && a !== 'delete_draft') return;
+    qc.removeQueries({ queryKey: listingKeys.detail(listingId) });
+    if (navigation.canGoBack()) navigation.goBack();
   };
 
   return (
@@ -157,7 +169,9 @@ export default function ListingScreen({ navigation, route }: RootStackScreenProp
       <FooterBar style={s.footer}>
         {isOwner ? (
           <>
-            <Button title={t('listing.owner.manage')} onPress={() => setManaging(true)} variant="outline" size="md" phLabel="Listing-manage" />
+            {canManage ? (
+              <Button title={t('listing.owner.manage')} onPress={() => setManaging(true)} variant="outline" size="md" phLabel="Listing-manage" />
+            ) : null}
             {editEntry(listing.status) ? (
               <Button title={t('listing.owner.edit')} onPress={edit} size="md" phLabel="Listing-edit" />
             ) : null}
@@ -182,7 +196,9 @@ export default function ListingScreen({ navigation, route }: RootStackScreenProp
       {!isOwner ? (
         <ReportSheet visible={sheet === 'report'} listingId={listingId} listingTitle={listing.title} onClose={() => setSheet(null)} />
       ) : null}
-      {isOwner ? <ManageSheet listing={managing ? listing : null} onClose={() => setManaging(false)} /> : null}
+      {canManage ? (
+        <ManageSheet listing={managing ? listing : null} onActionDone={actionDone} onClose={() => setManaging(false)} />
+      ) : null}
     </ScreenWrapper>
   );
 }

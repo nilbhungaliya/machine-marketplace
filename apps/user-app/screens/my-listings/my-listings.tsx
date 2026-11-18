@@ -17,6 +17,7 @@ import { ClipboardList, Inbox, ShieldAlert, TriangleAlert } from '@/lib/icons';
 import {
   MY_LISTINGS_SEGMENTS, myCardChip, myCardNudge, myCardSubtitle, showRenew,
 } from '@/lib/my-listings';
+import { videoUploadEnabled } from '@/lib/media-prepare';
 import { radius, spacing, useTheme } from '@/lib/theme';
 import type { RootStackScreenProps } from '@/navigation/types';
 import ListingCardItem from '@/screens/listing/listing-card-item';
@@ -108,7 +109,7 @@ export default function MyListingsScreen({ navigation, route }: RootStackScreenP
 
   const renderItem = ({ item }: { item: MyListingCard }) => {
     const chip = myCardChip(item);
-    const nudge = myCardNudge(item);
+    const nudge = myCardNudge(item, { videoEnabled: videoUploadEnabled() });
     const renew = showRenew(item);
     return (
       <ListingCardItem

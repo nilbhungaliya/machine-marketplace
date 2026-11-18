@@ -15,7 +15,7 @@ import {
   ArrowLeftRight, CalendarClock, Camera, ClipboardList, Factory, MapPin, Package, Tag, TriangleAlert, Wrench, type LucideIcon,
 } from '@/lib/icons';
 import { listingErrorMessage } from '@/lib/listing-errors';
-import { editEntry, editSections, nodeHasSides } from '@/lib/my-listings';
+import { editEntry, editSections, nodeHasSides, wizardStartStep } from '@/lib/my-listings';
 import type { EditStep } from '@/lib/sell-wizard';
 import { radius, spacing, useTheme } from '@/lib/theme';
 import type { RootStackScreenProps } from '@/navigation/types';
@@ -49,10 +49,11 @@ export default function EditMenuScreen({ navigation, route }: RootStackScreenPro
   const listing = owner.data;
   const entry = listing ? editEntry(listing.status) : null;
 
-  // A rejected listing (or a draft) is edited through the wizard, from the category step.
+  // A rejected listing (from the category step) or a draft (from its first incomplete step) goes through the wizard.
   useEffect(() => {
-    if (entry === 'wizard') navigation.replace('Sell', { listingId, step: 'category', mode: 'create' });
-  }, [entry, listingId, navigation]);
+    if (entry !== 'wizard' || !listing) return;
+    navigation.replace('Sell', { listingId, step: wizardStartStep(listing, nodeHasSides(tree.data, listing.categoryId)), mode: 'create' });
+  }, [entry, listingId, navigation]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const s = useMemo(() => StyleSheet.create({
     body: { padding: spacing.lg, gap: spacing.lg },

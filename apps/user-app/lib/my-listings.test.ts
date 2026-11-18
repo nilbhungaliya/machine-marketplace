@@ -2,10 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { LISTING_STATUSES } from '@mpm/shared-types';
 import { i18n } from '@/lib/i18n';
 import type { CategoryNode, MyListingCard } from '@mpm/shared-types';
-import { cardFixture } from './listing-fixtures.test-helper';
+import { cardFixture, ownerFixture } from './listing-fixtures.test-helper';
 import {
-  MY_LISTINGS_SEGMENTS, actionToastKey, editEntry, editSections, gateStep, manageItems, myCardChip, myCardNudge,
-  myCardSubtitle, needsConfirm, nodeHasSides, showRenew, statusChip, statusGroup,
+  MY_LISTINGS_SEGMENTS, actionToastKey, editEntry, editSections, gateStep, isStaleListingError, manageItems, myCardChip,
+  myCardNudge, myCardSubtitle, needsConfirm, nodeHasSides, ownerNote, quantityToastKey, showRenew, statusChip, statusGroup,
+  wizardStartStep,
 } from './my-listings';
 
 const mine = (over: Partial<MyListingCard> = {}): MyListingCard => ({
@@ -19,6 +20,9 @@ const mine = (over: Partial<MyListingCard> = {}): MyListingCard => ({
   needsAttention: [],
   ...over,
 });
+
+/** Video upload on (the nudge may ask for a video). */
+const nudgeOn = (c: MyListingCard) => myCardNudge(c, { videoEnabled: true });
 
 const apiError = (status: number, code: string, details?: Record<string, unknown>) => ({
   response: { status, data: { error: 'English message', code, details } },
@@ -170,22 +174,66 @@ describe('My listings cards', () => {
     expect(showRenew(c)).toBe(false);
   });
   it("the moderator's message on a rejected listing", () => {
-    const n = myCardNudge(mine({ status: 'rejected', moderation: { outcome: 'changes_requested', note: 'Add a real photo', at: '' } }));
+    const n = nudgeOn(mine({ status: 'rejected', moderation: { outcome: 'changes_requested', note: 'Add a real photo', at: '' } }));
     expect(n).toEqual({ key: 'listing.mine.moderatorSays', values: { note: 'Add a real photo' } });
   });
   it('a hide reason, then needs attention, then the first score nudge', () => {
-    expect(myCardNudge(mine({ status: 'hidden', statusReason: 'Stock photo' }))).toEqual({ key: 'listing.mine.hiddenReason', values: { reason: 'Stock photo' } });
-    expect(myCardNudge(mine({ needsAttention: [{ field: 'side', code: 'SIDE_REQUIRED' }], scoreMissing: ['video'] }))?.key).toBe('listing.mine.needsAttention');
-    expect(myCardNudge(mine({ scoreMissing: ['video', 'description'] }))?.key).toBe('listing.score.video');
-    expect(myCardNudge(mine())).toBeNull();
+    expect(nudgeOn(mine({ status: 'hidden', statusReason: 'Stock photo' }))).toEqual({ key: 'listing.mine.hiddenReason', values: { reason: 'Stock photo' } });
+    expect(nudgeOn(mine({ needsAttention: [{ field: 'side', code: 'SIDE_REQUIRED' }], scoreMissing: ['video'] }))?.key).toBe('listing.mine.needsAttention');
+    expect(nudgeOn(mine({ scoreMissing: ['video', 'description'] }))?.key).toBe('listing.score.video');
+    expect(nudgeOn(mine())).toBeNull();
   });
   it('no score nudge on sold listings; in review says so', () => {
-    expect(myCardNudge(mine({ status: 'sold', scoreMissing: ['video'] }))).toBeNull();
-    expect(myCardNudge(mine({ status: 'pending_review', scoreMissing: ['video'] }))?.key).toBe('listing.mine.inReview');
+    expect(nudgeOn(mine({ status: 'sold', scoreMissing: ['video'] }))).toBeNull();
+    expect(nudgeOn(mine({ status: 'pending_review', scoreMissing: ['video'] }))?.key).toBe('listing.mine.inReview');
   });
   it('every nudge key exists in en', () => {
     for (const k of ['listing.mine.moderatorSays', 'listing.mine.hiddenReason', 'listing.mine.needsAttention', 'listing.mine.inReview', 'listing.mine.changesRequested']) {
       expect(i18n.exists(k), k).toBe(true);
     }
+  });
+});
+
+describe('review fixes (L6 review)', () => {
+  it('no "Add a video" nudge while video upload is off', () => {
+    const c = mine({ scoreMissing: ['video', 'description'] });
+    expect(myCardNudge(c, { videoEnabled: false })?.key).toBe('listing.score.description');
+    expect(myCardNudge(mine({ scoreMissing: ['video'] }), { videoEnabled: false })).toBeNull();
+    expect(myCardNudge(c, { videoEnabled: true })?.key).toBe('listing.score.video');
+  });
+  it('a draft offers Edit and Delete draft, not Update quantity', () => {
+    expect(manageItems({ status: 'draft', kind: 'part', side: 'left' })).toEqual(['edit', 'delete_draft']);
+    expect(manageItems({ status: 'draft', kind: 'machine', side: null }, { view: true })).toEqual(['edit', 'view', 'delete_draft']);
+    expect(needsConfirm('delete_draft')).toBe(true);
+    expect(actionToastKey('delete_draft', 'draft')).toBe('listing.manage.done.delete_draft');
+    expect(i18n.exists('listing.manage.done.delete_draft')).toBe(true);
+    expect(i18n.exists('listing.manage.delete_draft')).toBe(true);
+  });
+  it('the wizard starts a draft at its first incomplete step, a rejected listing at the category', () => {
+    const draft = ownerFixture({ categoryId: 'c1', title: 'Bracket' });
+    expect(wizardStartStep(draft, true)).toBe('quantity');
+    expect(wizardStartStep(ownerFixture({ status: 'rejected', categoryId: 'c1', title: 'Bracket' }), true)).toBe('category');
+  });
+  it('stale-listing errors refresh the lists', () => {
+    const err = (status: number, code: string) => ({ response: { status, data: { code } } });
+    expect(isStaleListingError(err(409, 'LISTING_TRANSITION_NOT_ALLOWED'))).toBe(true);
+    expect(isStaleListingError(err(409, 'LISTING_NOT_EDITABLE'))).toBe(true);
+    expect(isStaleListingError(err(404, 'LISTING_NOT_FOUND'))).toBe(true);
+    expect(isStaleListingError(err(409, 'UNVERIFIED_LISTING_CAP'))).toBe(false);
+    expect(isStaleListingError({ code: 'ERR_NETWORK' })).toBe(false);
+  });
+  it('a quantity edit that sent a public listing back to review says so', () => {
+    expect(quantityToastKey('live', 'pending_review')).toBe('listing.manage.sentForReview');
+    expect(quantityToastKey('rented', 'pending_review')).toBe('listing.manage.sentForReview');
+    expect(quantityToastKey('pending_review', 'pending_review')).toBe('listing.quantitySheet.saved');
+    expect(quantityToastKey('live', 'live')).toBe('listing.quantitySheet.saved');
+  });
+  it("the owner's note on the listing page: the moderator's message or the hide reason only", () => {
+    const view = (over: Parameters<typeof ownerFixture>[0]) => ownerFixture(over);
+    expect(ownerNote(view({ status: 'rejected', moderation: { outcome: 'rejected', note: 'Blurry', at: '' } }))).toEqual({
+      key: 'listing.mine.moderatorSays', values: { note: 'Blurry' },
+    });
+    expect(ownerNote(view({ status: 'hidden', statusReason: 'Stock photo' }))?.key).toBe('listing.mine.hiddenReason');
+    expect(ownerNote(view({ status: 'live', score: { score: 20, missing: ['video'] } }))).toBeNull();
   });
 });

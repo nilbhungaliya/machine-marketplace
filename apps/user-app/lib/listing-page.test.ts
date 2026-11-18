@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { OtherSideCard, OtherSideResult } from '@mpm/shared-types';
 import { cardFixture } from './listing-fixtures.test-helper';
 import {
-  REPORT_DETAILS_MAX, contactActions, hasOtherSide, otherSideBlock, parseFitChoice, parseFitYear, reportBody,
+  REPORT_DETAILS_MAX, contactActions, hasOtherSide, isListingGone, otherSideBlock, parseFitChoice, parseFitYear, reportBody,
   reportProblem, serializeFitChoice,
 } from './listing-page';
 
@@ -119,5 +119,14 @@ describe('parseFitYear', () => {
     expect(parseFitYear('1949', now)).toEqual({ ok: false });
     expect(parseFitYear('2028', now)).toEqual({ ok: false });
     expect(parseFitYear('20.15', now)).toEqual({ ok: false });
+  });
+});
+
+describe('isListingGone', () => {
+  const err = (status: number, code: string) => ({ response: { status, data: { code } } });
+  it('a 404 LISTING_NOT_FOUND refetch means the page is gone, even with old data cached', () => {
+    expect(isListingGone(true, err(404, 'LISTING_NOT_FOUND'))).toBe(true);
+    expect(isListingGone(false, null)).toBe(false);
+    expect(isListingGone(true, { code: 'ERR_NETWORK' })).toBe(false);
   });
 });

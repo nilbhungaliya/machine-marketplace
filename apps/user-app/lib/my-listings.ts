@@ -1,11 +1,16 @@
 import type {
-  CategoryNode, ListingKind, ListingProblem, ListingStatus, MyListingCard, MyListingsGroup, PartSide, SellerListingAction,
+  CategoryNode, ListingKind, ListingOwnerView, ListingProblem, ListingStatus, MyListingCard, MyListingsGroup, PartSide,
+  SellerListingAction,
 } from '@mpm/shared-types';
-import { CATEGORY_EDITABLE_STATUSES, EDITABLE_LISTING_STATUSES, sellerActions } from '@mpm/shared-types';
+import {
+  CATEGORY_EDITABLE_STATUSES, EDITABLE_LISTING_STATUSES, PUBLIC_LISTING_STATUSES, sellerActions,
+} from '@mpm/shared-types';
+import { errorCode } from './api-error';
 import type { StatusTone } from '@/components/StatusChip';
 import { incompleteProblems } from './listing-errors';
 import { expiresText, updatedAgo } from './listing-format';
-import { stepForProblem, wizardSteps, type EditStep } from './sell-wizard';
+import { firstIncompleteStep, stepForProblem, wizardSteps, type EditStep } from './sell-wizard';
+import type { SellStep } from './sell-steps';
 
 // My listings (F2 spec §10): which segment a status sits in, and how its StatusChip reads. Pure.
 
@@ -54,8 +59,11 @@ export function statusChip(status: ListingStatus): { key: string; tone: StatusTo
 
 // ─── The manage sheet, the edit menu and the cards (§10; plan Task 27) ───
 
-/** A manage-sheet row: Edit, Update quantity, Find the other side, View listing, or a seller action (§7.2). */
-export type ManageItem = 'edit' | 'quantity' | 'other_side' | 'view' | SellerListingAction;
+/** A manage-sheet row: Edit, Update quantity, Find the other side, View listing, Delete draft, or a seller action (§7.2). */
+export type ManageItem = 'edit' | 'quantity' | 'other_side' | 'view' | 'delete_draft' | SellerListingAction;
+
+/** What the manage sheet runs through the API: a seller action, or deleting a draft (`DELETE /listings/:id`). */
+export type ManageAction = SellerListingAction | 'delete_draft';
 
 const isEditable = (status: ListingStatus): boolean => (EDITABLE_LISTING_STATUSES as readonly ListingStatus[]).includes(status);
 
@@ -69,6 +77,8 @@ export function manageItems(
   opts: { view?: boolean } = {},
 ): ManageItem[] {
   if (l.status === 'removed') return [];
+  // A draft isn't published yet: it's finished in the wizard or deleted (§5.3).
+  if (l.status === 'draft') return ['edit', ...(opts.view ? (['view'] as const) : []), 'delete_draft'];
   const actions = sellerActions(l.status, l.kind);
   const items: ManageItem[] = [];
   if (isEditable(l.status)) items.push('edit', 'quantity');
@@ -80,12 +90,27 @@ export function manageItems(
 }
 
 /** Destructive actions confirm first (§10). */
-export function needsConfirm(action: SellerListingAction): boolean {
-  return action === 'remove' || action === 'mark_sold';
+export function needsConfirm(action: ManageAction): boolean {
+  return action === 'remove' || action === 'mark_sold' || action === 'delete_draft';
+}
+
+/**
+ * Errors that mean the seller's copy of the listing is out of date (it moved on elsewhere, or is gone): refresh the
+ * lists and pages it shows in.
+ */
+export function isStaleListingError(err: unknown): boolean {
+  const code = errorCode(err);
+  return code === 'LISTING_TRANSITION_NOT_ALLOWED' || code === 'LISTING_NOT_EDITABLE' || code === 'LISTING_NOT_FOUND';
+}
+
+/** After Update quantity: an edit that sent a public listing back to review (an unaccepted flag) says so. */
+export function quantityToastKey(before: ListingStatus, after: ListingStatus): string {
+  const wasPublic = (PUBLIC_LISTING_STATUSES as readonly ListingStatus[]).includes(before);
+  return wasPublic && after === 'pending_review' ? 'listing.manage.sentForReview' : 'listing.quantitySheet.saved';
 }
 
 /** The toast after an action: a go-live action the gate sent to review says "Sent to our team for a quick check". */
-export function actionToastKey(action: SellerListingAction, outcome: ListingStatus): string {
+export function actionToastKey(action: ManageAction, outcome: ListingStatus): string {
   return outcome === 'pending_review' ? 'listing.manage.sentForReview' : `listing.manage.done.${action}`;
 }
 
@@ -105,6 +130,16 @@ export function gateStep(err: unknown, kind: ListingKind): EditStep | null {
 export function editEntry(status: ListingStatus): 'wizard' | 'menu' | null {
   if ((CATEGORY_EDITABLE_STATUSES as readonly ListingStatus[]).includes(status)) return 'wizard';
   return isEditable(status) ? 'menu' : null;
+}
+
+/**
+ * Where the wizard opens a listing Edit sends there (§5.3, R43): a draft at its first incomplete step ("Continue"), a
+ * rejected listing at the category step (the seller re-runs the wizard and resubmits). `nodeSides` as `editSections`.
+ */
+export function wizardStartStep(l: ListingOwnerView, nodeSides: boolean | null): SellStep {
+  if (l.status !== 'draft') return 'category';
+  const hasSides = nodeSides ?? (l.side === 'left' || l.side === 'right' || l.side === 'pair' || l.needsAttention.some((p) => p.field === 'side'));
+  return firstIncompleteStep(l, hasSides);
 }
 
 /**
@@ -155,7 +190,10 @@ export function showRenew(c: Pick<MyListingCard, 'expiringSoon' | 'status' | 'ki
  * The card's one-line message: the moderator's on a rejected listing, the hide reason, "In review", a needs-attention
  * nudge, then the first missing score item (not on sold listings).
  */
-export function myCardNudge(c: MyListingCard): { key: string; values?: Record<string, string> } | null {
+export function myCardNudge(
+  c: Pick<MyListingCard, 'status' | 'moderation' | 'statusReason' | 'needsAttention' | 'scoreMissing'>,
+  opts: { videoEnabled: boolean },
+): { key: string; values?: Record<string, string> } | null {
   if (c.status === 'rejected') {
     return c.moderation?.note ? { key: 'listing.mine.moderatorSays', values: { note: c.moderation.note } } : { key: 'listing.mine.changesRequested' };
   }
@@ -163,6 +201,13 @@ export function myCardNudge(c: MyListingCard): { key: string; values?: Record<st
   if (c.status === 'pending_review') return { key: 'listing.mine.inReview' };
   if (c.needsAttention.length > 0) return { key: 'listing.mine.needsAttention' };
   if (c.status === 'sold') return null;
-  const first = c.scoreMissing[0];
+  // No "Add a video" while the app can't upload one (`videoUploadEnabled()`, amendment 3).
+  const first = c.scoreMissing.find((item) => item !== 'video' || opts.videoEnabled);
   return first ? { key: `listing.score.${first}` } : null;
+}
+
+/** The owner's note on their listing page: the moderator's message on a rejected listing, or the hide reason. */
+export function ownerNote(l: ListingOwnerView): { key: string; values?: Record<string, string> } | null {
+  if (l.status !== 'rejected' && l.status !== 'hidden') return null;
+  return myCardNudge({ ...l, scoreMissing: [] }, { videoEnabled: false });
 }

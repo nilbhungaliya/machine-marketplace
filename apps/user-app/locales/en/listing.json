@@ -318,7 +318,10 @@
     "fromMine_right": "You have the left side. These sellers have the right one.",
     "emptyBody": "We'll show it here when one is listed.",
     "possibleTag": "Possibly the other side",
-    "noSide": "This listing has no left or right side."
+    "noSide": "This listing has no left or right side.",
+    "possibleShort": "Possibly",
+    "seeAllCount": "See all ({{count}})",
+    "loadError": "Couldn't load the other side."
   },
   "fitCheck": {
     "title": "Check my machine",
@@ -408,7 +411,9 @@
       "removeTitle": "Remove this listing?",
       "removeMessage": "Buyers won't see it again. This can't be undone.",
       "mark_soldTitle": "Mark as sold?",
-      "mark_soldMessage": "Buyers won't see it. You can relist it later."
+      "mark_soldMessage": "Buyers won't see it. You can relist it later.",
+      "delete_draftTitle": "Delete this draft?",
+      "delete_draftMessage": "This can't be undone."
     },
     "sentForReview": "Sent to our team for a quick check",
     "done": {
@@ -420,9 +425,11 @@
       "relist": "Live again.",
       "mark_rented": "Marked rented out.",
       "end_rental": "Available again.",
-      "remove": "Listing removed."
+      "remove": "Listing removed.",
+      "delete_draft": "Draft deleted."
     },
-    "verifyGst": "Verify GST"
+    "verifyGst": "Verify GST",
+    "delete_draft": "Delete draft"
   },
   "editMenu": {
     "title": "Edit listing",
