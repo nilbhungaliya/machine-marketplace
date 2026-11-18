@@ -1,7 +1,6 @@
 # F2 + F3 + A3 · Listings: sell wizard, listing page, lifecycle, Left / Right / Pair matching, moderation: design
 
-Date: 2026-11-18 · Status: **Draft — awaiting the owner's review** (not approved; the implementation plan is written
-only after approval) · Revision 2 · Scope IDs: **F2** (sell parts and machinery), **F3** (Left / Right / Pair
+Date: 2026-11-18 · Status: **Approved by the owner 2026-11-18** (revision 2) · Scope IDs: **F2** (sell parts and machinery), **F3** (Left / Right / Pair
 matching), **A3** (listing management) in `docs/product-scope.txt`; feeds F4/F5 (search, browse), F6 (enquiries and
 offers), F7 (deals, rentals), F8 (part requests). Spec modules in `docs/product-scope.md`: **M5** sell wizard, **M6**
 listing page, **M7** listing lifecycle, **M8** Left / Right / Pair matching, admin **AD3** listing moderation; touches
@@ -1194,3 +1193,25 @@ Rulings marked *(rev 2)* changed in revision 2.
 Exact component and file names (the plan, written after this spec is approved, sets the file map), query shapes, the step screens' layout within the v2 kit,
 copy wording within the meanings above, the admin review screen's panel layout (following the verification page), and
 test layout.
+
+---
+
+## Amendments after plan review (2026-11-18, pending the owner's OK)
+Found while planning (plan revision 2). The rulings above stay as approved until the owner accepts these; the plan
+builds them.
+
+1. **Lock order of the expiry job (§7.2, §7.4).** The rule "every write locks the business then the listing" has one
+   exception: the system `expire` transition takes only the listing (`FOR UPDATE SKIP LOCKED` in the job) and relies on
+   `UPDATE … WHERE id = $1 AND status = $from`. Taking the business lock after the listing lock would invert the order
+   used by seller actions and `setMyLocation`, and two transactions could deadlock.
+2. **No photo-less listing goes public (§7.2, §11.3, R52).** R52 covers the last photo deleted from a listing that is
+   live, paused, expired, unavailable, sold or rented. For a `hidden` or `pending_review` listing, **approve and unhide
+   refuse with `400 LISTING_INCOMPLETE`** (problem `{ field: 'photos', code: 'required' }`) while it has no photo
+   (unless the dev switch, R31), so neither can put it on view without one.
+3. **When video is off, the API refuses it too (§6.5, R47).** A shared constant `LISTING_VIDEO_UPLOAD_ENABLED` (in
+   `packages/shared-types`) is read by the API and the app. When it is `false`, presign and attach with `type: 'video'`
+   answer `400 MEDIA_TYPE` and the app offers photos only. It also stays off on iOS in the app until video has been
+   verified there.
+4. **`return_status` is cleared on reject and ask for changes (§7.2, R44).** Only approve and unhide read it; a
+   rejected listing comes back through resubmission, so a stale `return_status` from an earlier back-to-review must not
+   survive into a later approval.
