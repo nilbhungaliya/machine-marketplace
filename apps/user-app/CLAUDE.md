@@ -71,6 +71,7 @@ a screen never hand-rolls a copy of a kit piece (a status pill, a callout, a sel
 | `Skeleton.tsx` | Pulsing `field` placeholder for loading states (themed in dark). |
 | `Steps.tsx` | Onboarding progress bar (`current`, `total`) over the step text (`label`). |
 | `AppToast.tsx` | Themed toast renderer, mounted once in `App.tsx`. Show toasts with `Toast.show({ type: 'success' \| 'error' \| 'info', text1 })`. Inside a Modal, render `<AppToast inModal />`. |
+| `ActionSheet.tsx` | Bottom sheet with a list of rows (the manage sheet, report reasons): labels from the caller, backdrop and Back close it, radio rows for a single choice. |
 | `ConfirmSheet.tsx` | `const confirm = useConfirm(); if (await confirm({ title, message, destructive: true })) …` — also `useChoice()` for a three-way choice. Provider is in `App.tsx`. Buttons are `Button`s (`Confirm-sheet-confirm` / `-cancel` / `-secondary` / `-dismiss` / `-pick`). |
 
 **Chrome and art**
@@ -82,6 +83,10 @@ a screen never hand-rolls a copy of a kit piece (a status pill, a callout, a sel
 | `FooterBar.tsx` | Floating white pill at the screen's bottom for the screen's actions; children are `Button size="md"` (flex 1). Every screen with a bottom action uses it. |
 | `PressableScale.tsx` | Pressable with a spring press-scale (respects reduced motion). |
 | `SideToken.tsx` | The Left / Right / Pair mark (`kind`: `left` `right` `pair` `want-left` `want-right` `none`; `size` `md` / `lg` / `xl`); halves from `lib/side-token.ts`. Use it wherever a part's side is shown. |
+| `ListingCard.tsx` | A listing row (v2 `.listing`): thumbnail, title, side, condition, quantity, price, place. Map an API card onto it (`screens/listing/listing-card-item.tsx`). |
+| `PriceText.tsx` | Rupees from paise with Indian grouping (₹1,23,456), a per-unit suffix and an optional model note. Never format money by hand. |
+| `MediaTile.tsx` | Photo / video tile of the media step: picture, Cover badge, upload progress (`tileState()` maps the queue's states), error with retry, Make cover, delete. |
+| `SideDiagram.tsx` | The side convention drawing (machine from above, operator behind, L and R). Only for the default convention. |
 | `HeroGlow.tsx` | Welcome screen's radial lavender glow (`react-native-svg`), drawn behind the screen. |
 | `art/GearShot.tsx` | Product-shot gear illustration (welcome). `components/art/` holds illustration colours and is on the style-audit allowlist. |
 
@@ -132,6 +137,7 @@ export function Foo({ title, style }: { title: string; style?: StyleProp<ViewSty
 | Toasts | `react-native-toast-message` |
 | Animation | Reanimated 4 + react-native-worklets (babel plugin must stay last) |
 | Images | `expo-image`; photo capture via `expo-image-picker` |
+| Listing media (F2) | `expo-image-manipulator` (every photo, thumb and video poster is re-encoded, which strips EXIF / GPS: `lib/media-device.ts`), `expo-video` + `expo-video-thumbnails` (playback, posters), `react-native-compressor` + `react-native-nitro-modules` (video, `preserveMetadata: false`). Native modules: a new dev build is needed after pulling them. **Video upload is off** (`LISTING_VIDEO_UPLOAD_ENABLED` in shared-types and the app's `VIDEO_SPIKE_PASSED`, Android only) until the device checks in `docs/superpowers/spikes/2026-11-18-f2-native-media.md` pass. |
 | Secure storage | `expo-secure-store` for the JWT; AsyncStorage for preferences |
 
 Add a library with `npx expo install <pkg>` (not `pnpm add`) so it matches SDK 54, then `CI=1 npx expo install --check`.

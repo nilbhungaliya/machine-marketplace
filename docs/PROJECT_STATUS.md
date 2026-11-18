@@ -9,16 +9,23 @@ log whenever a session changes the project's state.
 admin-managed catalogue is built and seeded; businesses complete a profile with a pincode location and an industrial area
 and verify their GST (instant through a provider, or officer review with documents); admins run the verification queue,
 users & businesses and industrial areas. The app and the admin wear the approved **Periwinkle v2** design (re-skin,
-2026-11-18). No listing, search or deal feature (F2–F9) exists yet, and the other admin modules are still placeholders.
+2026-11-18). **F2 + F3 + A3 listings (2026-11-19):** sellers list parts, machines for sale and machines for rent with
+photos, preview and publish; buyers see the listing page and the Left / Right "other side"; sellers manage My listings;
+admins moderate, browse all listings and set marketplace settings. Search, enquiries, offers and deals (F4–F9) don't
+exist yet, and the other admin modules are still placeholders.
 
 | Area | State |
 |---|---|
 | Monorepo | pnpm 11 workspace: `apps/api`, `apps/admin`, `apps/user-app`, `packages/shared-types` |
 | API | Fastify 4 + Drizzle + Zod; `{ data }` / `{ error, code }` shapes; Redis rate limits; Sentry (opt-in); Socket.IO `/user` + `/admin`; job runner with graceful shutdown |
 | Auth | Admin email + password + JWT, 6 roles; user phone OTP (outside production the code is returned in the send response as `devCode`; MSG91 not wired) + JWT; onboarding creates the business; suspended/blocked accounts refused (`ACCOUNT_SUSPENDED`) at sign-in, on the very next API request (status read from the row on every request) and on socket connect |
-| Database | `admin_users`, `businesses` (trade/legal name, activities, categories, email, year, employees, GST fields, address, `industrial_area_id` or `industrial_area_other` — exactly one, CHECK —, city, state, pincode, PostGIS `location`, `verification_levels`, verification status), `users` (status), `audit_log`; catalogue (migrations 0002, 0003): `categories` (machine category › machine type › part group, `has_sides` / `side_convention` inherited), `template_fields` (`applies_to` parts/machines/both) + `template_field_options`, `brands`, `machine_models` (unique per brand + type, case-insensitive), `units`, `conditions`; F1 + A2 (migrations 0004–0007): `pincode_offices` (India Post directory, 156 932 offices / 19 300 pincodes), `industrial_areas` (unique name + city + state, case-insensitive), `gst_checks` (every lookup: business or officer), `gst_representative_proofs` (declaration → code or documents; one open review per business), `business_verifications` (grants and revocations, one active per business + level) |
+| Database | `admin_users`, `businesses` (trade/legal name, activities, categories, email, year, employees, GST fields, address, `industrial_area_id` or `industrial_area_other` — exactly one, CHECK —, city, state, pincode, PostGIS `location`, `verification_levels`, verification status), `users` (status), `audit_log`; catalogue (migrations 0002, 0003): `categories` (machine category › machine type › part group, `has_sides` / `side_convention` inherited), `template_fields` (`applies_to` parts/machines/both) + `template_field_options`, `brands`, `machine_models` (unique per brand + type, case-insensitive), `units`, `conditions`; F1 + A2 (migrations 0004–0007): `pincode_offices` (India Post directory, 156 932 offices / 19 300 pincodes), `industrial_areas` (unique name + city + state, case-insensitive), `gst_checks` (every lookup: business or officer), `gst_representative_proofs` (declaration → code or documents; one open review per business), `business_verifications` (grants and revocations, one active per business + level); F2 (migrations 0008, 0009 custom
+checks): `listings` (kind part / machine / machine_rental, status, side, price, quantity, location point, review reasons,
+version), `listing_machines`, `listing_rentals`, `listing_fitments`, `listing_media`, `listing_status_history`,
+`reports`, `app_settings` (marketplace settings registry); `units.is_machine_unit` |
 | Business profile (F1) + verification (A2) | Spec `docs/superpowers/specs/2026-11-18-f1-a2-business-profile-verification-design.md`, plan `docs/superpowers/plans/2026-11-18-f1-a2-business-profile-verification.md`. **API:** `GET/PATCH /businesses/me`, `PUT /businesses/me/location` (pincode + listed area or "Other", optional pin); public `GET /locations/pincodes/:pincode`, `/locations/nearest-pincode`, `/locations/industrial-areas?pincode=`; GST under `/businesses/me/gst` (state, lookup, declare, `otp/send`, `otp/verify`, `review`, `review/files`, `documents/presign`), one switch `getGstMode()` (`stub` in dev, `live` with a provider adapter + key, `review` otherwise or with `GST_PROVIDER=off`); R2-only private storage (`lib/storage.ts`, `503 STORAGE_UNAVAILABLE` when unset, uploads sniffed for JPEG/PNG/WebP/PDF); admin `/admin/verification/*` (queue, waiting count, detail, approve / reject / ask for more, 300 s document links), `/admin/businesses` (list, detail, revoke / release GST), `/admin/users/:id/suspend\|reinstate\|block\|unblock`, `/admin/industrial-areas` (CRUD, reorder, "Other" list and adopt); every mutation audit-logged. **Admin pages:** Business verification, Users & businesses (list + detail), Industrial areas. **App:** onboarding Your business (activities, machine categories) → Where are you? (pincode, area picker with Other, optional map pin), gating until done; GST intro → GSTIN → found → declaration → code (instant), or the review form with document picker; GST status and a completed Profile. Seeds: `db:seed:locations` (pincode directory), `db:seed:industrial-areas` (14 Surat areas); both refuse to run on a filled table |
 | Catalogue (A4) | Spec `docs/superpowers/specs/2026-11-18-a4-machine-catalogue-design.md`, plan `docs/superpowers/plans/2026-11-18-a4-machine-catalogue.md`. Public API: `GET /categories`, `/categories/:id/template?kind=part\|machine`, `/brands`, `/models`, `/master-data`; admin APIs for nodes (create, edit, side settings, move with root locks and clash checks, reorder, delete), fields and options, brands and models, units and conditions, CSV export (`/admin/catalog/export/:sheet`); `validateSpecs` service for M5. Admin pages: Categories & machine types, Specifications & fields, Brands, models & fit, Units, conditions & sides. Seed (`pnpm --filter @mpm/api db:seed:catalog`, loaded into dev 2026-11-18): Fibre2Fashion Machinery's 465 product types cleaned into 10 categories, 248 machine types, 331 part groups; embroidery and water-jet looms in full (81 fields); 14 brands and 19 models marked "needs review"; 8 units, 4 conditions. **`--reset` deletes the whole catalogue including admin edits: use only before go-live.** |
+| Listings (F2 + F3 + A3) | Spec `docs/superpowers/specs/2026-11-18-f2-f3-listings-design.md` (amendments 1–5), plan `docs/superpowers/plans/2026-11-18-f2-f3-listings.md`; built as C0 contracts + six parallel lanes (worktrees, merged into `develop`). **API:** seller `POST/PATCH/DELETE /listings`, publish with the go-live gate (photos, specs, side, GST for rentals, unverified-seller cap; review reasons `first_listings`, `unverified_seller`, sanity flags, `edited_after_report`), seller actions (pause, resume, renew, sold, unavailable, rented, end rental, relist, remove), `GET /listings/:id` (guest or owner view; private fields never public), seller listings, My listings, reports, `GET /listings/:id/other-side` (tiers: part number, fit overlap, similar name; PostGIS distance); media: presign → PUT to a private `incoming-listing/` key → attach (JPEG sniffed, EXIF / XMP / other APPn refused, size and duration rechecked, copied to the public bucket only if unchanged since the check), delete with CDN purge; `GET /categories/:id/template?includeRetired=1`; hourly expiry job (`FOR UPDATE SKIP LOCKED`, per-row savepoint). **Admin API + pages:** Listing moderation (queue, counts, review screen with stale-version guard, approve / ask for changes / reject / hide / unhide / remove, media delete with reason, resolve reports), All listings (filters, bulk hide / remove), listing detail, Settings (expiry, reminders, caps, expiry impact), Machine unit switch, "Listings (n)" on a business; every mutation audit-logged. **App:** Post tab → sell wizard per kind (category, details, machine, quantity, fit, side with diagram, photos, price, rates, location, preview, publish, Published), drafts, listing page (media viewer, Check my machine, report, seller's listings, other side), My listings (groups, manage sheet, edit menu, quantity sheet, removed by team), Profile "My listings". **Video upload is off** (`LISTING_VIDEO_UPLOAD_ENABLED = false`) until the device checks in `docs/superpowers/spikes/2026-11-18-f2-native-media.md` pass |
 | Shared types | Listing kinds/statuses, conditions, Left/Right/Pair + `complementarySide()`, units, price models, rental periods, enquiry/offer/deal/rental/part-request/report statuses, notification types, admin roles |
 | Admin | Login, role-filtered sidebar, dashboard KPI tiles (A1), A4 catalogue pages, A2 pages (Business verification, Users & businesses, Industrial areas), placeholder pages for the other A1–A6 modules; UI kit (dialogs, data table, filters, segmented tabs, lightbox, URL state, keyboard nav, socket), in Periwinkle v2 (see Design system) |
 | User app | Welcome → phone OTP → Your business (name, business, activities, categories) → Where are you? → 5 tabs (Home, Search, Post, Chats, Deals) + Profile (business details, location, GST verification, language, theme, logout); en/hi/gu with parity + audit tests; toasts, confirm sheet, skeletons. Native modules added for F1 (`expo-location`, `expo-document-picker`, `expo-image-picker`, `react-native-maps`): needs a new dev-client build. Re-skinned to Periwinkle v2 (see Design system); not yet checked on a device |
@@ -38,16 +45,42 @@ users & businesses and industrial areas. The app and the admin wear the approved
 5. `pnpm dev:api` (:3000, Swagger `/docs`), `pnpm dev:admin` (:3001), `pnpm start:user` (Metro :8082, needs a dev-client build: `pnpm android`).
    F1 added native modules (location, document and image pickers, maps), so **rebuild the dev client** (`pnpm android`)
    before running the app; the map pin needs `EXPO_PUBLIC_GOOGLE_MAPS_ANDROID_KEY` (`apps/user-app/.env.example`).
+   F2 added more native modules (image manipulator, video, compressor): **rebuild the dev client again**.
 6. GST in dev: the stub answers any valid GSTIN (code `123456`; `24AAACC0000C1ZY` cancelled, `24AAACN0000N1Z0` not
    found, `24AAACU0000U1ZF` provider down). Start the API with `GST_PROVIDER=off` to try the review path. Review
    uploads need the R2 variables (see Open items); without them they answer `503 STORAGE_UNAVAILABLE`.
+7. Listing photos need the public bucket (`AWS_S3_PUBLIC_BUCKET`, `MEDIA_PUBLIC_BASE_URL`); until then media answers
+   `503 STORAGE_UNAVAILABLE`. In dev, `LISTING_MEDIA_OPTIONAL=true` lets a listing publish without photos (ignored in
+   production). R2 round trips for listing media: `R2_TESTS=1 pnpm --filter @mpm/api exec vitest run
+   __tests__/media-r2-spike.test.ts __tests__/listing-media-r2.test.ts`.
 
 ## Open items
 
-- **R2 keys not set**: `AWS_S3_ENDPOINT`, `AWS_REGION` (`auto`), `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`,
-  `AWS_S3_PRIVATE_BUCKET`. Bucket private; token scoped to it with Object Read & Write; lifecycle rule "delete objects
-  with prefix `incoming-verification/` after 1 day"; no CORS needed (the app uploads with a native PUT, officers open
-  presigned links, the admin never uploads from a browser). The storage round-trip tests (3) are skipped until then.
+- **R2 private bucket: set** (2026-11-18); the three GST document round trips run and pass against it. Lifecycle rules
+  wanted on the private bucket: delete `incoming-verification/` and `incoming-listing/` after 1 day.
+- **R2 public bucket for listing media, not set:** `AWS_S3_PUBLIC_BUCKET`, `MEDIA_PUBLIC_BASE_URL` (a custom domain on
+  Cloudflare once D1 is settled; `r2.dev` for dev only), and for cache purge `CLOUDFLARE_ZONE_ID` +
+  `CLOUDFLARE_API_TOKEN` (Zone · Cache Purge on that zone only). The R2 token needs Object Read & Write on both buckets;
+  no CORS. Then run the listing-media R2 suites (How to run step 7): copy with `REPLACE` metadata, `If-Match` /
+  `CopySourceIfMatch` and range reads (206) are unverified until then.
+- **Video off** (F2 amendment 3): the native media spike couldn't run (no device). The owner runs the checklist in
+  `docs/superpowers/spikes/2026-11-18-f2-native-media.md`, then sets `LISTING_VIDEO_UPLOAD_ENABLED = true` and flips
+  the API test "the shipped video switch". Video on iOS is unverified (`videoUploadEnabled()` is Android only).
+- **F2 device check (owner):** new dev build; sell a part end to end with real photos; listing page, My listings and
+  Other side in light and dark, en / hi / gu; a photo taken with location tagging on has no EXIF once public; keyboard
+  over the sheets (report details, quantity, year); a confirm sheet opening right after the action sheet closes.
+  Hindi and Gujarati listing copy is not yet checked by a native speaker.
+- **F2 admin pages in a browser:** checked by API calls and page loads only (the browser extension wasn't connected);
+  click through moderation → review → approve / ask for changes, All listings from a business's "Listings (n)", and
+  Settings with the expiry-impact count.
+- **Orphan public listing copies:** if the process dies between copying to the public bucket and the attach
+  transaction, the `listings/<id>/<mediaId>/…` copies stay with no `listing_media` row (same class as the F1
+  `verification/` note). A periodic sweep would clean them.
+- Video presign / attach answers `503 STORAGE_UNAVAILABLE` before `400 MEDIA_TYPE` while the public bucket is unset
+  (storage is checked first, as for every media route): intended.
+- Spec note: §5.2 shows four side tokens, but on a node with sides the side is required (§4.3), so the wizard offers
+  Left / Right / Pair only.
+- The admin `listings-table` test can time out when the machine is busy; it passes on its own.
 - **Periwinkle v2 device check (owner):** the app's re-skin is checked by tests and an Android bundle only; the visual
   pass is the owner's on a dev build (re-skin spec §12.3: English light and dark, Hindi light, Gujarati dark). The
   splash and adaptive-icon colours in `app.json` show only after the next native build.
@@ -94,9 +127,8 @@ The ten client decisions D1–D10 are listed at the end of `docs/product-scope.m
 
 1. ~~**A4 machine configuration**~~ — built 2026-11-18 (see What's built). Client still reviews the seed (CSV export).
 2. ~~**F1 business profile + A2 verification**~~ — built 2026-11-18 (see What's built). R2 keys and a GST provider still to set.
-3. **F2 + F3 listings** — sell flow with specs, side, media upload (R2), preview, publish; A3 moderation. Spec
-   `docs/superpowers/specs/2026-11-18-f2-f3-listings-design.md` and plan `docs/superpowers/plans/2026-11-18-f2-f3-listings.md`
-   (11 batches, 30 tasks) both approved by the owner 2026-11-18; building next.
+3. ~~**F2 + F3 listings** + A3 moderation~~ — built 2026-11-19 (see What's built). Public bucket, video device check and
+   the owner's device pass still to do (Open items).
 4. **F4 + F5 discovery** — search, filters, side filter, complementary parts, nearby (PostGIS).
 5. **F6 + F7 enquiries, chat, offers, deals**, then rentals.
 6. **F8 part requests + matching job**, **F9 notifications** (FCM).
@@ -178,3 +210,15 @@ The ten client decisions D1–D10 are listed at the end of `docs/product-scope.m
   deleted afterwards), Users & businesses with its filter dialog, Industrial areas, Brands & models: every colour on
   those pages is a palette value. Dev DB: `db:seed:catalog` loaded (it was empty on this machine; a second run
   refuses). Still the owner's: the device check on a dev build (Open items).
+- 2026-11-19 — **F2 + F3 + A3 listings** built on `develop` from the approved spec (amendments 1–5) and plan:
+  Batches 1, 2a, 2b and the C0 contracts in sequence, then on the owner's request six parallel lanes like the textile
+  project (L1 API media, L2 other side / expiry / admin API, L3 admin pages, L4 app foundation, then L5 sell wizard and
+  L6 listing screens), each in its own worktree on a local lane branch, independently reviewed, fixed and merged
+  (worktrees deleted). Integration: video off (no device for the spike), template `includeRetired=1`, other-side
+  prefilter, expiry per-row savepoint, `Unit.isMachineUnit` required, GST tests made to run with the R2 private keys
+  the owner set (3 R2 round trips pass). Verified: typecheck and lint clean; tests app 384, admin 316, API 835 + 2
+  skipped (public-bucket R2 suites); `mpm_test` left empty; admin production build; `expo export --platform android`
+  bundles. Scripted API walk-through on the dev DB passed (two sellers, publish → review → approve, other side at 7 km,
+  rental refused without GST, pause / resume / sold, admin hide, expiry job), data deleted afterwards; admin pages
+  checked by page loads and API calls only (browser extension not connected). Still the owner's: public bucket, video
+  device check, the device pass, the browser click-through (Open items).
