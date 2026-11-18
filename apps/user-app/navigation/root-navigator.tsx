@@ -14,6 +14,10 @@ import GstDeclareScreen from '@/screens/verification/gst-declare';
 import GstCodeScreen from '@/screens/verification/gst-code';
 import GstReviewFormScreen from '@/screens/verification/gst-review-form';
 import GstStatusScreen from '@/screens/verification/gst-status';
+// F2 sell (L5)
+import SellStepScreen from '@/screens/sell/sell-step';
+import SellPublishedScreen from '@/screens/sell/published';
+import MyDraftsScreen from '@/screens/my-listings/drafts';
 import AuthStack from './auth-stack';
 import TabNavigator from './tab-navigator';
 import type { RootStackParamList } from './types';
@@ -95,6 +99,10 @@ export default function RootNavigator() {
           <Stack.Screen name="GstCode" component={GstCodeScreen} />
           <Stack.Screen name="GstReviewForm" component={GstReviewFormScreen} />
           <Stack.Screen name="GstStatus" component={GstStatusScreen} />
+          {/* F2 sell (L5) */}
+          <Stack.Screen name="Sell" component={SellStepScreen} />
+          <Stack.Screen name="SellPublished" component={SellPublishedScreen} />
+          <Stack.Screen name="MyDrafts" component={MyDraftsScreen} />
         </Stack.Group>
       )}
     </Stack.Navigator>
