@@ -44,3 +44,21 @@ export class ConflictError extends AppError {
     super(message, 409, code);
   }
 }
+
+export class TooManyRequestsError extends AppError {
+  constructor(message: string, code: string) {
+    super(message, 429, code);
+  }
+}
+
+export class ServiceUnavailableError extends AppError {
+  constructor(message: string, code: string) {
+    super(message, 503, code);
+  }
+}
+
+export class PayloadTooLargeError extends AppError {
+  constructor(message: string, code: string, details?: Record<string, unknown>) {
+    super(message, 413, code, details);
+  }
+}

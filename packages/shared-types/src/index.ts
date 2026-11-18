@@ -22,9 +22,28 @@ export interface Paginated<T> {
 }
 
 // ─── business ───
-/** One account can buy, sell, or both (scope F1: "One account can Buy + Sell"). */
-export const BUSINESS_ROLES = ['buy', 'sell', 'both'] as const;
-export type BusinessRole = (typeof BUSINESS_ROLES)[number];
+/** What a business does on the platform, one or more (scope F1 "One account can Buy + Sell", M1). Replaces buy/sell/both. */
+export const BUSINESS_ACTIVITIES = ['buy', 'sell', 'rent_out'] as const;
+export type BusinessActivity = (typeof BUSINESS_ACTIVITIES)[number];
+
+/** Optional employee-count range on the business profile (F1 spec §4.1). */
+export const EMPLOYEE_RANGES = ['1-10', '11-50', '51-200', '200+'] as const;
+export type EmployeeRange = (typeof EMPLOYEE_RANGES)[number];
+
+/** Where onboarding resumes: the profile step, the location step, or finished. */
+export const ONBOARDING_STEPS = ['profile', 'location', 'done'] as const;
+export type OnboardingStep = (typeof ONBOARDING_STEPS)[number];
+
+/** Constitution of business as the GST registration names it (picker on the review form, F1 spec §5.3). */
+export const CONSTITUTIONS = [
+  'proprietorship', 'partnership', 'llp', 'private_limited', 'public_limited', 'huf', 'trust_society', 'government',
+  'other',
+] as const;
+export type Constitution = (typeof CONSTITUTIONS)[number];
+
+/** A user account's standing (scope A2). Suspended or blocked accounts can't sign in (`ACCOUNT_SUSPENDED`). */
+export const ACCOUNT_STATUSES = ['active', 'suspended', 'blocked'] as const;
+export type AccountStatus = (typeof ACCOUNT_STATUSES)[number];
 
 /** Badges earned in this order: phone (OTP) → GST → business documents (scope F1, A2). */
 export const VERIFICATION_LEVELS = ['phone', 'gst', 'business'] as const;
@@ -294,4 +313,159 @@ export interface AdminCategoryDetail {
   node: CategoryNode;
   ownFields: TemplateField[];
   inheritedFields: TemplateField[];
+}
+
+// ─── GST verification (F1, A2; spec 2026-11-18-f1-a2 §5) ───
+
+/** `live`: a real provider; `stub`: textile's stub (never in production); `review`: officer review only (§5.1). */
+export const GST_MODES = ['live', 'stub', 'review'] as const;
+export type GstMode = (typeof GST_MODES)[number];
+
+/** The GST portal's registration status. Only `active` can verify. */
+export const GST_STATUSES = ['active', 'cancelled', 'suspended', 'inactive'] as const;
+export type GstStatus = (typeof GST_STATUSES)[number];
+
+/** One lookup's outcome. `held`: another business holds the GSTIN; `status_refused`: not `active`; `failed`: provider unreachable. */
+export const GST_CHECK_RESULTS = ['found', 'held', 'status_refused', 'not_found', 'failed'] as const;
+export type GstCheckResult = (typeof GST_CHECK_RESULTS)[number];
+
+/**
+ * A representative proof: instant path `declared` → `code_sent` → `passed`, or review `waiting` ⇄ `needs_more` →
+ * `approved` / `rejected`. `spent`: closed without a result (code limit, superseded by a review).
+ */
+export const GST_PROOF_STATUSES = [
+  'declared', 'code_sent', 'passed', 'waiting', 'needs_more', 'approved', 'rejected', 'spent',
+] as const;
+export type GstProofStatus = (typeof GST_PROOF_STATUSES)[number];
+
+/** What the app shows for a business's GST (`GET /businesses/me/gst`, §5.5). */
+export const GST_STATES = [
+  'none', 'found', 'code_sent', 'under_review', 'needs_more', 'rejected', 'verified', 'revoked',
+] as const;
+export type GstState = (typeof GST_STATES)[number];
+
+/** Files on a review: the REG-06 certificate (required) and an ID of a named person or an authorisation letter (§5.3). */
+export const GST_DOCUMENT_TYPES = ['gst_certificate', 'id_proof', 'authorisation_letter'] as const;
+export type GstDocumentType = (typeof GST_DOCUMENT_TYPES)[number];
+
+const GSTIN_FORMAT = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
+const GSTIN_BASE36 = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+
+/** Upper-case with every space removed, so `24aaacc 0000c1zy` and `24AAACC0000C1ZY` are one GSTIN. */
+export function normalizeGstin(input: string): string {
+  return input.replace(/\s+/g, '').toUpperCase();
+}
+
+/** Format, then the standard base-36 check digit (15th character). Expects a normalised GSTIN. */
+export function isValidGstin(gstin: string): boolean {
+  if (!GSTIN_FORMAT.test(gstin)) return false;
+  let sum = 0;
+  for (let i = 0; i < 14; i++) {
+    const product = GSTIN_BASE36.indexOf(gstin.charAt(i)) * (i % 2 === 0 ? 1 : 2);
+    sum += Math.floor(product / 36) + (product % 36);
+  }
+  return gstin.charAt(14) === GSTIN_BASE36.charAt((36 - (sum % 36)) % 36);
+}
+
+/** The PAN inside a GSTIN: characters 3–12. */
+export function panFromGstin(gstin: string): string {
+  return gstin.slice(2, 12);
+}
+
+/** The state code of a GSTIN: characters 1–2. */
+export function stateCodeFromGstin(gstin: string): string {
+  return gstin.slice(0, 2);
+}
+
+/** The registration fields the product uses from a lookup; the full provider response is never stored. */
+export interface GstDetails {
+  legalName: string;
+  tradeName: string | null;
+  address: { line: string; city: string; state: string; pincode: string };
+  constitution: string;
+  natureOfBusiness: string | null;
+  registeredOn: string | null;
+  status: GstStatus;
+}
+
+/**
+ * GET /businesses/me/gst: drives the Verification screen. `held`, `providerUnavailable` and `statusRefused`
+ * describe the latest lookup's outcome when `state` is `none`.
+ */
+export interface GstStateView {
+  mode: GstMode;
+  state: GstState;
+  instantAllowed: boolean;
+  storageAvailable: boolean;
+  expired?: boolean;
+  held?: boolean;
+  providerUnavailable?: boolean;
+  statusRefused?: GstStatus;
+  gstin?: string;
+  details?: GstDetails;
+  checkId?: string;
+  proofId?: string;
+  hint?: string;
+  resendAvailableAt?: string;
+  officerMessage?: string;
+  reason?: string;
+  verifiedAt?: string;
+}
+
+// ─── Business profile and location (F1; spec 2026-11-18-f1-a2 §4) ───
+
+/** One pincode from the post-office directory; `city` is the offices' district, title-cased. */
+export interface PincodeInfo {
+  pincode: string;
+  city: string;
+  district: string;
+  state: string;
+  offices: string[];
+}
+
+/** An admin-managed industrial area, picked per district and state. */
+export interface IndustrialArea {
+  id: string;
+  name: string;
+  city: string;
+  state: string;
+  isActive: boolean;
+  sortOrder: number;
+}
+
+/** GET /businesses/me. */
+export interface BusinessProfile {
+  id: string;
+  tradeName: string;
+  legalName: string | null;
+  /** The name shown: GST's trade name (or legal name) once GST-verified, otherwise `tradeName`. */
+  displayName: string;
+  /** True while GST is verified: the business name can't be edited. */
+  nameLocked: boolean;
+  activities: BusinessActivity[];
+  /** Machine category (level-1 catalogue node) ids. */
+  categories: string[];
+  email: string | null;
+  yearEstablished: number | null;
+  employees: EmployeeRange | null;
+  location: {
+    pincode: string | null;
+    city: string | null;
+    state: string | null;
+    industrialAreaId: string | null;
+    industrialAreaName: string | null;
+    industrialAreaOther: string | null;
+    addressLine: string | null;
+    lat: number | null;
+    lng: number | null;
+  };
+  gstin: string | null;
+  constitution: string | null;
+  gstRegisteredOn: string | null;
+  gstAddress: GstDetails['address'] | null;
+  verificationLevels: VerificationLevel[];
+  verificationStatus: VerificationStatus;
+  verifiedAt: string | null;
+  onboarding: OnboardingStep;
+  completion: { name: boolean; activities: boolean; location: boolean; gst: boolean };
 }
