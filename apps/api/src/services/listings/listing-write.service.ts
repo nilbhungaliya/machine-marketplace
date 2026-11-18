@@ -151,6 +151,8 @@ function checkFieldsForKind(kind: ListingKind, patch: ListingPatchInput): void {
 
 const RATE_KEYS = ['rateHourPaise', 'rateDayPaise', 'rateWeekPaise', 'rateMonthPaise'] as const;
 const PUBLIC_EDIT_STATUSES: readonly ListingStatus[] = ['live', 'rented'];
+/** Editable statuses off view that come back through the gate (§7.3, amendment 5). */
+const OFF_VIEW_STATUSES: readonly ListingStatus[] = ['paused', 'expired', 'unavailable', 'sold'];
 
 const MACHINE_DEFAULTS: MachineColumns = {
   brandId: null, brandOther: null, modelId: null, modelOther: null, year: null, hoursRun: null, serialNumber: null,
@@ -180,7 +182,8 @@ const sameQuantity = (a: string | null, b: string | null): boolean => (a === nul
  * Every PATCH bumps `version`; a non-draft one sets `refreshed_at` and recomputes `flags` (R16): a `live` / `rented`
  * listing with a flag no moderator accepted, or a side / fitment change while a report is open, goes back to review
  * (`edit_flagged`, `edited_after_report`); a `pending_review` one gains the reasons; the others keep the flag for the
- * go-live gate.
+ * go-live gate, and a `paused` / `expired` / `unavailable` / `sold` one also stores `edited_after_report` in its review
+ * reasons for the gate (amendment 5).
  */
 export async function patchListing(tx: Tx, user: UserTokenPayload, id: string, patch: ListingPatchInput): Promise<ListingOwnerView> {
   if (!user.businessId) throw listingNotFound();
@@ -387,6 +390,11 @@ export async function patchListing(tx: Tx, user: UserTokenPayload, id: string, p
     if (unaccepted.some((f) => isPublic || !listing.flags.includes(f))) reasons.push('edit_flagged');
     if ((sideChanged || fitmentsChanged) && (await hasOpenReport(tx, listing.id))) reasons.push('edited_after_report');
     if (listing.status === 'pending_review' && reasons.length > 0) set.reviewReasons = [...new Set([...listing.reviewReasons, ...reasons])];
+    // Amendment 5: off view, the edit after a report is remembered (as a stored flag is), and the go-live gate sends
+    // resume, renew, relist and end of rental to review while it is set; approval clears it.
+    if (OFF_VIEW_STATUSES.includes(listing.status) && reasons.includes('edited_after_report')) {
+      set.reviewReasons = [...new Set([...listing.reviewReasons, 'edited_after_report' as const])];
+    }
   }
 
   // An edit that changes nothing writes nothing: no version bump (a repeated autosave must not fail a moderator's open

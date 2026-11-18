@@ -1,6 +1,5 @@
-import { and, asc, eq, inArray, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, sql, type SQL } from 'drizzle-orm';
 import {
-  PUBLIC_LISTING_STATUSES,
   listingScore,
   type AppSettingsValues,
   type EffectiveTemplate,
@@ -34,8 +33,9 @@ import { publicUrl } from '../../lib/media-url.js';
 import { checkSpecs, isRequiredField } from '../../lib/spec-check.js';
 import { businessDisplayName } from '../business/profile.service.js';
 import { loadTemplate } from '../catalog/read.service.js';
-import { loadNode, type ListingNode } from './listing-validate.service.js';
+import { centroidSql, loadNode, type ListingNode } from './listing-validate.service.js';
 import type { ListingRow } from './locks.js';
+import { publicListingWhere } from './public-where.service.js';
 
 // Listing payloads (F2 spec §7.3–§7.5, §8.1, §13.4). The owner view is built here (plan Task 6); Task 10 builds the
 // public detail from the same loader and strips the private fields (serial number, address line, pincode, point).
@@ -70,7 +70,7 @@ export function headlineRate(rental: Pick<RentalRow, 'rateDayPaise' | 'rateHourP
 }
 
 /** The node's effective template for the listing's kind (retired fields included, inactive nodes allowed), or null. */
-async function templateOf(conn: Conn, row: ListingRow): Promise<EffectiveTemplate | null> {
+export async function templateOf(conn: Conn, row: Pick<ListingRow, 'categoryId' | 'kind'>): Promise<EffectiveTemplate | null> {
   if (!row.categoryId) return null;
   try {
     return await loadTemplate(conn, row.categoryId, row.kind === 'part' ? 'part' : 'machine', { includeRetired: true, allowInactive: true });
@@ -78,6 +78,112 @@ async function templateOf(conn: Conn, row: ListingRow): Promise<EffectiveTemplat
     if (err instanceof NotFoundError) return null;
     throw err;
   }
+}
+
+interface CardParts {
+  condition: { key: string; label: string } | null;
+  unit: { key: string; label: string; decimals: number } | null;
+  rental: Pick<RentalRow, 'rateDayPaise' | 'rateHourPaise' | 'rateWeekPaise' | 'rateMonthPaise'> | null;
+  thumbKey: string | null;
+  areaName: string | null;
+  distanceKm: number | null;
+}
+
+/** A listing card (§13.4 `ListingCard`): never a pincode, address line or point. */
+function cardFrom(row: ListingRow, p: CardParts): ListingCard {
+  return {
+    id: row.id,
+    ref: row.ref,
+    kind: row.kind,
+    status: row.status,
+    title: row.title ?? '',
+    side: row.side,
+    condition: p.condition,
+    quantity: trimQuantity(row.quantity),
+    unit: p.unit,
+    priceModel: row.priceModel,
+    pricePaise: row.pricePaise,
+    gstMode: row.gstMode,
+    rate: headlineRate(p.rental),
+    thumbUrl: publicUrl(p.thumbKey),
+    city: row.city,
+    industrialAreaName: p.areaName,
+    distanceKm: p.distanceKm,
+    refreshedAt: iso(row.refreshedAt),
+    businessId: row.businessId,
+  };
+}
+
+/**
+ * The viewer business's point (§4.1, §9.1): its pin, else the centroid of its pincode's offices (as a business-sourced
+ * listing's point, I8), else NULL.
+ */
+export function businessPointSql(businessId: string): SQL {
+  return sql`(SELECT COALESCE(b.location, ${centroidSql(sql`b.pincode`)}) FROM businesses b WHERE b.id = ${businessId})`;
+}
+
+/** Whole km between each listing's point and the viewer business's point; absent when either is unknown. */
+export async function distancesKm(conn: Conn, listingIds: string[], viewerBusinessId: string | null | undefined): Promise<Map<string, number>> {
+  const out = new Map<string, number>();
+  if (!viewerBusinessId || listingIds.length === 0) return out;
+  const rows = await conn
+    .select({ id: listings.id, km: sql<number | null>`round(ST_Distance(${listings.point}, ${businessPointSql(viewerBusinessId)}) / 1000)::int` })
+    .from(listings)
+    .where(inArray(listings.id, listingIds));
+  for (const r of rows) if (r.km != null) out.set(r.id, Number(r.km));
+  return out;
+}
+
+/**
+ * Cards for many listings in a fixed number of queries (seller listings, Other side): conditions, units, industrial
+ * areas, the first photo's thumbnail, rental rates and, with a viewer business, the distance. Order as given.
+ */
+export async function loadCards(conn: Conn, rows: ListingRow[], opts: { viewerBusinessId?: string | null } = {}): Promise<ListingCard[]> {
+  if (rows.length === 0) return [];
+  const ids = rows.map((r) => r.id);
+  const uniq = (xs: Array<string | null>) => [...new Set(xs.filter((x): x is string => x !== null))];
+  const conditionIds = uniq(rows.map((r) => r.conditionId));
+  const unitIds = uniq(rows.map((r) => r.unitId));
+  const areaIds = uniq(rows.map((r) => r.industrialAreaId));
+
+  const conditionRows = conditionIds.length
+    ? await conn.select({ id: conditions.id, key: conditions.key, label: conditions.label }).from(conditions).where(inArray(conditions.id, conditionIds))
+    : [];
+  const unitRows = unitIds.length
+    ? await conn.select({ id: units.id, key: units.key, label: units.label, decimals: units.decimals }).from(units).where(inArray(units.id, unitIds))
+    : [];
+  const areaRows = areaIds.length
+    ? await conn.select({ id: industrialAreas.id, name: industrialAreas.name }).from(industrialAreas).where(inArray(industrialAreas.id, areaIds))
+    : [];
+  const photoRows = await conn
+    .select({ listingId: listingMedia.listingId, thumbKey: listingMedia.thumbKey })
+    .from(listingMedia)
+    .where(and(inArray(listingMedia.listingId, ids), eq(listingMedia.type, 'photo')))
+    .orderBy(asc(listingMedia.sortOrder), asc(listingMedia.createdAt));
+  const rentalIds = rows.filter((r) => r.kind === 'machine_rental').map((r) => r.id);
+  const rentalRows = rentalIds.length ? await conn.select().from(listingRentals).where(inArray(listingRentals.listingId, rentalIds)) : [];
+  const distances = await distancesKm(conn, ids, opts.viewerBusinessId);
+
+  const thumbs = new Map<string, string | null>();
+  for (const p of photoRows) if (!thumbs.has(p.listingId)) thumbs.set(p.listingId, p.thumbKey);
+  const byId = <T extends { id: string }>(xs: T[]) => new Map(xs.map((x) => [x.id, x]));
+  const conds = byId(conditionRows);
+  const unitMap = byId(unitRows);
+  const areas = byId(areaRows);
+  const rentals = new Map(rentalRows.map((r) => [r.listingId, r]));
+
+  return rows.map((row) => {
+    const c = row.conditionId ? conds.get(row.conditionId) : undefined;
+    const u = row.unitId ? unitMap.get(row.unitId) : undefined;
+    return cardFrom(row, {
+      condition: c ? { key: c.key, label: c.label } : null,
+      unit: u ? { key: u.key, label: u.label, decimals: u.decimals } : null,
+      rental: rentals.get(row.id) ?? null,
+      thumbKey: thumbs.get(row.id) ?? null,
+      areaName: row.industrialAreaId ? (areas.get(row.industrialAreaId)?.name ?? null) : null,
+      distanceKm: distances.get(row.id) ?? null,
+    });
+  });
 }
 
 /** Everything a listing payload is built from, private fields included. */
@@ -197,29 +303,16 @@ export async function loadListing(conn: Conn, row: ListingRow): Promise<LoadedLi
   const [live] = await conn
     .select({ n: sql<number>`count(*)::int` })
     .from(listings)
-    .where(and(eq(listings.businessId, row.businessId), inArray(listings.status, [...PUBLIC_LISTING_STATUSES])));
+    .where(and(eq(listings.businessId, row.businessId), publicListingWhere()));
 
-  const card: ListingCard = {
-    id: row.id,
-    ref: row.ref,
-    kind: row.kind,
-    status: row.status,
-    title: row.title ?? '',
-    side: row.side,
+  const card = cardFrom(row, {
     condition: condition ?? null,
-    quantity: trimQuantity(row.quantity),
     unit: unit ?? null,
-    priceModel: row.priceModel,
-    pricePaise: row.pricePaise,
-    gstMode: row.gstMode,
-    rate: headlineRate(rentalRow),
-    thumbUrl: publicUrl(photos[0]?.thumbKey),
-    city: row.city,
-    industrialAreaName: refs?.areaName ?? null,
+    rental: rentalRow,
+    thumbKey: photos[0]?.thumbKey ?? null,
+    areaName: refs?.areaName ?? null,
     distanceKm: null,
-    refreshedAt: iso(row.refreshedAt),
-    businessId: row.businessId,
-  };
+  });
 
   const detail: ListingDetail = {
     ...card,
@@ -278,7 +371,9 @@ export async function loadListing(conn: Conn, row: ListingRow): Promise<LoadedLi
  * `pricePaise` / `PRICE_REQUIRED`, `gstMode` / `required` (unless Price on request), `rental.rates` / `RATE_REQUIRED`.
  * Never blocks an edit.
  */
-export function attentionProblems(l: Pick<LoadedListing, 'row' | 'node' | 'template' | 'photoCount' | 'detail'>): ListingProblem[] {
+export function attentionProblems(
+  l: Pick<LoadedListing, 'row' | 'node' | 'template' | 'photoCount'> & { detail: Pick<ListingDetail, 'rental'> },
+): ListingProblem[] {
   const { row } = l;
   const problems: ListingProblem[] = [];
   if (row.kind === 'part' && l.node?.effectiveHasSides && (row.side === null || row.side === 'not_applicable')) {
@@ -303,7 +398,7 @@ export function attentionProblems(l: Pick<LoadedListing, 'row' | 'node' | 'templ
 }
 
 /** Keys of the template's active optional fields that can be filled (the score's "every optional field" item). */
-function optionalSpecKeys(template: EffectiveTemplate | null): string[] {
+export function optionalSpecKeys(template: EffectiveTemplate | null): string[] {
   if (!template) return [];
   return template.fields
     .filter((f) => f.status === 'active' && !isRequiredField(f))
@@ -321,6 +416,23 @@ export async function hasOpenReport(conn: Conn, listingId: string): Promise<bool
   return row !== undefined;
 }
 
+/** `expiresAt` / `expiringSoon` (§7.4): `live` / `rented` only, from the current settings. */
+export function expiryOf(
+  row: Pick<ListingRow, 'status' | 'refreshedAt'>,
+  settings: AppSettingsValues,
+): { expiresAt: Date | null; expiringSoon: boolean } {
+  if ((row.status !== 'live' && row.status !== 'rented') || !row.refreshedAt) return { expiresAt: null, expiringSoon: false };
+  const expiresAt = new Date(row.refreshedAt.getTime() + settings.listing_expiry_days * DAY_MS);
+  return { expiresAt, expiringSoon: expiresAt.getTime() - Date.now() <= settings.listing_expiry_reminder_days * DAY_MS };
+}
+
+/** A moderator's last decision as the owner sees it. */
+export function moderationOf(row: ListingRow): ListingOwnerView['moderation'] {
+  return row.moderationOutcome
+    ? { outcome: row.moderationOutcome, note: row.moderationNote, at: (row.moderatedAt ?? row.statusChangedAt ?? row.updatedAt).toISOString() }
+    : null;
+}
+
 /**
  * The owner's view of their listing, any status (§7.3–§7.5): the detail with private fields, `needsAttention`,
  * `reviewOnEdit`, `expiresAt` / `expiringSoon` (`live` / `rented` only, from the current settings), moderation,
@@ -330,12 +442,7 @@ export async function toOwnerView(conn: Conn, row: ListingRow, settings: AppSett
   const loaded = await loadListing(conn, row);
   const d = loaded.detail;
 
-  let expiresAt: Date | null = null;
-  let expiringSoon = false;
-  if ((row.status === 'live' || row.status === 'rented') && row.refreshedAt) {
-    expiresAt = new Date(row.refreshedAt.getTime() + settings.listing_expiry_days * DAY_MS);
-    expiringSoon = expiresAt.getTime() - Date.now() <= settings.listing_expiry_reminder_days * DAY_MS;
-  }
+  const { expiresAt, expiringSoon } = expiryOf(row, settings);
 
   return {
     ...d,
@@ -351,13 +458,7 @@ export async function toOwnerView(conn: Conn, row: ListingRow, settings: AppSett
     reviewOnEdit: await hasOpenReport(conn, row.id),
     expiresAt: iso(expiresAt),
     expiringSoon,
-    moderation: row.moderationOutcome
-      ? {
-          outcome: row.moderationOutcome,
-          note: row.moderationNote,
-          at: (row.moderatedAt ?? row.statusChangedAt ?? row.updatedAt).toISOString(),
-        }
-      : null,
+    moderation: moderationOf(row),
     statusReason: row.statusReason,
     score: listingScore({
       kind: row.kind,

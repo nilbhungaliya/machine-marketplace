@@ -6,6 +6,7 @@ import {
   LISTING_DESCRIPTION_MAX,
   LISTING_FITMENTS_MAX,
   LISTING_KINDS,
+  LISTING_REPORT_REASONS,
   LISTING_TITLE_MAX,
   LISTING_TITLE_MIN,
   PART_NUMBER_MAX,
@@ -15,9 +16,14 @@ import {
   RENTAL_OPERATOR_OPTIONS,
   RENTAL_PERIODS,
   RENTAL_TRANSPORT_OPTIONS,
+  MY_LISTINGS_GROUPS,
+  SELLER_LISTING_ACTIONS,
 } from '@mpm/shared-types';
 import { perUser } from '../lib/per-user-limit.js';
 import { isRealDate, isStorableText } from '../lib/spec-check.js';
+import { applySellerAction, publishListing } from '../services/listings/listing-lifecycle.service.js';
+import { getListing, getOwnerView, listMine } from '../services/listings/listing-read.service.js';
+import { createReport } from '../services/listings/listing-reports.service.js';
 import { createListing, deleteDraft, patchListing, type ListingPatchInput } from '../services/listings/listing-write.service.js';
 
 // Seller listing writes (F2 spec §5.3, §7.3, §14). Thin: Zod-parse → service (in one transaction) → `{ data }`. Types,
@@ -159,8 +165,47 @@ const patchBody = z
   .strict()
   .refine((p) => Object.keys(p).length > 0, 'Nothing to update');
 
+const actionBody = z.object({ action: z.enum(SELLER_LISTING_ACTIONS), note: optText(300) }).strict();
+
+const mineQuery = z.object({
+  group: z.enum(MY_LISTINGS_GROUPS).default('live'),
+  page: z.coerce.number().int().min(1).max(1000).default(1),
+});
+
+const reportBody = z
+  .object({ reason: z.enum(LISTING_REPORT_REASONS), details: optText(500) })
+  .strict()
+  .refine((b) => b.reason !== 'something_else' || !!b.details, { message: 'Tell us what is wrong', path: ['details'] });
+
 const listingRoutes: FastifyPluginAsync = async (fastify) => {
   const user = { schema: { tags }, preHandler: fastify.requireUser };
+  const optionalUser = { schema: { tags }, preHandler: fastify.optionalUser };
+
+  // My listings: counts per group plus one page (§10).
+  fastify.get('/listings/mine', user, async (request) => {
+    const { group, page } = mineQuery.parse(request.query);
+    return { data: await listMine(fastify.db, request.user!, group, page) };
+  });
+
+  // Public listing page (§8.1): the owner gets the owner view; anyone else a public listing or 404.
+  fastify.get('/listings/:id', optionalUser, async (request) => {
+    const { id } = idParams.parse(request.params);
+    return { data: await getListing(fastify.db, id, request.user) };
+  });
+
+  // The owner view in any status (removed only when an admin removed it in the last 30 days).
+  fastify.get('/listings/:id/owner', user, async (request) => {
+    const { id } = idParams.parse(request.params);
+    return { data: await getOwnerView(fastify.db, request.user!, id) };
+  });
+
+  // Report listing (§8.4): 10 per user per 24 h, counted on the table.
+  fastify.post('/listings/:id/reports', user, async (request, reply) => {
+    const { id } = idParams.parse(request.params);
+    const body = reportBody.parse(request.body);
+    const data = await fastify.db.transaction((tx) => createReport(tx, request.user!, id, { reason: body.reason, details: body.details ?? null }));
+    return reply.status(201).send({ data });
+  });
 
   fastify.post('/listings', { ...user, config: perUser(30) }, async (request, reply) => {
     const { kind } = createBody.parse(request.body);
@@ -179,6 +224,19 @@ const listingRoutes: FastifyPluginAsync = async (fastify) => {
     const { id } = idParams.parse(request.params);
     await fastify.db.transaction((tx) => deleteDraft(tx, request.user!, id));
     return { data: { id, deleted: true } };
+  });
+
+  // Publish (from draft) or resubmit (from rejected) through the go-live gate (§5.5): `{ listing, outcome }`.
+  fastify.post('/listings/:id/publish', { ...user, config: perUser(30) }, async (request) => {
+    const { id } = idParams.parse(request.params);
+    return { data: await fastify.db.transaction((tx) => publishListing(tx, request.user!, id)) };
+  });
+
+  // Seller actions of §7.2 (pause, resume, renew, mark sold / unavailable / rented, relist, end rental, remove).
+  fastify.post('/listings/:id/actions', { ...user, config: perUser(60) }, async (request) => {
+    const { id } = idParams.parse(request.params);
+    const { action, note } = actionBody.parse(request.body);
+    return { data: await fastify.db.transaction((tx) => applySellerAction(tx, request.user!, id, action, note ?? null)) };
   });
 };
 

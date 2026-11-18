@@ -2,6 +2,7 @@ import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { BUSINESS_ACTIVITIES, EMPLOYEE_RANGES } from '@mpm/shared-types';
 import { getMyBusiness, setMyLocation, updateMyProfile } from '../services/business/profile.service.js';
+import { listSellerListings, SELLER_LISTINGS_MAX } from '../services/listings/listing-read.service.js';
 
 const profileBody = z
   .object({
@@ -37,6 +38,11 @@ const locationBody = z
 
 const tags = ['Businesses'];
 
+const sellerListingsQuery = z.object({
+  limit: z.coerce.number().int().min(1).max(SELLER_LISTINGS_MAX).default(20),
+  exclude: z.string().uuid().optional(),
+});
+
 // The signed-in user's own business (F1 spec §10). Thin: validate → service → `{ data }`.
 const businessRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get('/businesses/me', { schema: { tags }, preHandler: fastify.requireUser }, async (request) => ({
@@ -51,6 +57,13 @@ const businessRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.put('/businesses/me/location', { schema: { tags }, preHandler: fastify.requireUser }, async (request) => {
     const body = locationBody.parse(request.body);
     return { data: await setMyLocation(fastify.db, request.user!.userId, body) };
+  });
+
+  // A seller's public listings, newest first (F2 spec §8.1 "More from this seller", the seller listings screen).
+  fastify.get('/businesses/:id/listings', { schema: { tags }, preHandler: fastify.optionalUser }, async (request) => {
+    const { id } = z.object({ id: z.string().uuid() }).parse(request.params);
+    const { limit, exclude } = sellerListingsQuery.parse(request.query);
+    return { data: await listSellerListings(fastify.db, id, { limit, exclude, viewer: request.user }) };
   });
 };
 
