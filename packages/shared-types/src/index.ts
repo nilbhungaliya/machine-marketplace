@@ -298,11 +298,8 @@ export interface Unit {
   decimals: number;
   sortOrder: number;
   isActive: boolean;
-  /**
-   * Machines and rentals use the first active unit with this flag, set by the server (F2 spec §4.2, R48). Optional
-   * until the admin edits it (F2 plan Task 19).
-   */
-  isMachineUnit?: boolean;
+  /** Machines and rentals use the first active unit with this flag, set by the server (F2 spec §4.2, R48). */
+  isMachineUnit: boolean;
 }
 
 export interface Condition {

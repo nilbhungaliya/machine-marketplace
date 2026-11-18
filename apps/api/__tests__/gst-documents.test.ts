@@ -42,6 +42,12 @@ function restoreStorageEnv(): void {
   }
 }
 
+/** Closed after every block in this file has run (the app's close ends the shared database pool). */
+const closeAtEnd: (() => Promise<void>)[] = [];
+afterAll(async () => {
+  for (const close of closeAtEnd) await close();
+});
+
 describe('GST documents (no R2 needed)', () => {
   let app: FastifyInstance;
   let user: TestBusinessUser;
@@ -61,7 +67,8 @@ describe('GST documents (no R2 needed)', () => {
   afterAll(async () => {
     restoreStorageEnv();
     await deleteTestBusinesses([user.businessId, other.businessId]);
-    await app.close();
+    // Not closed here: closing the app ends the shared pool, which the R2 block below still needs.
+    closeAtEnd.push(() => app.close());
   });
 
   it('with the storage variables cleared, presign → 503 STORAGE_UNAVAILABLE (checked first)', async () => {

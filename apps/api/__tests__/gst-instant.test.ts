@@ -3,6 +3,7 @@ import type { FastifyInstance } from 'fastify';
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import type { GstStateView } from '@mpm/shared-types';
 import { buildApp } from '../src/app.js';
+import { isStorageConfigured } from '../src/lib/storage.js';
 import { db } from '../src/db/index.js';
 import { businessVerifications, businesses, gstChecks, gstRepresentativeProofs } from '../src/db/schema.js';
 import { signInWithPhone } from '../src/services/user.service.js';
@@ -103,7 +104,7 @@ describe('GST instant path', () => {
     const gstin = uniqueTestGstin();
 
     const start = await state(user);
-    expect(start).toMatchObject({ mode: 'stub', state: 'none', instantAllowed: true, storageAvailable: false });
+    expect(start).toMatchObject({ mode: 'stub', state: 'none', instantAllowed: true, storageAvailable: isStorageConfigured() });
 
     const looked = await lookup(user, ` ${gstin.toLowerCase().slice(0, 7)} ${gstin.slice(7)}`);
     expect(looked.status).toBe(200);

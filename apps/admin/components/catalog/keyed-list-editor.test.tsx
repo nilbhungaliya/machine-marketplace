@@ -142,8 +142,8 @@ describe('KeyedListEditor', () => {
 
 describe('KeyedListEditor for units', () => {
   const units: Unit[] = [
-    { id: 'u1', key: 'pcs', label: 'Pieces', decimals: 0, sortOrder: 0, isActive: true },
-    { id: 'u2', key: 'kg', label: 'Kilograms', decimals: 3, sortOrder: 1, isActive: true },
+    { id: 'u1', key: 'pcs', label: 'Pieces', decimals: 0, sortOrder: 0, isActive: true, isMachineUnit: false },
+    { id: 'u2', key: 'kg', label: 'Kilograms', decimals: 3, sortOrder: 1, isActive: true, isMachineUnit: false },
   ];
 
   function renderUnits() {
