@@ -79,6 +79,17 @@ describe('getGstMode', () => {
     expect(getGstMode()).toBe('live');
   });
 
+  it('GST_PROVIDER=off forces review even with a registered provider and a key (ruling R6)', () => {
+    const p = spyProvider();
+    setGstProvider(p);
+    env({ NODE_ENV: 'production', GST_PROVIDER: 'off', GST_API_KEY: 'secret' });
+    expect(getGstMode()).toBe('review');
+    expect(getGstProvider()).not.toBe(p);
+    expect(getGstProvider()).not.toBe(gstStub);
+    env({ NODE_ENV: 'test', GST_PROVIDER: ' off ', GST_API_KEY: 'secret' });
+    expect(getGstMode()).toBe('review');
+  });
+
   it('a blank key does not count as set', () => {
     setGstProvider(spyProvider());
     env({ NODE_ENV: 'production', GST_API_KEY: '   ' });

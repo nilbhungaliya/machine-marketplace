@@ -28,6 +28,8 @@ services:
       REDIS_URL: redis://redis:6379
       PORT: "3000"
       NODE_ENV: production
+      # Caddy is the one proxy in front of the API. Without this every client has Caddy's IP, and shares one rate limit.
+      TRUST_PROXY_HOPS: "1"
     depends_on:
       redis:
         condition: service_healthy

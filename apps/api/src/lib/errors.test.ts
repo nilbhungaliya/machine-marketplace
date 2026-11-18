@@ -9,6 +9,12 @@ describe('error classes added for F1 + A2', () => {
     expect(err.code).toBe('GST_LOOKUP_LIMIT');
     expect(err.message).toBe('Try again tomorrow');
     expect(err.name).toBe('TooManyRequestsError');
+    expect(err.details).toBeUndefined();
+  });
+
+  it('TooManyRequestsError carries optional details (retryAt)', () => {
+    const err = new TooManyRequestsError('Wait', 'GST_OTP_TOO_SOON', { retryAt: '2026-11-18T10:00:30.000Z' });
+    expect(err.details).toEqual({ retryAt: '2026-11-18T10:00:30.000Z' });
   });
 
   it('ServiceUnavailableError is a 503 with the given code', () => {

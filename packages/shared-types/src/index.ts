@@ -389,8 +389,8 @@ export interface GstDetails {
 }
 
 /**
- * GET /businesses/me/gst: drives the Verification screen. `held`, `providerUnavailable` and `statusRefused`
- * describe the latest lookup's outcome when `state` is `none`.
+ * GET /businesses/me/gst: drives the Verification screen. `held`, `notFound`, `providerUnavailable` and
+ * `statusRefused` describe the latest lookup's outcome when `state` is `none`.
  */
 export interface GstStateView {
   mode: GstMode;
@@ -399,6 +399,8 @@ export interface GstStateView {
   storageAvailable: boolean;
   expired?: boolean;
   held?: boolean;
+  /** The latest lookup found no such GSTIN ("We couldn't find this GSTIN. Check it and try again."). */
+  notFound?: boolean;
   providerUnavailable?: boolean;
   statusRefused?: GstStatus;
   gstin?: string;

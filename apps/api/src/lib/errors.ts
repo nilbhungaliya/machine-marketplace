@@ -46,8 +46,9 @@ export class ConflictError extends AppError {
 }
 
 export class TooManyRequestsError extends AppError {
-  constructor(message: string, code: string) {
-    super(message, 429, code);
+  /** `details.retryAt` (ISO time) tells the client when to try again. */
+  constructor(message: string, code: string, details?: Record<string, unknown>) {
+    super(message, 429, code, details);
   }
 }
 

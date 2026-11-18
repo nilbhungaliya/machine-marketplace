@@ -12,6 +12,7 @@ import adminAuthRoutes from './routes/admin/auth.js';
 import authOtpRoutes from './routes/auth-otp.js';
 import usersRoutes from './routes/users.js';
 import businessRoutes from './routes/businesses.js';
+import gstRoutes from './routes/gst.js';
 import catalogRoutes from './routes/catalog.js';
 import locationRoutes from './routes/locations.js';
 import adminCatalogCategoryRoutes from './routes/admin/catalog-categories.js';
@@ -28,8 +29,24 @@ export interface BuildAppOptions {
   logger?: boolean;
 }
 
+/**
+ * How many proxies sit in front of the API (ported from textile `app.ts`); unset or 0 means none, as in dev and tests.
+ * Without it, `request.ip` behind Caddy is Caddy's address, so every client shares one per-IP rate-limit bucket (the GST
+ * lookup / code-send limits, spec §5.2). A malformed value stops the start; a well-formed but wrong count can't be
+ * detected, so `buildApp` logs the count it resolved. Production (`infra/deploy`) sets 1 for Caddy.
+ */
+export function trustProxyHops(): number | false {
+  const raw = process.env.TRUST_PROXY_HOPS;
+  if (raw === undefined || raw === '') return false;
+  const hops = Number(raw);
+  if (!Number.isSafeInteger(hops) || hops < 0) throw new Error(`TRUST_PROXY_HOPS must be a whole number of proxies, got "${raw}"`);
+  return hops === 0 ? false : hops;
+}
+
 export async function buildApp({ infra = true, logger = true }: BuildAppOptions = {}): Promise<FastifyInstance> {
-  const app = Fastify({ logger });
+  const hops = trustProxyHops();
+  const app = Fastify({ logger, trustProxy: hops });
+  app.log.info({ trustProxyHops: hops || 0 }, 'trusted proxy hops resolved');
 
   if (process.env.NODE_ENV !== 'production') {
     await app.register(swagger, {
@@ -53,6 +70,7 @@ export async function buildApp({ infra = true, logger = true }: BuildAppOptions 
     await app.register(authOtpRoutes);
     await app.register(usersRoutes);
     await app.register(businessRoutes);
+    await app.register(gstRoutes);
     await app.register(catalogRoutes);
     await app.register(locationRoutes);
     await app.register(adminAuthRoutes);

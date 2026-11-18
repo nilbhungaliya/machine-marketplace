@@ -30,6 +30,8 @@ export default defineConfig({
       REDIS_URL: testRedisUrl,
       // Suites fire hundreds of requests a minute from one client; the 120/min production limit would 429 them.
       RATE_LIMIT_MAX: '1000000',
+      // Same for the GST per-IP limit (lookup, otp/send): every suite calls from 127.0.0.1. One test lowers it.
+      GST_IP_RATE_MAX: '1000000',
     },
     // Integration tests share ONE Postgres + Redis; parallel files trample each
     // other's fixtures. Every suite must delete what it inserts in afterAll.
