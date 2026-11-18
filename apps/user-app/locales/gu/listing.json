@@ -1,1 +1,281 @@
-{}
+{
+  "kind": {
+    "part": "સ્પેર પાર્ટ",
+    "machine": "વેચાણ માટે મશીન",
+    "machine_rental": "ભાડે આપવા માટે મશીન"
+  },
+  "condition": {
+    "new": "નવું",
+    "unused": "વપરાયા વગરનું",
+    "used": "વપરાયેલું",
+    "excess": "વધારાનો સ્ટોક"
+  },
+  "unit": {
+    "pcs": {
+      "label": "પીસ",
+      "per": "/પીસ",
+      "count_one": "{{qty}} પીસ",
+      "count_other": "{{qty}} પીસ"
+    },
+    "pairs": {
+      "label": "જોડી",
+      "per": "/જોડી",
+      "count_one": "{{qty}} જોડી",
+      "count_other": "{{qty}} જોડી"
+    },
+    "sets": {
+      "label": "સેટ",
+      "per": "/સેટ",
+      "count_one": "{{qty}} સેટ",
+      "count_other": "{{qty}} સેટ"
+    },
+    "kg": {
+      "label": "કિલોગ્રામ",
+      "per": "/કિલો",
+      "count_one": "{{qty}} કિલો",
+      "count_other": "{{qty}} કિલો"
+    },
+    "metres": {
+      "label": "મીટર",
+      "per": "/મીટર",
+      "count_one": "{{qty}} મીટર",
+      "count_other": "{{qty}} મીટર"
+    },
+    "litres": {
+      "label": "લિટર",
+      "per": "/લિટર",
+      "count_one": "{{qty}} લિટર",
+      "count_other": "{{qty}} લિટર"
+    },
+    "boxes": {
+      "label": "બોક્સ",
+      "per": "/બોક્સ",
+      "count_one": "{{qty}} બોક્સ",
+      "count_other": "{{qty}} બોક્સ"
+    },
+    "machines": {
+      "label": "મશીનો",
+      "per": "/મશીન",
+      "count_one": "{{qty}} મશીન",
+      "count_other": "{{qty}} મશીનો"
+    }
+  },
+  "unitFallback": {
+    "per": "/ {{unit}}",
+    "count": "{{qty}} {{unit}}"
+  },
+  "price": {
+    "onRequest": "ભાવ પૂછો",
+    "model": {
+      "fixed": "નક્કી ભાવ",
+      "negotiable": "ભાવતાલ થઈ શકે",
+      "on_request": "ભાવ પૂછો"
+    },
+    "gst": {
+      "included": "GST સાથે",
+      "extra": "GST અલગ"
+    }
+  },
+  "period": {
+    "hour": "/કલાક",
+    "day": "/દિવસ",
+    "week": "/અઠવાડિયું",
+    "month": "/મહિનો"
+  },
+  "periodName": {
+    "hour": "પ્રતિ કલાક",
+    "day": "પ્રતિ દિવસ",
+    "week": "પ્રતિ અઠવાડિયું",
+    "month": "પ્રતિ મહિનો"
+  },
+  "side": {
+    "left": "લેફ્ટ સાઇડ",
+    "right": "રાઇટ સાઇડ",
+    "pair": "જોડી (બંને સાઇડ)",
+    "not_applicable": "કોઈ સાઇડ નથી"
+  },
+  "delivery": {
+    "pickup": "ખરીદનાર લઈ જાય",
+    "ship": "હું મોકલી શકું",
+    "local_delivery": "લોકલ ડિલિવરી"
+  },
+  "status": {
+    "draft": "ડ્રાફ્ટ",
+    "pending_review": "તપાસમાં",
+    "rejected": "ફેરફાર જરૂરી",
+    "live": "લાઇવ",
+    "paused": "અટકાવેલ",
+    "reserved": "આરક્ષિત",
+    "sold": "વેચાઈ ગયું",
+    "rented": "ભાડે આપેલ",
+    "unavailable": "ઉપલબ્ધ નથી",
+    "expired": "સમય પૂરો",
+    "hidden": "અમારી ટીમે છુપાવ્યું",
+    "removed": "દૂર કરેલ"
+  },
+  "group": {
+    "live": "લાઇવ",
+    "review": "તપાસમાં",
+    "paused": "અટકાવેલ",
+    "sold": "વેચાયેલ",
+    "drafts": "ડ્રાફ્ટ",
+    "removed_by_team": "અમારી ટીમે દૂર કર્યા"
+  },
+  "time": {
+    "updatedToday": "આજે અપડેટ થયું",
+    "updatedDaysAgo_one": "{{count}} દિવસ પહેલાં અપડેટ થયું",
+    "updatedDaysAgo_other": "{{count}} દિવસ પહેલાં અપડેટ થયું",
+    "updatedOn": "{{date}}ના રોજ અપડેટ થયું",
+    "expiresToday": "આજે પૂરું થશે",
+    "expiresInDays_one": "{{count}} દિવસમાં પૂરું થશે",
+    "expiresInDays_other": "{{count}} દિવસમાં પૂરું થશે",
+    "expired": "સમય પૂરો"
+  },
+  "distance": {
+    "near": "1 કિમીથી ઓછું દૂર",
+    "km": "{{km}} કિમી દૂર"
+  },
+  "fits": {
+    "allModels": "બધાં મોડલ",
+    "yearFrom": "{{from}}થી",
+    "yearTo": "{{to}} સુધી"
+  },
+  "rental": {
+    "operator": {
+      "included": "ઓપરેટર સાથે",
+      "optional": "માગો તો ઓપરેટર",
+      "not_available": "ઓપરેટર નથી",
+      "mandatory": "ઓપરેટર જરૂરી"
+    },
+    "fuel": {
+      "client": "ડીઝલ તમે આપશો",
+      "included": "ઈંધણ સાથે",
+      "per_litre": "ઈંધણ પ્રતિ લિટર અલગ"
+    },
+    "transport": {
+      "owner_delivers": "માલિક પહોંચાડશે",
+      "renter_picks_up": "ભાડે લેનાર લઈ જાય",
+      "either": "ડિલિવરી અથવા પિકઅપ"
+    }
+  },
+  "reportReason": {
+    "stock_photos": "સ્ટોક ફોટા, સાચો પાર્ટ નથી",
+    "wrong_side_or_fit": "ખોટી સાઇડ અથવા ફિટ",
+    "wrong_price_or_quantity": "ખોટો ભાવ અથવા જથ્થો",
+    "already_sold": "પહેલેથી વેચાઈ ગયું",
+    "advance_payment": "એડવાન્સ પેમેન્ટ માગ્યું",
+    "something_else": "બીજું કંઈક"
+  },
+  "score": {
+    "photos": "3 કે વધુ ફોટા ઉમેરો",
+    "video": "એક વીડિયો ઉમેરો",
+    "part_number": "પાર્ટ નંબર ઉમેરો",
+    "fitment": "જે મશીનમાં બેસે તે ઉમેરો",
+    "year": "બનાવટનું વર્ષ ઉમેરો",
+    "hours_run": "ચાલેલા કલાક ઉમેરો",
+    "optional_specs": "બધાં સ્પેસિફિકેશન ભરો",
+    "description": "થોડું લાંબું વર્ણન ઉમેરો"
+  },
+  "view": {
+    "mediaCounter": "{{index}} / {{total}}",
+    "noPhoto": "હજી કોઈ ફોટો નથી",
+    "playVideo": "વીડિયો ચલાવો",
+    "openPhoto": "ફોટો {{index}} ખોલો",
+    "forRent": "ભાડે",
+    "description": "વર્ણન",
+    "conditionNote": "હાલત વિશે",
+    "minOrder": "ઓછામાં ઓછો ઓર્ડર: {{qty}}",
+    "rates": "ભાડું",
+    "terms": "શરતો",
+    "shiftHours_one": "એક દિવસ = {{count}} કલાક",
+    "shiftHours_other": "એક દિવસ = {{count}} કલાક",
+    "monthDays_one": "એક મહિનો = {{count}} કામકાજી દિવસ",
+    "monthDays_other": "એક મહિનો = {{count}} કામકાજી દિવસ",
+    "overtime": "ઓવરટાઇમ",
+    "minimum": "ઓછામાં ઓછું ભાડું",
+    "operator": "ઓપરેટર",
+    "operatorRate": "{{amount}} /દિવસ",
+    "fuel": "ઈંધણ",
+    "transport": "ટ્રાન્સપોર્ટ",
+    "transportCharge": "એક તરફ {{amount}}",
+    "worksWithin": "{{km}} કિમીની અંદર કામ કરે છે",
+    "deposit": "સિક્યોરિટી ડિપોઝિટ",
+    "availableFrom": "{{date}}થી ઉપલબ્ધ",
+    "availableNow": "હમણાં ઉપલબ્ધ",
+    "minDuration_hour_one": "{{count}} કલાક",
+    "minDuration_hour_other": "{{count}} કલાક",
+    "minDuration_day_one": "{{count}} દિવસ",
+    "minDuration_day_other": "{{count}} દિવસ",
+    "minDuration_week_one": "{{count}} અઠવાડિયું",
+    "minDuration_week_other": "{{count}} અઠવાડિયાં",
+    "minDuration_month_one": "{{count}} મહિનો",
+    "minDuration_month_other": "{{count}} મહિના",
+    "machineTip": "વપરાયેલું મશીન જોયા વગર ક્યારેય પેમેન્ટ ન કરો.",
+    "fitsTitle": "આ મશીનોમાં બેસે છે",
+    "checkMyMachine": "મારું મશીન તપાસો",
+    "specsTitle": "સ્પેસિફિકેશન",
+    "partNumber": "પાર્ટ નંબર",
+    "partBrand": "પાર્ટ બ્રાન્ડ",
+    "reference": "રેફરન્સ",
+    "make": "કંપની",
+    "model": "મોડલ",
+    "year": "વર્ષ",
+    "hoursRun": "ચાલેલા કલાક",
+    "hoursRunValue_one": "{{hours}} કલાક",
+    "hoursRunValue_other": "{{hours}} કલાક",
+    "running": "ચાલતું જોઈ શકાય",
+    "inspection": "એપોઇન્ટમેન્ટથી તપાસ",
+    "yes": "હા",
+    "deliveryTitle": "ડિલિવરી અને લોકેશન",
+    "sellerTitle": "વેચનાર",
+    "gstVerified": "GST ચકાસાયેલ",
+    "memberSince": "{{date}}થી સભ્ય",
+    "liveListings_one": "{{count}} લાઇવ લિસ્ટિંગ",
+    "liveListings_other": "{{count}} લાઇવ લિસ્ટિંગ",
+    "viewAll": "બધાં લિસ્ટિંગ જુઓ",
+    "report": "લિસ્ટિંગની ફરિયાદ કરો"
+  },
+  "errors": {
+    "kindImmutable": "લિસ્ટિંગનો પ્રકાર બદલી શકાતો નથી.",
+    "fieldNotForKind": "આ માહિતી આ પ્રકારના લિસ્ટિંગને લાગુ પડતી નથી.",
+    "categoryInvalid": "ચાલુ કેટેગરી પસંદ કરો.",
+    "specsInvalid": "દર્શાવેલાં સ્પેસિફિકેશન તપાસો.",
+    "sideRequired": "લેફ્ટ, રાઇટ અથવા જોડી પસંદ કરો.",
+    "sideNotAllowed": "આ પાર્ટની કોઈ સાઇડ નથી.",
+    "unitDecimals": "આ યુનિટ માટે દશાંશ વધારે છે.",
+    "minOrderAboveQuantity": "ઓછામાં ઓછો ઓર્ડર જથ્થા કરતાં વધુ ન હોઈ શકે.",
+    "priceRequired": "ભાવ લખો, અથવા 'ભાવ પૂછો' પસંદ કરો.",
+    "rateRequired": "ઓછામાં ઓછું એક ભાડું લખો.",
+    "brandInvalid": "યાદીમાંથી બ્રાન્ડ પસંદ કરો, અથવા 'અન્ય'માં લખો.",
+    "modelInvalid": "આ બ્રાન્ડનું મોડલ પસંદ કરો, અથવા 'અન્ય'માં લખો.",
+    "fitmentInvalid": "આ પાર્ટ જે મશીનોમાં બેસે છે તે તપાસો.",
+    "areaMismatch": "આ ઔદ્યોગિક વિસ્તાર આ પિનકોડના જિલ્લામાં નથી.",
+    "incomplete": "થોડી માહિતી હજી બાકી છે.",
+    "mediaKeyInvalid": "આ અપલોડ મેળ ખાતું નથી. ફરી ઉમેરો.",
+    "mediaMissing": "ફાઇલ અમારા સુધી પહોંચી નથી. ફરી પ્રયાસ કરો.",
+    "mediaType": "આ પ્રકારની ફાઇલની મંજૂરી નથી.",
+    "mediaMetadata": "આ ફોટામાં હજી લોકેશનની માહિતી છે. એપમાંથી ફરી ઉમેરો.",
+    "mediaOrderInvalid": "ફોટાનો ક્રમ બદલી શકાયો નથી. ફરી પ્રયાસ કરો.",
+    "mediaTooLarge": "આ ફાઇલ બહુ મોટી છે.",
+    "videoTooLong": "વીડિયો 60 સેકન્ડ સુધીનો હોઈ શકે.",
+    "rentalNeedsGst": "ભાડાનાં લિસ્ટિંગ માટે તમારું GST ચકાસો.",
+    "reportOwnListing": "તમે તમારા પોતાના લિસ્ટિંગની ફરિયાદ ન કરી શકો.",
+    "notFound": "આ લિસ્ટિંગ હવે ઉપલબ્ધ નથી.",
+    "onboardingIncomplete": "પહેલાં તમારી બિઝનેસ પ્રોફાઇલ પૂરી કરો.",
+    "draftLimit": "તમારા 20 ડ્રાફ્ટ છે. નવું શરૂ કરવા એક પબ્લિશ કરો અથવા દૂર કરો.",
+    "unverifiedCap": "{{cap}}થી વધુ લિસ્ટિંગ માટે તમારું GST ચકાસો.",
+    "noMachineUnit": "હમણાં મશીનો લિસ્ટ થઈ શકતાં નથી. કૃપા કરીને પછી પ્રયાસ કરો.",
+    "notEditable": "આ લિસ્ટિંગ હમણાં બદલી શકાતું નથી.",
+    "categoryLocked": "તપાસ પછી કેટેગરી બદલી શકાતી નથી.",
+    "transitionNotAllowed": "આ લિસ્ટિંગ માટે હમણાં એ શક્ય નથી.",
+    "mediaLimit": "10 ફોટા અને 2 વીડિયોની મર્યાદા પૂરી થઈ ગઈ છે.",
+    "mediaLastPhoto": "લિસ્ટિંગમાં ઓછામાં ઓછો એક ફોટો જરૂરી છે.",
+    "reportExists": "તમે આ લિસ્ટિંગની ફરિયાદ કરી ચૂક્યા છો. અમારી ટીમ તે જોઈ રહી છે.",
+    "reportLimit": "તમે આજે ઘણી ફરિયાદો મોકલી છે. કૃપા કરીને કાલે ફરી પ્રયાસ કરો.",
+    "storageUnavailable": "ફોટો અપલોડ હજી ઉપલબ્ધ નથી.",
+    "rateLimited": "ઘણા બધા પ્રયાસ. કૃપા કરીને થોડી મિનિટ રાહ જુઓ.",
+    "uploadFailed": "અપલોડ પૂરું થયું નથી. ફરી પ્રયાસ માટે ટેપ કરો.",
+    "photoPrepare": "આ ફોટો તૈયાર થઈ શક્યો નથી. બીજો પસંદ કરો.",
+    "videoPrepare": "આ વીડિયો તૈયાર થઈ શક્યો નથી. બીજો પસંદ કરો."
+  }
+}

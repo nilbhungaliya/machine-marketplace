@@ -1,1 +1,55 @@
-{}
+{
+  "steps": {
+    "category": "Category",
+    "part_details": "Part details",
+    "machine": "Machine",
+    "quantity": "Quantity and condition",
+    "rates": "Rates and terms",
+    "fit": "Brand and fit",
+    "side": "Which side?",
+    "media": "Photos and video",
+    "price": "Price",
+    "location": "Location",
+    "preview": "Preview"
+  },
+  "stepOf": "Step {{current}} of {{total}}: {{label}}",
+  "validation": {
+    "required": "This is required.",
+    "number": "Enter a number.",
+    "min": "Enter {{min}} or more.",
+    "max": "Enter {{max}} or less.",
+    "date": "Enter a date as YYYY-MM-DD.",
+    "textMax": "Keep it under {{max}} characters.",
+    "pickOne": "Choose one.",
+    "pickAtLeastOne": "Choose at least one."
+  },
+  "quantity": {
+    "empty": "Enter the quantity.",
+    "invalid": "Enter a number.",
+    "decimals": "Too many decimals for this unit.",
+    "zero": "Enter more than 0.",
+    "tooLarge": "That's more than we can list at once."
+  },
+  "price": {
+    "invalid": "Enter an amount in rupees, like 420 or 420.50."
+  },
+  "media": {
+    "photoLimit": "You can add up to 10 photos.",
+    "videoLimit": "You can add up to 2 videos.",
+    "videoTooLong": "Videos can be up to 60 seconds.",
+    "tooLarge": "This file is too large.",
+    "photosLeft_one": "{{count}} more photo",
+    "photosLeft_other": "{{count}} more photos",
+    "cover": "Cover",
+    "makeCover": "Make cover",
+    "delete": "Delete",
+    "retry": "Retry",
+    "uploading": "Uploading {{percent}}%",
+    "failed": "Upload failed",
+    "unreadable": "Couldn't read this file. Try another."
+  },
+  "side": {
+    "diagramTitle": "Seen from behind, facing forward",
+    "diagramText": "Left is the operator's left hand. Buyers see the same picture on your listing."
+  }
+}

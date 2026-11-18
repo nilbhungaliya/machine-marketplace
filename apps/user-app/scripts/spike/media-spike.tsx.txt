@@ -1,0 +1,140 @@
+// F2 native media spike screen (plan Task 20 Step 4; spec §6.4, §6.5, R46, R47). __DEV__ only, English only, not
+// translated: a developer tool, never shipped.
+//
+// HOW TO RESTORE (the source is kept as apps/user-app/scripts/spike/media-spike.tsx.txt):
+//   1. Copy it to apps/user-app/screens/dev/media-spike.tsx.
+//   2. In navigation/root-navigator.tsx, inside the signed-in branch, add
+//        {__DEV__ ? <Stack.Screen name={'MediaSpike' as never} component={MediaSpikeScreen} /> : null}
+//      with `import MediaSpikeScreen from '@/screens/dev/media-spike';`, and open it from a __DEV__ button, e.g. in
+//      screens/profile.tsx: navigation.navigate('MediaSpike' as never).
+//   3. Build the dev client (pnpm android), make the fixtures on the host and copy them in:
+//        node apps/user-app/scripts/spike/make-gps-fixtures.mjs <newEmptyDir>
+//        adb push <dir>/. /data/local/tmp/spike/
+//        adb shell run-as com.machineparts.app mkdir -p files/spike
+//        for f in gps.jpg gps.mp4 gps.mov gps-small.mp4; do adb shell run-as com.machineparts.app cp /data/local/tmp/spike/$f files/spike/; done
+//   4. Upload target: with R2 keys, set EXPO_PUBLIC_SPIKE_UPLOAD_URL to a presigned PUT for video/mp4 of
+//      gps-small.mp4's exact size; otherwise run `node apps/user-app/scripts/spike/upload-sink.mjs` on the host and
+//      `adb reverse tcp:8099 tcp:8099` (the default URL is http://localhost:8099/spike-upload).
+//   5. Run all checks on the screen, then pull the outputs:
+//        adb exec-out run-as com.machineparts.app cat files/spike/out/<f> > <f>
+//      and check them on the host: ffprobe -v quiet -show_format -show_streams <video> (codec h264, long edge <= 1280,
+//      NO `location` tag); photo.jpg and poster.jpg carry no Exif:
+//        node apps/user-app/scripts/spike/make-gps-fixtures.mjs --check-jpeg <f>   (exit 0 = no Exif)
+//      and, once F2 is merged, the API's apps/api/src/lib/sniff-media.ts (jpegHasExif + jpegHeaderStatus, which also
+//      refuses XMP and other APPn) is the reference check.
+//   6. Remove the screen and its navigation entry again.
+//
+// Fixture paths (the app's files dir): files/spike/{gps.jpg,gps.mp4,gps.mov,gps-small.mp4}; outputs in files/spike/out/:
+// photo.jpg, poster.jpg, gps-mp4-out.mp4, gps-mov-out.mp4, gps-small-mp4-out.mp4.
+
+import React, { useState } from 'react';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import * as LegacyFS from 'expo-file-system/legacy';
+import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
+import * as VideoThumbnails from 'expo-video-thumbnails';
+import { useVideoPlayer, VideoView } from 'expo-video';
+import { Video, getVideoMetaData } from 'react-native-compressor';
+import ScreenWrapper from '@/components/ScreenWrapper';
+import Button from '@/components/Button';
+import { spacing, useTheme } from '@/lib/theme';
+import { useType } from '@/hooks/use-type';
+import { PHOTO_TARGETS, POSTER_TARGET, VIDEO_COMPRESS_OPTIONS } from '@/lib/media-prepare';
+
+const DIR = `${LegacyFS.documentDirectory}spike/`;
+const OUT = `${DIR}out/`;
+const PLAY_URL = 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4';
+const UPLOAD_URL = process.env.EXPO_PUBLIC_SPIKE_UPLOAD_URL || 'http://localhost:8099/spike-upload';
+
+type Line = { step: string; ok: boolean; detail: string };
+
+async function copyOut(from: string, name: string): Promise<string> {
+  await LegacyFS.makeDirectoryAsync(OUT, { intermediates: true }).catch(() => undefined);
+  const to = `${OUT}${name}`;
+  await LegacyFS.deleteAsync(to, { idempotent: true });
+  await LegacyFS.copyAsync({ from, to });
+  return to;
+}
+
+export default function MediaSpikeScreen() {
+  const { colors } = useTheme();
+  const type = useType();
+  const [lines, setLines] = useState<Line[]>([]);
+  const [busy, setBusy] = useState(false);
+  const player = useVideoPlayer(PLAY_URL, (p) => { p.loop = false; });
+
+  const log = (step: string, ok: boolean, detail: unknown) => {
+    const line = { step, ok, detail: typeof detail === 'string' ? detail : JSON.stringify(detail) };
+    console.log('[media-spike]', line.step, line.ok ? 'OK' : 'FAIL', line.detail);
+    setLines((prev) => [...prev, line]);
+  };
+
+  const run = async () => {
+    setBusy(true);
+    setLines([]);
+    // 1. Photo through the manipulator (R46): 1600 px, 0.8.
+    try {
+      const ctx = ImageManipulator.manipulate(`${DIR}gps.jpg`);
+      ctx.resize({ width: PHOTO_TARGETS.full.longEdge });
+      const ref = await ctx.renderAsync();
+      const res = await ref.saveAsync({ compress: PHOTO_TARGETS.full.compress, format: SaveFormat.JPEG });
+      const to = await copyOut(res.uri, 'photo.jpg');
+      log('manipulator', true, { to, width: res.width, height: res.height });
+    } catch (e) {
+      log('manipulator', false, String(e));
+    }
+    // 2. Videos through the compressor (R47), metadata of the output, poster.
+    for (const name of ['gps.mp4', 'gps.mov', 'gps-small.mp4']) {
+      try {
+        const started = Date.now();
+        const out = await Video.compress(`${DIR}${name}`, { ...VIDEO_COMPRESS_OPTIONS });
+        const meta = await getVideoMetaData(out);
+        const to = await copyOut(out, `${name.replace('.', '-')}-out.mp4`);
+        log(`compress ${name}`, true, { to, ms: Date.now() - started, meta });
+        if (name === 'gps.mp4') {
+          const thumb = await VideoThumbnails.getThumbnailAsync(out, { time: POSTER_TARGET.atMs });
+          const posterTo = await copyOut(thumb.uri, 'poster.jpg');
+          log('thumbnail', true, { to: posterTo, width: thumb.width, height: thumb.height });
+        }
+      } catch (e) {
+        log(`compress ${name}`, false, String(e));
+      }
+    }
+    // 3. Streamed binary PUT with progress (createUploadTask, expo-file-system/legacy).
+    try {
+      let events = 0;
+      const task = LegacyFS.createUploadTask(
+        UPLOAD_URL,
+        `${DIR}gps-small.mp4`,
+        { httpMethod: 'PUT', uploadType: LegacyFS.FileSystemUploadType.BINARY_CONTENT, headers: { 'Content-Type': 'video/mp4' } },
+        () => { events += 1; },
+      );
+      const res = await task.uploadAsync();
+      log('upload', !!res && res.status >= 200 && res.status < 300, { status: res?.status, progressEvents: events, url: UPLOAD_URL });
+    } catch (e) {
+      log('upload', false, String(e));
+    }
+    setBusy(false);
+  };
+
+  const s = StyleSheet.create({
+    pad: { padding: spacing.lg, gap: spacing.md },
+    line: { ...type('caption'), color: colors.text },
+    fail: { ...type('caption'), color: colors.danger },
+    video: { width: '100%', aspectRatio: 16 / 9, backgroundColor: colors.photo },
+  });
+
+  return (
+    <ScreenWrapper>
+      <ScrollView contentContainerStyle={s.pad}>
+        <Button title="Run media checks" onPress={run} loading={busy} phLabel="Spike-run" />
+        <Button title="Play public MP4" onPress={() => player.play()} variant="outline" phLabel="Spike-play" />
+        <VideoView player={player} style={s.video} nativeControls />
+        <View>
+          {lines.map((l, i) => (
+            <Text key={i} style={l.ok ? s.line : s.fail}>{`${l.ok ? 'OK' : 'FAIL'} ${l.step}: ${l.detail}`}</Text>
+          ))}
+        </View>
+      </ScrollView>
+    </ScreenWrapper>
+  );
+}

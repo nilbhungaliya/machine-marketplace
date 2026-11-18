@@ -17,6 +17,8 @@ interface ListRowProps {
   selected?: boolean;
   /** The last row of a card: no divider below. */
   last?: boolean;
+  /** A destructive action (Remove listing): label and icon in `danger`. */
+  danger?: boolean;
   onPress?: () => void;
   disabled?: boolean;
   testID?: string;
@@ -27,7 +29,7 @@ interface ListRowProps {
 
 /** A row in a `Card flush` (Periwinkle v2 `.menu div`, spec §7.2). */
 export default function ListRow({
-  label, hint, icon: Icon, trailing, chevron = false, selected = false, last = false, onPress, disabled,
+  label, hint, icon: Icon, trailing, chevron = false, selected = false, last = false, danger = false, onPress, disabled,
   testID, accessibilityRole, accessibilityState, style,
 }: ListRowProps) {
   const { colors } = useTheme();
@@ -44,14 +46,15 @@ export default function ListRow({
     text: { flex: 1 },
     label: { ...type('bodyStrong'), color: colors.text },
     labelSelected: { color: colors.primaryInk },
+    labelDanger: { color: colors.danger },
     hint: { ...type('caption'), color: colors.textMuted, marginTop: 2 },
   }), [colors, type]);
 
   const content = (
     <>
-      {Icon ? <Icon size={20} color={colors.primaryInk} /> : null}
+      {Icon ? <Icon size={20} color={danger ? colors.danger : colors.primaryInk} /> : null}
       <View style={s.text}>
-        <Text style={[s.label, selected && s.labelSelected]}>{label}</Text>
+        <Text style={[s.label, selected && s.labelSelected, danger && s.labelDanger]}>{label}</Text>
         {hint ? <Text style={s.hint}>{hint}</Text> : null}
       </View>
       {trailing}

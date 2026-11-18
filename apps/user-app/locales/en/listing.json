@@ -1,1 +1,281 @@
-{}
+{
+  "kind": {
+    "part": "Spare part",
+    "machine": "Machine for sale",
+    "machine_rental": "Machine for rent"
+  },
+  "condition": {
+    "new": "New",
+    "unused": "Unused",
+    "used": "Used",
+    "excess": "Excess"
+  },
+  "unit": {
+    "pcs": {
+      "label": "Pieces",
+      "per": "/pc",
+      "count_one": "{{qty}} pc",
+      "count_other": "{{qty}} pcs"
+    },
+    "pairs": {
+      "label": "Pairs",
+      "per": "/pair",
+      "count_one": "{{qty}} pair",
+      "count_other": "{{qty}} pairs"
+    },
+    "sets": {
+      "label": "Sets",
+      "per": "/set",
+      "count_one": "{{qty}} set",
+      "count_other": "{{qty}} sets"
+    },
+    "kg": {
+      "label": "Kilograms",
+      "per": "/kg",
+      "count_one": "{{qty}} kg",
+      "count_other": "{{qty}} kg"
+    },
+    "metres": {
+      "label": "Metres",
+      "per": "/m",
+      "count_one": "{{qty}} m",
+      "count_other": "{{qty}} m"
+    },
+    "litres": {
+      "label": "Litres",
+      "per": "/L",
+      "count_one": "{{qty}} L",
+      "count_other": "{{qty}} L"
+    },
+    "boxes": {
+      "label": "Boxes",
+      "per": "/box",
+      "count_one": "{{qty}} box",
+      "count_other": "{{qty}} boxes"
+    },
+    "machines": {
+      "label": "Machines",
+      "per": "/machine",
+      "count_one": "{{qty}} machine",
+      "count_other": "{{qty}} machines"
+    }
+  },
+  "unitFallback": {
+    "per": "/ {{unit}}",
+    "count": "{{qty}} {{unit}}"
+  },
+  "price": {
+    "onRequest": "Price on request",
+    "model": {
+      "fixed": "Fixed price",
+      "negotiable": "Negotiable",
+      "on_request": "Price on request"
+    },
+    "gst": {
+      "included": "GST included",
+      "extra": "GST extra"
+    }
+  },
+  "period": {
+    "hour": "/hr",
+    "day": "/day",
+    "week": "/week",
+    "month": "/month"
+  },
+  "periodName": {
+    "hour": "Per hour",
+    "day": "Per day",
+    "week": "Per week",
+    "month": "Per month"
+  },
+  "side": {
+    "left": "Left side",
+    "right": "Right side",
+    "pair": "Pair (both sides)",
+    "not_applicable": "No side"
+  },
+  "delivery": {
+    "pickup": "Buyer picks up",
+    "ship": "I can ship",
+    "local_delivery": "Local delivery"
+  },
+  "status": {
+    "draft": "Draft",
+    "pending_review": "In review",
+    "rejected": "Needs changes",
+    "live": "Live",
+    "paused": "Paused",
+    "reserved": "Reserved",
+    "sold": "Sold",
+    "rented": "Rented out",
+    "unavailable": "Unavailable",
+    "expired": "Expired",
+    "hidden": "Hidden by our team",
+    "removed": "Removed"
+  },
+  "group": {
+    "live": "Live",
+    "review": "In review",
+    "paused": "Paused",
+    "sold": "Sold",
+    "drafts": "Drafts",
+    "removed_by_team": "Removed by our team"
+  },
+  "time": {
+    "updatedToday": "Updated today",
+    "updatedDaysAgo_one": "Updated {{count}} day ago",
+    "updatedDaysAgo_other": "Updated {{count}} days ago",
+    "updatedOn": "Updated {{date}}",
+    "expiresToday": "Expires today",
+    "expiresInDays_one": "Expires in {{count}} day",
+    "expiresInDays_other": "Expires in {{count}} days",
+    "expired": "Expired"
+  },
+  "distance": {
+    "near": "Less than 1 km away",
+    "km": "{{km}} km away"
+  },
+  "fits": {
+    "allModels": "all models",
+    "yearFrom": "{{from}} on",
+    "yearTo": "up to {{to}}"
+  },
+  "rental": {
+    "operator": {
+      "included": "Operator included",
+      "optional": "Operator on request",
+      "not_available": "No operator",
+      "mandatory": "Operator required"
+    },
+    "fuel": {
+      "client": "You supply the diesel",
+      "included": "Fuel included",
+      "per_litre": "Fuel charged per litre"
+    },
+    "transport": {
+      "owner_delivers": "Owner delivers",
+      "renter_picks_up": "Renter picks up",
+      "either": "Delivery or pickup"
+    }
+  },
+  "reportReason": {
+    "stock_photos": "Stock photos, not the real part",
+    "wrong_side_or_fit": "Wrong side or fit",
+    "wrong_price_or_quantity": "Wrong price or quantity",
+    "already_sold": "Already sold",
+    "advance_payment": "Asked for advance payment",
+    "something_else": "Something else"
+  },
+  "score": {
+    "photos": "Add 3 or more photos",
+    "video": "Add a video",
+    "part_number": "Add the part number",
+    "fitment": "Add a machine it fits",
+    "year": "Add the year of manufacture",
+    "hours_run": "Add the hours run",
+    "optional_specs": "Fill in every specification",
+    "description": "Add a longer description"
+  },
+  "view": {
+    "mediaCounter": "{{index}} / {{total}}",
+    "noPhoto": "No photo yet",
+    "playVideo": "Play video",
+    "openPhoto": "Open photo {{index}}",
+    "forRent": "For rent",
+    "description": "Description",
+    "conditionNote": "About the condition",
+    "minOrder": "Minimum order: {{qty}}",
+    "rates": "Rates",
+    "terms": "Terms",
+    "shiftHours_one": "A day is {{count}} hour",
+    "shiftHours_other": "A day is {{count}} hours",
+    "monthDays_one": "A month is {{count}} working day",
+    "monthDays_other": "A month is {{count}} working days",
+    "overtime": "Overtime",
+    "minimum": "Minimum hire",
+    "operator": "Operator",
+    "operatorRate": "{{amount}} /day",
+    "fuel": "Fuel",
+    "transport": "Transport",
+    "transportCharge": "{{amount}} each way",
+    "worksWithin": "Works within {{km}} km",
+    "deposit": "Security deposit",
+    "availableFrom": "Available from {{date}}",
+    "availableNow": "Available now",
+    "minDuration_hour_one": "{{count}} hour",
+    "minDuration_hour_other": "{{count}} hours",
+    "minDuration_day_one": "{{count}} day",
+    "minDuration_day_other": "{{count}} days",
+    "minDuration_week_one": "{{count}} week",
+    "minDuration_week_other": "{{count}} weeks",
+    "minDuration_month_one": "{{count}} month",
+    "minDuration_month_other": "{{count}} months",
+    "machineTip": "Never pay before inspecting a used machine.",
+    "fitsTitle": "Fits these machines",
+    "checkMyMachine": "Check my machine",
+    "specsTitle": "Specifications",
+    "partNumber": "Part number",
+    "partBrand": "Part brand",
+    "reference": "Reference",
+    "make": "Make",
+    "model": "Model",
+    "year": "Year",
+    "hoursRun": "Hours run",
+    "hoursRunValue_one": "{{hours}} hour",
+    "hoursRunValue_other": "{{hours}} hours",
+    "running": "Can be seen running",
+    "inspection": "Inspection by appointment",
+    "yes": "Yes",
+    "deliveryTitle": "Delivery and location",
+    "sellerTitle": "Seller",
+    "gstVerified": "GST verified",
+    "memberSince": "Member since {{date}}",
+    "liveListings_one": "{{count}} live listing",
+    "liveListings_other": "{{count}} live listings",
+    "viewAll": "View all listings",
+    "report": "Report listing"
+  },
+  "errors": {
+    "kindImmutable": "The kind of a listing can't be changed.",
+    "fieldNotForKind": "This field doesn't apply to this kind of listing.",
+    "categoryInvalid": "Pick an active category.",
+    "specsInvalid": "Check the highlighted specifications.",
+    "sideRequired": "Choose left, right or pair.",
+    "sideNotAllowed": "This part has no side.",
+    "unitDecimals": "Too many decimals for this unit.",
+    "minOrderAboveQuantity": "The minimum order can't be more than the quantity.",
+    "priceRequired": "Enter a price, or choose Price on request.",
+    "rateRequired": "Enter at least one rate.",
+    "brandInvalid": "Pick a brand from the list, or type it under Other.",
+    "modelInvalid": "Pick a model of this brand, or type it under Other.",
+    "fitmentInvalid": "Check the machines this part fits.",
+    "areaMismatch": "That industrial area isn't in this pincode's district.",
+    "incomplete": "A few details are still missing.",
+    "mediaKeyInvalid": "This upload didn't match. Try adding it again.",
+    "mediaMissing": "The file didn't reach us. Try again.",
+    "mediaType": "This file type isn't allowed.",
+    "mediaMetadata": "This photo still has location data. Add it again from the app.",
+    "mediaOrderInvalid": "Couldn't reorder the photos. Try again.",
+    "mediaTooLarge": "This file is too large.",
+    "videoTooLong": "Videos can be up to 60 seconds.",
+    "rentalNeedsGst": "Verify your GST to list rentals.",
+    "reportOwnListing": "You can't report your own listing.",
+    "notFound": "This listing isn't available any more.",
+    "onboardingIncomplete": "Finish your business profile first.",
+    "draftLimit": "You have 20 drafts. Publish or delete one to start another.",
+    "unverifiedCap": "Verify your GST to list more than {{cap}} listings.",
+    "noMachineUnit": "Machines can't be listed right now. Please try again later.",
+    "notEditable": "This listing can't be edited now.",
+    "categoryLocked": "The category can't be changed after review.",
+    "transitionNotAllowed": "That isn't possible for this listing now.",
+    "mediaLimit": "You've reached the limit of 10 photos and 2 videos.",
+    "mediaLastPhoto": "A listing needs at least one photo.",
+    "reportExists": "You've already reported this listing. Our team is looking at it.",
+    "reportLimit": "You've sent many reports today. Please try again tomorrow.",
+    "storageUnavailable": "Photo upload isn't available yet.",
+    "rateLimited": "Too many attempts. Please wait a few minutes.",
+    "uploadFailed": "The upload didn't finish. Tap to retry.",
+    "photoPrepare": "Couldn't prepare this photo. Try another.",
+    "videoPrepare": "Couldn't prepare this video. Try another."
+  }
+}

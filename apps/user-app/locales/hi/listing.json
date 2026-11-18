@@ -1,1 +1,281 @@
-{}
+{
+  "kind": {
+    "part": "स्पेयर पार्ट",
+    "machine": "बिक्री के लिए मशीन",
+    "machine_rental": "किराए के लिए मशीन"
+  },
+  "condition": {
+    "new": "नया",
+    "unused": "अप्रयुक्त",
+    "used": "पुराना",
+    "excess": "अतिरिक्त स्टॉक"
+  },
+  "unit": {
+    "pcs": {
+      "label": "पीस",
+      "per": "/पीस",
+      "count_one": "{{qty}} पीस",
+      "count_other": "{{qty}} पीस"
+    },
+    "pairs": {
+      "label": "जोड़ी",
+      "per": "/जोड़ी",
+      "count_one": "{{qty}} जोड़ी",
+      "count_other": "{{qty}} जोड़ी"
+    },
+    "sets": {
+      "label": "सेट",
+      "per": "/सेट",
+      "count_one": "{{qty}} सेट",
+      "count_other": "{{qty}} सेट"
+    },
+    "kg": {
+      "label": "किलोग्राम",
+      "per": "/किलो",
+      "count_one": "{{qty}} किलो",
+      "count_other": "{{qty}} किलो"
+    },
+    "metres": {
+      "label": "मीटर",
+      "per": "/मीटर",
+      "count_one": "{{qty}} मीटर",
+      "count_other": "{{qty}} मीटर"
+    },
+    "litres": {
+      "label": "लीटर",
+      "per": "/लीटर",
+      "count_one": "{{qty}} लीटर",
+      "count_other": "{{qty}} लीटर"
+    },
+    "boxes": {
+      "label": "डिब्बे",
+      "per": "/डिब्बा",
+      "count_one": "{{qty}} डिब्बा",
+      "count_other": "{{qty}} डिब्बे"
+    },
+    "machines": {
+      "label": "मशीनें",
+      "per": "/मशीन",
+      "count_one": "{{qty}} मशीन",
+      "count_other": "{{qty}} मशीनें"
+    }
+  },
+  "unitFallback": {
+    "per": "/ {{unit}}",
+    "count": "{{qty}} {{unit}}"
+  },
+  "price": {
+    "onRequest": "कीमत पूछें",
+    "model": {
+      "fixed": "तय कीमत",
+      "negotiable": "मोलभाव संभव",
+      "on_request": "कीमत पूछें"
+    },
+    "gst": {
+      "included": "GST सहित",
+      "extra": "GST अलग"
+    }
+  },
+  "period": {
+    "hour": "/घंटा",
+    "day": "/दिन",
+    "week": "/हफ़्ता",
+    "month": "/महीना"
+  },
+  "periodName": {
+    "hour": "प्रति घंटा",
+    "day": "प्रति दिन",
+    "week": "प्रति हफ़्ता",
+    "month": "प्रति महीना"
+  },
+  "side": {
+    "left": "लेफ़्ट साइड",
+    "right": "राइट साइड",
+    "pair": "जोड़ी (दोनों साइड)",
+    "not_applicable": "कोई साइड नहीं"
+  },
+  "delivery": {
+    "pickup": "खरीदार ले जाएँ",
+    "ship": "मैं भेज सकता हूँ",
+    "local_delivery": "लोकल डिलीवरी"
+  },
+  "status": {
+    "draft": "ड्राफ़्ट",
+    "pending_review": "जाँच में",
+    "rejected": "बदलाव ज़रूरी",
+    "live": "लाइव",
+    "paused": "रोका गया",
+    "reserved": "आरक्षित",
+    "sold": "बिक गया",
+    "rented": "किराए पर",
+    "unavailable": "उपलब्ध नहीं",
+    "expired": "समय समाप्त",
+    "hidden": "हमारी टीम ने छिपाया",
+    "removed": "हटाया गया"
+  },
+  "group": {
+    "live": "लाइव",
+    "review": "जाँच में",
+    "paused": "रोके गए",
+    "sold": "बिके",
+    "drafts": "ड्राफ़्ट",
+    "removed_by_team": "हमारी टीम ने हटाए"
+  },
+  "time": {
+    "updatedToday": "आज अपडेट हुआ",
+    "updatedDaysAgo_one": "{{count}} दिन पहले अपडेट हुआ",
+    "updatedDaysAgo_other": "{{count}} दिन पहले अपडेट हुआ",
+    "updatedOn": "{{date}} को अपडेट हुआ",
+    "expiresToday": "आज समाप्त होगा",
+    "expiresInDays_one": "{{count}} दिन में समाप्त होगा",
+    "expiresInDays_other": "{{count}} दिन में समाप्त होगा",
+    "expired": "समय समाप्त"
+  },
+  "distance": {
+    "near": "1 किमी से कम दूर",
+    "km": "{{km}} किमी दूर"
+  },
+  "fits": {
+    "allModels": "सभी मॉडल",
+    "yearFrom": "{{from}} से",
+    "yearTo": "{{to}} तक"
+  },
+  "rental": {
+    "operator": {
+      "included": "ऑपरेटर शामिल",
+      "optional": "ऑपरेटर माँगने पर",
+      "not_available": "ऑपरेटर नहीं",
+      "mandatory": "ऑपरेटर ज़रूरी"
+    },
+    "fuel": {
+      "client": "डीज़ल आप देंगे",
+      "included": "ईंधन शामिल",
+      "per_litre": "ईंधन प्रति लीटर अलग"
+    },
+    "transport": {
+      "owner_delivers": "मालिक पहुँचाएँगे",
+      "renter_picks_up": "किराएदार ले जाएँ",
+      "either": "डिलीवरी या पिकअप"
+    }
+  },
+  "reportReason": {
+    "stock_photos": "स्टॉक फ़ोटो, असली पार्ट नहीं",
+    "wrong_side_or_fit": "गलत साइड या फ़िट",
+    "wrong_price_or_quantity": "गलत कीमत या मात्रा",
+    "already_sold": "पहले ही बिक चुका",
+    "advance_payment": "एडवांस पेमेंट माँगा",
+    "something_else": "कुछ और"
+  },
+  "score": {
+    "photos": "3 या ज़्यादा फ़ोटो जोड़ें",
+    "video": "एक वीडियो जोड़ें",
+    "part_number": "पार्ट नंबर जोड़ें",
+    "fitment": "वह मशीन जोड़ें जिसमें यह लगता है",
+    "year": "निर्माण का साल जोड़ें",
+    "hours_run": "चले हुए घंटे जोड़ें",
+    "optional_specs": "सभी स्पेसिफ़िकेशन भरें",
+    "description": "थोड़ा लंबा विवरण जोड़ें"
+  },
+  "view": {
+    "mediaCounter": "{{index}} / {{total}}",
+    "noPhoto": "अभी कोई फ़ोटो नहीं",
+    "playVideo": "वीडियो चलाएँ",
+    "openPhoto": "फ़ोटो {{index}} खोलें",
+    "forRent": "किराए के लिए",
+    "description": "विवरण",
+    "conditionNote": "हालत के बारे में",
+    "minOrder": "न्यूनतम ऑर्डर: {{qty}}",
+    "rates": "किराया",
+    "terms": "शर्तें",
+    "shiftHours_one": "एक दिन = {{count}} घंटा",
+    "shiftHours_other": "एक दिन = {{count}} घंटे",
+    "monthDays_one": "एक महीना = {{count}} कामकाजी दिन",
+    "monthDays_other": "एक महीना = {{count}} कामकाजी दिन",
+    "overtime": "ओवरटाइम",
+    "minimum": "न्यूनतम किराया अवधि",
+    "operator": "ऑपरेटर",
+    "operatorRate": "{{amount}} /दिन",
+    "fuel": "ईंधन",
+    "transport": "ट्रांसपोर्ट",
+    "transportCharge": "एक तरफ़ {{amount}}",
+    "worksWithin": "{{km}} किमी के अंदर काम करते हैं",
+    "deposit": "सिक्योरिटी डिपॉज़िट",
+    "availableFrom": "{{date}} से उपलब्ध",
+    "availableNow": "अभी उपलब्ध",
+    "minDuration_hour_one": "{{count}} घंटा",
+    "minDuration_hour_other": "{{count}} घंटे",
+    "minDuration_day_one": "{{count}} दिन",
+    "minDuration_day_other": "{{count}} दिन",
+    "minDuration_week_one": "{{count}} हफ़्ता",
+    "minDuration_week_other": "{{count}} हफ़्ते",
+    "minDuration_month_one": "{{count}} महीना",
+    "minDuration_month_other": "{{count}} महीने",
+    "machineTip": "पुरानी मशीन देखे बिना कभी पेमेंट न करें।",
+    "fitsTitle": "इन मशीनों में लगता है",
+    "checkMyMachine": "मेरी मशीन जाँचें",
+    "specsTitle": "स्पेसिफ़िकेशन",
+    "partNumber": "पार्ट नंबर",
+    "partBrand": "पार्ट ब्रांड",
+    "reference": "रेफ़रेंस",
+    "make": "कंपनी",
+    "model": "मॉडल",
+    "year": "साल",
+    "hoursRun": "चले हुए घंटे",
+    "hoursRunValue_one": "{{hours}} घंटा",
+    "hoursRunValue_other": "{{hours}} घंटे",
+    "running": "चलती हुई देख सकते हैं",
+    "inspection": "अपॉइंटमेंट से जाँच",
+    "yes": "हाँ",
+    "deliveryTitle": "डिलीवरी और लोकेशन",
+    "sellerTitle": "विक्रेता",
+    "gstVerified": "GST सत्यापित",
+    "memberSince": "{{date}} से सदस्य",
+    "liveListings_one": "{{count}} लाइव लिस्टिंग",
+    "liveListings_other": "{{count}} लाइव लिस्टिंग",
+    "viewAll": "सभी लिस्टिंग देखें",
+    "report": "लिस्टिंग की शिकायत करें"
+  },
+  "errors": {
+    "kindImmutable": "लिस्टिंग का प्रकार बदला नहीं जा सकता।",
+    "fieldNotForKind": "यह जानकारी इस तरह की लिस्टिंग पर लागू नहीं होती।",
+    "categoryInvalid": "कोई चालू कैटेगरी चुनें।",
+    "specsInvalid": "चिह्नित स्पेसिफ़िकेशन जाँचें।",
+    "sideRequired": "लेफ़्ट, राइट या जोड़ी चुनें।",
+    "sideNotAllowed": "इस पार्ट की कोई साइड नहीं है।",
+    "unitDecimals": "इस यूनिट के लिए दशमलव ज़्यादा हैं।",
+    "minOrderAboveQuantity": "न्यूनतम ऑर्डर मात्रा से ज़्यादा नहीं हो सकता।",
+    "priceRequired": "कीमत डालें, या 'कीमत पूछें' चुनें।",
+    "rateRequired": "कम से कम एक किराया डालें।",
+    "brandInvalid": "सूची से ब्रांड चुनें, या 'अन्य' में लिखें।",
+    "modelInvalid": "इस ब्रांड का मॉडल चुनें, या 'अन्य' में लिखें।",
+    "fitmentInvalid": "जिन मशीनों में यह पार्ट लगता है, उन्हें जाँचें।",
+    "areaMismatch": "यह औद्योगिक क्षेत्र इस पिनकोड के ज़िले में नहीं है।",
+    "incomplete": "कुछ जानकारी अभी बाकी है।",
+    "mediaKeyInvalid": "यह अपलोड मेल नहीं खाया। फिर से जोड़ें।",
+    "mediaMissing": "फ़ाइल हम तक नहीं पहुँची। फिर कोशिश करें।",
+    "mediaType": "इस तरह की फ़ाइल की अनुमति नहीं है।",
+    "mediaMetadata": "इस फ़ोटो में अब भी लोकेशन की जानकारी है। ऐप से फिर से जोड़ें।",
+    "mediaOrderInvalid": "फ़ोटो का क्रम नहीं बदल सका। फिर कोशिश करें।",
+    "mediaTooLarge": "यह फ़ाइल बहुत बड़ी है।",
+    "videoTooLong": "वीडियो 60 सेकंड तक का हो सकता है।",
+    "rentalNeedsGst": "किराए की लिस्टिंग के लिए अपना GST सत्यापित करें।",
+    "reportOwnListing": "आप अपनी ही लिस्टिंग की शिकायत नहीं कर सकते।",
+    "notFound": "यह लिस्टिंग अब उपलब्ध नहीं है।",
+    "onboardingIncomplete": "पहले अपनी बिज़नेस प्रोफ़ाइल पूरी करें।",
+    "draftLimit": "आपके 20 ड्राफ़्ट हैं। नया शुरू करने के लिए एक पब्लिश करें या हटाएँ।",
+    "unverifiedCap": "{{cap}} से ज़्यादा लिस्टिंग के लिए अपना GST सत्यापित करें।",
+    "noMachineUnit": "अभी मशीनें लिस्ट नहीं हो सकतीं। कृपया बाद में कोशिश करें।",
+    "notEditable": "यह लिस्टिंग अभी बदली नहीं जा सकती।",
+    "categoryLocked": "जाँच के बाद कैटेगरी नहीं बदली जा सकती।",
+    "transitionNotAllowed": "इस लिस्टिंग के लिए अभी यह संभव नहीं है।",
+    "mediaLimit": "10 फ़ोटो और 2 वीडियो की सीमा पूरी हो गई है।",
+    "mediaLastPhoto": "लिस्टिंग में कम से कम एक फ़ोटो ज़रूरी है।",
+    "reportExists": "आप इस लिस्टिंग की शिकायत कर चुके हैं। हमारी टीम इसे देख रही है।",
+    "reportLimit": "आपने आज कई शिकायतें भेजी हैं। कृपया कल फिर कोशिश करें।",
+    "storageUnavailable": "फ़ोटो अपलोड अभी उपलब्ध नहीं है।",
+    "rateLimited": "बहुत ज़्यादा कोशिशें। कृपया कुछ मिनट रुकें।",
+    "uploadFailed": "अपलोड पूरा नहीं हुआ। फिर से कोशिश के लिए टैप करें।",
+    "photoPrepare": "यह फ़ोटो तैयार नहीं हो सकी। कोई दूसरी चुनें।",
+    "videoPrepare": "यह वीडियो तैयार नहीं हो सका। कोई दूसरा चुनें।"
+  }
+}
