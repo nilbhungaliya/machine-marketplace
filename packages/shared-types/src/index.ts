@@ -471,3 +471,185 @@ export interface BusinessProfile {
   onboarding: OnboardingStep;
   completion: { name: boolean; activities: boolean; location: boolean; gst: boolean };
 }
+
+// ─── Admin: GST review queue and businesses (F1 + A2 spec §8.1, §8.2) ───
+
+/** The review queue's tabs: `decided` = approved or rejected in the last 90 days. */
+export const GST_REVIEW_QUEUES = ['waiting', 'needs_more', 'decided'] as const;
+export type GstReviewQueue = (typeof GST_REVIEW_QUEUES)[number];
+
+/** What the business typed on a review with no lookup attached (§5.3). */
+export interface GstEnteredDetails {
+  legalName: string;
+  tradeName: string | null;
+  address: GstDetails['address'];
+  constitution: string;
+}
+
+/** The officer's corrections on approval (only used when no fresh lookup decides, §5.3). */
+export interface GstApprovalEdits {
+  legalName?: string;
+  tradeName?: string | null;
+  address?: GstDetails['address'];
+  constitution?: string;
+}
+
+/** GET /admin/verification/reviews. */
+export interface AdminGstReviewRow {
+  id: string;
+  businessId: string;
+  businessName: string;
+  city: string | null;
+  gstin: string;
+  status: GstProofStatus;
+  hasLookup: boolean;
+  documentCount: number;
+  createdAt: string;
+  updatedAt: string;
+  decidedAt: string | null;
+}
+
+/** One stored document of a review: no key, only its place and type; the URL comes from `.../documents/:proofId/:index/url`. */
+export interface AdminGstReviewDocument {
+  index: number;
+  type: GstDocumentType;
+  format: 'jpg' | 'png' | 'webp' | 'pdf';
+}
+
+/** A GST lookup in a history list: never the details (a held lookup's details belong to another business). */
+export interface AdminGstCheckEntry {
+  id: string;
+  gstin: string;
+  source: 'business' | 'officer';
+  result: GstCheckResult;
+  gstStatus: GstStatus | null;
+  createdAt: string;
+}
+
+/** A representative proof in a history list, without document keys. */
+export interface AdminGstProofEntry {
+  id: string;
+  gstin: string;
+  method: 'provider_otp' | 'documents' | null;
+  status: GstProofStatus;
+  documentTypes: GstDocumentType[];
+  officerMessage: string | null;
+  reason: string | null;
+  lookupAtApproval: 'active' | 'unavailable' | 'none' | null;
+  createdAt: string;
+  decidedAt: string | null;
+}
+
+/** A grant or revocation in a history list. */
+export interface AdminVerificationEntry {
+  id: string;
+  level: VerificationLevel;
+  method: 'provider_otp' | 'officer_review' | null;
+  status: 'active' | 'revoked';
+  verifiedAt: string;
+  revokedAt: string | null;
+  revokeReason: string | null;
+}
+
+export interface AdminGstHistory {
+  checks: AdminGstCheckEntry[];
+  proofs: AdminGstProofEntry[];
+  verifications: AdminVerificationEntry[];
+}
+
+/** GET /admin/verification/reviews/:id. */
+export interface AdminGstReviewDetail {
+  id: string;
+  status: GstProofStatus;
+  gstin: string;
+  declarationVersion: number;
+  declaredAt: string;
+  createdAt: string;
+  updatedAt: string;
+  decidedAt: string | null;
+  officerMessage: string | null;
+  reason: string | null;
+  lookupAtApproval: 'active' | 'unavailable' | 'none' | null;
+  approvedDetails: GstDetails | null;
+  business: {
+    id: string;
+    tradeName: string;
+    /** The GSTIN the business holds now (may differ from the reviewed one after a revocation). */
+    gstin: string | null;
+    addressLine: string | null;
+    city: string | null;
+    state: string | null;
+    pincode: string | null;
+    verificationStatus: VerificationStatus;
+  };
+  submittedBy: { id: string; name: string | null; phone: string };
+  /** What the business typed (no lookup attached), else null. */
+  entered: GstEnteredDetails | null;
+  /** The attached lookup (always a `found` one of this business), else null. */
+  lookup: { checkId: string; details: GstDetails; resolvedAt: string | null } | null;
+  /**
+   * The GST side (lookup, else entered) against the business's profile: `legalName` when the business name matches
+   * neither the GST legal nor trade name; `pincode` when the profile pincode differs from the GST address pincode.
+   */
+  mismatches: { legalName: boolean; pincode: boolean };
+  documents: AdminGstReviewDocument[];
+  history: AdminGstHistory;
+  /** False in mode `review`: the officer checks the GST portal and may correct the details before approving. */
+  providerAvailable: boolean;
+  storageAvailable: boolean;
+}
+
+/** GET /admin/verification/documents/:proofId/:index/url. */
+export interface AdminDocumentUrl {
+  url: string;
+  type: GstDocumentType;
+  format: 'jpg' | 'png' | 'webp' | 'pdf';
+  expiresAt: string;
+}
+
+/** GET /admin/businesses. */
+export interface AdminBusinessRow {
+  id: string;
+  tradeName: string;
+  legalName: string | null;
+  gstin: string | null;
+  city: string | null;
+  state: string | null;
+  /** The listed area's name, else the business's own "Other" text. */
+  industrialArea: string | null;
+  verificationStatus: VerificationStatus;
+  verificationLevels: VerificationLevel[];
+  owner: { id: string; name: string | null; phone: string; status: AccountStatus } | null;
+  createdAt: string;
+}
+
+export interface AdminBusinessList {
+  rows: AdminBusinessRow[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface AdminAuditEntry {
+  id: string;
+  action: string;
+  entityType: string;
+  entityId: string | null;
+  adminId: string | null;
+  adminName: string | null;
+  before: unknown;
+  after: unknown;
+  createdAt: string;
+}
+
+/** GET /admin/businesses/:id. */
+export interface AdminBusinessDetail {
+  profile: BusinessProfile;
+  verificationNote: string | null;
+  users: Array<{ id: string; name: string | null; phone: string; status: AccountStatus; memberRole: MemberRole; createdAt: string }>;
+  gst: GstStateView;
+  /** True while a review is `waiting` or `needs_more` (Release GSTIN is refused then). */
+  reviewOpen: boolean;
+  history: AdminGstHistory;
+  audit: AdminAuditEntry[];
+}

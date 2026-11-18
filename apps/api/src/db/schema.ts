@@ -6,7 +6,7 @@ import { sql } from 'drizzle-orm';
 import {
   ACCOUNT_STATUSES, ADMIN_ROLES, CATALOG_LEVELS, CATALOG_STATUSES, EMPLOYEE_RANGES, FIELD_APPLIES_TO, FIELD_TYPES,
   GST_CHECK_RESULTS, GST_PROOF_STATUSES, GST_STATUSES, LANGUAGES, MEMBER_ROLES, VERIFICATION_LEVELS,
-  VERIFICATION_STATUSES, type BusinessActivity, type GstDetails, type GstDocumentType,
+  VERIFICATION_STATUSES, type BusinessActivity, type GstDetails, type GstDocumentType, type GstEnteredDetails,
 } from '@mpm/shared-types';
 
 // Starting schema only: admin auth, the business/user core (scope F1, A2) and the audit log. Listings, enquiries,
@@ -322,13 +322,6 @@ export const gstChecks = pgTable(
   (t) => ({ businessCreatedIdx: index('gst_checks_business_created_idx').on(t.businessId, t.createdAt) }),
 );
 
-/** What the business typed on a review with no lookup attached (§5.3). */
-export interface GstEnteredDetails {
-  legalName: string;
-  tradeName: string | null;
-  address: GstDetails['address'];
-  constitution: string;
-}
 
 /**
  * The authorised-representative proof (§5.2 steps 4-5, §5.3): a declaration, then a registered-contact code

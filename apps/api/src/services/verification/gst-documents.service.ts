@@ -170,9 +170,28 @@ export async function deleteKeys(
   }
 }
 
-/** A 300 s presigned GET for a stored document (officers only, audited by the caller). Only `verification/` keys. */
+/** The content type a stored document is served with, from its key's extension (the sniffed type, set by staging). */
+const CONTENT_TYPE_OF: Record<DocumentKind, string> = {
+  jpg: 'image/jpeg',
+  png: 'image/png',
+  webp: 'image/webp',
+  pdf: 'application/pdf',
+};
+
+/** The format of a stored `verification/` key (its extension), or null for anything else. */
+export function documentFormat(key: string): DocumentKind | null {
+  const match = VERIFICATION_KEY_RE.exec(key);
+  return match ? (match[1] as DocumentKind) : null;
+}
+
+/**
+ * A 300 s presigned GET for a stored document (officers only, audited by the caller). Only `verification/` keys. The
+ * response is served inline with the type the key's extension names (which staging took from the sniffed bytes), so
+ * an officer's link renders as what the file really is.
+ */
 export async function presignDocumentRead(key: string): Promise<string> {
   requireStorage();
-  if (!VERIFICATION_KEY_RE.test(key)) throw new ValidationError('Invalid document key', undefined, 'DOCUMENT_KEY_INVALID');
-  return presignPrivateGet(key, PRIVATE_GET_TTL_SECONDS);
+  const format = documentFormat(key);
+  if (format === null) throw new ValidationError('Invalid document key', undefined, 'DOCUMENT_KEY_INVALID');
+  return presignPrivateGet(key, PRIVATE_GET_TTL_SECONDS, { contentType: CONTENT_TYPE_OF[format], disposition: 'inline' });
 }

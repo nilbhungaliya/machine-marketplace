@@ -140,12 +140,29 @@ export async function presignSignedPut(
   return { url, key, expiresAt };
 }
 
-/** A short-lived GET for a private object (default 300 s). Local signing (no network). */
-export async function presignPrivateGet(key: string, ttlSeconds = PRIVATE_GET_TTL_SECONDS): Promise<string> {
+/**
+ * A short-lived GET for a private object (default 300 s). Local signing (no network). `contentType` and
+ * `disposition` are signed into the URL as `response-content-type` / `response-content-disposition`, so the response
+ * carries them whatever the object was uploaded with.
+ */
+export async function presignPrivateGet(
+  key: string,
+  ttlSeconds = PRIVATE_GET_TTL_SECONDS,
+  opts: { contentType?: string; disposition?: string } = {},
+): Promise<string> {
   requireStorage();
   assertSafeKey(key);
   const expiresIn = Math.min(Math.max(1, Math.floor(ttlSeconds)), MAX_PRESIGN_TTL_SECONDS);
-  return getSignedUrl(buildClient(), new GetObjectCommand({ Bucket: privateBucket(), Key: key }), { expiresIn });
+  return getSignedUrl(
+    buildClient(),
+    new GetObjectCommand({
+      Bucket: privateBucket(),
+      Key: key,
+      ...(opts.contentType ? { ResponseContentType: opts.contentType } : {}),
+      ...(opts.disposition ? { ResponseContentDisposition: opts.disposition } : {}),
+    }),
+    { expiresIn },
+  );
 }
 
 /**

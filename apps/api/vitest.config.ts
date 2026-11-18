@@ -32,6 +32,8 @@ export default defineConfig({
       RATE_LIMIT_MAX: '1000000',
       // Same for the GST per-IP limit (lookup, otp/send): every suite calls from 127.0.0.1. One test lowers it.
       GST_IP_RATE_MAX: '1000000',
+      // No proxy in tests, whatever a developer's .env says: request.ip (and the per-IP limits) must be the client's.
+      TRUST_PROXY_HOPS: '0',
     },
     // Integration tests share ONE Postgres + Redis; parallel files trample each
     // other's fixtures. Every suite must delete what it inserts in afterAll.

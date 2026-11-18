@@ -59,12 +59,13 @@ async function activeCategoryIds(conn: Db | Tx, ids: string[]): Promise<string[]
 }
 
 /**
- * The active `gst` verification, if any, with the trade name it was granted with: the officer-approved details, else
- * the lookup the proof was attached to. `null` when GST isn't verified.
+ * The active `gst` verification, if any, with the trade name it was granted with: the officer-approved details when
+ * there are any (an officer who cleared the trade name wins over the lookup's), else the lookup the proof was attached
+ * to. `null` when GST isn't verified.
  */
 async function activeGst(conn: Db | Tx, businessId: string): Promise<{ tradeName: string | null } | null> {
   const { rows } = await conn.execute<{ trade_name: string | null }>(sql`
-    SELECT coalesce(p.approved_details->>'tradeName', c.details->>'tradeName') AS trade_name
+    SELECT CASE WHEN p.approved_details IS NOT NULL THEN p.approved_details->>'tradeName' ELSE c.details->>'tradeName' END AS trade_name
     FROM business_verifications v
     LEFT JOIN gst_representative_proofs p ON p.id = v.verified_by_proof_id
     LEFT JOIN gst_checks c ON c.id = p.check_id
@@ -97,6 +98,15 @@ async function userRow(conn: Db | Tx, userId: string, lock = false) {
 export async function getMyBusiness(db: Db | Tx, userId: string): Promise<BusinessProfile> {
   const user = await userRow(db, userId);
   if (!user.businessId) throw noBusiness();
+  return businessProfile(db, user.businessId, user.name);
+}
+
+/**
+ * One business's profile, as `GET /businesses/me` shows it (also the admin detail's, spec §8.2). `userName` is the
+ * person whose onboarding step is computed (the signed-in user, or the owner for an admin). `404 NO_BUSINESS` when the
+ * business doesn't exist.
+ */
+export async function businessProfile(db: Db | Tx, businessId: string, userName: string | null): Promise<BusinessProfile> {
   const [row] = await db
     .select({
       b: businesses,
@@ -106,7 +116,7 @@ export async function getMyBusiness(db: Db | Tx, userId: string): Promise<Busine
     })
     .from(businesses)
     .leftJoin(industrialAreas, eq(industrialAreas.id, businesses.industrialAreaId))
-    .where(eq(businesses.id, user.businessId));
+    .where(eq(businesses.id, businessId));
   if (!row) throw noBusiness();
   const b = row.b;
 
@@ -143,9 +153,9 @@ export async function getMyBusiness(db: Db | Tx, userId: string): Promise<Busine
     verificationLevels: b.verificationLevels as VerificationLevel[],
     verificationStatus: b.verificationStatus,
     verifiedAt: b.verifiedAt ? b.verifiedAt.toISOString() : null,
-    onboarding: onboardingStep(current, user.name),
+    onboarding: onboardingStep(current, userName),
     completion: {
-      name: filled(user.name) && filled(b.tradeName),
+      name: filled(userName) && filled(b.tradeName),
       activities: b.activities.length > 0 && categoryIds.length > 0,
       location: locationDone(b),
       gst: gst !== null,

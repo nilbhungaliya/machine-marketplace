@@ -1,5 +1,6 @@
 import { and, eq, inArray, sql } from 'drizzle-orm';
-import type { BusinessActivity, GstDetails } from '@mpm/shared-types';
+import { randomUUID } from 'node:crypto';
+import type { BusinessActivity, GstDetails, GstDocumentType, GstEnteredDetails, GstProofStatus } from '@mpm/shared-types';
 import { db } from '../../src/db/index.js';
 import { businessVerifications, businesses, gstChecks, gstRepresentativeProofs, users } from '../../src/db/schema.js';
 import { signUserToken } from '../../src/plugins/auth.js';
@@ -153,5 +154,79 @@ export async function revokeTestGst(businessId: string, reason = 'Test revocatio
         verifiedAt: null,
       })
       .where(eq(businesses.id, businessId));
+  });
+}
+
+/** What a test review typed when no lookup is attached (the default). */
+export function testEntered(overrides: Partial<GstEnteredDetails> = {}): GstEnteredDetails {
+  return {
+    legalName: 'Typed Engineering Pvt Ltd',
+    tradeName: 'Typed Works',
+    address: { line: 'Plot 12, GIDC Odhav', city: 'Ahmedabad', state: 'Gujarat', pincode: '382415' },
+    constitution: 'Private Limited Company',
+    ...overrides,
+  };
+}
+
+/**
+ * A review (spec §5.3) inserted directly, as `submitReview` leaves it, so officer-side tests run without R2: a
+ * `documents` proof (default `waiting`) with fake `verification/<businessId>/<proofId>/<uuid>.<ext>` keys (a
+ * certificate PDF and an ID JPEG), and the business's summary `pending`. `withCheck` attaches a `found` business lookup
+ * from the stub (then `entered` is null); otherwise `entered` (default `testEntered()`). Returns the ids.
+ */
+export async function insertTestReview(
+  businessId: string,
+  opts: {
+    gstin?: string;
+    withCheck?: boolean;
+    entered?: GstEnteredDetails;
+    status?: Extract<GstProofStatus, 'waiting' | 'needs_more'>;
+    documents?: Array<{ type: GstDocumentType; ext?: 'jpg' | 'png' | 'webp' | 'pdf' }>;
+  } = {},
+): Promise<{ proofId: string; gstin: string; checkId: string | null }> {
+  const gstin = opts.gstin ?? uniqueTestGstin();
+  const [owner] = await db.select({ id: users.id }).from(users).where(eq(users.businessId, businessId)).limit(1);
+  if (!owner) throw new Error('insertTestReview: the business has no user');
+  const proofId = randomUUID();
+  const docs = opts.documents ?? [
+    { type: 'gst_certificate' as const, ext: 'pdf' as const },
+    { type: 'id_proof' as const, ext: 'jpg' as const },
+  ];
+  const documents = docs.map((d) => ({ key: `verification/${businessId}/${proofId}/${randomUUID()}.${d.ext ?? 'pdf'}`, type: d.type }));
+  return db.transaction(async (tx) => {
+    let checkId: string | null = null;
+    if (opts.withCheck) {
+      const lookup = await gstStub.lookup(gstin);
+      if (lookup.kind !== 'found') throw new Error(`insertTestReview: the stub didn't find ${gstin}`);
+      const [check] = await tx
+        .insert(gstChecks)
+        .values({
+          businessId,
+          userId: owner.id,
+          gstin,
+          source: 'business',
+          result: 'found',
+          providerRef: lookup.ref,
+          gstStatus: lookup.details.status,
+          details: lookup.details,
+          resolvedAt: sql`now()`,
+        })
+        .returning({ id: gstChecks.id });
+      checkId = check!.id;
+    }
+    await tx.insert(gstRepresentativeProofs).values({
+      id: proofId,
+      checkId,
+      businessId,
+      userId: owner.id,
+      gstin,
+      declarationVersion: DECLARATION_VERSION,
+      method: 'documents',
+      status: opts.status ?? 'waiting',
+      entered: checkId ? null : (opts.entered ?? testEntered()),
+      documents,
+    });
+    await tx.update(businesses).set({ verificationStatus: 'pending', verificationNote: null }).where(eq(businesses.id, businessId));
+    return { proofId, gstin, checkId };
   });
 }

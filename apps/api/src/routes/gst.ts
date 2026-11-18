@@ -1,8 +1,10 @@
 import type { FastifyPluginAsync, FastifyRequest } from 'fastify';
 import { z } from 'zod';
+import { GST_DOCUMENT_TYPES } from '@mpm/shared-types';
 import { TooManyRequestsError } from '../lib/errors.js';
 import { presignDocumentUpload } from '../services/verification/gst-documents.service.js';
 import { declare, lookupGst, sendGstCode, verifyGstCode, type GstActor } from '../services/verification/gst-instant.service.js';
+import { addReviewFiles, submitReview } from '../services/verification/gst-review.service.js';
 import { getGstState, noBusiness } from '../services/verification/gst-state.service.js';
 
 // GST verification for the signed-in user's business (F1 + A2 spec §5, §10). Thin: validate → service → `{ data }`.
@@ -23,6 +25,38 @@ const presignBody = z
     size: z.number().int().positive(),
   })
   .strict();
+
+// Path A (spec §5.3): the file rule (2–5, certificate + ID / letter) and the details-iff-no-lookup rule are the
+// service's (400 DOCUMENTS_REQUIRED); the schema only bounds sizes. Keys are checked by staging (DOCUMENT_KEY_INVALID).
+const documentFile = z.object({ key: z.string().min(1).max(300), type: z.enum(GST_DOCUMENT_TYPES) }).strict();
+const documentFiles = z.array(documentFile).max(10);
+const gstAddress = z
+  .object({
+    line: z.string().trim().min(1).max(300),
+    city: z.string().trim().min(1).max(80),
+    state: z.string().trim().min(1).max(80),
+    pincode: z.string().regex(/^[1-9]\d{5}$/, 'must be a 6-digit pincode'),
+  })
+  .strict();
+const reviewBody = z
+  .object({
+    gstin: z.string().min(1).max(40),
+    checkId: uuid.optional(),
+    entered: z
+      .object({
+        legalName: z.string().trim().min(1).max(200),
+        tradeName: z.string().trim().max(200).nullable().optional(),
+        address: gstAddress,
+        constitution: z.string().trim().min(1).max(100),
+      })
+      .strict()
+      .optional(),
+    declarationVersion: z.number().int().positive(),
+    uploadId: uuid,
+    files: documentFiles,
+  })
+  .strict();
+const reviewFilesBody = z.object({ proofId: uuid, files: documentFiles }).strict();
 
 /**
  * Lookups and code sends also count per signed-in user (spec §5.2 step 2: "plus the per-user … route rate limit"),
@@ -107,7 +141,18 @@ const gstRoutes: FastifyPluginAsync = async (fastify) => {
     return { data: await verifyGstCode(fastify.db, actorOf(request), proofId, code) };
   });
 
-  // A signed PUT for one review document (spec §6); the review submission (Task 10) names the uploaded keys.
+  // Path A (spec §5.3): submit a review, and add files to one the officer sent back (needs_more).
+  fastify.post('/businesses/me/gst/review', auth, async (request) => {
+    const body = reviewBody.parse(request.body);
+    return { data: await submitReview(fastify.db, actorOf(request), body, { log: request.log }) };
+  });
+
+  fastify.post('/businesses/me/gst/review/files', auth, async (request) => {
+    const { proofId, files } = reviewFilesBody.parse(request.body);
+    return { data: await addReviewFiles(fastify.db, actorOf(request), proofId, { files }, { log: request.log }) };
+  });
+
+  // A signed PUT for one review document (spec §6); the review submission names the uploaded keys.
   fastify.post('/businesses/me/gst/documents/presign', auth, async (request) => {
     const body = presignBody.parse(request.body);
     return { data: await presignDocumentUpload(fastify.db, actorOf(request), body) };

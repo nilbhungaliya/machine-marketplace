@@ -71,7 +71,8 @@ const iso = (d: Date | null | undefined): string | undefined => (d ? d.toISOStri
  * GET /businesses/me/gst (§5.5). In order:
  * 1. an active `gst` verification → `verified` (the details it was granted with);
  * 2. an open review → `under_review` / `needs_more` (with the officer's message);
- * 3. otherwise the newest of the latest officer revocation (`revoked`), rejected review (`rejected`) and business
+ * 3. otherwise the newest of the latest officer revocation (`revoked`, only while the business still holds the
+ *    revoked GSTIN: after Release GSTIN it reads `none`, ruling R9), rejected review (`rejected`) and business
  *    lookup decides. A lookup reads as its outcome: `found` (needs Yes, or declared), `code_sent`, or `none` with
  *    `held` / `notFound` / `statusRefused` / `providerUnavailable`. A `found` lookup older than 30 minutes, or a
  *    `code_sent` proof whose lookup is, reads `none` + `expired` (nothing is written).
@@ -132,8 +133,9 @@ export async function getGstState(conn: Db | Tx, businessId: string): Promise<Gs
 
   // 3. The newest of: a revocation, a rejected review, a lookup.
   const [revoked] = await conn
-    .select({ at: businessVerifications.revokedAt, reason: businessVerifications.revokeReason })
+    .select({ at: businessVerifications.revokedAt, reason: businessVerifications.revokeReason, gstin: gstRepresentativeProofs.gstin })
     .from(businessVerifications)
+    .leftJoin(gstRepresentativeProofs, eq(gstRepresentativeProofs.id, businessVerifications.verifiedByProofId))
     .where(
       and(
         eq(businessVerifications.businessId, businessId),
@@ -168,6 +170,8 @@ export async function getGstState(conn: Db | Tx, businessId: string): Promise<Gs
   const newest = Math.max(time(revoked?.at), time(rejected?.at), time(check?.createdAt));
   if (newest === -Infinity) return base;
   if (revoked && time(revoked.at) === newest) {
+    // Released since (ruling R9): the business no longer holds the revoked GSTIN, so there is nothing to show.
+    if (business.gstin === null || business.gstin !== revoked.gstin) return base;
     return { ...base, state: 'revoked', ...(business.gstin ? { gstin: business.gstin } : {}), ...(revoked.reason ? { reason: revoked.reason } : {}) };
   }
   if (rejected && time(rejected.at) === newest) {
