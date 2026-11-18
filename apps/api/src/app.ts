@@ -15,6 +15,7 @@ import gstRoutes from './routes/gst.js';
 import catalogRoutes from './routes/catalog.js';
 import locationRoutes from './routes/locations.js';
 import listingRoutes from './routes/listings.js';
+import listingMediaRoutes from './routes/listing-media.js';
 import adminCatalogCategoryRoutes from './routes/admin/catalog-categories.js';
 import adminCatalogFieldRoutes from './routes/admin/catalog-fields.js';
 import adminCatalogBrandRoutes from './routes/admin/catalog-brands.js';
@@ -25,6 +26,7 @@ import adminUserRoutes from './routes/admin/users.js';
 import adminVerificationRoutes from './routes/admin/verification.js';
 import adminBusinessRoutes from './routes/admin/businesses.js';
 import adminSettingsRoutes from './routes/admin/settings.js';
+import adminListingMediaRoutes from './routes/admin/listing-media.js';
 
 export interface BuildAppOptions {
   /** false in unit tests that must not touch Postgres/Redis. */
@@ -76,6 +78,7 @@ export async function buildApp({ infra = true, logger = true }: BuildAppOptions 
     await app.register(catalogRoutes);
     await app.register(locationRoutes);
     await app.register(listingRoutes);
+    await app.register(listingMediaRoutes);
     await app.register(adminAuthRoutes);
     await app.register(adminCatalogCategoryRoutes);
     await app.register(adminCatalogFieldRoutes);
@@ -87,6 +90,7 @@ export async function buildApp({ infra = true, logger = true }: BuildAppOptions 
     await app.register(adminVerificationRoutes);
     await app.register(adminBusinessRoutes);
     await app.register(adminSettingsRoutes);
+    await app.register(adminListingMediaRoutes);
   }
 
   return app;

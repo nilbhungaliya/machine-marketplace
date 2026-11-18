@@ -12,8 +12,9 @@ import { ServiceUnavailableError, ValidationError } from './errors.js';
 
 /**
  * Private file storage on Cloudflare R2 (S3-compatible; F1 + A2 spec §6), ported from textile's `lib/storage.ts`.
- * **R2 only**: no MinIO, no local fallback. Only the private bucket (`AWS_S3_PRIVATE_BUCKET`) exists for now
- * (verification documents, read through presigned GETs); the public bucket arrives with F2.
+ * **R2 only**: no MinIO, no local fallback. The private bucket (`AWS_S3_PRIVATE_BUCKET`) holds verification documents
+ * (read through presigned GETs) and every incoming upload; the public bucket (`AWS_S3_PUBLIC_BUCKET`, F2 §6.1) holds
+ * checked listing media.
  *
  * Every key is built by the server. Clients never send a key or a URL we didn't hand them.
  */
@@ -257,6 +258,79 @@ export async function copyObject(fromKey: string, toKey: string): Promise<void> 
     if (isNotFound(err)) throw new ObjectMissingError(fromKey);
     rethrowStorageError(err);
   }
+}
+
+// ─── Public listing media (F2 spec §6.1, §6.6, R45) ───
+// Uploads land in the private bucket (`incoming-listing/…`); only sniffed, checked files are copied to the public bucket
+// (`listings/<listingId>/<mediaId>/<role>.<ext>`), read through `MEDIA_PUBLIC_BASE_URL` (`lib/media-url.ts`).
+
+/**
+ * What listing media needs (§6.1): the five private variables, the public bucket and its base URL; in production also
+ * the Cloudflare zone and token, because a production that can't purge can't take media down (R45).
+ */
+export const MEDIA_STORAGE_ENV = [...STORAGE_ENV, 'AWS_S3_PUBLIC_BUCKET', 'MEDIA_PUBLIC_BASE_URL'] as const;
+export const MEDIA_STORAGE_PRODUCTION_ENV = ['CLOUDFLARE_ZONE_ID', 'CLOUDFLARE_API_TOKEN'] as const;
+
+/** Devices and browsers keep a copy for a day, the Cloudflare edge for a year; keys are never reused (R45). */
+export const PUBLIC_MEDIA_CACHE_CONTROL = 'public, max-age=86400, s-maxage=31536000';
+
+const isSet = (name: string): boolean => (process.env[name] ?? '').trim() !== '';
+
+/** True when listing media can be stored and served (§6.1). Read on every call, so tests can clear and restore it. */
+export function isMediaStorageConfigured(): boolean {
+  if (!MEDIA_STORAGE_ENV.every(isSet)) return false;
+  return process.env.NODE_ENV !== 'production' || MEDIA_STORAGE_PRODUCTION_ENV.every(isSet);
+}
+
+/** `503 STORAGE_UNAVAILABLE` unless listing media storage is configured (every media endpoint, §6.1). */
+export function requireMediaStorage(): void {
+  if (!isMediaStorageConfigured()) throw new ServiceUnavailableError("Photo upload isn't available yet", 'STORAGE_UNAVAILABLE');
+}
+
+function publicBucket(): string {
+  return process.env.AWS_S3_PUBLIC_BUCKET!.trim();
+}
+
+/**
+ * A server-side copy from the private bucket to the public one (R2 CopyObject across buckets of one account: no bytes
+ * pass through the API). `MetadataDirective: 'REPLACE'` so the copy carries the **sniffed** `Content-Type` and the
+ * public `Cache-Control`, not what the upload was signed with. `ObjectMissingError` when the source isn't there.
+ */
+export async function copyToPublic(
+  fromPrivateKey: string,
+  toPublicKey: string,
+  opts: { contentType: string; cacheControl?: string },
+): Promise<void> {
+  requireMediaStorage();
+  assertSafeKey(fromPrivateKey);
+  assertSafeKey(toPublicKey);
+  try {
+    await buildClient().send(
+      new CopyObjectCommand({
+        Bucket: publicBucket(),
+        Key: toPublicKey,
+        CopySource: `${privateBucket()}/${fromPrivateKey}`,
+        MetadataDirective: 'REPLACE',
+        ContentType: opts.contentType,
+        CacheControl: opts.cacheControl ?? PUBLIC_MEDIA_CACHE_CONTROL,
+      }),
+      { abortSignal: AbortSignal.timeout(COPY_TIMEOUT_MS) },
+    );
+  } catch (err) {
+    if (isNotFound(err)) throw new ObjectMissingError(fromPrivateKey);
+    rethrowStorageError(err);
+  }
+}
+
+/** Deletes one object from the public bucket (a no-op for a key that isn't there). The caller purges its CDN URL. */
+export async function deletePublicObject(key: string, opts: { timeoutMs?: number } = {}): Promise<void> {
+  requireMediaStorage();
+  assertSafeKey(key);
+  await buildClient()
+    .send(new DeleteObjectCommand({ Bucket: publicBucket(), Key: key }), {
+      abortSignal: AbortSignal.timeout(opts.timeoutMs ?? DELETE_TIMEOUT_MS),
+    })
+    .catch(rethrowStorageError);
 }
 
 /** Deletes one object. S3/R2 answer 204 for a key that was never there, so a re-run is a no-op. */

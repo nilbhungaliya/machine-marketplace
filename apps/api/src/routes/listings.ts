@@ -24,7 +24,7 @@ import { isRealDate, isStorableText } from '../lib/spec-check.js';
 import { applySellerAction, publishListing } from '../services/listings/listing-lifecycle.service.js';
 import { getListing, getOwnerView, listMine } from '../services/listings/listing-read.service.js';
 import { createReport } from '../services/listings/listing-reports.service.js';
-import { createListing, deleteDraft, patchListing, type ListingPatchInput } from '../services/listings/listing-write.service.js';
+import { createListing, deleteDraftWithMedia, patchListing, type ListingPatchInput } from '../services/listings/listing-write.service.js';
 
 // Seller listing writes (F2 spec §5.3, §7.3, §14). Thin: Zod-parse → service (in one transaction) → `{ data }`. Types,
 // formats and limits are checked here; references, kind rules and grandfathering in the service.
@@ -219,10 +219,10 @@ const listingRoutes: FastifyPluginAsync = async (fastify) => {
     return { data: await fastify.db.transaction((tx) => patchListing(tx, request.user!, id, patch)) };
   });
 
-  // Drafts only. The media keys it returns are deleted (and purged) after commit by the media task (plan Task 13).
+  // Drafts only. Its media objects are deleted and purged after commit, best-effort (§6.1, plan Task 13).
   fastify.delete('/listings/:id', { ...user, config: perUser(60) }, async (request) => {
     const { id } = idParams.parse(request.params);
-    await fastify.db.transaction((tx) => deleteDraft(tx, request.user!, id));
+    await deleteDraftWithMedia(fastify.db, request.user!, id, request.log);
     return { data: { id, deleted: true } };
   });
 
