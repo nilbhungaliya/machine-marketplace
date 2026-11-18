@@ -4,7 +4,7 @@
 import type { LucideIcon } from 'lucide-react-native';
 import type { CategoryIcon } from '@mpm/shared-types';
 import {
-  ChevronLeft, ChevronRight, Home, Search, PlusCircle, MessageCircle, Handshake, User, Package,
+  ChevronLeft, ChevronRight, Home, Search, Plus, MessageCircle, Handshake, User, Package,
   ClipboardList, MapPin, Globe, Sun, LogOut, Check, ShieldCheck, CircleCheck, TriangleAlert, Info, Wrench, Factory,
   CalendarClock, BellRing, Cog, Scissors, Shirt, Layers, Droplets, Printer, Microscope, WashingMachine, Footprints,
   LocateFixed, Camera, Images, FileText, X, Clock, ShieldAlert, Building2, Square, SquareCheck,
@@ -20,7 +20,7 @@ export {
 export const TAB_ICONS = {
   home: Home,
   search: Search,
-  post: PlusCircle,
+  post: Plus,
   chats: MessageCircle,
   deals: Handshake,
 } satisfies Record<string, LucideIcon>;

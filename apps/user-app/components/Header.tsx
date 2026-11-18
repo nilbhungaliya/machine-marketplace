@@ -1,59 +1,39 @@
 import React, { useMemo } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { useTheme, fonts } from '@/lib/theme';
+import { useTranslation } from 'react-i18next';
+import { spacing, useTheme } from '@/lib/theme';
+import { useType } from '@/hooks/use-type';
 import { ChevronLeft } from '@/lib/icons';
+import IconButton from '@/components/IconButton';
 
 interface HeaderProps {
   title: string;
   showBack?: boolean;
   onBack?: () => void;
   rightIcon?: React.ReactNode;
+  style?: StyleProp<ViewStyle>;
 }
 
-export default function Header({ title, showBack = true, onBack, rightIcon }: HeaderProps) {
+/** The app bar (Periwinkle v2 `.appbar`, spec §7.3): a raised round back button and a one-line, left-aligned title. */
+export default function Header({ title, showBack = true, onBack, rightIcon, style }: HeaderProps) {
   const navigation = useNavigation();
+  const { t } = useTranslation();
   const { colors } = useTheme();
+  const type = useType();
 
   const s = useMemo(() => StyleSheet.create({
     container: {
       height: 56,
       flexDirection: 'row',
       alignItems: 'center',
-      paddingHorizontal: 16,
+      gap: spacing.md,
+      paddingHorizontal: spacing.lg,
       backgroundColor: colors.background,
     },
-    backButton: {
-      width: 44,
-      alignItems: 'flex-start',
-      justifyContent: 'center',
-    },
-    backCircle: {
-      width: 44,
-      height: 44,
-      borderRadius: 22,
-      backgroundColor: colors.surface,
-      borderWidth: 1,
-      borderColor: colors.border,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    rightButton: {
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    title: {
-      flex: 1,
-      fontFamily: fonts.bold,
-      fontSize: 20,
-      color: colors.text,
-      letterSpacing: -0.3,
-      marginLeft: 12,
-    },
-    titleNoBack: {
-      paddingLeft: 0,
-    },
-  }), [colors]);
+    title: { flex: 1, ...type('appBar'), color: colors.text },
+    right: { alignItems: 'center', justifyContent: 'center' },
+  }), [colors, type]);
 
   const handleBack = () => {
     if (onBack) onBack();
@@ -61,20 +41,18 @@ export default function Header({ title, showBack = true, onBack, rightIcon }: He
   };
 
   return (
-    <View style={s.container}>
+    <View style={[s.container, style]}>
       {showBack ? (
-        <TouchableOpacity ph-label="Back-button" onPress={handleBack} style={s.backButton}>
-          <View style={s.backCircle}>
-            <ChevronLeft size={24} color={colors.text} />
-          </View>
-        </TouchableOpacity>
+        <IconButton
+          icon={ChevronLeft}
+          iconSize={22}
+          onPress={handleBack}
+          accessibilityLabel={t('common.back')}
+          testID="Back-button"
+        />
       ) : null}
-      <Text style={[s.title, !showBack && s.titleNoBack]}>{title}</Text>
-      {rightIcon ? (
-        <View style={s.rightButton}>{rightIcon}</View>
-      ) : showBack ? (
-        <View style={s.backButton} />
-      ) : null}
+      <Text style={s.title} numberOfLines={1}>{title}</Text>
+      {rightIcon ? <View style={s.right}>{rightIcon}</View> : null}
     </View>
   );
 }

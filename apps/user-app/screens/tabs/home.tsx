@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { ROOT_CATEGORIES } from '@mpm/shared-types';
 import ScreenWrapper from '@/components/ScreenWrapper';
 import EmptyState from '@/components/EmptyState';
+import { useTabBarInset } from '@/hooks/use-tab-bar-inset';
 import { MapPin, Package, Search, User } from '@/lib/icons';
 import { fonts, radius, spacing, useTheme } from '@/lib/theme';
 import type { TabScreenProps } from '@/navigation/types';
@@ -11,6 +12,8 @@ import type { TabScreenProps } from '@/navigation/types';
 export default function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
   const { t } = useTranslation();
   const { colors, shadows } = useTheme();
+  // The floating tab bar draws over the screen's bottom (spec §7.5): keeps the empty state's button clear of it.
+  const tabInset = useTabBarInset();
 
   const s = useMemo(() => StyleSheet.create({
     header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.lg, paddingTop: spacing.sm, gap: spacing.md },
@@ -70,6 +73,7 @@ export default function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
         ctaTitle={t('home.sellCta')}
         ctaPhLabel="Sell-a-part"
         onCtaPress={() => navigation.navigate('Main', { screen: 'Post' })}
+        style={{ paddingBottom: tabInset }}
       />
     </ScreenWrapper>
   );

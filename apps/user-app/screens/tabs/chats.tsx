@@ -3,14 +3,17 @@ import { useTranslation } from 'react-i18next';
 import ScreenWrapper from '@/components/ScreenWrapper';
 import Header from '@/components/Header';
 import EmptyState from '@/components/EmptyState';
+import { useTabBarInset } from '@/hooks/use-tab-bar-inset';
 import { TAB_ICONS } from '@/lib/icons';
 
 export default function ChatsScreen() {
   const { t } = useTranslation();
+  // The floating tab bar draws over the screen's bottom (spec §7.5).
+  const tabInset = useTabBarInset();
   return (
     <ScreenWrapper edges={['top']}>
       <Header title={t('chats.title')} showBack={false} />
-      <EmptyState icon={TAB_ICONS.chats} title={t('chats.emptyTitle')} subtitle={t('chats.emptySubtitle')} />
+      <EmptyState icon={TAB_ICONS.chats} title={t('chats.emptyTitle')} subtitle={t('chats.emptySubtitle')} style={{ paddingBottom: tabInset }} />
     </ScreenWrapper>
   );
 }

@@ -42,6 +42,7 @@ describe('auditSource', () => {
     expect(texts("const x = { screen: 'Main', params: { screen: 'Home' } };")).toEqual([]);
     expect(texts('<Button phLabel="Withdraw-commission" title="Withdraw" />')).toEqual(['Withdraw']);
     expect(texts("const o = { ignoreLabels: ['View', 'Animated(View)'] };")).toEqual([]);
+    expect(texts("const o = { tabBarButtonTestID: 'Tab-home', tabBarLabel: 'Home' };")).toEqual(['Home']);
     expect(texts('<EmptyState ctaPhLabel="Add-Vehicle-button" ctaLabel="Add vehicle" />')).toEqual(['Add vehicle']);
   });
   it('ignores the English half of the en/gu table in lib/format-date.ts only', () => {

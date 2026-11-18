@@ -3,9 +3,8 @@ import { View, Text, StyleSheet, Pressable, Animated, Easing } from 'react-nativ
 import Toast, { type ToastConfig, type ToastConfigParams, type ToastShowParams } from 'react-native-toast-message';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CircleCheck, TriangleAlert, Info, type LucideIcon } from '@/lib/icons';
-import { useTheme, fonts, type ThemeColors } from '@/lib/theme';
-import { useLanguage } from '@/lib/i18n/language';
-import { scriptLineHeight } from '@/lib/i18n/script';
+import { radius, spacing, useTheme, type ThemeColors } from '@/lib/theme';
+import { useType } from '@/hooks/use-type';
 import { DEFAULT_VISIBLE_MS, recordShown, clearShown, takePending } from '@/components/toast-handoff';
 
 type Variant = 'success' | 'error' | 'info';
@@ -34,24 +33,23 @@ patchable.show = (params) => {
   });
 };
 
-// Success splits its yellow: `primary` reads as a 3px rail on white but is
-// invisible as a glyph on the pale gold chip, which takes `primaryDark`.
-function variantStyle(variant: Variant, colors: ThemeColors): { Glyph: LucideIcon; chip: string; icon: string; rail: string } {
+// Spec §7.2: each variant's icon sits in a well of its soft fill; the draining rail takes the icon colour.
+function variantStyle(variant: Variant, colors: ThemeColors): { Glyph: LucideIcon; chip: string; icon: string } {
   switch (variant) {
     case 'success':
-      return { Glyph: CircleCheck, chip: colors.primaryWash, icon: colors.primaryInk, rail: colors.primary };
+      return { Glyph: CircleCheck, chip: colors.okSoft, icon: colors.ok };
     case 'error':
-      return { Glyph: TriangleAlert, chip: colors.dangerSoft, icon: colors.danger, rail: colors.danger };
+      return { Glyph: TriangleAlert, chip: colors.dangerSoft, icon: colors.danger };
     case 'info':
-      return { Glyph: Info, chip: colors.primaryWash, icon: colors.primaryInk, rail: colors.primaryInk };
+      return { Glyph: Info, chip: colors.primaryWash, icon: colors.primaryInk };
   }
 }
 
-/** The house card from `VehicleCard`, plus a status chip and a draining rail. */
+/** A white card with a hairline, a soft floating shadow, an icon well and a draining rail (spec §7.2). */
 function ToastCard({ variant, text1, text2, isVisible, hide, onPress, props }: ToastConfigParams<ToastExtras> & { variant: Variant }) {
   const { colors, shadows } = useTheme();
-  const lang = useLanguage();
-  const { Glyph, chip, icon, rail } = variantStyle(variant, colors);
+  const type = useType();
+  const { Glyph, chip, icon } = variantStyle(variant, colors);
   const durationMs = props?.durationMs ?? DEFAULT_VISIBLE_MS;
 
   // Already seen — auto-hidden or tapped away — so closing a sheet later must
@@ -77,59 +75,49 @@ function ToastCard({ variant, text1, text2, isVisible, hide, onPress, props }: T
   }, [isVisible, text1, text2, durationMs, drain]);
 
   const s = useMemo(() => StyleSheet.create({
+    // The shadow lives on the outer card and the clipping on the inner one, so `overflow: 'hidden'` (which keeps
+    // the rail inside the rounded corners) can never clip the shadow on either platform.
     shell: {
+      // Lines up with the screens' 16 side padding and the cards underneath.
+      alignSelf: 'stretch',
+      marginHorizontal: spacing.lg,
+      backgroundColor: colors.surface,
+      borderRadius: radius.lg,
+      borderWidth: 1,
+      borderColor: colors.hairline,
+      ...shadows.float,
+    },
+    clip: {
       flexDirection: 'row',
       alignItems: 'center',
-      // Matches the screens' `paddingHorizontal`, so it lines up with the
-      // cards underneath rather than sitting proud of them.
-      alignSelf: 'stretch',
-      marginHorizontal: 20,
-      backgroundColor: colors.surface,
-      borderRadius: 16,
-      borderWidth: 1,
-      borderColor: colors.border,
-      // Clips the rail (a child) to the radius. `overflow` clips children only;
-      // the outset `boxShadow` from `shadows.raised` is drawn outside the view's
-      // own box, so the shadow stays.
+      borderRadius: radius.lg - 1,
       overflow: 'hidden',
-      ...shadows.raised,
     },
     chip: {
       width: 34,
       height: 34,
-      borderRadius: 11,
-      marginLeft: 12,
+      borderRadius: 12,
+      marginLeft: spacing.md,
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: chip,
     },
     // Bottom padding clears the rail's 3px.
-    copy: { flex: 1, paddingTop: 11, paddingBottom: 13, paddingLeft: 11, paddingRight: 14 },
-    text1: {
-      fontFamily: fonts.bold,
-      fontSize: 14.5,
-      lineHeight: scriptLineHeight(lang, 14.5, 19),
-      color: colors.text,
-    },
-    text2: {
-      fontFamily: fonts.regular,
-      fontSize: 12,
-      lineHeight: 16,
-      color: colors.textSecondary,
-      marginTop: 2,
-    },
+    copy: { flex: 1, paddingTop: spacing.md, paddingBottom: 14, paddingLeft: spacing.md, paddingRight: 14 },
+    text1: { ...type('bodyStrong'), color: colors.text },
+    text2: { ...type('caption'), color: colors.textSecondary, marginTop: 2 },
     rail: {
       position: 'absolute',
       left: 0,
       right: 0,
       bottom: 0,
       height: 3,
-      backgroundColor: rail,
+      backgroundColor: icon,
       // `scaleX`, not an animated width, to stay on the native driver: a toast
       // lands just as a request settles, when the JS thread is busiest.
       transformOrigin: 'left center',
     },
-  }), [colors, shadows, chip, rail, lang]);
+  }), [colors, shadows, chip, icon, type]);
 
   return (
     <Pressable
@@ -139,14 +127,16 @@ function ToastCard({ variant, text1, text2, isVisible, hide, onPress, props }: T
       accessibilityRole="alert"
       accessibilityLabel={[text1, text2].filter(Boolean).join('. ')}
     >
-      <View style={s.chip}>
-        <Glyph size={20} color={icon} strokeWidth={2.2} />
+      <View style={s.clip}>
+        <View style={s.chip}>
+          <Glyph size={20} color={icon} strokeWidth={2.2} />
+        </View>
+        <View style={s.copy}>
+          {text1 ? <Text style={s.text1} numberOfLines={2}>{text1}</Text> : null}
+          {text2 ? <Text style={s.text2} numberOfLines={2}>{text2}</Text> : null}
+        </View>
+        <Animated.View style={[s.rail, { transform: [{ scaleX: drain }] }]} pointerEvents="none" />
       </View>
-      <View style={s.copy}>
-        {text1 ? <Text style={s.text1} numberOfLines={2}>{text1}</Text> : null}
-        {text2 ? <Text style={s.text2} numberOfLines={2}>{text2}</Text> : null}
-      </View>
-      <Animated.View style={[s.rail, { transform: [{ scaleX: drain }] }]} pointerEvents="none" />
     </Pressable>
   );
 }

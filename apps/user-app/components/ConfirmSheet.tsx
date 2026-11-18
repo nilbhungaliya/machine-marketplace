@@ -2,7 +2,9 @@ import React, { createContext, useContext, useEffect, useMemo, useReducer, useRe
 import { Modal, View, Text, Pressable, StyleSheet, Animated, BackHandler } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { useTheme, fonts, spacing } from '@/lib/theme';
+import { fonts, radius, spacing, useTheme } from '@/lib/theme';
+import { useType } from '@/hooks/use-type';
+import Button from '@/components/Button';
 import { createConfirmManager, type Choice, type ConfirmManager, type ConfirmOptions } from './confirm-manager';
 import { useSheetAnimation } from '@/hooks/use-sheet-animation';
 import AppToast from '@/components/AppToast';
@@ -55,7 +57,8 @@ function ConfirmSheet({
   onSecondary: () => void;
   onCancel: () => void;
 }) {
-  const { colors, shadows } = useTheme();
+  const { colors } = useTheme();
+  const type = useType();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { rendered, backdropOpacity, translateY } = useSheetAnimation(visible);
@@ -74,44 +77,38 @@ function ConfirmSheet({
   const s = useMemo(() => StyleSheet.create({
     backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: colors.scrim },
     sheetWrap: { flex: 1, justifyContent: 'flex-end' },
+    // Periwinkle v2 `.sheet` (spec §7.2): no shadow, the scrim sets it apart.
     card: {
       backgroundColor: colors.surface,
-      borderTopLeftRadius: 20, borderTopRightRadius: 20,
-      paddingHorizontal: spacing.xl, paddingTop: spacing.md,
-      ...shadows.raised,
+      borderTopLeftRadius: radius.sheet, borderTopRightRadius: radius.sheet,
+      paddingHorizontal: spacing.xl, paddingTop: 10,
     },
     handle: { alignSelf: 'center', width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border, marginBottom: spacing.lg },
-    title: { fontFamily: fonts.bold, fontSize: 18, color: colors.text, marginBottom: spacing.sm },
-    message: { fontFamily: fonts.regular, fontSize: 14, color: colors.textSecondary, lineHeight: 20, marginBottom: spacing.xl },
+    title: { ...type('sheetTitle'), color: colors.text, marginBottom: spacing.sm },
+    message: { ...type('body'), color: colors.textSecondary, marginBottom: spacing.xl },
     row: { flexDirection: 'row', gap: spacing.md },
-    btn: { flex: 1, paddingVertical: 14, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-    cancelBtn: { borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
-    cancelText: { fontFamily: fonts.semiBold, fontSize: 15, color: colors.text, textAlign: 'center' },
-    // Dark on the yellow button; destructive (red) swaps to white below.
-    confirmText: { fontFamily: fonts.semiBold, fontSize: 15, color: colors.onPrimary, textAlign: 'center' },
-    confirmTextOnRed: { color: colors.onDanger },
+    rowBtn: { flex: 1, width: 'auto' },
     // Three choices stack: their labels carry amounts and do not fit side by side.
     stack: { gap: spacing.sm },
-    stackBtn: { paddingVertical: 14, paddingHorizontal: spacing.md, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-    dismissBtn: { paddingVertical: 12, alignItems: 'center' },
     pick: {
-      flexDirection: 'row', gap: spacing.md, borderWidth: 1.5, borderColor: colors.border, borderRadius: 14,
+      flexDirection: 'row', gap: spacing.md, borderWidth: 1.5, borderColor: colors.hairline, borderRadius: radius.lg,
       padding: spacing.md, backgroundColor: colors.surface,
     },
-    pickOn: { borderColor: colors.text },
-    radio: { width: 18, height: 18, borderRadius: 9, borderWidth: 2, borderColor: colors.border, marginTop: 1 },
-    radioOn: { borderWidth: 5, borderColor: colors.text },
+    pickOn: { borderColor: colors.primary, backgroundColor: colors.primaryWash },
+    radio: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: colors.border, marginTop: 1 },
+    radioOn: { borderWidth: 6, borderColor: colors.primary },
     pickTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: spacing.sm },
-    pickTitle: { fontFamily: fonts.bold, fontSize: 14, color: colors.text, flexShrink: 1 },
-    pickAmount: { fontFamily: fonts.extraBold, fontSize: 15, color: colors.ok },
-    pickNone: { fontFamily: fonts.semiBold, fontSize: 12.5, color: colors.textMuted },
-    pickDetail: { fontFamily: fonts.regular, fontSize: 12.5, lineHeight: 18, color: colors.textSecondary, marginTop: 2 },
-  }), [colors, shadows]);
+    pickTitle: { ...type('cardTitle'), color: colors.text, flexShrink: 1 },
+    pickAmount: { ...type('price'), fontSize: 16, color: colors.ok },
+    pickNone: { ...type('caption'), fontFamily: fonts.semiBold, color: colors.textMuted },
+    pickDetail: { ...type('caption'), color: colors.textSecondary, marginTop: 2 },
+  }), [colors, type]);
 
   if (!rendered || !options) return null;
 
-  const confirmBg = options.destructive ? colors.danger : colors.primary;
-  const confirmText = [s.confirmText, options.destructive && s.confirmTextOnRed];
+  const confirmVariant = options.destructive ? 'danger' : 'primary';
+  const confirmTitle = options.confirmLabel ?? t('components.confirm.confirm');
+  const cancelTitle = options.cancelLabel ?? t('common.cancel');
 
   return (
     // animationType 'none': the native slide moves the whole window, dragging the
@@ -151,41 +148,27 @@ function ConfirmSheet({
                   </Pressable>
                 );
               })}
-              <Pressable
-                ph-label="Confirm-sheet-confirm"
-                style={[s.stackBtn, { backgroundColor: confirmBg, marginTop: spacing.sm }]}
+              <Button
+                phLabel="Confirm-sheet-confirm"
+                variant={confirmVariant}
+                style={{ marginTop: spacing.sm }}
+                title={options.confirmLabels?.[picked] ?? confirmTitle}
                 onPress={picked === 'secondary' ? onSecondary : onConfirm}
-              >
-                <Text style={confirmText}>{options.confirmLabels?.[picked] ?? options.confirmLabel ?? t('components.confirm.confirm')}</Text>
-              </Pressable>
-              <Pressable ph-label="Confirm-sheet-dismiss" style={s.dismissBtn} onPress={onCancel}>
-                <Text style={s.cancelText}>{options.cancelLabel ?? t('common.cancel')}</Text>
-              </Pressable>
+              />
+              <Button phLabel="Confirm-sheet-dismiss" variant="ghost" title={cancelTitle} onPress={onCancel} />
             </View>
           ) : options.hideCancel ? (
-            <Pressable ph-label="Confirm-sheet-confirm" style={[s.stackBtn, { backgroundColor: confirmBg }]} onPress={onConfirm}>
-              <Text style={confirmText}>{options.confirmLabel ?? t('components.confirm.confirm')}</Text>
-            </Pressable>
+            <Button phLabel="Confirm-sheet-confirm" variant={confirmVariant} title={confirmTitle} onPress={onConfirm} />
           ) : options.secondaryLabel ? (
             <View style={s.stack}>
-              <Pressable ph-label="Confirm-sheet-confirm" style={[s.stackBtn, { backgroundColor: confirmBg }]} onPress={onConfirm}>
-                <Text style={confirmText}>{options.confirmLabel ?? t('components.confirm.confirm')}</Text>
-              </Pressable>
-              <Pressable ph-label="Confirm-sheet-secondary" style={[s.stackBtn, s.cancelBtn]} onPress={onSecondary}>
-                <Text style={s.cancelText}>{options.secondaryLabel}</Text>
-              </Pressable>
-              <Pressable ph-label="Confirm-sheet-dismiss" style={s.dismissBtn} onPress={onCancel}>
-                <Text style={s.cancelText}>{options.cancelLabel ?? t('common.cancel')}</Text>
-              </Pressable>
+              <Button phLabel="Confirm-sheet-confirm" variant={confirmVariant} title={confirmTitle} onPress={onConfirm} />
+              <Button phLabel="Confirm-sheet-secondary" variant="outline" title={options.secondaryLabel} onPress={onSecondary} />
+              <Button phLabel="Confirm-sheet-dismiss" variant="ghost" title={cancelTitle} onPress={onCancel} />
             </View>
           ) : (
             <View style={s.row}>
-              <Pressable style={[s.btn, s.cancelBtn]} onPress={onCancel}>
-                <Text style={s.cancelText}>{options.cancelLabel ?? t('common.cancel')}</Text>
-              </Pressable>
-              <Pressable style={[s.btn, { backgroundColor: confirmBg }]} onPress={onConfirm}>
-                <Text style={confirmText}>{options.confirmLabel ?? t('components.confirm.confirm')}</Text>
-              </Pressable>
+              <Button phLabel="Confirm-sheet-cancel" variant="outline" style={s.rowBtn} title={cancelTitle} onPress={onCancel} />
+              <Button phLabel="Confirm-sheet-confirm" variant={confirmVariant} style={s.rowBtn} title={confirmTitle} onPress={onConfirm} />
             </View>
           )}
         </Animated.View>

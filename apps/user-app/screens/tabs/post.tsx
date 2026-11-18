@@ -3,12 +3,15 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import Toast from 'react-native-toast-message';
 import ScreenWrapper from '@/components/ScreenWrapper';
+import { useTabBarInset } from '@/hooks/use-tab-bar-inset';
 import { BellRing, CalendarClock, ChevronRight, Factory, Wrench, type LucideIcon } from '@/lib/icons';
 import { fonts, radius, spacing, useTheme } from '@/lib/theme';
 
 export default function PostScreen() {
   const { t } = useTranslation();
   const { colors, shadows } = useTheme();
+  // The floating tab bar draws over the screen's bottom (spec §7.5).
+  const tabInset = useTabBarInset();
 
   const s = useMemo(() => StyleSheet.create({
     body: { flex: 1, padding: spacing.lg, gap: spacing.md },
@@ -41,7 +44,7 @@ export default function PostScreen() {
 
   return (
     <ScreenWrapper edges={['top']}>
-      <View style={s.body}>
+      <View style={[s.body, { paddingBottom: tabInset }]}>
         <Text style={s.title}>{t('post.title')}</Text>
         {card(Wrench, 'sellPart')}
         {card(Factory, 'sellMachine')}
