@@ -1,6 +1,7 @@
 # F1 + A2 · Business profile, location and GST verification: design
 
-Date: 2026-11-18 · Status: **approved 2026-11-18** (owner's review applied: R2-only storage, review items 1–12) · Scope IDs: **F1** (app), **A2** (admin), feeds F4/F5 (search by
+Date: 2026-11-18 · Status: **approved 2026-11-18** (after two review rounds: R2-only storage, items 1–12, items 1–7, and release
+refused while a review is open) · Scope IDs: **F1** (app), **A2** (admin), feeds F4/F5 (search by
 city and industrial area), F2 (verified badge, later limits) · Spec modules: M1 (onboarding and profile), M19 (trust),
 AD2 (users and business verification) in `docs/product-scope.md`.
 
@@ -131,9 +132,10 @@ industrial area) · GST verified. Each missing segment shows a prompt that opens
   Udhna Udyog Nagar, Katargam GIDC, Bhestan, Varachha, Limbayat, Kadodara, Palsana, Kamrej, Kim, Ichchhapor GIDC,
   Olpad. City and state follow the pincode directory's spelling (`Surat`, `Gujarat`). **For the client to check** (§13).
   Seed is insert-only and refuses when the table isn't empty, as A4's loader. **[Claude]**
-- **"Other" values:** the admin page lists the distinct `industrial_area_other` texts per city with how many businesses
-  typed each, and **Add to list**, which creates the area and links every business in that city whose text matches it
-  case-insensitively (in one transaction, audit-logged). **[Claude]**
+- **"Other" values:** the admin page lists the distinct `industrial_area_other` texts grouped by the **pincode's
+  district and state** (as §4.2 matches areas, not the typed city), with how many businesses typed each, and **Add to
+  list**, which creates the area for that district and state and links every business whose pincode resolves to it and
+  whose text matches case-insensitively (in one transaction, audit-logged). **[Claude]**
 - Deactivating an area hides it from the picker; businesses keep it. An area in use can't be deleted (`AREA_IN_USE`).
 
 ### 4.4 Pincode directory
@@ -165,11 +167,19 @@ status `active | cancelled | suspended | inactive`). The full provider response 
 the mode so the app shows the right flow.
 
 ### 5.2 Path B: instant (modes `live`, `stub`)
+**Who may start (checked first by lookup, declare and code-send, before any provider call) [Claude]:**
+`409 GST_REVIEW_ONLY` when `instantAllowed` is false (§5.5: mode `review`, or the business has ever had an officer
+revocation), so a revoked business never makes the provider send a code to the real registered contact;
+`409 GST_ALREADY_VERIFIED` when the business has an active GST verification (it changes GSTIN only after an officer
+revokes or releases the current one); `409 GST_REVIEW_OPEN` while it has a review `waiting` or `needs_more`.
+
 1. **Enter.** 15-character GSTIN, upper-cased, spaces removed; format and **checksum** checked in the app and on the
    server (textile's `parseGstin`). PAN = characters 3–12, state code = first 2. Invalid: `400 GSTIN_INVALID`.
-2. **Look up.** Allowed **5 lookups per business per day** (counted on `gst_checks`, so restarts don't reset;
-   `429 GST_LOOKUP_LIMIT`, "Try again tomorrow"), plus the per-user and per-IP route rate limit. Every lookup is a
-   `gst_checks` row with its result.
+2. **Look up.** Allowed **5 lookups per business per calendar day in India time** (counted on `gst_checks`, so
+   restarts don't reset; `429 GST_LOOKUP_LIMIT`, "Try again tomorrow"), plus the per-user and per-IP route rate limit.
+   Every lookup is a `gst_checks` row with its result and its source (the business or an officer). **Only the
+   business's own lookups count, and lookups that failed because the provider was unreachable don't**, so an officer's
+   lookup at approval or a provider outage never uses up a business's day. **[Claude, from plan review]**
 3. **Outcomes:**
 
 | Result | The business sees | Next |
@@ -192,7 +202,10 @@ the mode so the app shows the right flow.
    `business_verifications` (`level = gst`, `method = provider_otp`); add `gst` to `verification_levels`; set
    `verification_status = approved`. The business sees "GST verified".
 7. **Can't get the code?** A link on the code screen opens the path A form with the lookup attached (§5.3); the officer
-   then sees the provider's data beside what the business entered.
+   then sees the provider's data beside what the business entered. **Submitting a review closes every open instant
+   attempt** (declared or code sent) of that business, and **confirming a code is refused while a review is open**
+   (`409 GST_REVIEW_OPEN`), so a code that arrives late can't verify the business while its review waits.
+   **[Claude, from plan review]**
 
 ### 5.3 Path A: admin review (mode `review`, or the fallbacks above)
 **The business submits [Owner: documents now]:**
@@ -207,6 +220,8 @@ the mode so the app shows the right flow.
   each JPEG, PNG, WebP or PDF, ≤ 10 MB (§6).
 
 **What happens:**
+- A business with an **active GST verification can't submit a review** (`409 GST_ALREADY_VERIFIED`), the same rule
+  as §5.2's start rule. **[Claude]**
 - One open review per business at a time (`409 GST_REVIEW_OPEN`). The business sees **Under review** ("usually within
   one working day; you can keep using the app"). **[Scope M1]**
 - The officer (§8.1) **approves**, **rejects with a reason**, or **asks for more** with a message. Ask-for-more puts the
@@ -228,9 +243,12 @@ the mode so the app shows the right flow.
 - **Reject:** the business sees the reason and can start again (new submission, new documents). "Start again" opens
   the path §5.4's rule allows: the instant path if the business has never had an officer revocation, otherwise the
   review form.
-- **A different GSTIN:** a business may submit a review for a GSTIN other than the one it holds (for example after a
-  revocation). Approving it **replaces** the held GSTIN; the old one is released in the same transaction and its GST
-  fields overwritten. Recorded in `audit_log`. **[Claude]**
+- **A different GSTIN:** a business may submit a review for a GSTIN other than the one it holds. Because of the rule
+  above this only happens when it holds a GSTIN **without** an active verification (after a revocation). Approving it
+  **replaces** the held GSTIN; the old one is released in the same transaction and its GST fields overwritten.
+  Recorded in `audit_log`. Approval also refuses (`409 GST_ALREADY_VERIFIED`) if the business somehow has an active
+  GST verification by then, so there is never an active row to close and the one-active-row rule (§9) holds without a
+  "replaced" status. **[Claude]**
 - **Provider down at approval** (mode `live`/`stub`, lookup unreachable): the officer isn't blocked. The page says the
   provider couldn't be reached and switches to review-mode behaviour (portal check, editable details); the approval
   records `lookup: unavailable`. **[Claude]**
@@ -246,6 +264,8 @@ officer revocation, the instant path is closed for it for good**: it can only ve
 officer always decides. The rule reads the history (any `business_verifications` row with `revocation_source =
 officer`), never the current state, so no later reject, release or re-approval reopens it. **[Claude]**
 Releasing the GSTIN (so another business can verify it) is a separate officer action, "Release GSTIN", with a reason.
+Release is refused while the business has a review `waiting` or `needs_more` (`409 GST_REVIEW_OPEN`), so the stored
+summary (§5.4a) never says `not_submitted` with a review in the queue.
 **[Claude: replaces textile's restriction / lift / restore tools, which depend on re-checks]**
 
 - **Revocation unlocks the business name** (the business can edit it again); the GST fields (legal name, address,
@@ -261,10 +281,10 @@ service in the same transaction as each step; `verification_note` holds the late
 | Nothing submitted, or a lookup / code in progress | `not_submitted` | unchanged |
 | Review submitted, files added after ask-for-more | `pending` | cleared on submit |
 | Officer asks for more | `pending` | the officer's message |
-| Granted (instant or approved) | `approved` | cleared |
+| Granted (instant or approved) | `approved` (and `verified_at` = now) | cleared |
 | Officer rejects | `rejected` | the reason |
-| Officer revokes | `rejected` | the revoke reason |
-| Release GSTIN | `not_submitted` | the release reason |
+| Officer revokes | `rejected` (and `verified_at` cleared) | the revoke reason |
+| Release GSTIN | `not_submitted` (and `verified_at` cleared) | the release reason |
 
 `pending` covers both `under_review` and `needs_more` of §5.5; the admin filter offers those as one "Under review"
 value plus the queue's own tabs for the split. **[Claude]**
@@ -302,9 +322,12 @@ which decides whether any "start" button opens the instant path or the review fo
 - **Upload flow (as textile):** `POST .../documents/presign` with type and size → a signed PUT (5 minutes) to
   `incoming-verification/<businessId>/<proofId>/<uuid>.<ext>` → the app uploads → the submit call names the keys; the
   server checks each key belongs to this business and proof, **heads** the object (size ≤ 10 MB), **sniffs its first
-  bytes** (textile's `sniffDocument`: JPEG, PNG, WebP, PDF only; `400 DOCUMENT_TYPE` otherwise), then **copies** it to
-  `verification/<businessId>/<proofId>/<uuid>.<ext>` and deletes the incoming object. Only `verification/` keys are
-  stored on the proof.
+  bytes** (textile's `sniffDocument`: JPEG, PNG, WebP, PDF only; `400 DOCUMENT_TYPE` otherwise). Then, in this order:
+  **copy** each to `verification/<businessId>/<proofId>/<uuid>.<ext>` **before** the database transaction opens,
+  **save** the `verification/` keys on the proof (database transaction), and only after that commits **delete** the
+  incoming objects. If the save fails, the **copies are deleted** (the lifecycle rule doesn't cover `verification/`)
+  and the incoming objects are left for the lifecycle rule; a failed delete is logged. Only `verification/` keys are
+  ever stored. **[Claude]**
 - **Leftover uploads:** files uploaded but never submitted stay under `incoming-verification/`; an **R2 lifecycle rule
   deletes objects under that prefix after 1 day**. The build's final report names the rule to set. **[Claude]**
 - **Reading:** only officers, through a **5-minute presigned GET**, each view audit-logged. Never public.
@@ -355,7 +378,8 @@ message, add files). Rejected (reason, Start again). Revoked (reason, review for
 - Detail: what the business entered beside the provider lookup (when there is one), mismatches highlighted; the
   documents (image lightbox, PDF in a new tab via the presigned link); a link to the public GST portal search; the
   business's previous checks and decisions.
-- Actions: **Approve** (in `review` mode with editable legal name / address / constitution), **Reject** (reason
+- Actions: **Approve** (with editable legal name, trade name, address and constitution **whenever no lookup is
+  attached or the provider is down at approval**, as §5.3), **Reject** (reason
   required), **Ask for more** (message required). Stale double-clicks: the second decision gets `409 STALE_REVIEW`.
 
 ### 8.2 Users & businesses (`/businesses`, read: `support`, `verification_officer`, `moderator`; actions below)
@@ -460,8 +484,8 @@ concurrency failures map to 409 as in A4 (`pg-errors.ts`).
     land before launch). Uploads land under `incoming-verification/` and are copied on submit; a 1-day lifecycle rule
     clears the rest.
 12. Document views audit-logged.
-13. Roles: suspend / block / reinstate by verification officer, moderator, super admin; revoke and release GST by
-    verification officer, super admin; industrial areas by category manager.
+13. Roles: suspend / reinstate by verification officer, moderator, super admin; **block / unblock by super admin
+    only**; revoke and release GST by verification officer, super admin; industrial areas by category manager.
 14. `requireUser` checks account status on every request, so suspension is immediate.
 15. Onboarding stays login-first and ends at the tabs (a change from the played-back "back to what you were doing");
     guest browsing and returning to the action come with M2.
@@ -477,6 +501,11 @@ concurrency failures map to 409 as in A4 (`pg-errors.ts`).
 25. A `found` lookup older than 30 minutes reads as `none` with `expired: true`.
 26. Separate `reinstate` (suspension) and `unblock` (super admin) endpoints.
 27. A review may be for a different GSTIN; approving it replaces and releases the held one.
+28. A verified business can't look up, declare, send codes or submit a review (`409 GST_ALREADY_VERIFIED`) until an
+    officer revokes or releases its GSTIN; a business without the instant path is refused at lookup, declare and
+    code-send (`409 GST_REVIEW_ONLY`), not only at confirm.
+29. `verified_at` set on grant, cleared on revoke and release.
+30. Documents: copy, save keys, then delete the uploads; failures leave uploads for the lifecycle rule.
 
 ---
 
