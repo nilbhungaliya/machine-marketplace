@@ -41,6 +41,13 @@ export const CONSTITUTIONS = [
 ] as const;
 export type Constitution = (typeof CONSTITUTIONS)[number];
 
+/**
+ * The GST declaration's wording version (F1 spec §5.2 step 4: "I am the proprietor, partner, director or authorised
+ * signatory of this business"). The API records it and refuses any other (`400 DECLARATION_OUTDATED`); the app sends
+ * it with a review. Bump it whenever the wording changes, in the app's copy (en / hi / gu) at the same time.
+ */
+export const GST_DECLARATION_VERSION = 1;
+
 /** A user account's standing (scope A2). Suspended or blocked accounts can't sign in (`ACCOUNT_SUSPENDED`). */
 export const ACCOUNT_STATUSES = ['active', 'suspended', 'blocked'] as const;
 export type AccountStatus = (typeof ACCOUNT_STATUSES)[number];
@@ -438,6 +445,8 @@ export interface IndustrialArea {
 /** GET /businesses/me. */
 export interface BusinessProfile {
   id: string;
+  /** The person's own name (`users.name`): the signed-in user, or the owner in the admin detail. */
+  userName: string | null;
   tradeName: string;
   legalName: string | null;
   /** The name shown: GST's trade name (or legal name) once GST-verified, otherwise `tradeName`. */

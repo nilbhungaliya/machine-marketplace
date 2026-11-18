@@ -1,13 +1,27 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { CompositeScreenProps, NavigatorScreenParams } from '@react-navigation/native';
+import type { FormMode } from '@/lib/onboarding-step';
 
 export type RootStackParamList = {
   Welcome: undefined;
   Auth: NavigatorScreenParams<AuthStackParamList> | undefined;
-  Name: undefined;
+  /** Onboarding step 1, or the Profile row "Business profile" with `mode: 'edit'`. Defaults to onboarding. */
+  YourBusiness: { mode: FormMode } | undefined;
+  /** Onboarding step 2, or the Profile row "Location" with `mode: 'edit'`. Defaults to onboarding. */
+  WhereAreYou: { mode: FormMode } | undefined;
   Main: NavigatorScreenParams<TabParamList> | undefined;
   Profile: undefined;
+  /** "Get verified", once right after onboarding (Skip for now). */
+  GstIntro: undefined;
+  /** GST verification (F1 spec §7): which screen opens is `gstScreen(state)` in lib/gst-flow.ts. */
+  GstStart: undefined;
+  GstFound: undefined;
+  GstDeclare: { checkId: string };
+  GstCode: undefined;
+  /** `checkId`: "Can't get the code?" attaches the lookup; `gstin` prefills the field. */
+  GstReviewForm: { checkId?: string; gstin?: string } | undefined;
+  GstStatus: undefined;
 };
 
 export type AuthStackParamList = {

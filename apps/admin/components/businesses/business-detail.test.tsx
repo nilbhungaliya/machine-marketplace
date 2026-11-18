@@ -41,6 +41,7 @@ function business({ userStatus = 'active', verified = true, reviewOpen = false, 
   return {
     profile: {
       id: 'b1',
+      userName: 'Hitesh Patel',
       tradeName: 'Shree Ambica Engineering',
       legalName: verified ? 'SHREE AMBICA ENGINEERING' : null,
       displayName: 'Shree Ambica Engineering',

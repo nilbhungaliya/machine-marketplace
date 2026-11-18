@@ -140,6 +140,8 @@ describe('business profile API', () => {
       });
       expect(res.statusCode, res.body).toBe(200);
       const profile = res.json().data as BusinessProfile;
+      // The person's own name comes back with the business (the app's "Your name" field and Profile card).
+      expect(profile.userName).toBe('Ravi Patel');
       expect(profile).toMatchObject({
         tradeName: `Ravi Works ${S}`,
         displayName: `Ravi Works ${S}`,
@@ -153,7 +155,7 @@ describe('business profile API', () => {
       expect(user).toMatchObject({ name: 'Ravi Patel', businessId: profile.id });
       expect(await signInWithPhone(db, phone)).toMatchObject({ isNewUser: false, onboarding: 'location' });
       // The sign-in token still says businessId null: the API finds the business through the user.
-      expect((await me()).id).toBe(profile.id);
+      expect(await me()).toMatchObject({ id: profile.id, userName: 'Ravi Patel' });
     });
   });
 

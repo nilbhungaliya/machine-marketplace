@@ -1,6 +1,7 @@
 import axios, { type InternalAxiosRequestConfig } from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import { i18n, isLanguage } from '@/lib/i18n';
+import { notifySessionEnded, sessionEndReason } from '@/lib/session-events';
 
 export const TOKEN_KEY = 'jwt_token';
 
@@ -32,6 +33,9 @@ api.interceptors.response.use(
       // Auth state is cleared by useAuth when it next checks the token.
       await SecureStore.deleteItemAsync(TOKEN_KEY);
     }
+    // A suspended or blocked account (F1 spec §8.2): RootNavigator signs out and says why.
+    const reason = sessionEndReason({ status: error.response?.status, code: error.response?.data?.code });
+    if (reason) notifySessionEnded(reason);
     return Promise.reject(error);
   },
 );

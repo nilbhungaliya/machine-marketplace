@@ -1,6 +1,6 @@
 import { and, eq, ne, sql } from 'drizzle-orm';
 import type { PgInsertValue } from 'drizzle-orm/pg-core';
-import type { GstStateView } from '@mpm/shared-types';
+import { GST_DECLARATION_VERSION, type GstStateView } from '@mpm/shared-types';
 import type { Db, Tx } from '../../db/index.js';
 import { gstChecks, gstRepresentativeProofs } from '../../db/schema.js';
 import { ConflictError, NotFoundError, ServiceUnavailableError, TooManyRequestsError, ValidationError } from '../../lib/errors.js';
@@ -26,8 +26,8 @@ import { parseGstin } from './gstin.js';
  * code sends and confirms run one at a time and the review submission (Task 10) waits for them, and vice versa.
  */
 
-/** The declaration (§5.2 step 4). Bump the version whenever the wording changes; the app shows this text. */
-export const DECLARATION_VERSION = 1;
+/** The declaration (§5.2 step 4). Its version lives in shared-types, so the API and the app can't drift apart. */
+export const DECLARATION_VERSION = GST_DECLARATION_VERSION;
 export const DECLARATION_TEXT = 'I am the proprietor, partner, director or authorised signatory of this business';
 
 /** §5.2's numbers. */

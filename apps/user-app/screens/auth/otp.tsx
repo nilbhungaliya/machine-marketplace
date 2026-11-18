@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import Toast from 'react-native-toast-message';
-import { OTP_LENGTH } from '@mpm/shared-types';
+import { OTP_LENGTH, type OnboardingStep } from '@mpm/shared-types';
 import ScreenWrapper from '@/components/ScreenWrapper';
 import Header from '@/components/Header';
 import Input from '@/components/Input';
@@ -16,7 +16,8 @@ import { fonts, spacing, useTheme } from '@/lib/theme';
 import type { AuthStackScreenProps } from '@/navigation/types';
 
 interface VerifyResponse {
-  data: { token: string; user: { id: string }; isNewUser: boolean };
+  /** `onboarding`: where onboarding resumes (`profile` for a new user), F1 spec §7. */
+  data: { token: string; user: { id: string }; isNewUser: boolean; onboarding: OnboardingStep };
 }
 
 export default function OtpScreen({ route }: AuthStackScreenProps<'OTP'>) {
@@ -57,9 +58,9 @@ export default function OtpScreen({ route }: AuthStackScreenProps<'OTP'>) {
     setLoading(true);
     try {
       const { data } = await api.post<VerifyResponse>('/auth/otp/verify', { phone, code: otp.digits });
-      track(AUTH_EVENTS.otpVerified, { isNewUser: data.data.isNewUser });
-      // Root navigator swaps to onboarding or the tabs once auth state changes.
-      await login(data.data.token, data.data.user.id, data.data.isNewUser);
+      track(AUTH_EVENTS.otpVerified, { isNewUser: data.data.isNewUser, onboarding: data.data.onboarding });
+      // Root navigator swaps to the onboarding step or the tabs once auth state changes.
+      await login(data.data.token, data.data.user.id, data.data.onboarding);
     } catch (err) {
       track(AUTH_EVENTS.otpVerifyFailed, { reason: authErrorCode(err as object) });
       setError(mapAuthError(err as object));

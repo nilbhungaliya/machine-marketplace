@@ -42,6 +42,8 @@ Status: `green / red / blue / orange` + `*Muted` backgrounds.
 | `Skeleton.tsx` | Pulsing placeholder block for loading states. |
 | `PressableScale.tsx` | Pressable with a spring press-scale (respects reduced motion). |
 | `AppToast.tsx` | Themed toast renderer, mounted once in `App.tsx`. Show toasts with `Toast.show({ type: 'success' \| 'error' \| 'info', text1 })`. Inside a Modal, render `<AppToast inModal />`. |
+| `Chip.tsx` | Selectable chip (`role` checkbox / radio, optional icon) for multi- and single-choice lists. |
+| `Notice.tsx` | Tinted callout (`tone` info / success / warning / danger, icon, optional title, children). |
 | `ConfirmSheet.tsx` | `const confirm = useConfirm(); if (await confirm({ title, message, destructive: true })) …` — also `useChoice()` for a three-way choice. Provider is in `App.tsx`. |
 
 Hooks: `useAuth` (session), `useSocket(onEvent)` (live `/user` events; filter by event-name prefix), `use-sheet-animation` (bottom-sheet enter/exit).
@@ -74,7 +76,7 @@ export function Foo({ title, style }: { title: string; style?: StyleProp<ViewSty
 | Navigation | **React Navigation** (`navigation/`): root stack → auth stack / onboarding / 5 bottom tabs (Home, Search, Post, Chats, Deals) + Profile. **No Expo Router**; screens live in `screens/`. |
 | State | Redux Toolkit (`store/authSlice.ts`) — client state only |
 | Server data | TanStack React Query (`lib/queryClient.ts`) + axios (`lib/api.ts`, attaches JWT + `X-App-Language`) |
-| Forms | Formik + Yup (see `screens/auth/name.tsx`); build Yup schemas inside the component so messages follow the language |
+| Forms | Formik + Yup (see `screens/onboarding/your-business.tsx`, schemas in `lib/onboarding-step.ts`); build Yup schemas inside the component so messages follow the language |
 | Icons | `lucide-react-native`, imported **only** via `lib/icons.ts` |
 | Toasts | `react-native-toast-message` |
 | Animation | Reanimated 4 + react-native-worklets (babel plugin must stay last) |

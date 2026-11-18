@@ -7,5 +7,21 @@
   "themeSystem": "System",
   "logout": "Log out",
   "logoutConfirmTitle": "Log out?",
-  "logoutConfirmMessage": "You will need an OTP to sign in again."
+  "logoutConfirmMessage": "You will need an OTP to sign in again.",
+  "rows": {
+    "business": "Business profile",
+    "location": "Location and industrial area",
+    "gst": "GST verification"
+  },
+  "completion": {
+    "title": "Profile {{done}} of {{total}} complete",
+    "done": "Your profile is complete.",
+    "prompt": {
+      "name": "Add your name and business name",
+      "activities": "Choose what you do and your machines",
+      "location": "Add your pincode and industrial area",
+      "gst": "Verify your GST to get the badge"
+    }
+  },
+  "loadError": "Couldn't load your business."
 }

@@ -126,6 +126,7 @@ export async function businessProfile(db: Db | Tx, businessId: string, userName:
 
   return {
     id: b.id,
+    userName,
     tradeName: b.tradeName,
     legalName: b.legalName,
     displayName: gst ? (gst.tradeName ?? b.legalName ?? b.tradeName) : b.tradeName,

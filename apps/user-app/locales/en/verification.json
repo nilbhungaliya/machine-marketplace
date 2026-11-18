@@ -1,0 +1,176 @@
+{
+  "title": "Get verified",
+  "intro": {
+    "title": "Get the verified badge",
+    "callout": "Verified businesses get more enquiries. We check your GSTIN with the GST network. It's free.",
+    "howItWorks": "How it works",
+    "instantStep1": "Enter your GSTIN.",
+    "instantStep2": "Check the business we find and confirm it's yours.",
+    "instantStep3": "Enter the code sent to the phone or email registered with GST.",
+    "reviewStep1": "Enter your GSTIN and upload your GST certificate with an ID or an authorisation letter.",
+    "reviewStep2": "Our team checks it, usually within one working day.",
+    "verifyNow": "Verify now",
+    "skip": "Skip for now"
+  },
+  "start": {
+    "gstin": "GSTIN",
+    "gstinPlaceholder": "15 characters, e.g. 24AAACC0000C1ZY",
+    "gstinHint": "Printed on your GST registration certificate.",
+    "gstinEmpty": "Enter your GSTIN",
+    "gstinInvalid": "This isn't a valid GSTIN. Check it and try again.",
+    "lookUp": "Look up",
+    "expired": "Your lookup expired. Look it up again.",
+    "held": "This GSTIN is already linked to an account. If it's yours, contact support.",
+    "notFound": "We couldn't find this GSTIN. Check it and try again.",
+    "statusRefused": "This GSTIN is {{status}}. Only an active GSTIN can be verified.",
+    "providerUnavailable": "We couldn't reach the GST service. Try again, or send your documents for review.",
+    "reviewOnly": "Our team verifies GST for your business. Send your GSTIN and documents for review.",
+    "sendForReview": "Send for review"
+  },
+  "gstStatus": {
+    "active": "active",
+    "cancelled": "cancelled",
+    "suspended": "suspended",
+    "inactive": "inactive"
+  },
+  "found": {
+    "title": "We found your business",
+    "subtitle": "Check the details from the GST network.",
+    "yes": "Yes, this is my business",
+    "notMine": "Not my business"
+  },
+  "declare": {
+    "title": "Confirm it's you",
+    "subtitle": "Only someone who runs this business can verify it.",
+    "text": "I am the proprietor, partner, director or authorised signatory of this business.",
+    "codeNote": "Next we send a code to the phone or email registered with GST.",
+    "sendCode": "Agree and send code"
+  },
+  "code": {
+    "title": "Enter the code",
+    "sentTo": "We sent a code to {{hint}}, the contact registered with GST.",
+    "sent": "We sent a code to the contact registered with GST.",
+    "label": "Code",
+    "invalid": "Enter the code you received",
+    "wrong_one": "That code is wrong. {{count}} try left.",
+    "wrong_other": "That code is wrong. {{count}} tries left.",
+    "verify": "Verify",
+    "verified": "GST verified",
+    "resend": "Send the code again",
+    "resendIn": "Send again in {{seconds}} s",
+    "resent": "Code sent again",
+    "cantGetCode": "Can't get the code? Send documents for review"
+  },
+  "review": {
+    "title": "Send for review",
+    "subtitle": "Our team checks your documents, usually within one working day.",
+    "detailsTitle": "Your GST registration",
+    "detailsHint": "As printed on your GST certificate.",
+    "legalName": "Legal name",
+    "tradeName": "Trade name (optional)",
+    "addressLine": "Principal place of business",
+    "constitution": "Constitution of business",
+    "constitutionRequired": "Choose the constitution of your business",
+    "declarationRequired": "Tick the declaration to continue",
+    "submit": "Submit for review"
+  },
+  "constitution": {
+    "proprietorship": "Proprietorship",
+    "partnership": "Partnership",
+    "llp": "LLP",
+    "private_limited": "Private limited",
+    "public_limited": "Public limited",
+    "huf": "HUF",
+    "trust_society": "Trust or society",
+    "government": "Government",
+    "other": "Other"
+  },
+  "documents": {
+    "title": "Documents",
+    "rule": "Add 2 to 5 files: your GST registration certificate, and an ID of a person named on it or an authorisation letter. JPEG, PNG, WebP or PDF, up to 10 MB each.",
+    "camera": "Camera",
+    "gallery": "Gallery",
+    "pdf": "PDF",
+    "size": "{{size}} MB",
+    "remove": "Remove file",
+    "types": {
+      "gst_certificate": "GST certificate",
+      "id_proof": "ID proof",
+      "authorisation_letter": "Authorisation letter"
+    },
+    "untyped": "Choose what each file is",
+    "fileType": "Use a JPEG, PNG, WebP or PDF file",
+    "tooLarge": "This file is larger than 10 MB",
+    "needCertificate": "Add your GST registration certificate",
+    "needPerson": "Add an ID of a person named on the certificate, or an authorisation letter",
+    "max_one": "You can add {{count}} file",
+    "max_other": "You can add up to {{count}} files",
+    "cameraDenied": "Allow the camera to take a photo, or pick a file instead",
+    "unavailable": "Document upload isn't available yet. Please try again later.",
+    "uploading": "Uploading {{done}} of {{total}}…"
+  },
+  "details": {
+    "tradeName": "Trade name: {{name}}",
+    "registeredOn": "registered {{date}}",
+    "gstin": "GSTIN {{gstin}}",
+    "active": "Active"
+  },
+  "status": {
+    "reason": "Reason",
+    "underReview": {
+      "title": "Under review",
+      "body": "Usually within one working day. You can keep using the app."
+    },
+    "needsMore": {
+      "title": "We need a little more",
+      "body": "Our team needs more documents to verify your GST.",
+      "message": "Message from our team",
+      "addFiles": "Add files",
+      "send": "Send files",
+      "sent": "Files sent. Your review is back in the queue."
+    },
+    "rejected": {
+      "title": "Not approved",
+      "body": "Your GST verification wasn't approved.",
+      "startAgain": "Start again"
+    },
+    "verified": {
+      "title": "GST verified",
+      "body": "Your business shows the verified badge.",
+      "since": "Verified on {{date}}. Your business shows the verified badge."
+    },
+    "revoked": {
+      "title": "GST verification removed",
+      "body": "Our team removed your GST verification.",
+      "verifyAgain": "Send documents to verify again"
+    }
+  },
+  "chip": {
+    "verified": "Verified",
+    "underReview": "Under review",
+    "needsMore": "Action needed",
+    "rejected": "Not approved",
+    "revoked": "Removed",
+    "notVerified": "Not verified"
+  },
+  "errors": {
+    "gstinInvalid": "This isn't a valid GSTIN. Check it and try again.",
+    "gstinTaken": "This GSTIN is already linked to an account. If it's yours, contact support.",
+    "lookupLimit": "You've used today's 5 lookups. Try again tomorrow.",
+    "reviewOnly": "Our team verifies GST for your business. Send your documents for review.",
+    "alreadyVerified": "Your GST is already verified.",
+    "reviewOpen": "Your GST documents are under review.",
+    "lookupExpired": "Your lookup expired. Look it up again.",
+    "proofClosed": "This attempt is closed. Look up your GSTIN again.",
+    "otpLimit": "No more codes for this attempt. Look up your GSTIN again.",
+    "otpTooSoon": "Wait a few seconds before asking for another code.",
+    "otpInvalid": "That code is wrong.",
+    "unavailable": "We couldn't reach the GST service. Try again.",
+    "reviewState": "This review isn't waiting for files any more.",
+    "storageUnavailable": "Document upload isn't available yet. Please try again later.",
+    "uploadFailed": "A file didn't upload. Check your connection and try again.",
+    "declarationOutdated": "The declaration has changed. Update the app and try again.",
+    "rateLimited": "Too many attempts. Please wait a few minutes and try again.",
+    "otherGstinHeld": "Your business is linked to a different GSTIN. To change it, send your documents for review."
+  }
+}
