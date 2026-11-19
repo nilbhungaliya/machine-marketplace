@@ -23,10 +23,10 @@ describe('home tiles (spec §8.3, R15)', () => {
   });
 
   it('a kind tile opens results with that kind; a category tile opens Browse at that node', () => {
-    expect(tileTarget({ type: 'kind', kind: 'machine_rental', count: 1 })).toEqual({ screen: 'SearchResults', params: { kinds: ['machine_rental'] } });
+    expect(tileTarget({ type: 'kind', kind: 'machine_rental', count: 1 })).toEqual({ screen: 'SearchResults', params: { filters: { kinds: ['machine_rental'] } } });
     expect(tileTarget({ type: 'category', id: 'c1', name: 'x', icon: null }))
       .toEqual({ screen: 'Main', params: { screen: 'Search', params: { browseNodeId: 'c1' } } });
-    expect(seeAllTarget()).toEqual({ screen: 'SearchResults', params: { kinds: ['part', 'machine'] } });
+    expect(seeAllTarget()).toEqual({ screen: 'SearchResults', params: { filters: { kinds: ['part', 'machine'] } } });
   });
 });
 

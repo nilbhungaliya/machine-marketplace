@@ -66,7 +66,8 @@ export default function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
     if (home.data) reportEcho(home.data.origin);
   }, [home.data, reportEcho]);
 
-  // The Search screens (B5) aren't in this file's route types: one cast for a target chosen at run time.
+  // One cast for a target chosen at run time; HomeTarget's params mirror RootStackParamList's SearchResults and
+  // the Search tab's params (lib/home-view.ts).
   const go = (target: HomeTarget) => {
     (navigation.navigate as unknown as (name: string, params?: object) => void)(target.screen, target.params);
   };

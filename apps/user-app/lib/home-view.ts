@@ -23,17 +23,17 @@ export function homeTiles(view: Pick<HomeView, 'kindTiles' | 'rootCategories'> |
  * Search tab's Browse at that node. The Search screens read the radius from the shared origin store.
  */
 export type HomeTarget =
-  | { screen: 'SearchResults'; params: { kinds: ListingKind[] } }
+  | { screen: 'SearchResults'; params: { filters: { kinds: ListingKind[] } } }
   | { screen: 'Main'; params: { screen: 'Search'; params: { browseNodeId?: string; focus?: boolean } } };
 
 export function tileTarget(tile: HomeTile): HomeTarget {
-  if (tile.type === 'kind') return { screen: 'SearchResults', params: { kinds: [tile.kind] } };
+  if (tile.type === 'kind') return { screen: 'SearchResults', params: { filters: { kinds: [tile.kind] } } };
   return { screen: 'Main', params: { screen: 'Search', params: { browseNodeId: tile.id } } };
 }
 
 /** "See all" under Top items near you: the same kinds (parts and machines for sale), no words (§7). */
 export function seeAllTarget(): HomeTarget {
-  return { screen: 'SearchResults', params: { kinds: ['part', 'machine'] } };
+  return { screen: 'SearchResults', params: { filters: { kinds: ['part', 'machine'] } } };
 }
 
 /** The search bar: the Search tab with the box focused. */
