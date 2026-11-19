@@ -528,23 +528,25 @@ video is off; No results with widen button.
 
 ### B7-1: Integration
 
-- [ ] Remove every `NOT_IMPLEMENTED` stub; `grep -rn NOT_IMPLEMENTED apps/api/src` is empty.
-- [ ] Run, one package at a time: `pnpm typecheck`, `pnpm lint`, `pnpm --filter @mpm/api test`,
+- [x] Remove every `NOT_IMPLEMENTED` stub; `grep -rn NOT_IMPLEMENTED apps/api/src` is empty.
+- [x] Run, one package at a time: `pnpm typecheck`, `pnpm lint`, `pnpm --filter @mpm/api test`,
   `pnpm --filter admin test`, `pnpm --filter user-app test`; check `mpm_test` is empty of this feature's rows;
   `pnpm --filter admin build`; `CI=1 npx expo export --platform android` in `apps/user-app`.
-- [ ] Dev DB: `db:migrate`, `db:backfill:search`, `db:seed:search`.
+- [x] Dev DB: `db:migrate`, `db:backfill:search`, `db:seed:search`.
 
 ### B7-2: Agent verification and docs
 
-- [ ] Scripted API walk-through on the dev DB: two sellers at known distances; search by part number ("AB-123/X" as
+- [x] Scripted API walk-through on the dev DB: two sellers at known distances; search by part number ("AB-123/X" as
   "ab123x"), side word ("lh", "बायाँ"), typo, brand + model, `#ref`; Left with a Pair; widen; count-only; saved; home;
   browse counts; admin synonym create → reader sees it; zero-result entry appears; all data deleted afterwards.
-- [ ] Admin pages in Chrome (if the extension is connected; else page loads + API calls, as F2): Search synonyms (add,
+- [x] Admin pages in Chrome (if the extension is connected; else page loads + API calls, as F2): Search synonyms (add,
   try a search, delete), Search insights (make a synonym, hide trending), brand flag.
-- [ ] Update `docs/PROJECT_STATUS.md` (What's built, How to run: `db:backfill:search`, `db:seed:search`,
+  _Done as page loads (200) + API calls (synonym create / preview / delete, zero-results, trending); hide trending and
+  the brand flag were not exercised live (covered by `admin-search` / admin page tests). No browser._
+- [x] Update `docs/PROJECT_STATUS.md` (What's built, How to run: `db:backfill:search`, `db:seed:search`,
   `DISCOVERY_CURSOR_SECRET`; Open items; session log), `apps/user-app/CLAUDE.md` (guest navigation, origin hook, new kit
   pieces), `.env.example`.
-- [ ] Controller commits and pushes `develop` (milestone).
+- [x] Controller commits and pushes `develop` (milestone).
 
 ### B7-3: Owner checklist (not for an implementer subagent)
 

@@ -11,8 +11,11 @@ and verify their GST (instant through a provider, or officer review with documen
 users & businesses and industrial areas. The app and the admin wear the approved **Periwinkle v2** design (re-skin,
 2026-11-18). **F2 + F3 + A3 listings (2026-11-19):** sellers list parts, machines for sale and machines for rent with
 photos, preview and publish; buyers see the listing page and the Left / Right "other side"; sellers manage My listings;
-admins moderate, browse all listings and set marketplace settings. Search, enquiries, offers and deals (F4–F9) don't
-exist yet, and the other admin modules are still placeholders.
+admins moderate, browse all listings and set marketplace settings. **F4 + F5 discovery (2026-11-19):** guests and
+users search (query reader with part numbers, side words in en / hi / gu, brand / model / category chips, synonyms,
+typos), filter, sort, browse the catalogue with live counts, see Home near them and save listings; admins manage search
+synonyms and read search insights. Enquiries, offers and deals (F6–F9) don't exist yet, and the other admin modules are
+still placeholders.
 
 | Area | State |
 |---|---|
@@ -22,13 +25,17 @@ exist yet, and the other admin modules are still placeholders.
 | Database | `admin_users`, `businesses` (trade/legal name, activities, categories, email, year, employees, GST fields, address, `industrial_area_id` or `industrial_area_other` — exactly one, CHECK —, city, state, pincode, PostGIS `location`, `verification_levels`, verification status), `users` (status), `audit_log`; catalogue (migrations 0002, 0003): `categories` (machine category › machine type › part group, `has_sides` / `side_convention` inherited), `template_fields` (`applies_to` parts/machines/both) + `template_field_options`, `brands`, `machine_models` (unique per brand + type, case-insensitive), `units`, `conditions`; F1 + A2 (migrations 0004–0007): `pincode_offices` (India Post directory, 156 932 offices / 19 300 pincodes), `industrial_areas` (unique name + city + state, case-insensitive), `gst_checks` (every lookup: business or officer), `gst_representative_proofs` (declaration → code or documents; one open review per business), `business_verifications` (grants and revocations, one active per business + level); F2 (migrations 0008, 0009 custom
 checks): `listings` (kind part / machine / machine_rental, status, side, price, quantity, location point, review reasons,
 version), `listing_machines`, `listing_rentals`, `listing_fitments`, `listing_media`, `listing_status_history`,
-`reports`, `app_settings` (marketplace settings registry); `units.is_machine_unit` |
+`reports`, `app_settings` (marketplace settings registry); `units.is_machine_unit`; F4 + F5 (migrations 0010, 0011
+custom: synonym checks and unique key, SQL normaliser twin `mpm_normalize_search`): `listings` search columns (`search_text`, `search_title_text`,
+`search_point`, `search_refreshed_at`), `search_synonyms`, `search_queries` (anonymous log, 90 days),
+`search_trending_hidden`, `saved_listings`, `search_refresh_jobs`; `brands.chip_needs_context` |
+| Discovery (F4 + F5) | Spec `docs/superpowers/specs/2026-11-19-f4-f5-discovery-design.md` (three owner reviews + amendments: radius margin 3 km, count at its own path, additive word synonyms `wordGroups`, brand view `allCount` + `brandId` filter), plan `docs/superpowers/plans/2026-11-19-f4-f5-discovery.md` (batches B0–B7). **API:** `POST /discover/search` (query reader: `#ref` redirect, bare-ref suggestion, synonym phrases, brand / model / category chips, part numbers, side words, stop words; full → partial → widen; filters incl. fit, place, price, quantity, seller, specs; sorts best match / nearest / newest / price / year / hours with Left-before-Pair and available-before-rented tiers; disjunctive facets on page 1; sealed AES-GCM cursor), `POST /discover/search/count`, `GET /discover/suggest`, `GET /discover/trending`, `POST /discover/home`, `/discover/browse`, `/discover/browse/brand`, `/discover/cards`; `GET/PUT/DELETE /users/me/saved-listings`; `GET /categories?depth=1`; origin (GPS point with fallback, pincode, business; snapped, never echoed as coordinates); PostGIS distance shared with F2's other side; rate limits per user / `X-Install-Id` plus a per-IP cap; search text refreshed in every listing write's transaction and by the `search-refresh` job after catalogue renames; `search-query-retention` job; search log skips phone / Aadhaar / email / GSTIN / PAN shapes. **Admin API + pages** (Catalogue, `category_manager`): Search synonyms (list, add / edit / delete, "Try a search" preview), Search insights (zero-result searches with "Make a synonym", trending with Hide / Unhide), brand "ordinary word" flag (`chip_needs_context`); every mutation audit-logged, reader cache sees changes within 5 s. **App:** guest browsing ("Browse first", sign-in sheet at the moment of intent, pending Save after sign-in), location (GPS / business / pincode, radius 10–200 km or All India), Home (location chip, kind and category tiles, Top items near you, Machines for rent nearby, Recently viewed), Search tab (Browse with counts, popular brands → brand view, recent and trending searches, suggestions), Results (chips, filter row, partial banner with widen, sort sheet, infinite scroll), Filters (live count footer), No results, Saved (Profile row), hearts on every card. Seeds: `db:seed:search` (102 synonyms incl. side words in en / hi / gu, 44 stop words), `db:backfill:search` |
 | Business profile (F1) + verification (A2) | Spec `docs/superpowers/specs/2026-11-18-f1-a2-business-profile-verification-design.md`, plan `docs/superpowers/plans/2026-11-18-f1-a2-business-profile-verification.md`. **API:** `GET/PATCH /businesses/me`, `PUT /businesses/me/location` (pincode + listed area or "Other", optional pin); public `GET /locations/pincodes/:pincode`, `/locations/nearest-pincode`, `/locations/industrial-areas?pincode=`; GST under `/businesses/me/gst` (state, lookup, declare, `otp/send`, `otp/verify`, `review`, `review/files`, `documents/presign`), one switch `getGstMode()` (`stub` in dev, `live` with a provider adapter + key, `review` otherwise or with `GST_PROVIDER=off`); R2-only private storage (`lib/storage.ts`, `503 STORAGE_UNAVAILABLE` when unset, uploads sniffed for JPEG/PNG/WebP/PDF); admin `/admin/verification/*` (queue, waiting count, detail, approve / reject / ask for more, 300 s document links), `/admin/businesses` (list, detail, revoke / release GST), `/admin/users/:id/suspend\|reinstate\|block\|unblock`, `/admin/industrial-areas` (CRUD, reorder, "Other" list and adopt); every mutation audit-logged. **Admin pages:** Business verification, Users & businesses (list + detail), Industrial areas. **App:** onboarding Your business (activities, machine categories) → Where are you? (pincode, area picker with Other, optional map pin), gating until done; GST intro → GSTIN → found → declaration → code (instant), or the review form with document picker; GST status and a completed Profile. Seeds: `db:seed:locations` (pincode directory), `db:seed:industrial-areas` (14 Surat areas); both refuse to run on a filled table |
 | Catalogue (A4) | Spec `docs/superpowers/specs/2026-11-18-a4-machine-catalogue-design.md`, plan `docs/superpowers/plans/2026-11-18-a4-machine-catalogue.md`. Public API: `GET /categories`, `/categories/:id/template?kind=part\|machine`, `/brands`, `/models`, `/master-data`; admin APIs for nodes (create, edit, side settings, move with root locks and clash checks, reorder, delete), fields and options, brands and models, units and conditions, CSV export (`/admin/catalog/export/:sheet`); `validateSpecs` service for M5. Admin pages: Categories & machine types, Specifications & fields, Brands, models & fit, Units, conditions & sides. Seed (`pnpm --filter @mpm/api db:seed:catalog`, loaded into dev 2026-11-18): Fibre2Fashion Machinery's 465 product types cleaned into 10 categories, 248 machine types, 331 part groups; embroidery and water-jet looms in full (81 fields); 14 brands and 19 models marked "needs review"; 8 units, 4 conditions. **`--reset` deletes the whole catalogue including admin edits: use only before go-live.** |
 | Listings (F2 + F3 + A3) | Spec `docs/superpowers/specs/2026-11-18-f2-f3-listings-design.md` (amendments 1–5), plan `docs/superpowers/plans/2026-11-18-f2-f3-listings.md`; built as C0 contracts + six parallel lanes (worktrees, merged into `develop`). **API:** seller `POST/PATCH/DELETE /listings`, publish with the go-live gate (photos, specs, side, GST for rentals, unverified-seller cap; review reasons `first_listings`, `unverified_seller`, sanity flags, `edited_after_report`), seller actions (pause, resume, renew, sold, unavailable, rented, end rental, relist, remove), `GET /listings/:id` (guest or owner view; private fields never public), seller listings, My listings, reports, `GET /listings/:id/other-side` (tiers: part number, fit overlap, similar name; PostGIS distance); media: presign → PUT to a private `incoming-listing/` key → attach (JPEG sniffed, EXIF / XMP / other APPn refused, size and duration rechecked, copied to the public bucket only if unchanged since the check), delete with CDN purge; `GET /categories/:id/template?includeRetired=1`; hourly expiry job (`FOR UPDATE SKIP LOCKED`, per-row savepoint). **Admin API + pages:** Listing moderation (queue, counts, review screen with stale-version guard, approve / ask for changes / reject / hide / unhide / remove, media delete with reason, resolve reports), All listings (filters, bulk hide / remove), listing detail, Settings (expiry, reminders, caps, expiry impact), Machine unit switch, "Listings (n)" on a business; every mutation audit-logged. **App:** Post tab → sell wizard per kind (category, details, machine, quantity, fit, side with diagram, photos, price, rates, location, preview, publish, Published), drafts, listing page (media viewer, Check my machine, report, seller's listings, other side), My listings (groups, manage sheet, edit menu, quantity sheet, removed by team), Profile "My listings". **Video upload is off** (`LISTING_VIDEO_UPLOAD_ENABLED = false`) until the device checks in `docs/superpowers/spikes/2026-11-18-f2-native-media.md` pass |
-| Shared types | Listing kinds/statuses, conditions, Left/Right/Pair + `complementarySide()`, units, price models, rental periods, enquiry/offer/deal/rental/part-request/report statuses, notification types, admin roles |
-| Admin | Login, role-filtered sidebar, dashboard KPI tiles (A1), A4 catalogue pages, A2 pages (Business verification, Users & businesses, Industrial areas), placeholder pages for the other A1–A6 modules; UI kit (dialogs, data table, filters, segmented tabs, lightbox, URL state, keyboard nav, socket), in Periwinkle v2 (see Design system) |
-| User app | Welcome → phone OTP → Your business (name, business, activities, categories) → Where are you? → 5 tabs (Home, Search, Post, Chats, Deals) + Profile (business details, location, GST verification, language, theme, logout); en/hi/gu with parity + audit tests; toasts, confirm sheet, skeletons. Native modules added for F1 (`expo-location`, `expo-document-picker`, `expo-image-picker`, `react-native-maps`): needs a new dev-client build. Re-skinned to Periwinkle v2 (see Design system); not yet checked on a device |
+| Shared types | Listing kinds/statuses, conditions, Left/Right/Pair + `complementarySide()`, units, price models, rental periods, enquiry/offer/deal/rental/part-request/report statuses, notification types, admin roles; discovery (`SearchRequest` / `SearchFilters` / `SearchPage` / `QueryReading`, `DiscoveryOrigin`, radii, `ListingCard.saved` / `tags`, home / browse / brand views, saved items, synonyms, limits) |
+| Admin | Login, role-filtered sidebar, dashboard KPI tiles (A1), A4 catalogue pages, A2 pages (Business verification, Users & businesses, Industrial areas), A3 listing pages, F4 Search synonyms and Search insights, placeholder pages for the other A1–A6 modules; UI kit (dialogs, data table, filters, segmented tabs, lightbox, URL state, keyboard nav, socket), in Periwinkle v2 (see Design system) |
+| User app | Welcome (phone sign-in or "Browse first" as a guest) → phone OTP → Your business (name, business, activities, categories) → Where are you? → 5 tabs (Home, Search, Post, Chats, Deals; see Discovery for Home and Search) + Profile (business details, location, GST verification, My listings, Saved, language, logout); en/hi/gu with parity + audit tests; toasts, confirm sheet, skeletons. Native modules added for F1 (`expo-location`, `expo-document-picker`, `expo-image-picker`, `react-native-maps`): needs a new dev-client build. Re-skinned to Periwinkle v2 (see Design system); not yet checked on a device |
 | Design system | Spec `docs/superpowers/specs/2026-11-18-periwinkle-v2-reskin-design.md` (rulings R1–R17), plan `docs/superpowers/plans/2026-11-18-periwinkle-v2-reskin.md`. **App:** tokens in `apps/user-app/lib/palette.ts` (**light only** since 2026-11-19, `shadows.raised / float / segment`) behind `useTheme()`; Manrope + JetBrains Mono (`@expo-google-fonts/*`); type scale `lib/typography.ts` via `useType()` with the Hindi / Gujarati rules (system Noto fallback, R6); the v2 kit in `components/` (Button variants / sizes, filled Input with `prefix` / `size` / `mono`, Field, Chip, SegmentedControl, OtpCells, Card, ListRow, StatusChip, Notice, Steps, IconButton, Header, FooterBar, SideToken, HeroGlow, `art/GearShot`) and the icon-only floating tab bar (`navigation/floating-tab-bar.tsx`, `useTabBarInset()`); every screen restyled with no copy, `testID` or behaviour change. **Admin:** `apps/admin/lib/palette.ts` remaps Tailwind's `gray / brand / red / amber / green` to v2 and adds `sun`, `photo`, `scrim` (no `blue` / `indigo` / `side`); Manrope + JetBrains Mono via `next/font`; `components/ui/field-classes.ts`; kit, shell and the four mockup-mapped pages restyled class-only. **Guards:** palette parity tests read the mockup's source in both apps (plus WCAG contrast floors in the app); style audits (`lib/style-audit.test.ts` in each app) fail on hard-coded or off-palette colours, and in the app on `fontWeight` or a literal font family. How-to: `apps/user-app/CLAUDE.md` §1–2, §6, §8.1, `apps/admin/CLAUDE.md` |
 | Docs | `docs/product-scope.md`: full feature spec, modules M1–M20 + AD1–AD7 with phases and competitor inspiration (incl. M11 buyer requirements / RFQ, as in textile's M9); `docs/research/`: three sourced competitor notes; `docs/product-scope.txt`: PDF extract with U/F/A IDs; `docs/Machine Parts Marketplace Product Scope (full).pdf`: 46-page client-ready scope in the textile scope PDF's style (12 diagrams), exported from the Claude Doc https://claude.ai/artifact/VwZKCLT5xEzAwB5CgfnwyG |
 | Design | **Approved: Periwinkle v2** (D2; v2 chosen 2026-11-18): `docs/mockups/user-app-mockup-periwinkle-v2.html` (from `src/build-periwinkle-v2.mjs`) is the UI brief, and since the re-skin the code's palettes are tested against it (see Design system). v1 (kept for reference only): `docs/mockups/user-app-mockup-periwinkle.html`, 56 phone + 4 admin screens in 11 flows, light/dark, generated by `docs/mockups/src/build-periwinkle.mjs` (content from `build.mjs`, plus No results, Report listing, Handed over, Compare replies and Machines for rent); theme page `theme-periwinkle.html`. Superseded: `docs/mockups/user-app-mockup.html` (51 phone + 4 admin screens, light/dark, generated by `docs/mockups/src/build.mjs`); not yet reviewed by the client. Direction B: `docs/mockups/user-app-mockup-b.html` (same screens, paper / machine green / signal orange, L \| R side token, generated by `docs/mockups/src/build-b.mjs`) for decision D2 |
@@ -37,11 +44,15 @@ version), `listing_machines`, `listing_rentals`, `listing_fitments`, `listing_me
 ## How to run
 
 1. Docker Desktop running → `pnpm infra:up`
-2. `.env` at the repo root (copied from `.env.example`; dev secrets only)
+2. `.env` at the repo root (copied from `.env.example`; dev secrets only). `DISCOVERY_CURSOR_SECRET` (at least 32
+   characters, a fresh value per environment) is required: the API refuses to start without it.
 3. `pnpm --filter @mpm/api db:migrate && pnpm --filter @mpm/api db:migrate:test && pnpm --filter @mpm/api db:seed`
 4. Seed data (each fills an empty table once and refuses after): `pnpm --filter @mpm/api db:seed:catalog`,
    `pnpm --filter @mpm/api db:seed:locations` (pincode directory from `infra/seed/pincode-directory.csv.gz`; `--reset`
-   replaces it), `pnpm --filter @mpm/api db:seed:industrial-areas` (then edit areas in the admin panel)
+   replaces it), `pnpm --filter @mpm/api db:seed:industrial-areas` (then edit areas in the admin panel),
+   `pnpm --filter @mpm/api db:seed:search` (side words, starter synonyms and stop words; then edit them in Search
+   synonyms). After migration 0010 on a database that already has listings, run `pnpm --filter @mpm/api
+   db:backfill:search` once to fill their search columns (safe to re-run).
 5. `pnpm dev:api` (:3000, Swagger `/docs`), `pnpm dev:admin` (:3001), `pnpm start:user` (Metro :8082, needs a dev-client build: `pnpm android`).
    F1 added native modules (location, document and image pickers, maps), so **rebuild the dev client** (`pnpm android`)
    before running the app; the map pin needs `EXPO_PUBLIC_GOOGLE_MAPS_ANDROID_KEY` (`apps/user-app/.env.example`).
@@ -85,14 +96,40 @@ version), `listing_machines`, `listing_rentals`, `listing_fitments`, `listing_me
 - Spec note: §5.2 shows four side tokens, but on a node with sides the side is required (§4.3), so the wizard offers
   Left / Right / Pair only.
 - The admin `listings-table` test can time out when the machine is busy; it passes on its own.
+- **F4 + F5 device check (owner, plan B7-3):** GPS permission prompt on first Home open (grant, deny, blocked →
+  settings); location sheet; radius changes. Browse first as a guest → search → listing → heart → sign in → saved after
+  onboarding. Search on a device in en / hi / gu: side words, typo, part number, filters footer, partial banner, widen.
+  Home, Search, Filters, Results, Saved against the Periwinkle v2 mockup (light). Review the starter synonyms and the
+  `chip_needs_context` brand list with the client.
+- **F4 + F5 admin pages in a browser:** Search synonyms and Search insights were checked by page loads and API calls
+  only (no browser); click through add / edit / delete a synonym with "Try a search", "Make a synonym" from a
+  zero-result row, Hide / Unhide trending, and the brand "ordinary word" flag.
+- Hindi and Gujarati discovery copy is not yet checked by a native speaker.
+- **Typo threshold:** search's `word_similarity` 0.6 misses "hydralic" for "hydraulic" (suggest's 0.5 would match it,
+  but suggest only offers category / brand / model names, so a listing word gets nothing there); about 0.55 would
+  catch it. "hydraulik" is found. Tune with real queries.
+- **Relevance cost:** photos-ok and completeness are per-row subqueries at query time; store them in
+  `refreshListingSearch` when volume grows.
+- **Ordinary-word brands:** only "Happy" is flagged `chipNeedsContext` in the catalogue seed; flag Bull, ACE and the like
+  when a machinery-brand seed lands. The dev DB's catalogue was seeded before the flag existed, so its "Happy" is not
+  flagged (set it in Brands, models & fit, or reseed before go-live).
+- Review the starter synonyms and the flagged brands with the client (with the B7-3 list above).
+- Filters "place" offers states only: no cities / industrial areas endpoint yet.
+- The No results "post a requirement" card waits for F8.
+- Saved count on Profile shows "n+" (the saved list has no total from the API).
+- Listing detail's `saved` is null (the heart there reads `POST /discover/cards`).
+- F2's listing-page distance (rounded, from the business) and discovery cards (snapped, floored, from the origin) can
+  differ by about 1 km.
+- A returning user who signs in from guest mode skips the one-time GST intro until the next cold start.
+- **Part-number joining across a space** joins only when one piece is one or two letters or both are digits ("AB 123 X",
+  "6205 zz", "12 345 678"); two full codes ("AA11 BB22", "6205 2RS") stay apart, and units never join ("10 hp").
+  Revisit with real queries.
 - **Periwinkle v2 device check (owner):** the app's re-skin is checked by tests and an Android bundle only; the visual
   pass is the owner's on a dev build (re-skin spec §12.3, now light only: English, Hindi, Gujarati). The
   splash and adaptive-icon colours in `app.json` show only after the next native build.
 - **Noto contingency (re-skin spec §5.3):** if hi/gu titles don't look bolder than body text on the Android device,
   bundle Noto Sans Devanagari / Gujarati and switch the family in `typeStyle` (`apps/user-app/lib/typography.ts`).
 - **Owner question:** on the GST status screen the status chip repeats the title's wording; keep both or drop one?
-- Home's category chips aren't tappable yet but are `Chip`s, so they announce a checkbox role; give them the right
-  role (or make them filters) with F4.
 - Rulings worth a second look: R9 (icon-only tab bar; labels are one flag away) and R15 (light-theme muted and status
   text under AA 4.5 : 1; darker values ready in the spec).
 - Admin KPI subtitles are grey (`text-gray-500`), not the mockup's green: the current ones ("Hidden from the app",
@@ -111,10 +148,9 @@ version), `listing_machines`, `listing_rentals`, `listing_fitments`, `listing_me
 - `GST_OTHER_GSTIN_HELD` (`grantGst`) is unreachable today (the instant path refuses earlier); kept defensively.
 - Document submit checks the key shape (`400 DOCUMENT_KEY_INVALID`) before storage (`503`): documented in
   `stageDocuments`, intended.
-- A location saved without a pin stores no point: nearby search (F4) should fall back to the pincode's
-  `pincode_offices.point`.
-- Admin `fetchCategoryNames` and the app's onboarding category chips download the whole `/categories` tree: add a
-  roots-only read with F4.
+- Admin `fetchCategoryNames` and the app's onboarding category chips (`fetchMachineCategories`) still download the
+  whole `/categories` tree; `GET /categories?depth=1` (roots only) exists since F4: switch the callers that only need
+  the roots.
 
 ## Open decisions (ask the client)
 
@@ -133,7 +169,8 @@ The ten client decisions D1–D10 are listed at the end of `docs/product-scope.m
 2. ~~**F1 business profile + A2 verification**~~ — built 2026-11-18 (see What's built). R2 keys and a GST provider still to set.
 3. ~~**F2 + F3 listings** + A3 moderation~~ — built 2026-11-19 (see What's built). Public bucket, video device check and
    the owner's device pass still to do (Open items).
-4. **F4 + F5 discovery** — spec written 2026-11-19 (`docs/superpowers/specs/2026-11-19-f4-f5-discovery-design.md`), awaiting the owner's review; then the plan.
+4. ~~**F4 + F5 discovery**~~ — built 2026-11-19 (see What's built). The owner's device pass, the admin pages in a
+   browser and the client's synonym review still to do (Open items).
 5. **F6 + F7 enquiries, chat, offers, deals**, then rentals.
 6. **F8 part requests + matching job**, **F9 notifications** (FCM).
 7. A1 dashboard KPIs, A5 monitoring, A6 reports and flags.
@@ -248,3 +285,21 @@ The ten client decisions D1–D10 are listed at the end of `docs/product-scope.m
 - 2026-11-19 — F4 + F5 discovery spec written from the owner's answers (core now: search with query reader, filters,
   sort, browse with counts, home, saved, recently viewed, guest browsing; GPS location; Pair shown under Left / Right;
   live + reserved, rented only in rentals) after reading textile's M2/M5 and Part 2 specs and code. Awaiting review.
+- 2026-11-19 — **F4 + F5 discovery** built on `develop` from the approved spec (three owner reviews) and plan
+  `2026-11-19-f4-f5-discovery.md`: B0 contracts, B1 API search, B2 API discovery / saved / admin API / search seed, B3
+  admin pages and B4 app foundation in sequence, then B5 (app search) and B6 (app home, saved, recently viewed) as two
+  parallel lanes merged into `develop`; each batch independently reviewed with a fix wave, plus a merge fix and a joint
+  B5 + B6 review fix (`e5f3e74`). Spec amendments during the build: radius margin 3 km, count-only at
+  `POST /discover/search/count`, additive word synonyms (`wordGroups`), brand view `allCount` + `brandId` filter.
+  B7 integration: typecheck and lint clean; tests API 1123 + 2 skipped (public-bucket R2 suites), admin 380, app 527;
+  `mpm_test` left empty; admin production build; `expo export --platform android` bundles. Dev DB: migrations 0010–0011
+  applied, `db:backfill:search` run (no listings), `db:seed:search` already loaded (102 synonyms, 44 stop words).
+  Scripted API walk-through on the dev DB passed (three users, two sellers ~3 km and ~127 km from the origin, four
+  listings approved through moderation): "AB-123/X" found as "ab123x" and "AB 123 X"; "lh" and "बायाँ" read as Left,
+  with the Pair below the Left and tagged; typo "hydraulik"; Toyota + LWT710 chips; `#ref` redirect and bare-ref
+  suggestion; widen 50 → 200 km; count-only incl. `partialTotal`; save, own-listing 409, saved list, hearts for buyer
+  vs guest; home tiles; browse counts; brand view; cards order; admin word synonym seen by the public search after
+  5.2 s and gone after delete; zero-result query in insights; trending 200 (empty). Data deleted afterwards (catalogue,
+  seeds and settings unchanged; audit rows kept). Admin pages checked by page loads (`/search-synonyms/`,
+  `/search-insights/` 200) and API calls only. Still the owner's: the device pass and a browser click-through (Open
+  items).

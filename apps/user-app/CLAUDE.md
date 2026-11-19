@@ -73,6 +73,8 @@ a screen never hand-rolls a copy of a kit piece (a status pill, a callout, a sel
 | `AppToast.tsx` | Themed toast renderer, mounted once in `App.tsx`. Show toasts with `Toast.show({ type: 'success' \| 'error' \| 'info', text1 })`. Inside a Modal, render `<AppToast inModal />`. |
 | `ActionSheet.tsx` | Bottom sheet with a list of rows (the manage sheet, report reasons): labels from the caller, backdrop and Back close it, radio rows for a single choice. |
 | `ConfirmSheet.tsx` | `const confirm = useConfirm(); if (await confirm({ title, message, destructive: true })) …` — also `useChoice()` for a three-way choice. Provider is in `App.tsx`. Buttons are `Button`s (`Confirm-sheet-confirm` / `-cancel` / `-secondary` / `-dismiss` / `-pick`). |
+| `BottomSheet.tsx` | The v2 `.sheet` frame for a sheet with its own content (sign-in, location): Modal, sheet animation, scrim, Back closes, handle, optional title, content above the keyboard. A list of rows stays `ActionSheet`. |
+| `SignInSheet.tsx` | Why an account is needed (`reason`), Continue with mobile number, Not now. `SignInSheetProvider` is mounted once in `App.tsx`; open it through `useRequireSignIn()` (§5.1). |
 
 **Chrome and art**
 
@@ -83,7 +85,12 @@ a screen never hand-rolls a copy of a kit piece (a status pill, a callout, a sel
 | `FooterBar.tsx` | Floating white pill at the screen's bottom for the screen's actions; children are `Button size="md"` (flex 1). Every screen with a bottom action uses it. |
 | `PressableScale.tsx` | Pressable with a spring press-scale (respects reduced motion). |
 | `SideToken.tsx` | The Left / Right / Pair mark (`kind`: `left` `right` `pair` `want-left` `want-right` `none`; `size` `md` / `lg` / `xl`); halves from `lib/side-token.ts`. Use it wherever a part's side is shown. |
-| `ListingCard.tsx` | A listing row (v2 `.listing`): thumbnail, title, side, condition, quantity, price, place. Map an API card onto it (`screens/listing/listing-card-item.tsx`). |
+| `ListingCard.tsx` | A listing row (v2 `.listing`): thumbnail, title, side, condition, quantity, price, place, distance, tags (Reserved / On rent / "Pair: contains a left"), heart. Map an API card onto it (`screens/listing/listing-card-item.tsx`). |
+| `GridCard.tsx` | Grid card (v2 `.gcard`): product shot, heart, side token, first tag as the yellow badge, title, price. Home's "Top items near you", rentals-only results. |
+| `MiniCard.tsx` | Small card for a horizontal row (v2 `.mini`): photo, title, price or headline rate. Home's "Machines for rent nearby". |
+| `SaveButton.tsx` | The heart (v2 `.hrt`). Optimistic through `useSaveToggle` (`hooks/use-saved.ts`); a guest gets the sign-in sheet and the save runs after sign-in. Never on the viewer's own listing (`canShowHeart`). |
+| `FilterChipRow.tsx` | The results screen's filter row (v2 `.filterrow`): Filters n, the reader's removable chips (×), radius chip, quick chips. |
+| `LocationChip.tsx` / `LocationSheet.tsx` | Home's origin chip (server's `origin.label` + "Within 50 km" / "All India") and the sheet behind it: Use my location, Use my business location, Enter pincode, radius chips. |
 | `PriceText.tsx` | Rupees from paise with Indian grouping (₹1,23,456), a per-unit suffix and an optional model note. Never format money by hand. |
 | `MediaTile.tsx` | Photo / video tile of the media step: picture, Cover badge, upload progress (`tileState()` maps the queue's states), error with retry, Make cover, delete. |
 | `SideDiagram.tsx` | The side convention drawing (machine from above, operator behind, L and R). Only for the default convention. |
@@ -164,6 +171,26 @@ apps/user-app/
 └── store/               # Redux slices
 ```
 A feature folder owns its sub-screens, helpers and local types; promote to `components/` or `lib/` when shared.
+
+### 5.1 Guests and the discovery origin (F4 + F5)
+
+- **Guest navigation** (business rule 2, F4 + F5 spec §8.1): Welcome's "Browse first" opens the `guest` group in
+  `navigation/root-navigator.tsx` (tabs, listing pages, search results, and the auth screens pushed when needed); a cold
+  start with no saved session reopens it, a refused session lands on Welcome (`lib/sign-in-gate.ts`). Post, Chats and
+  Deals ask a guest to sign in (`screens/tabs/guest-gate.tsx`); Profile shows a Sign in card.
+- **Asking for sign-in:** never navigate to the phone screen yourself. Call `requireSignIn({ reason, pending })` from
+  `useRequireSignIn()` (`hooks/use-require-sign-in.ts`): it returns true when signed in, else opens the sign-in sheet.
+  `pending` is a serialisable `PendingAction` (`lib/pending-action.ts`, only `{ type: 'save', listingId }` today) kept in
+  the auth slice; `usePendingActionRunner` (`hooks/use-saved.ts`) runs it once after OTP **and** onboarding; cancel drops
+  it. A new pending type (enquire, offer with F6) goes in `PendingAction` and the runner.
+- **Origin:** `useDiscoveryOrigin()` (`hooks/use-discovery-origin.ts`, pure store in `lib/discovery-origin.ts`) is the one
+  origin for Home, Search, results and the location sheet. GPS fixes live in memory only: **never store coordinates**
+  (AsyncStorage keeps the radius, a typed pincode and the source) and never put a coordinate or pincode in analytics or
+  logs. A list **freezes** its origin when page 1 is requested (`origin.freeze()`) and sends that same origin with every
+  later page and count-only call (spec R18: the cursor's seal includes it); a location change starts a new list.
+- **Server data:** discovery calls live in `lib/discover-api.ts` / `lib/saved-api.ts` and the hooks in
+  `hooks/use-discover.ts` / `hooks/use-saved.ts`; React Query keys sit under `['discover', …]` so a save toggle patches
+  every cached card (`applySaved`). `lib/install-id.ts` sends `X-Install-Id` (rate-limit key for guests).
 
 ---
 
