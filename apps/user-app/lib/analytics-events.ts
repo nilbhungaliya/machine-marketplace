@@ -76,6 +76,23 @@ export const LISTING_EVENTS = {
 } as const;
 
 /**
+ * Search (F4 + F5 spec §8.4, §8.6). Counts, kinds and positions only: never the query text, a chip's name, a pincode or
+ * coordinates (§11).
+ * - `searchSubmitted` (`words`, `chips`: counts; `kinds`: sorted kinds or `all`): page 1 of a new results list arrived.
+ * - `searchResultOpened` (`position`: 1-based), `searchFiltersApplied` (`count`: `countFilters`),
+ *   `searchWidened` (`radiusKm`: a number or null for All India), `searchZeroResults` (`kinds`).
+ * - `browseNodeOpened` (`level`): a Browse row opened its children or its results.
+ */
+export const SEARCH_EVENTS = {
+  searchSubmitted: 'search_submitted',
+  searchResultOpened: 'search_result_opened',
+  searchFiltersApplied: 'search_filters_applied',
+  searchWidened: 'search_widened',
+  searchZeroResults: 'search_zero_results',
+  browseNodeOpened: 'browse_node_opened',
+} as const;
+
+/**
  * Discovery (F4 + F5 spec §8.6). Never the query text, a pincode or coordinates (§11).
  * - `locationPermissionAnswered` (`granted`): the system location prompt was answered.
  * - `locationChanged` (`source`: gps | business | pincode | radius, `radiusKm`: a number or null for All India).

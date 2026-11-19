@@ -67,5 +67,140 @@
     "pincodeUnknown": "We don't know this pincode yet.",
     "cannotSaveOwn": "You can't save your own listing.",
     "savedLimit": "You've saved {{cap}} listings. Remove some to save more."
+  },
+  "search": {
+    "bar": {
+      "placeholder": "Part, machine, brand or part no.",
+      "clear": "Clear the search",
+      "submit": "Search"
+    },
+    "start": {
+      "recent": "Recent searches",
+      "clearRecent": "Clear",
+      "trending": "Popular searches",
+      "browse": "Browse by machine"
+    },
+    "browse": {
+      "root": "All categories",
+      "seeAll": "See all in {{name}}",
+      "popularBrands": "Popular brands here",
+      "rowA11y_one": "{{name}}, {{count}} listing",
+      "rowA11y_other": "{{name}}, {{count}} listings",
+      "emptyNear": "Nothing listed here within {{km}} km",
+      "emptyNearBody": "Sellers further away may have it.",
+      "showAllIndia": "Show all India",
+      "empty": "Nothing listed here yet",
+      "emptyBody": "New listings show up here as sellers add them.",
+      "loadError": "Couldn't load the categories",
+      "loadErrorBody": "Check your connection and try again."
+    },
+    "suggest": {
+      "searchFor": "Search for “{{q}}”",
+      "category": "Category",
+      "brand": "Brand",
+      "model": "Model",
+      "listing": "Listing #{{ref}}"
+    },
+    "brand": {
+      "all": "All {{name}}",
+      "allHint": "Parts and machines of this brand, and parts that fit it",
+      "models": "Models",
+      "empty": "No models listed yet",
+      "emptyBody": "Open “All” to see everything of this brand."
+    },
+    "results": {
+      "count_one": "{{count}} result, {{order}}",
+      "count_other": "{{count}} results, {{order}}",
+      "filters": "Filters",
+      "filtersCount": "Filters {{count}}",
+      "sort": "Sort",
+      "price": "Price",
+      "kinds_one": "{{count}} listing type",
+      "kinds_other": "{{count}} listing types",
+      "refRow": "Listing #{{ref}}",
+      "refHint": "The listing with this number",
+      "loadError": "Couldn't load the results",
+      "loadErrorBody": "Check your connection and try again.",
+      "reset": "Reset the search",
+      "widen": "Widen",
+      "closeMatches": "Close matches"
+    },
+    "order": {
+      "best_match": "best match first",
+      "nearest": "nearest first",
+      "newest": "newest first",
+      "price_asc": "lowest price first",
+      "price_desc": "highest price first",
+      "year_desc": "newest machines first",
+      "hours_asc": "fewest hours first"
+    },
+    "sort": {
+      "title": "Sort by",
+      "best_match": "Best match",
+      "nearest": "Nearest",
+      "newest": "Newest",
+      "price_asc": "Price: low to high",
+      "price_desc": "Price: high to low",
+      "year_desc": "Year: newest first",
+      "hours_asc": "Hours run: fewest first"
+    },
+    "partial": {
+      "none": "No exact matches.",
+      "noneWithin": "No exact matches within {{km}} km.",
+      "exactWithin_one": "{{count}} exact match within {{km}} km.",
+      "exactWithin_other": "{{count}} exact matches within {{km}} km.",
+      "exactAllIndia_one": "{{count}} exact match across India.",
+      "exactAllIndia_other": "{{count}} exact matches across India."
+    },
+    "noResults": {
+      "title": "No results",
+      "titleWithin": "Nothing matches within {{km}} km",
+      "body": "Try fewer words, remove a filter or check the spelling.",
+      "widen_one": "Widen to {{km}} km · {{count}} result",
+      "widen_other": "Widen to {{km}} km · {{count}} results",
+      "widenAllIndia_one": "Search all India · {{count}} result",
+      "widenAllIndia_other": "Search all India · {{count}} results"
+    },
+    "filters": {
+      "title": "Filters",
+      "clearAll": "Clear all",
+      "side": "Side",
+      "condition": "Condition",
+      "fit": "Fits machine",
+      "fitBrand": "Machine brand",
+      "fitBrandPick": "Choose a brand",
+      "fitModel": "Model",
+      "anyModel": "Any model",
+      "fitYear": "Year",
+      "fitYearPlaceholder": "For example 2018",
+      "fitYearInvalid": "Enter a year like 2018",
+      "fitClear": "Remove machine",
+      "distance": "Distance",
+      "distanceFrom": "From {{label}}",
+      "place": "State",
+      "price": "Price per unit",
+      "priceDay": "Rent per day",
+      "min": "Min ₹",
+      "max": "Max ₹",
+      "rangeMin": "Min",
+      "rangeMax": "Max",
+      "priceInvalid": "Enter an amount in rupees",
+      "hideOnRequest": "Hide “Price on request”",
+      "quantity": "Quantity available",
+      "any": "Any",
+      "qtyStep": "{{qty}}+",
+      "seller": "Seller",
+      "gstVerified": "GST verified only",
+      "delivers": "Delivers",
+      "hasVideo": "Has video",
+      "withCount": "{{label}} · {{count}}",
+      "specRange": "Listed from {{min}} to {{max}}",
+      "show_one": "Show {{count}} result",
+      "show_other": "Show {{count}} results",
+      "showClose_one": "No exact matches · Show {{count}} close one",
+      "showClose_other": "No exact matches · Show {{count}} close ones",
+      "showResults": "Show results",
+      "noResults": "No results"
+    }
   }
 }

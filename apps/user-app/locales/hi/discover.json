@@ -67,5 +67,140 @@
     "pincodeUnknown": "यह पिनकोड अभी हमारे पास नहीं है।",
     "cannotSaveOwn": "आप अपनी ही लिस्टिंग सेव नहीं कर सकते।",
     "savedLimit": "आपने {{cap}} लिस्टिंग सेव की हैं। और सेव करने के लिए कुछ हटाएँ।"
+  },
+  "search": {
+    "bar": {
+      "placeholder": "पार्ट, मशीन, ब्रांड या पार्ट नंबर",
+      "clear": "सर्च साफ़ करें",
+      "submit": "सर्च करें"
+    },
+    "start": {
+      "recent": "हाल की सर्च",
+      "clearRecent": "साफ़ करें",
+      "trending": "लोकप्रिय सर्च",
+      "browse": "मशीन के हिसाब से देखें"
+    },
+    "browse": {
+      "root": "सभी कैटेगरी",
+      "seeAll": "{{name}} में सब देखें",
+      "popularBrands": "यहाँ के लोकप्रिय ब्रांड",
+      "rowA11y_one": "{{name}}, {{count}} लिस्टिंग",
+      "rowA11y_other": "{{name}}, {{count}} लिस्टिंग",
+      "emptyNear": "{{km}} किमी के अंदर यहाँ कुछ लिस्ट नहीं है",
+      "emptyNearBody": "थोड़ी दूर के सेलर के पास मिल सकता है।",
+      "showAllIndia": "पूरा भारत देखें",
+      "empty": "यहाँ अभी कुछ लिस्ट नहीं है",
+      "emptyBody": "सेलर जैसे ही लिस्टिंग जोड़ेंगे, वे यहाँ दिखेंगी।",
+      "loadError": "कैटेगरी लोड नहीं हो पाईं",
+      "loadErrorBody": "अपना कनेक्शन देखें और फिर से कोशिश करें।"
+    },
+    "suggest": {
+      "searchFor": "“{{q}}” सर्च करें",
+      "category": "कैटेगरी",
+      "brand": "ब्रांड",
+      "model": "मॉडल",
+      "listing": "लिस्टिंग #{{ref}}"
+    },
+    "brand": {
+      "all": "सभी {{name}}",
+      "allHint": "इस ब्रांड के पार्ट और मशीनें, और इसमें फिट होने वाले पार्ट",
+      "models": "मॉडल",
+      "empty": "अभी कोई मॉडल लिस्ट नहीं है",
+      "emptyBody": "इस ब्रांड का सब कुछ देखने के लिए “सभी” खोलें।"
+    },
+    "results": {
+      "count_one": "{{count}} नतीजा, {{order}}",
+      "count_other": "{{count}} नतीजे, {{order}}",
+      "filters": "फ़िल्टर",
+      "filtersCount": "फ़िल्टर {{count}}",
+      "sort": "क्रम",
+      "price": "कीमत",
+      "kinds_one": "{{count}} तरह की लिस्टिंग",
+      "kinds_other": "{{count}} तरह की लिस्टिंग",
+      "refRow": "लिस्टिंग #{{ref}}",
+      "refHint": "इस नंबर वाली लिस्टिंग",
+      "loadError": "नतीजे लोड नहीं हो पाए",
+      "loadErrorBody": "अपना कनेक्शन देखें और फिर से कोशिश करें।",
+      "reset": "सर्च दोबारा शुरू करें",
+      "widen": "दायरा बढ़ाएँ",
+      "closeMatches": "मिलते-जुलते नतीजे"
+    },
+    "order": {
+      "best_match": "सबसे सही पहले",
+      "nearest": "सबसे नज़दीक पहले",
+      "newest": "सबसे नए पहले",
+      "price_asc": "सबसे कम कीमत पहले",
+      "price_desc": "सबसे ज़्यादा कीमत पहले",
+      "year_desc": "सबसे नई मशीनें पहले",
+      "hours_asc": "सबसे कम घंटे चली पहले"
+    },
+    "sort": {
+      "title": "क्रम चुनें",
+      "best_match": "सबसे सही",
+      "nearest": "सबसे नज़दीक",
+      "newest": "सबसे नए",
+      "price_asc": "कीमत: कम से ज़्यादा",
+      "price_desc": "कीमत: ज़्यादा से कम",
+      "year_desc": "साल: सबसे नई पहले",
+      "hours_asc": "चले घंटे: सबसे कम पहले"
+    },
+    "partial": {
+      "none": "कोई पूरा मेल नहीं मिला।",
+      "noneWithin": "{{km}} किमी के अंदर कोई पूरा मेल नहीं मिला।",
+      "exactWithin_one": "{{km}} किमी के अंदर {{count}} पूरा मेल।",
+      "exactWithin_other": "{{km}} किमी के अंदर {{count}} पूरे मेल।",
+      "exactAllIndia_one": "पूरे भारत में {{count}} पूरा मेल।",
+      "exactAllIndia_other": "पूरे भारत में {{count}} पूरे मेल।"
+    },
+    "noResults": {
+      "title": "कोई नतीजा नहीं",
+      "titleWithin": "{{km}} किमी के अंदर कुछ नहीं मिला",
+      "body": "कम शब्द लिखें, कोई फ़िल्टर हटाएँ या स्पेलिंग जाँचें।",
+      "widen_one": "{{km}} किमी तक बढ़ाएँ · {{count}} नतीजा",
+      "widen_other": "{{km}} किमी तक बढ़ाएँ · {{count}} नतीजे",
+      "widenAllIndia_one": "पूरे भारत में सर्च करें · {{count}} नतीजा",
+      "widenAllIndia_other": "पूरे भारत में सर्च करें · {{count}} नतीजे"
+    },
+    "filters": {
+      "title": "फ़िल्टर",
+      "clearAll": "सब हटाएँ",
+      "side": "साइड",
+      "condition": "हालत",
+      "fit": "किस मशीन में फिट",
+      "fitBrand": "मशीन का ब्रांड",
+      "fitBrandPick": "ब्रांड चुनें",
+      "fitModel": "मॉडल",
+      "anyModel": "कोई भी मॉडल",
+      "fitYear": "साल",
+      "fitYearPlaceholder": "जैसे 2018",
+      "fitYearInvalid": "2018 जैसा साल डालें",
+      "fitClear": "मशीन हटाएँ",
+      "distance": "दूरी",
+      "distanceFrom": "{{label}} से",
+      "place": "राज्य",
+      "price": "प्रति यूनिट कीमत",
+      "priceDay": "प्रति दिन किराया",
+      "min": "कम से कम ₹",
+      "max": "ज़्यादा से ज़्यादा ₹",
+      "rangeMin": "कम से कम",
+      "rangeMax": "ज़्यादा से ज़्यादा",
+      "priceInvalid": "रुपयों में रकम डालें",
+      "hideOnRequest": "“कीमत पूछने पर” वाली छिपाएँ",
+      "quantity": "उपलब्ध मात्रा",
+      "any": "कोई भी",
+      "qtyStep": "{{qty}}+",
+      "seller": "सेलर",
+      "gstVerified": "सिर्फ़ GST वेरिफ़ाइड",
+      "delivers": "डिलीवरी करते हैं",
+      "hasVideo": "वीडियो वाली",
+      "withCount": "{{label}} · {{count}}",
+      "specRange": "{{min}} से {{max}} तक लिस्ट हैं",
+      "show_one": "{{count}} नतीजा दिखाएँ",
+      "show_other": "{{count}} नतीजे दिखाएँ",
+      "showClose_one": "पूरा मेल नहीं · {{count}} मिलता-जुलता दिखाएँ",
+      "showClose_other": "पूरा मेल नहीं · {{count}} मिलते-जुलते दिखाएँ",
+      "showResults": "नतीजे दिखाएँ",
+      "noResults": "कोई नतीजा नहीं"
+    }
   }
 }

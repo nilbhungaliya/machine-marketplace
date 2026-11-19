@@ -27,6 +27,10 @@ import OtherSideScreen from '@/screens/listing/other-side';
 import MyListingsScreen from '@/screens/my-listings/my-listings';
 import EditMenuScreen from '@/screens/my-listings/edit-menu';
 import RemovedByTeamScreen from '@/screens/my-listings/removed-by-team';
+// F4 + F5 search (B5)
+import SearchResultsScreen from '@/screens/search/results';
+import SearchFiltersScreen from '@/screens/search/filters';
+import SearchBrandScreen from '@/screens/search/brand';
 import { usePendingActionRunner } from '@/hooks/use-saved';
 import AuthStack from './auth-stack';
 import TabNavigator from './tab-navigator';
@@ -103,8 +107,10 @@ export default function RootNavigator() {
           <Stack.Screen name="ListingMedia" component={MediaViewerScreen} options={{ animation: 'fade' }} />
           <Stack.Screen name="SellerListings" component={SellerListingsScreen} />
           <Stack.Screen name="OtherSide" component={OtherSideScreen} />
-          {/* TODO(B5): register SearchResults, SearchFilters and SearchBrand here too (guests search), next to the
-              signed-in group's, once B5 adds them to RootStackParamList. */}
+          {/* F4 + F5 search (B5): guests search too. */}
+          <Stack.Screen name="SearchResults" component={SearchResultsScreen} />
+          <Stack.Screen name="SearchFilters" component={SearchFiltersScreen} />
+          <Stack.Screen name="SearchBrand" component={SearchBrandScreen} />
           <Stack.Screen name="Auth" component={AuthStack} />
         </Stack.Group>
       ) : !isAuthenticated ? (
@@ -146,6 +152,10 @@ export default function RootNavigator() {
           <Stack.Screen name="MyListings" component={MyListingsScreen} />
           <Stack.Screen name="ListingEditMenu" component={EditMenuScreen} />
           <Stack.Screen name="RemovedByTeam" component={RemovedByTeamScreen} />
+          {/* F4 + F5 search (B5) */}
+          <Stack.Screen name="SearchResults" component={SearchResultsScreen} />
+          <Stack.Screen name="SearchFilters" component={SearchFiltersScreen} />
+          <Stack.Screen name="SearchBrand" component={SearchBrandScreen} />
         </Stack.Group>
       )}
     </Stack.Navigator>
