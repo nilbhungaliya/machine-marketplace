@@ -43,6 +43,9 @@ import guSell from './gu/sell.json';
 import enListing from './en/listing.json';
 import hiListing from './hi/listing.json';
 import guListing from './gu/listing.json';
+import enSaved from './en/saved.json';
+import hiSaved from './hi/saved.json';
+import guSaved from './gu/saved.json';
 import enDiscover from './en/discover.json';
 import hiDiscover from './hi/discover.json';
 import guDiscover from './gu/discover.json';
@@ -66,6 +69,7 @@ export const resources = {
       verification: enVerification,
       sell: enSell,
       listing: enListing,
+      saved: enSaved,
       discover: enDiscover,
     },
   },
@@ -86,6 +90,7 @@ export const resources = {
       verification: hiVerification,
       sell: hiSell,
       listing: hiListing,
+      saved: hiSaved,
       discover: hiDiscover,
     },
   },
@@ -106,6 +111,7 @@ export const resources = {
       verification: guVerification,
       sell: guSell,
       listing: guListing,
+      saved: guSaved,
       discover: guDiscover,
     },
   },

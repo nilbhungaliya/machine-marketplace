@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -12,6 +12,11 @@ import FooterBar from '@/components/FooterBar';
 import Notice from '@/components/Notice';
 import Skeleton from '@/components/Skeleton';
 import StatusChip from '@/components/StatusChip';
+import SaveButton from '@/components/SaveButton';
+import { useCards } from '@/hooks/use-discover';
+import { useHeartViewer } from '@/hooks/use-saved';
+import { recordViewed } from '@/lib/recently-viewed';
+import { listingHeart } from '@/lib/saved-view';
 import { listingKeys, useListing, useListingTemplate, useOtherSide, useSellerListings } from '@/hooks/use-listing';
 import { useRequireSignIn } from '@/hooks/use-require-sign-in';
 import { useType } from '@/hooks/use-type';
@@ -53,6 +58,19 @@ export default function ListingScreen({ navigation, route }: RootStackScreenProp
   const more = useSellerListings(listing?.businessId ?? null, { limit: MORE_LIMIT, exclude: listingId });
   const [sheet, setSheet] = useState<'fit' | 'report' | null>(null);
   const [managing, setManaging] = useState(false);
+  // The heart (F4 + F5 spec §8.5): the detail's `saved` isn't computed by the API, so a signed-in buyer's state comes
+  // from this listing's card (`POST /discover/cards`, patched by every toggle like any other cached card).
+  const viewer = useHeartViewer();
+  const wantsCard = !!listing && !listing.isOwner && viewer.signedIn;
+  const cardQuery = useCards(useMemo(() => [listingId], [listingId]), null, wantsCard);
+  const cardSaved = cardQuery.data ? cardQuery.data.find((c) => c.id === listingId)?.saved ?? null : undefined;
+
+  // Recently viewed (§8.5, R13): on the phone only, own listings skipped; once per opened listing.
+  const loaded = !!listing && listing.id === listingId;
+  useEffect(() => {
+    if (!loaded || !listing) return;
+    void recordViewed({ listingId, businessId: listing.businessId }, listing.isOwner ? listing.businessId : null);
+  }, [loaded, listingId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const s = useMemo(() => StyleSheet.create({
     loading: { padding: spacing.lg, gap: spacing.md },
@@ -146,6 +164,11 @@ export default function ListingScreen({ navigation, route }: RootStackScreenProp
 
   const edit = () => void openEdit(navigation, qc, listing);
 
+  const heart = listingHeart(listing, viewer, cardSaved);
+  const heartButton = heart.show ? (
+    <SaveButton listingId={listingId} saved={heart.saved} size="md" testID="Listing-save" />
+  ) : null;
+
   // Removed or deleted from this page: there's nothing left to show, so drop it and go back.
   const actionDone = (a: ManageAction) => {
     if (a !== 'remove' && a !== 'delete_draft') return;
@@ -155,7 +178,7 @@ export default function ListingScreen({ navigation, route }: RootStackScreenProp
 
   return (
     <ScreenWrapper>
-      <Header title={kindTitle} />
+      <Header title={kindTitle} rightIcon={heartButton} />
       <ListingView
         style={{ flex: 1 }}
         listing={listing}

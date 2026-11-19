@@ -1,17 +1,23 @@
 {
-  "title": "તમારી નજીકના પાર્ટ્સ અને મશીનરી",
-  "allIndia": "આખું ભારત",
-  "searchPlaceholder": "પાર્ટ, મશીન, બ્રાન્ડ કે મૉડલ શોધો…",
-  "categories": {
-    "spare_parts": "સ્પેર પાર્ટ્સ",
-    "machinery": "મશીનરી",
-    "machine_rental": "મશીન ભાડે",
-    "tools": "ટૂલ્સ",
-    "electrical": "ઇલેક્ટ્રિકલ",
-    "hydraulics": "હાઇડ્રોલિક્સ",
-    "bearings_transmission": "બેરિંગ અને ટ્રાન્સમિશન"
+  "searchPlaceholder": "પાર્ટ, મશીન, બ્રાન્ડ કે પાર્ટ નંબર",
+  "tiles": {
+    "part": "સ્પેર પાર્ટ્સ",
+    "machine": "મશીનરી",
+    "machine_rental": "ભાડે",
+    "a11y_one": "{{name}}, {{count}} લિસ્ટિંગ",
+    "a11y_other": "{{name}}, {{count}} લિસ્ટિંગ"
   },
+  "topTitle": "તમારી નજીકની ટોપ આઇટમ",
+  "seeAll": "બધું જુઓ",
+  "rentTitle": "નજીકમાં ભાડાની મશીનો",
+  "recentTitle": "તાજેતરમાં જોયેલા",
+  "emptyRadiusTitle": "{{km}} km ની અંદર હજુ કંઈ નથી",
+  "emptyRadiusSubtitle": "થોડું વધુ દૂર જુઓ, અથવા થોડી વાર પછી ફરી જુઓ.",
+  "widenTo": "{{km}} km ની અંદર જુઓ",
+  "widenAllIndia": "આખા ભારતમાં જુઓ",
   "emptyTitle": "હજુ કોઈ લિસ્ટિંગ નથી",
   "emptySubtitle": "તમારા વિસ્તારના લાઇવ પાર્ટ્સ અને મશીનરી અહીં દેખાશે.",
-  "sellCta": "પાર્ટ વેચો"
+  "sellCta": "પાર્ટ વેચો",
+  "loadErrorTitle": "હોમ લોડ ન થયું",
+  "loadErrorBody": "તમારું કનેક્શન તપાસો અને ફરી પ્રયાસ કરો."
 }

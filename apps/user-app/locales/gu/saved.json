@@ -1,0 +1,17 @@
+{
+  "title": "સેવ કરેલા",
+  "subtitle_one": "{{count}} લિસ્ટિંગ",
+  "subtitle_other": "{{count}} લિસ્ટિંગ",
+  "subtitleMore": "{{n}}+ લિસ્ટિંગ",
+  "unavailableTitle": "હવે ઉપલબ્ધ નથી",
+  "unavailableBody": "તે વેચાઈ ગયું, રોકાયું કે દૂર કરાયું.",
+  "remove": "દૂર કરો",
+  "emptyTitle": "હજુ કંઈ સેવ કર્યું નથી",
+  "emptySubtitle": "કોઈ લિસ્ટિંગ પર દિલનું નિશાન દબાવો, તે અહીં રહેશે.",
+  "browseCta": "લિસ્ટિંગ જુઓ",
+  "loadErrorTitle": "સેવ કરેલી લિસ્ટિંગ લોડ ન થઈ",
+  "loadErrorBody": "તમારું કનેક્શન તપાસો અને ફરી પ્રયાસ કરો.",
+  "profileRow": "સેવ કરેલા",
+  "profileRowCount": "સેવ કરેલા ({{n}})",
+  "profileRowMore": "સેવ કરેલા ({{n}}+)"
+}

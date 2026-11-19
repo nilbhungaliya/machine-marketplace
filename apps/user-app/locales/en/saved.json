@@ -1,0 +1,17 @@
+{
+  "title": "Saved",
+  "subtitle_one": "{{count}} listing",
+  "subtitle_other": "{{count}} listings",
+  "subtitleMore": "{{n}}+ listings",
+  "unavailableTitle": "No longer available",
+  "unavailableBody": "It was sold, paused or removed.",
+  "remove": "Remove",
+  "emptyTitle": "Nothing saved yet",
+  "emptySubtitle": "Tap the heart on a listing to keep it here.",
+  "browseCta": "Browse listings",
+  "loadErrorTitle": "Couldn't load your saved listings",
+  "loadErrorBody": "Check your connection and try again.",
+  "profileRow": "Saved",
+  "profileRowCount": "Saved ({{n}})",
+  "profileRowMore": "Saved ({{n}}+)"
+}

@@ -1,17 +1,23 @@
 {
-  "title": "Parts and machinery near you",
-  "allIndia": "All India",
-  "searchPlaceholder": "Search part, machine, brand or model…",
-  "categories": {
-    "spare_parts": "Spare parts",
-    "machinery": "Machinery",
-    "machine_rental": "Machine rental",
-    "tools": "Tools",
-    "electrical": "Electrical",
-    "hydraulics": "Hydraulics",
-    "bearings_transmission": "Bearings & transmission"
+  "searchPlaceholder": "Part, machine, brand or part no.",
+  "tiles": {
+    "part": "Spare parts",
+    "machine": "Machinery",
+    "machine_rental": "For rent",
+    "a11y_one": "{{name}}, {{count}} listing",
+    "a11y_other": "{{name}}, {{count}} listings"
   },
+  "topTitle": "Top items near you",
+  "seeAll": "See all",
+  "rentTitle": "Machines for rent nearby",
+  "recentTitle": "Recently viewed",
+  "emptyRadiusTitle": "Nothing within {{km}} km yet",
+  "emptyRadiusSubtitle": "Look a little further, or check back soon.",
+  "widenTo": "Look within {{km}} km",
+  "widenAllIndia": "Look across All India",
   "emptyTitle": "No listings yet",
   "emptySubtitle": "Live parts and machinery in your area will show up here.",
-  "sellCta": "Sell a part"
+  "sellCta": "Sell a part",
+  "loadErrorTitle": "Couldn't load Home",
+  "loadErrorBody": "Check your connection and try again."
 }

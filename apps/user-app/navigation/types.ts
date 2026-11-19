@@ -16,6 +16,8 @@ export type RootStackParamList = {
   WhereAreYou: { mode: FormMode } | undefined;
   Main: NavigatorScreenParams<TabParamList> | undefined;
   Profile: undefined;
+  /** Saved listings (F4 + F5 spec §8.5), from Profile's "Saved (n)" row. Signed-in only. */
+  Saved: undefined;
   /** "Get verified", once right after onboarding (Skip for now). */
   GstIntro: undefined;
   /** GST verification (F1 spec §7): which screen opens is `gstScreen(state)` in lib/gst-flow.ts. */
