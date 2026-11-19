@@ -1,5 +1,316 @@
 {
   "title": "ચૅટ",
   "emptyTitle": "હજુ કોઈ ચૅટ નથી",
-  "emptySubtitle": "દરેક લિસ્ટિંગની પૂછપરછ, ઑફર અને કાઉન્ટર ઑફર એક જ થ્રેડમાં દેખાય છે."
+  "emptySubtitle": "દરેક લિસ્ટિંગની પૂછપરછ, ઑફર અને કાઉન્ટર ઑફર એક જ થ્રેડમાં દેખાય છે.",
+  "segments": {
+    "label": "ચૅટ બતાવો",
+    "all": "બધી",
+    "buying": "ખરીદી",
+    "selling": "વેચાણ",
+    "yourTurn": "તમારો વારો",
+    "yourTurnCount": "તમારો વારો {{count}}"
+  },
+  "filterEmptyTitle": "અહીં કંઈ નથી",
+  "filterEmptySubtitle": "અત્યારે આ યાદીમાં કોઈ વાતચીત નથી.",
+  "loadErrorTitle": "તમારી ચૅટ લોડ ન થઈ શકી",
+  "loadErrorBody": "તમારું કનેક્શન તપાસો અને ફરી પ્રયાસ કરો.",
+  "archivedLink": "આર્કાઇવ",
+  "archivedTitle": "આર્કાઇવ કરેલી ચૅટ",
+  "archivedEmptyTitle": "કોઈ આર્કાઇવ ચૅટ નથી",
+  "archivedEmptySubtitle": "તમે આર્કાઇવ કરો છો તે ચૅટ અહીં દેખાય છે. નવો સંદેશ આવે ત્યારે ચૅટ પાછી આવી જાય છે.",
+  "unread_one": "{{count}} નવો સંદેશ",
+  "unread_other": "{{count}} નવા સંદેશ",
+  "gstVerified": "GST ચકાસાયેલ",
+  "pill": {
+    "your_turn": "તમારો વારો",
+    "deal": "ડીલ",
+    "open": "રાહ",
+    "replied": "જવાબ મળ્યો",
+    "converted": "ડીલ થઈ",
+    "closed": "બંધ"
+  },
+  "preview": {
+    "none": "હજુ કોઈ સંદેશ નથી",
+    "mine": "તમે: {{text}}",
+    "photos_one": "{{count}} ફોટો",
+    "photos_other": "{{count}} ફોટા",
+    "photosCaption_one": "{{count}} ફોટો: {{text}}",
+    "photosCaption_other": "{{count}} ફોટા: {{text}}",
+    "enquiry": "પૂછપરછ",
+    "offer": "ઑફર {{price}}",
+    "offerPerUnit": "ઑફર {{price}} /{{unit}}",
+    "offerNoPrice": "ઑફર",
+    "deal": "ડીલ નક્કી થઈ"
+  },
+  "systemPreview": {
+    "offer_withdrawn": "ઑફર પાછી ખેંચાઈ",
+    "offer_rejected": "ઑફર નામંજૂર થઈ",
+    "offer_expired": "ઑફરની મુદત પૂરી",
+    "offer_backup": "ઑફર બેકઅપમાં રોકાઈ છે",
+    "offer_revived": "બેકઅપ ઑફર ફરી ખુલી",
+    "offer_reconfirmed": "ઑફરની ફરી પુષ્ટિ થઈ",
+    "offers_closed": "ઑફર બંધ થઈ",
+    "deal_agreed": "ડીલ નક્કી થઈ",
+    "deal_notes_changed": "ડીલ નોંધ બદલાઈ",
+    "deal_handed_over": "સોંપી દીધું",
+    "deal_completed": "ડીલ પૂરી થઈ",
+    "deal_auto_completed": "ડીલ પૂરી થઈ",
+    "deal_cancel_requested": "રદ કરવાની વિનંતી",
+    "deal_cancel_request_withdrawn": "રદ કરવાની વિનંતી પાછી",
+    "deal_cancelled": "ડીલ રદ થઈ",
+    "deal_problem_reported": "સમસ્યા જણાવી",
+    "deal_dispute_resolved": "સપોર્ટે સમસ્યા ઉકેલી",
+    "contact_shared": "નંબર શેર થયા",
+    "blocked": "બિઝનેસ બ્લૉક થયો"
+  },
+  "system": {
+    "offer_withdrawn": {
+      "mine": "તમે તમારી ઑફર પાછી ખેંચી.",
+      "theirs": "{{name}} એ તેમની ઑફર પાછી ખેંચી."
+    },
+    "offer_rejected": {
+      "mine": "તમે ઑફર નામંજૂર કરી.",
+      "theirs": "{{name}} એ ઑફર નામંજૂર કરી."
+    },
+    "offer_expired": "ઑફરની મુદત પૂરી થઈ.",
+    "offer_backup": "સ્ટૉક બીજી ડીલમાં છે, એટલે આ ઑફર બેકઅપમાં રોકાઈ છે.",
+    "offer_revived": "સ્ટૉક ફરી મળે છે: બેકઅપ ઑફર ખુલી ગઈ છે.",
+    "offer_reconfirmed": "વેચનારે ઑફરની ફરી પુષ્ટિ કરી.",
+    "offers_closed": {
+      "listing_unavailable": "ઑફર બંધ: લિસ્ટિંગ હવે ઉપલબ્ધ નથી.",
+      "listing_changed": "ઑફર બંધ: લિસ્ટિંગ બદલાઈ ગયું છે.",
+      "blocked": "ઑફર બંધ: એક બિઝનેસ બ્લૉક થયો.",
+      "account_inactive": "ઑફર બંધ: એક ખાતું હવે સક્રિય નથી."
+    },
+    "deal_agreed": "ડીલ #{{ref}} નક્કી થઈ.",
+    "deal_notes_changed": {
+      "mine": "તમે ડીલ નોંધ બદલી: {{fields}}.",
+      "theirs": "{{name}} એ ડીલ નોંધ બદલી: {{fields}}."
+    },
+    "deal_handed_over": "ડીલ #{{ref}} સોંપી દીધેલી તરીકે નોંધાઈ.",
+    "deal_completed": "માલ મળ્યાની પુષ્ટિ થઈ. ડીલ #{{ref}} પૂરી થઈ.",
+    "deal_auto_completed": "ડીલ #{{ref}} આપોઆપ પૂરી થઈ.",
+    "deal_cancel_requested": {
+      "mine": "તમે ડીલ #{{ref}} રદ કરવાની વિનંતી કરી.",
+      "theirs": "{{name}} એ ડીલ #{{ref}} રદ કરવાની વિનંતી કરી."
+    },
+    "deal_cancel_request_withdrawn": {
+      "mine": "તમે રદ કરવાની વિનંતી પાછી ખેંચી.",
+      "theirs": "{{name}} એ રદ કરવાની વિનંતી પાછી ખેંચી."
+    },
+    "deal_cancelled": {
+      "mine": "તમે ડીલ #{{ref}} રદ કરી: {{reason}}.",
+      "theirs": "{{name}} એ ડીલ #{{ref}} રદ કરી: {{reason}}.",
+      "both": "બંને પક્ષોએ ડીલ #{{ref}} રદ કરી.",
+      "system": "ડીલ #{{ref}} રદ થઈ: {{reason}}."
+    },
+    "deal_problem_reported": {
+      "mine": "તમે ડીલ #{{ref}} માં સમસ્યા જણાવી: {{category}}.",
+      "theirs": "{{name}} એ ડીલ #{{ref}} માં સમસ્યા જણાવી: {{category}}."
+    },
+    "deal_dispute_resolved": {
+      "completed": "સપોર્ટે સમસ્યા બંધ કરી: ડીલ #{{ref}} પૂરી થઈ.",
+      "cancelled": "સપોર્ટે સમસ્યા બંધ કરી: ડીલ #{{ref}} રદ થઈ.",
+      "resumed": "સપોર્ટે સમસ્યા બંધ કરી: ડીલ #{{ref}} ચાલુ છે."
+    },
+    "contact_shared": "આ ડીલ માટે તમે બંનેએ તમારા નંબર શેર કર્યા.",
+    "blocked": {
+      "mine": "તમે આ બિઝનેસને બ્લૉક કર્યો.",
+      "theirs": "આ વાતચીત બંધ છે."
+    },
+    "supportMessage": "સપોર્ટ: {{message}}"
+  },
+  "noteField": {
+    "payment_method": "ચુકવણી",
+    "advance": "એડવાન્સ",
+    "fulfilment": "પિકઅપ કે ડિલિવરી",
+    "expected_on": "તારીખ",
+    "text": "નોંધ"
+  },
+  "cancelReason": {
+    "no_longer_needed": "હવે જરૂર નથી",
+    "found_elsewhere": "બીજે મળી ગયું",
+    "seller_not_responding": "વેચનાર જવાબ નથી આપતા",
+    "buyer_not_responding": "ખરીદનાર જવાબ નથી આપતા",
+    "payment_not_received": "ચુકવણી મળી નથી",
+    "stock_problem": "સ્ટૉકની સમસ્યા",
+    "listing_removed": "લિસ્ટિંગ દૂર કર્યું",
+    "support_closed": "સપોર્ટે બંધ કર્યું",
+    "other": "બીજું કારણ"
+  },
+  "problemCategory": {
+    "not_as_described": "જણાવ્યા મુજબ નથી",
+    "damaged": "ખરાબ કે તૂટેલું",
+    "short_quantity": "જથ્થો ઓછો",
+    "not_received": "મળ્યું નથી",
+    "payment_not_received": "ચુકવણી મળી નથી",
+    "other": "બીજી સમસ્યા"
+  },
+  "quick": {
+    "is_available": "શું આ હજુ ઉપલબ્ધ છે?",
+    "more_photos": "વધુ ફોટા મોકલો",
+    "video": "વીડિયો મોકલો",
+    "specifications": "પૂરી માહિતી",
+    "compatibility": "શું આ મારા મશીનમાં ફિટ થશે?",
+    "best_price": "સૌથી સારો ભાવ",
+    "price_request": "ભાવ જણાવો"
+  },
+  "thread": {
+    "title": "ચૅટ",
+    "loadErrorTitle": "આ ચૅટ ખુલી ન શકી",
+    "loadErrorBody": "કદાચ તે દૂર કરાઈ છે, અથવા કનેક્શન તૂટી ગયું.",
+    "menu": "વધુ વિકલ્પો",
+    "call": "{{name}} ને કૉલ કરો",
+    "openListing": "લિસ્ટિંગ ખોલો",
+    "noLongerListed": "હવે લિસ્ટેડ નથી",
+    "available": "{{quantity}} {{unit}} માંથી {{available}} ઉપલબ્ધ",
+    "allOnHold": "બધું ડીલમાં હોલ્ડ પર",
+    "priceOnRequest": "પૂછવા પર ભાવ",
+    "perUnit": "/{{unit}}",
+    "machineTip": "જૂનું મશીન તપાસ્યા વગર ક્યારેય ચુકવણી ન કરો.",
+    "masked": "ડીલ પછી તમે બંને તમારા નંબર શેર ન કરો ત્યાં સુધી ફોન નંબર અને ઇમેઇલ છુપાયેલા રહે છે.",
+    "scamWarning": "એડવાન્સ ચુકવણીથી સાવધાન રહો. પાર્ટ કે મશીન તપાસ્યા પછી જ ચુકવણી કરો; ઍપની બહાર ચૂકવેલા પૈસા અમે પાછા અપાવી શકતા નથી.",
+    "photo": "ફોટો {{n}} / {{total}}",
+    "closePhoto": "ફોટો બંધ કરો",
+    "sendQuote": "ભાવ મોકલો",
+    "noMessages": "હજુ કોઈ સંદેશ નથી. નમસ્તે કહો."
+  },
+  "enquiryCard": {
+    "mine": "તમારી પૂછપરછ",
+    "theirs": "પૂછપરછ",
+    "quantity": "જથ્થો: {{quantity}}",
+    "machine": "ખરીદનારનું મશીન: {{machine}}",
+    "fits": "ફિટ થતી યાદીમાં છે",
+    "notListed": "ફિટ થતી યાદીમાં નથી"
+  },
+  "composer": {
+    "placeholder": "સંદેશ",
+    "send": "મોકલો",
+    "addPhotos": "ફોટા ઉમેરો",
+    "removePhoto": "ફોટો {{n}} દૂર કરો",
+    "takePhoto": "ફોટો પાડો",
+    "chooseGallery": "ગૅલેરીમાંથી પસંદ કરો",
+    "photosTitle": "ફોટા ઉમેરો",
+    "cameraDenied": "ફોટો પાડવા માટે કૅમેરાની પરવાનગી આપો.",
+    "photoPrepareFailed": "આ ફોટો તૈયાર ન થઈ શક્યો. બીજો અજમાવો.",
+    "uploadFailed": "ફોટો અપલોડ ન થયો. ફરી પ્રયાસ કરો.",
+    "photosLimit": "તમે એક વખતમાં 5 ફોટા સુધી મોકલી શકો છો.",
+    "tooLong": "સંદેશ 2,000 અક્ષરો સુધીનો હોઈ શકે.",
+    "notSent": "મોકલાયો નથી. ફરી મોકલવા માટે મોકલો દબાવો.",
+    "viewer": "તમે આ વાતચીત વાંચી શકો છો, પણ જવાબ આપી શકતા નથી.",
+    "blockedByMe": "તમે {{name}} ને બ્લૉક કર્યા છે. જવાબ આપવા પ્રોફાઇલ › બ્લૉક કરેલા બિઝનેસમાં અનબ્લૉક કરો.",
+    "blockedMe": "તમે આ વાતચીતમાં જવાબ આપી શકતા નથી.",
+    "readOnly": "તમે આ વાતચીતમાં જવાબ આપી શકતા નથી."
+  },
+  "contact": {
+    "bannerTitle": "આ ડીલ માટે તમારો નંબર શેર કરશો?",
+    "bannerBody": "તમે બંને શેર કરશો ત્યારે જ {{name}} તમારો નંબર જોઈ શકશે.",
+    "share": "મારો નંબર શેર કરો",
+    "sharedMine": "તમે તમારો નંબર શેર કર્યો. {{name}} ની રાહ છે.",
+    "theirsShared": "{{name}} એ તેમનો નંબર શેર કર્યો. જોવા માટે તમારો નંબર શેર કરો.",
+    "revealed": "આ ડીલ માટે નંબર શેર થયા.",
+    "revealedNumber": "નંબર શેર થયા. {{name}} નો નંબર:",
+    "ownerOnly": "બિઝનેસનો નંબર તમારા માલિક શેર કરી શકે છે.",
+    "sheetTitle": "મારો નંબર શેર કરો",
+    "tick": "આ ડીલ માટે મારો નંબર {{name}} સાથે શેર કરો",
+    "sheetBody": "તમે બંને અહીં શેર કરશો ત્યારે જ {{name}} તમારો નંબર જોઈ શકશે. આ ચૅટમાં પહેલાં લખેલા નંબર અને ઇમેઇલ પણ તેમને દેખાવા લાગશે, અને તે પાછું લઈ શકાતું નથી.",
+    "sheetFallback": "જો તમારા બિઝનેસનો કોઈ સંપર્ક નંબર ન હોય, તો માલિકનો ફોન નંબર શેર થશે.",
+    "confirm": "મારો નંબર શેર કરો",
+    "tickFirst": "નંબર શેર કરવા માટે બૉક્સ પર ટિક કરો.",
+    "shared": "નંબર શેર થયો. તેઓ શેર કરશે ત્યારે દેખાશે.",
+    "sharedRevealed": "નંબર શેર થયા. હવે તમે એકબીજાને કૉલ કરી શકો છો."
+  },
+  "menu": {
+    "share": "લિસ્ટિંગ શેર કરો",
+    "report": "વાતચીતની ફરિયાદ કરો",
+    "block": "બિઝનેસ બ્લૉક કરો",
+    "archive": "ચૅટ આર્કાઇવ કરો",
+    "unarchive": "ઇનબૉક્સમાં લઈ જાઓ",
+    "archived": "ચૅટ આર્કાઇવ થઈ",
+    "unarchived": "ચૅટ તમારા ઇનબૉક્સમાં આવી ગઈ",
+    "archiveFailed": "આ ચૅટ બદલી ન શકાઈ. ફરી પ્રયાસ કરો."
+  },
+  "block": {
+    "title": "{{name}} ને બ્લૉક કરશો?",
+    "message": "તમે એકબીજાને સંદેશ કે ઑફર મોકલી શકશો નહીં, અને ખુલ્લી ઑફર બંધ થશે. ચાલુ ડીલ ચાલુ રહેશે. તમે પ્રોફાઇલમાંથી અનબ્લૉક કરી શકો છો.",
+    "confirm": "બ્લૉક કરો",
+    "done": "બિઝનેસ બ્લૉક થયો"
+  },
+  "report": {
+    "title": "વાતચીતની ફરિયાદ કરો",
+    "reason": {
+      "spam": "સ્પૅમ",
+      "scam_or_advance_payment": "છેતરપિંડી કે એડવાન્સ પૈસા માગે છે",
+      "abusive": "અપમાનજનક કે તોછડું વર્તન",
+      "fake_listing": "નકલી લિસ્ટિંગ",
+      "other": "બીજું કંઈક"
+    },
+    "details": "વિગત",
+    "detailsHint": "વૈકલ્પિક",
+    "detailsRequired": "શું થયું તે જણાવો",
+    "detailsTooLong": "500 અક્ષરો સુધી",
+    "alsoBlock": "આ બિઝનેસને બ્લૉક પણ કરો",
+    "send": "ફરિયાદ મોકલો",
+    "reasonRequired": "પહેલાં એક કારણ પસંદ કરો.",
+    "sent": "આભાર. અમારી ટીમ આ વાતચીત જોશે."
+  },
+  "enquire": {
+    "title": "વેચનારને પૂછો",
+    "askPriceTitle": "ભાવ પૂછો",
+    "quantity": "જથ્થો",
+    "quantityUnit": "જથ્થો ({{unit}})",
+    "note": "સંદેશ ઉમેરો",
+    "noteHint": "વૈકલ્પિક",
+    "notePlaceholder": "માપ, હાલત કે ડિલિવરી વિશે પૂછો",
+    "machine": "મારું મશીન મોકલો: {{machine}}",
+    "machineSaved": "મેં તપાસેલું મશીન",
+    "send": "પૂછપરછ મોકલો",
+    "empty": "એક પ્રશ્ન પસંદ કરો અથવા સંદેશ લખો.",
+    "noteTooLong": "સંદેશ 500 અક્ષરો સુધીનો હોઈ શકે.",
+    "quantityProblem": {
+      "empty": "જથ્થો લખો.",
+      "invalid": "એક સંખ્યા લખો.",
+      "decimals": "આ એકમ માટે દશાંશ વધુ છે.",
+      "zero": "જથ્થો 0 થી વધુ હોવો જોઈએ.",
+      "tooLarge": "આ જથ્થો ઘણો વધારે છે."
+    },
+    "sent": "પૂછપરછ મોકલાઈ"
+  },
+  "contactNumber": {
+    "title": "સંપર્ક નંબર",
+    "intro": "ડીલ પછી, જ્યારે તમે બંને શેર કરવાનું પસંદ કરો, ત્યારે ખરીદનાર કે વેચનારને આ નંબર દેખાય છે. તે ન હોય તો માલિકનો ફોન નંબર શેર થાય છે.",
+    "current": "હાલનો સંપર્ક નંબર",
+    "unknown": "તમારા બિઝનેસનો નંબર ઉમેરો, અથવા હાલનો નંબર બદલો.",
+    "phone": "મોબાઇલ નંબર",
+    "phonePlaceholder": "10 અંકનો મોબાઇલ નંબર",
+    "sendCode": "કોડ મોકલો",
+    "codeTitle": "કોડ દાખલ કરો",
+    "codeSent": "અમે {{phone}} પર કોડ મોકલ્યો છે.",
+    "code": "કોડ",
+    "verify": "ચકાસો અને સેવ કરો",
+    "resend": "કોડ ફરી મોકલો",
+    "resendIn": "{{seconds}} સેકન્ડમાં ફરી મોકલો",
+    "devCode": "ડેવ કોડ: {{code}}",
+    "changeNumber": "બીજો નંબર વાપરો",
+    "invalid": "10 અંકનો મોબાઇલ નંબર દાખલ કરો.",
+    "saved": "સંપર્ક નંબર સેવ થયો",
+    "remove": "સંપર્ક નંબર દૂર કરો",
+    "removeTitle": "સંપર્ક નંબર દૂર કરશો?",
+    "removeMessage": "તેના બદલે ડીલ પછી માલિકનો ફોન નંબર શેર થશે. જૂના નંબરના શેર હવે દેખાશે નહીં.",
+    "removed": "સંપર્ક નંબર દૂર કર્યો",
+    "ownerOnly": "સંપર્ક નંબર ફક્ત બિઝનેસના માલિક બદલી શકે છે."
+  },
+  "blocked": {
+    "title": "બ્લૉક કરેલા બિઝનેસ",
+    "subtitle": "તેઓ તમને સંદેશ કે ઑફર મોકલી શકતા નથી, અને તમે પણ તેમનો સંપર્ક કરી શકતા નથી.",
+    "emptyTitle": "કોઈ બ્લૉક કરેલો બિઝનેસ નથી",
+    "emptySubtitle": "તમે ચૅટમાંથી બ્લૉક કરો છો તે બિઝનેસ અહીં દેખાય છે.",
+    "since": "{{date}} ના રોજ બ્લૉક કર્યો",
+    "unblock": "અનબ્લૉક કરો",
+    "unblockTitle": "{{name}} ને અનબ્લૉક કરશો?",
+    "unblockMessage": "તમે ફરી એકબીજાને સંદેશ મોકલી શકશો. જે ઑફર બંધ થઈ હતી તે બંધ જ રહેશે.",
+    "unblocked": "{{name}} અનબ્લૉક થયા",
+    "loadErrorTitle": "યાદી લોડ ન થઈ શકી",
+    "loadErrorBody": "તમારું કનેક્શન તપાસો અને ફરી પ્રયાસ કરો."
+  }
 }
