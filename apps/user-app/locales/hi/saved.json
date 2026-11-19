@@ -1,0 +1,17 @@
+{
+  "title": "सेव किए गए",
+  "subtitle_one": "{{count}} लिस्टिंग",
+  "subtitle_other": "{{count}} लिस्टिंग",
+  "subtitleMore": "{{n}}+ लिस्टिंग",
+  "unavailableTitle": "अब उपलब्ध नहीं",
+  "unavailableBody": "यह बिक गई, रोकी गई या हटा दी गई।",
+  "remove": "हटाएँ",
+  "emptyTitle": "अभी कुछ सेव नहीं किया",
+  "emptySubtitle": "किसी लिस्टिंग पर दिल का निशान दबाएँ, वह यहाँ रहेगी।",
+  "browseCta": "लिस्टिंग देखें",
+  "loadErrorTitle": "सेव की गई लिस्टिंग लोड नहीं हो सकीं",
+  "loadErrorBody": "अपना कनेक्शन जाँचें और फिर से कोशिश करें।",
+  "profileRow": "सेव किए गए",
+  "profileRowCount": "सेव किए गए ({{n}})",
+  "profileRowMore": "सेव किए गए ({{n}}+)"
+}

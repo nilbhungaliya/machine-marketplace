@@ -96,6 +96,14 @@ export const SETTINGS_EVENTS = {
 } as const;
 
 /**
+ * Home (F4 + F5 spec §8.3, §8.6). Never a pincode, coordinates or a category name.
+ * - `tileOpened` (`tile`: kind | category).
+ */
+export const HOME_EVENTS = {
+  tileOpened: 'home_tile_opened',
+} as const;
+
+/**
  * Route params allowed onto screen events. Everything else is dropped, so a param
  * carrying a phone or a price never reaches analytics by accident. Ids only (plus `mode` and `category`): never the
  * listing routes' `step`, `group`, `from`, `outcome` or `index`.

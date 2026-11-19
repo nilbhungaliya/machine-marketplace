@@ -6,6 +6,7 @@ import { onSessionEnded } from '@/lib/session-events';
 import { shouldRestoreGuest } from '@/lib/sign-in-gate';
 import WelcomeScreen from '@/screens/welcome';
 import ProfileScreen from '@/screens/profile';
+import SavedScreen from '@/screens/saved';
 import YourBusinessScreen from '@/screens/onboarding/your-business';
 import WhereAreYouScreen from '@/screens/onboarding/where-are-you';
 import GstIntroScreen from '@/screens/verification/gst-intro';
@@ -125,6 +126,7 @@ export default function RootNavigator() {
           {introFirst ? intro : null}
           <Stack.Screen name="Main" component={TabNavigator} />
           <Stack.Screen name="Profile" component={ProfileScreen} />
+          <Stack.Screen name="Saved" component={SavedScreen} />
           <Stack.Screen name="YourBusiness" component={YourBusinessScreen} initialParams={{ mode: 'edit' }} />
           <Stack.Screen name="WhereAreYou" component={WhereAreYouScreen} initialParams={{ mode: 'edit' }} />
           {introFirst ? null : intro}

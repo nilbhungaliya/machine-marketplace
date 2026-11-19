@@ -1,17 +1,23 @@
 {
-  "title": "आपके पास के पार्ट्स और मशीनरी",
-  "allIndia": "पूरा भारत",
-  "searchPlaceholder": "पार्ट, मशीन, ब्रांड या मॉडल खोजें…",
-  "categories": {
-    "spare_parts": "स्पेयर पार्ट्स",
-    "machinery": "मशीनरी",
-    "machine_rental": "मशीन किराए पर",
-    "tools": "टूल्स",
-    "electrical": "इलेक्ट्रिकल",
-    "hydraulics": "हाइड्रोलिक्स",
-    "bearings_transmission": "बेयरिंग और ट्रांसमिशन"
+  "searchPlaceholder": "पार्ट, मशीन, ब्रांड या पार्ट नंबर",
+  "tiles": {
+    "part": "स्पेयर पार्ट्स",
+    "machine": "मशीनरी",
+    "machine_rental": "किराए पर",
+    "a11y_one": "{{name}}, {{count}} लिस्टिंग",
+    "a11y_other": "{{name}}, {{count}} लिस्टिंग"
   },
+  "topTitle": "आपके पास के टॉप आइटम",
+  "seeAll": "सभी देखें",
+  "rentTitle": "पास में किराए की मशीनें",
+  "recentTitle": "हाल ही में देखे गए",
+  "emptyRadiusTitle": "{{km}} km के अंदर अभी कुछ नहीं",
+  "emptyRadiusSubtitle": "थोड़ा और दूर देखें, या कुछ समय बाद फिर देखें।",
+  "widenTo": "{{km}} km के अंदर देखें",
+  "widenAllIndia": "पूरे भारत में देखें",
   "emptyTitle": "अभी कोई लिस्टिंग नहीं",
   "emptySubtitle": "आपके इलाके के लाइव पार्ट्स और मशीनरी यहाँ दिखेंगे।",
-  "sellCta": "पार्ट बेचें"
+  "sellCta": "पार्ट बेचें",
+  "loadErrorTitle": "होम लोड नहीं हो सका",
+  "loadErrorBody": "अपना कनेक्शन जाँचें और फिर से कोशिश करें।"
 }

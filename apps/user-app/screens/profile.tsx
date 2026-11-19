@@ -20,7 +20,9 @@ import { SETTINGS_EVENTS } from '@/lib/analytics-events';
 import { completionSegments, gstChip, profileRowTarget, type ProfileRow } from '@/lib/gst-flow';
 import { setLanguage, useLanguage } from '@/lib/i18n/language';
 import { LANGUAGE_OPTIONS } from '@/lib/i18n/language-names';
-import { Building2, ChevronRight, ClipboardList, Globe, MapPin, ShieldCheck, User, type LucideIcon } from '@/lib/icons';
+import { Building2, ChevronRight, ClipboardList, Globe, Heart, MapPin, ShieldCheck, User, type LucideIcon } from '@/lib/icons';
+import { useSavedListings } from '@/hooks/use-saved';
+import { savedCount } from '@/lib/saved-view';
 import { queryClient } from '@/lib/queryClient';
 import { fonts, radius, spacing, useTheme } from '@/lib/theme';
 import { openTarget } from '@/navigation/go';
@@ -33,7 +35,7 @@ export default function ProfileScreen({ navigation }: RootStackScreenProps<'Prof
   const type = useType();
   const language = useLanguage();
   const { logout, name, isAuthenticated } = useAuth();
-  const { openSignIn } = useRequireSignIn();
+  const { openSignIn, requireSignIn } = useRequireSignIn();
   const confirm = useConfirm();
   // A guest (F4 + F5 spec §8.1) has no business: a "Sign in" card instead of the business rows, language kept.
   const business = useBusiness(isAuthenticated);
@@ -42,6 +44,16 @@ export default function ProfileScreen({ navigation }: RootStackScreenProps<'Prof
   // The "My listings" row's live count (F2 spec §10).
   const myListings = useMyListings('live', 1, !!profile);
   const liveCount = myListings.data?.counts.live;
+  // "Saved (n)" (F4 + F5 spec §8.5): the first page's count, "n+" when there are more pages.
+  const savedList = useSavedListings(isAuthenticated);
+  const saved = savedCount(savedList.data?.pages[0]);
+  const savedLabel = !saved
+    ? t('saved.profileRow')
+    : saved.more ? t('saved.profileRowMore', { n: saved.n }) : t('saved.profileRowCount', { n: saved.n });
+  // A guest gets the sign-in sheet; Saved is a signed-in screen.
+  const openSaved = () => {
+    if (requireSignIn({ reason: 'save' })) navigation.navigate('Saved');
+  };
   const [opening, setOpening] = useState<ProfileRow | null>(null);
 
   const confirmLogout = async () => {
@@ -133,6 +145,19 @@ export default function ProfileScreen({ navigation }: RootStackScreenProps<'Prof
             <Text style={s.guestText}>{t('auth.guest.subtitle')}</Text>
             <Button title={t('auth.guest.cta')} phLabel="Profile-sign-in" size="md" onPress={openSignIn} />
           </Card>
+        ) : null}
+        {!isAuthenticated ? (
+          <Card flush>
+            <ListRow
+              icon={Heart}
+              label={savedLabel}
+              chevron
+              last
+              onPress={openSaved}
+              testID="Profile-row-saved"
+              accessibilityRole="button"
+            />
+          </Card>
         ) : business.isLoading ? (
           <View style={s.loading}>
             <Skeleton style={s.headSkeleton} />
@@ -182,6 +207,14 @@ export default function ProfileScreen({ navigation }: RootStackScreenProps<'Prof
                 chevron
                 onPress={() => navigation.navigate('MyListings')}
                 testID="Profile-row-listings"
+                accessibilityRole="button"
+              />
+              <ListRow
+                icon={Heart}
+                label={savedLabel}
+                chevron
+                onPress={openSaved}
+                testID="Profile-row-saved"
                 accessibilityRole="button"
               />
               {rows.map((r, i) => (
