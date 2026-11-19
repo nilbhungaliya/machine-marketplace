@@ -19,7 +19,7 @@ import { i18n } from '@/lib/i18n';
 import { sessionEndReason } from '@/lib/session-events';
 import { decodeJwtPayload, isExpired } from '@/lib/jwt';
 import { queryClient } from '@/lib/queryClient';
-import { unregisterPush } from '@/lib/push';
+import { clearLastPushResponse, unregisterPush } from '@/lib/push';
 import {
   cachedStep,
   cacheStep,
@@ -100,6 +100,7 @@ export async function signOut(dispatch: AppDispatch): Promise<void> {
   setErrorUser(null);
   const token = await SecureStore.getItemAsync(TOKEN_KEY).catch(() => null);
   void unregisterPush(token);
+  clearLastPushResponse();
   await SecureStore.deleteItemAsync(TOKEN_KEY);
   await Promise.all([forgetGuest(), clearDiscoveryOnDevice()]);
   queryClient.clear();

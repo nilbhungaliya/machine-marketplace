@@ -161,6 +161,16 @@ export function unregisterPush(token: string | null): Promise<void> {
   });
 }
 
+/**
+ * Sign-out: forget the last tapped push, so a tap from this session never opens after the next sign-in. Done here, not
+ * while signed out in `usePushNotifications`: the session boots signed out, and a cold start's tap must survive that.
+ */
+export function clearLastPushResponse(): void {
+  const N = notificationsModule();
+  if (!N) return;
+  void N.clearLastNotificationResponseAsync().catch(() => undefined);
+}
+
 /** What `askPushOnce` reads before deciding (§11.6). */
 export async function readPushAskState(): Promise<{ asked: boolean; granted: boolean; canAskAgain: boolean } | null> {
   const N = notificationsModule();

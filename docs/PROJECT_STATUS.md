@@ -110,10 +110,8 @@ consent trigger): `chat_threads`, `chat_messages`, `chat_thread_user_state`, `bu
 - **Chat retention:** no job deletes old chat messages or photos yet (spec §24); decide retention with the DPDP work.
 - **Lane test databases to drop:** the empty `mpm_l1_test` … `mpm_l4_test` (wave A lanes) and Redis test DBs 3–6 can go
   (`docker exec mpm-postgres-1 dropdb -U mpm mpm_l1_test` …, `redis-cli -p 6381 -n 3 flushdb` …).
-- **F6 + F7 checks not yet run (Batch I-2):** `CI=1 npx expo export --platform android` in `apps/user-app` (stopped by
-  the machine running low on memory on 2026-11-20, not a bundle error), `npx expo install --check`, and `sharp` on the
-  Alpine API image (`docker build -f apps/api/Dockerfile .`, spec §23). Run them before the device build and the first
-  deploy.
+- **F6 + F7 check not yet run:** `sharp` on the Alpine API image (`docker build -f apps/api/Dockerfile .`, spec §23).
+  Run it before the first deploy. (`expo export --platform android` and `expo install --check` passed on 2026-11-20.)
 - Scores and the seller-score block are computed on read (a grouped query per seller); store aggregates when volume
   grows (spec §23).
 
@@ -380,3 +378,15 @@ is settled** by F6 + F7 ruling R6: hidden until there is a deal and both sides t
   PROJECT_STATUS, the three CLAUDE.md files, `product-scope.md` (§22: M9 / M15 pointers answered, M13 calendar days,
   M10 sharing after a deal, D6 settled), F4 spec (bell and Enquire / Offer sign-in reasons exist), spec and plan
   marked built. Still the owner's: Firebase keys and the device pass (Open items).
+- 2026-11-20 — **F6 + F7 final branch review** (`git diff 3dbb344..HEAD`, two independent reviewers: API + data, app +
+  admin; both "ship after fixes") and fix wave. API: business rows locked `FOR NO KEY UPDATE` in `patchMyBusiness`,
+  `setMyLocation`, GST and admin locks (only writes that change `gstin` keep `FOR UPDATE`) — a seller saving a location
+  could deadlock with an accept on their listing (F6 foreign-key inserts take `KEY SHARE` under listing locks); `lockDeal`
+  no-key-update (review publish vs submit); block re-checked after the listing lock in send / counter / reconfirm /
+  accept (accept closes the chain `blocked`, `403 BUSINESS_BLOCKED`). App: socket enabled only after onboarding (joins
+  the business room for `deal:updated` / `thread:updated`); a push tapped from a killed app opens its screen (response
+  cleared in `signOut`, not during boot); handover photo memory-cached with refetch; counter / reject sheets stay
+  mounted until their success callbacks run. Verified: typecheck and lint clean; tests API 1542 + 3 skipped, admin 402,
+  app 704; `mpm_test` left empty; `CI=1 npx expo export --platform android` bundles (4 823 modules), `expo install
+  --check` clean. F6 + F7 is complete on `develop`; still the owner's: Firebase keys + `google-services.json`, a new
+  dev-client build, the device pass and the admin click-through (Open items).

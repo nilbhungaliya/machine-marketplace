@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { eq } from 'drizzle-orm';
 import { db } from '../src/db/index.js';
-import { chatThreads, dealEvents, deals, listings, stockHolds } from '../src/db/schema.js';
+import { businessBlocks, chatThreads, dealEvents, deals, listings, stockHolds } from '../src/db/schema.js';
 import { addTestMember, assertHeldInvariant, insertTestDeal } from './_helpers/test-deals.js';
 import { call, createOfferWorld, extraBuyer, newKey, offerListing, offerRow, setTestSettings, type OfferWorld } from './_helpers/test-offers.js';
 
@@ -142,5 +142,35 @@ describe('accept', () => {
     const outsider = await extraBuyer();
     const res = await accept(id, undefined, outsider.token);
     expect([res.statusCode, res.json().code]).toEqual([404, 'OFFER_NOT_FOUND']);
+  });
+
+  // Final review: a block that missed this thread (it raced the offer) is caught under the listing lock.
+  it('refuses an accept between a blocked pair (403) and closes the chain as blocked', async () => {
+    const listingId = await offerListing(w);
+    const buyer = await extraBuyer();
+    const id = await sendOffer(buyer.token, listingId, '1');
+    await db.insert(businessBlocks).values({ blockerBusinessId: w.seller.businessId, blockedBusinessId: buyer.businessId, createdByUserId: w.seller.userId });
+    const res = await accept(id);
+    expect([res.statusCode, res.json().code]).toEqual([403, 'BUSINESS_BLOCKED']);
+    expect(await offerRow(id)).toMatchObject({ status: 'closed', closeReason: 'blocked' });
+    expect(await dealsOf(listingId)).toHaveLength(0);
+  });
+
+  // Final review: `setMyLocation` locks the seller business, then its listings; an accept holds the listing and inserts
+  // rows referencing that business (KEY SHARE). The business lock is FOR NO KEY UPDATE, so neither waits on the other
+  // in a cycle (40P01 before).
+  it('a location change racing an accept on that business’s listing: both settle, no deadlock', async () => {
+    for (let i = 0; i < 3; i++) {
+      const listingId = await offerListing(w);
+      const id = await sendOffer(w.buyers[0]!.token, listingId, '1');
+      const location = { pincode: '990011', city: 'Surat', state: 'Gujarat', industrialAreaOther: 'Test Estate', lat: 21.2 + i / 100, lng: 72.8 };
+      const [put, acc] = await Promise.all([
+        call(w.app, w.seller.token, 'PUT', '/businesses/me/location', location),
+        accept(id),
+      ]);
+      expect(put.statusCode, put.body).toBe(200);
+      expect(acc.statusCode, acc.body).toBe(200);
+      await assertHeldInvariant(listingId);
+    }
   });
 });

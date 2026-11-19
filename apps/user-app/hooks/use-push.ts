@@ -107,12 +107,9 @@ export function usePushNotifications(): void {
 
   useEffect(() => {
     const Notifications = notificationsModule();
-    if (!Notifications) return undefined;
-    if (!member) {
-      // A push tapped while signed out must not open after the next sign-in.
-      void Notifications.clearLastNotificationResponseAsync().catch(() => undefined);
-      return undefined;
-    }
+    // Not cleared while `member` is false: the session boots signed out (token still loading), and a cold start's tap
+    // must open once `member` turns true. Sign-out clears it (`signOut` → `clearLastPushResponse`).
+    if (!Notifications || !member) return undefined;
     const onResponse = (response: N.NotificationResponse | null) => {
       if (!response) return;
       // Handled once: a later read of the last response (a remount, the next start) mustn't open it again.

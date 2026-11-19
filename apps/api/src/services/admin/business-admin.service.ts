@@ -217,9 +217,12 @@ export async function getBusinessDetail(conn: Db | Tx, id: string): Promise<Admi
   };
 }
 
-/** The business row, locked first (the lock every GST write takes). `404` when it doesn't exist. */
-async function lockBusiness(tx: Tx, id: string) {
-  const [row] = await tx.select().from(businesses).where(eq(businesses.id, id)).for('update');
+/**
+ * The business row, locked first (the lock every GST write takes). `404` when it doesn't exist. `FOR NO KEY UPDATE`
+ * unless the caller changes `gstin` (a unique key): F6 inserts referencing the business take `KEY SHARE`.
+ */
+async function lockBusiness(tx: Tx, id: string, mode: 'no key update' | 'update' = 'no key update') {
+  const [row] = await tx.select().from(businesses).where(eq(businesses.id, id)).for(mode);
   if (!row) throw new NotFoundError('Business');
   return row;
 }
@@ -283,7 +286,8 @@ export async function revokeGst(tx: Tx, adminId: string, businessId: string, rea
  */
 export async function releaseGstin(tx: Tx, adminId: string, businessId: string, reason: string): Promise<GstActionResult> {
   const why = adminText(reason);
-  const business = await lockBusiness(tx, businessId);
+  // Clears `gstin` (a unique key): the strong lock.
+  const business = await lockBusiness(tx, businessId, 'update');
   if ((await openReview(tx, businessId)) !== null) {
     throw new ConflictError('This business has a GST review open. Decide it first.', 'GST_REVIEW_OPEN');
   }

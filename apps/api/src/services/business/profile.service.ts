@@ -255,8 +255,9 @@ export async function updateMyProfile(db: Db, userId: string, patch: ProfilePatc
       return;
     }
 
-    // The grant (GST) locks the business row too, so the name check and the update see one state.
-    const [b] = await tx.select().from(businesses).where(eq(businesses.id, user.businessId)).for('update');
+    // The grant (GST) locks the business row too, so the name check and the update see one state. `FOR NO KEY UPDATE`
+    // (never `FOR UPDATE`): this never changes a key column, and F6 inserts referencing the business take `KEY SHARE`.
+    const [b] = await tx.select().from(businesses).where(eq(businesses.id, user.businessId)).for('no key update');
     if (!b) throw noBusiness();
     if (patch.businessName !== undefined && patch.businessName !== b.tradeName && (await activeGst(tx, b.id))) {
       throw new ConflictError("Your business name comes from your GST registration and can't be changed", 'NAME_LOCKED');
@@ -320,7 +321,10 @@ export async function setMyLocation(db: Db, userId: string, body: LocationInput)
   await db.transaction(async (tx) => {
     const user = await userRow(tx, userId);
     if (!user.businessId) throw noBusiness();
-    const [b] = await tx.select().from(businesses).where(eq(businesses.id, user.businessId)).for('update');
+    // `FOR NO KEY UPDATE`, not `FOR UPDATE`: F6 inserts rows referencing this business (offers, deals, threads,
+    // notifications: `KEY SHARE`) while holding a listing lock, and `syncBusinessListings` below locks those listings.
+    // A `FOR UPDATE` here would deadlock with them (40P01); no key column of `businesses` changes.
+    const [b] = await tx.select().from(businesses).where(eq(businesses.id, user.businessId)).for('no key update');
     if (!b) throw noBusiness();
 
     if (areaId) {

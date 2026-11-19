@@ -6,7 +6,8 @@ import { AppError, NotFoundError } from '../../lib/errors.js';
 /**
  * Row locks for F6 + F7 (spec §8.5), in **this order** whenever a transaction takes more than one:
  *
- *   buyer business (`FOR NO KEY UPDATE`) → listing(s) (`FOR UPDATE`, id order) → deal → offers (id order) → thread
+ *   buyer business (`FOR NO KEY UPDATE`) → listing(s) (`FOR UPDATE`, id order) → deal (`FOR NO KEY UPDATE`) → offers
+ *   (id order) → thread
  *
  * F6 / F7 code **never locks the seller business**: only F2's seller and admin listing writers do (business → listing,
  * `services/listings/locks.ts`), which is compatible with this order because no F6 / F7 transaction holds a listing
@@ -31,9 +32,13 @@ export async function lockListingsInOrder(tx: Tx, ids: string[]): Promise<Array<
   return tx.select().from(listings).where(inArray(listings.id, sorted)).orderBy(asc(listings.id)).for('update');
 }
 
-/** `404 DEAL_NOT_FOUND` when it doesn't exist (party checks are the caller's). */
+/**
+ * `404 DEAL_NOT_FOUND` when it doesn't exist (party checks are the caller's). `FOR NO KEY UPDATE`: deal ids never
+ * change, and rows referencing the deal (reviews, events, notifications) take `KEY SHARE` on it, which this doesn't
+ * block (no review-publish job vs review submit deadlock).
+ */
 export async function lockDeal(tx: Tx, dealId: string): Promise<DealRow> {
-  const [row] = await tx.select().from(deals).where(eq(deals.id, dealId)).for('update');
+  const [row] = await tx.select().from(deals).where(eq(deals.id, dealId)).for('no key update');
   if (!row) throw new AppError('Deal not found', 404, 'DEAL_NOT_FOUND');
   return row;
 }

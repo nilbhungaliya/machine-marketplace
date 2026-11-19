@@ -13,8 +13,11 @@ vi.mock('@react-native-async-storage/async-storage', () => ({
     }),
   },
 }));
-const { unregisterPush } = vi.hoisted(() => ({ unregisterPush: vi.fn(async (_token: string | null) => {}) }));
-vi.mock('@/lib/push', () => ({ unregisterPush }));
+const { unregisterPush, clearLastPushResponse } = vi.hoisted(() => ({
+  unregisterPush: vi.fn(async (_token: string | null) => {}),
+  clearLastPushResponse: vi.fn(() => {}),
+}));
+vi.mock('@/lib/push', () => ({ unregisterPush, clearLastPushResponse }));
 vi.mock('expo-secure-store', () => ({
   getItemAsync: vi.fn(async () => 'session-token'),
   setItemAsync: vi.fn(async () => {}),
@@ -61,5 +64,7 @@ describe('sign-out clears on-device discovery data (DPDP, shared devices)', () =
     expect(store.getState().auth).toMatchObject({ isAuthenticated: false, guest: false, pending: null });
     // Every sign-out path deletes this phone's push device with the session's token (F6 + F7 §11.6).
     expect(unregisterPush).toHaveBeenCalledWith('session-token');
+    // A push tapped in this session never opens after the next sign-in (cleared here, not while booting).
+    expect(clearLastPushResponse).toHaveBeenCalledOnce();
   });
 });

@@ -224,10 +224,12 @@ export default function OfferCard({ offer, thread, style }: OfferCardProps) {
         </View>
       ) : null}
 
-      {offer.actions.includes('counter') ? (
+      {/* Kept mounted while open: the counter's own `offer:updated` can drop `counter` from the actions before the
+          mutation settles, and the sheet's success effects (toast, analytics, push ask) run in its callbacks. */}
+      {offer.actions.includes('counter') || sheet === 'counter' ? (
         <OfferSheet mode="counter" offer={offer} threadId={offer.threadId} visible={sheet === 'counter'} onClose={() => setSheet(null)} />
       ) : null}
-      {offer.actions.includes('reject') ? (
+      {offer.actions.includes('reject') || sheet === 'reject' ? (
         <RejectOfferSheet visible={sheet === 'reject'} loading={busy} onClose={() => setSheet(null)} onReject={reject} />
       ) : null}
     </View>

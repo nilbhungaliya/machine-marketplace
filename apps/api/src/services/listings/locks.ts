@@ -6,7 +6,7 @@ import { AppError } from '../../lib/errors.js';
 // The listing lock order (F2 spec §5.5 step 1, plan Global Constraints): every listing write — PATCH, publish, a
 // lifecycle action, a media attach / delete, an admin action — locks the business row first (`FOR NO KEY UPDATE`, as
 // F1), then the listing (`FOR UPDATE`), so publishes, relists and edits of one business run one after another and can't
-// deadlock. `setMyLocation` takes the business (`FOR UPDATE`) before it touches the business's listings, in the same
+// deadlock. `setMyLocation` takes the business (`FOR NO KEY UPDATE`) before it touches the business's listings, in the same
 // order. The one exception is the system `expire` transition (amendment 1): it locks only the listing.
 
 export type ListingRow = typeof listings.$inferSelect;

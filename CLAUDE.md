@@ -188,7 +188,11 @@ outside `runTx` throws in tests). Notifications are rows written in the same tra
 numbers); the `notification-push` job sends them. Money and deal writes take an optional `Idempotency-Key`
 (`config: { idempotent: true }` + `runIdempotent`, `services/idempotency.service.ts`). Row locks follow one order
 (buyer business → listings in id order → deal → offers → thread; `services/deals/locks.ts`), and every stock move keeps
-`listings.held_quantity` = Σ active holds (`services/deals/holds.ts`, `syncReservation`). **Push is opt-in**, like Sentry:
+`listings.held_quantity` = Σ active holds (`services/deals/holds.ts`, `syncReservation`). Business rows (and deals) are
+locked `FOR NO KEY UPDATE`, never `FOR UPDATE`: F6 inserts rows referencing a business (offers, deals, threads,
+notifications) under listing locks, and those foreign keys take `KEY SHARE`, which `FOR UPDATE` blocks (a business →
+listings writer such as `setMyLocation` would deadlock). The one exception is a write that changes `businesses.gstin`
+(a unique key: `grantGst`, `releaseGstin`). **Push is opt-in**, like Sentry:
 `FIREBASE_SERVICE_ACCOUNT_B64`; without it deliveries are `sent_dev` (dev) or `skipped` (production).
 
 **Background jobs:** add a `JobSpec` to `src/jobs/index.ts`. Jobs start only from `index.ts` (never `buildApp`, so tests

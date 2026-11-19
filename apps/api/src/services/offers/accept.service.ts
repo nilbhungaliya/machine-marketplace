@@ -11,6 +11,8 @@ import { createDealFromOffer } from '../deals/deal-create.js';
 import {
   assertOfferOpen,
   availableMilli,
+  businessBlocked,
+  isBlockedBetween,
   listingTakesOffers,
   loadThread,
   lockOfferForAction,
@@ -18,7 +20,7 @@ import {
 } from './offer.service.js';
 import { notYourTurn, offerNotOpen, otherSide } from './offer-rules.js';
 import { emitOfferUpdated, loadOfferView, type OfferRow } from './offer-view.js';
-import { reconcileOffersForListing } from './reconcile.js';
+import { closeThreadChainsBlocked, reconcileOffersForListing } from './reconcile.js';
 
 /**
  * Accept (F6 + F7 spec §7.6, R15; ported from textile `offer.service.ts` `acceptOffer`). One transaction, the §8.5
@@ -32,11 +34,21 @@ import { reconcileOffersForListing } from './reconcile.js';
  *    the other side, `offer:updated` per reader and `deal:updated` to both businesses (ids only).
  * Two accepts for the last units serialise on the listing lock; the second finds its offer a backup already
  * (reconcile) or too little stock.
+ *
+ * A blocked pair (checked under the listing lock, final review: block race): the thread's open chains close
+ * (`blocked`, as `closeChainsBetween`) and **that commits**; the result is `blocked`, answered `403 BUSINESS_BLOCKED`.
  */
 
 export type AcceptResult =
   | { outcome: 'accepted'; dealId: string; offer: OfferView }
-  | { outcome: 'backup'; available: string; offerId: string };
+  | { outcome: 'backup'; available: string; offerId: string }
+  | { outcome: 'blocked' };
+
+/** The stored body of the committed block refusal. */
+export function businessBlockedBody(): { error: string; code: string } {
+  const err = businessBlocked();
+  return { error: err.message, code: err.code };
+}
 
 /** The stored body of the committed refusal (§7.6, P11). */
 export function quantityNotAvailableBody(available: string): { error: string; code: string; details: { available: string } } {
@@ -59,6 +71,10 @@ async function moveToBackup(tx: Tx, offer: OfferRow, actorSide: 'buyer' | 'selle
 
 export async function acceptOffer(tx: Tx, user: UserTokenPayload, offerId: string): Promise<AcceptResult> {
   const { listing, offer, reader, thread } = await lockOfferForAction(tx, user, offerId);
+  if (await isBlockedBetween(tx, offer.buyerBusinessId, offer.sellerBusinessId)) {
+    await closeThreadChainsBlocked(tx, thread.id);
+    return { outcome: 'blocked' };
+  }
   // Lost the race for the last units (the other accept moved this row to backup first): the same answer as a move.
   if (offer.status === 'backup') {
     const body = quantityNotAvailableBody(milliToQuantity(availableMilli(listing)));

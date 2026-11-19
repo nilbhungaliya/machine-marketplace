@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useQueryClient } from '@tanstack/react-query';
@@ -39,6 +39,9 @@ import { qk } from '@/lib/query-keys';
 import { radius, spacing, useTheme } from '@/lib/theme';
 import type { RootStackScreenProps } from '@/navigation/types';
 
+/** Refetching the deal for an expired handover photo URL at most this often (as the chat thread does). */
+const PHOTO_REFRESH_GAP_MS = 10_000;
+
 /**
  * The Deal record (F6 + F7 spec §9.1, §15.1; mockups deals · "Deal record", "Handed over"): listing and counterpart,
  * the agreed terms ("Payment happens outside the app"), the handed-over callout with its deadlines, a pending cancel
@@ -57,6 +60,15 @@ export default function DealRecordScreen({ navigation, route }: RootStackScreenP
   const [sheet, setSheet] = useState<'notes' | 'handover' | 'cancel' | 'request' | null>(null);
 
   useOnReconnect(() => { void query.refetch(); });
+
+  // The handover photo is a signed URL (300 s): a load error refetches the deal for a fresh one, at most every 10 s.
+  const lastPhotoRefresh = useRef(0);
+  const onPhotoExpired = useCallback(() => {
+    const now = Date.now();
+    if (now - lastPhotoRefresh.current < PHOTO_REFRESH_GAP_MS) return;
+    lastPhotoRefresh.current = now;
+    void qc.invalidateQueries({ queryKey: qk.deal(dealId) });
+  }, [qc, dealId]);
 
   const s = useMemo(() => StyleSheet.create({
     content: { padding: spacing.lg, gap: spacing.md },
@@ -274,7 +286,14 @@ export default function DealRecordScreen({ navigation, route }: RootStackScreenP
           <Card style={s.card}>
             <Text style={s.section}>{t('deals.handover.detailTitle')}</Text>
             {deal.handover.photo ? (
-              <Image source={{ uri: deal.handover.photo.url }} style={s.photo} contentFit="cover" accessibilityIgnoresInvertColors />
+              <Image
+                source={{ uri: deal.handover.photo.url }}
+                style={s.photo}
+                contentFit="cover"
+                cachePolicy="memory"
+                onError={onPhotoExpired}
+                accessibilityIgnoresInvertColors
+              />
             ) : null}
             {deal.handover.note ? <Text style={s.body}>{deal.handover.note}</Text> : null}
             {!deal.handover.photo && !deal.handover.note ? <Text style={s.meta}>{t('deals.handover.noDetail')}</Text> : null}

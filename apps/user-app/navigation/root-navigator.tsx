@@ -109,8 +109,9 @@ export default function RootNavigator() {
   const intro = <Stack.Screen key="GstIntro" name="GstIntro" component={GstIntroScreen} options={{ gestureEnabled: false }} />;
 
   return (
-    // One /user socket for the signed-in user (F6 + F7 §13); guests get none.
-    <SocketProvider enabled={isAuthenticated}>
+    // One /user socket for the signed-in user with a business (F6 + F7 §13); guests and onboarding get none. Enabled
+    // only once onboarding is done, so the socket connects after the business exists and joins its business room.
+    <SocketProvider enabled={isAuthenticated && onboarding === 'done'}>
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       {!isAuthenticated && guest ? (
         // Guests browse (F4 + F5 spec §8.1, R12): the tabs, the listing pages and the auth screens, pushed when needed.

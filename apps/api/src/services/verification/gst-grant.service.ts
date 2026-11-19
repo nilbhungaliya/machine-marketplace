@@ -10,14 +10,19 @@ import { activeGstVerification, noBusiness } from './gst-state.service.js';
  * The single GST grant (F1 + A2 spec §5.2 step 6, §5.3 "Approve"; textile `gst.service.ts` `grantGst`). The instant
  * confirm (`verifyGstCode`) and the officer's approval (Task 10) both end here.
  *
- * Lock order, always: the business row (`SELECT … FOR UPDATE`, the lock `verifyGstCode` and the review submission take
- * first), then the GSTIN's advisory lock. Two businesses racing for one GSTIN each hold only their own row and then
+ * Lock order, always: the business row (`SELECT … FOR NO KEY UPDATE`, the lock `verifyGstCode` and the review
+ * submission take first; `grantGst` asks for `FOR UPDATE` because it writes `gstin`, a unique key), then the GSTIN's
+ * advisory lock. Two businesses racing for one GSTIN each hold only their own row and then
  * queue on the GSTIN lock, so the second sees the first's committed GSTIN and gets `409 GSTIN_TAKEN`.
  */
 
-/** Locks the business row until the transaction ends, and returns it. `404 NO_BUSINESS` when it's gone. */
-export async function lockBusinessRow(tx: Tx, businessId: string) {
-  const [row] = await tx.select().from(businesses).where(eq(businesses.id, businessId)).for('update');
+/**
+ * Locks the business row until the transaction ends, and returns it. `404 NO_BUSINESS` when it's gone. `FOR NO KEY
+ * UPDATE` by default (F6 inserts referencing the business take `KEY SHARE`, root CLAUDE.md lock order); `'update'` only
+ * for a writer that changes `gstin` (a unique key, so its UPDATE needs the strong lock anyway).
+ */
+export async function lockBusinessRow(tx: Tx, businessId: string, mode: 'no key update' | 'update' = 'no key update') {
+  const [row] = await tx.select().from(businesses).where(eq(businesses.id, businessId)).for(mode);
   if (!row) throw noBusiness();
   return row;
 }
@@ -70,7 +75,8 @@ export interface GrantGstInput {
  */
 export async function grantGst(tx: Tx, input: GrantGstInput): Promise<string> {
   const { businessId, gstin, details } = input;
-  const business = await lockBusinessRow(tx, businessId);
+  // Writes `gstin` (a unique key): `FOR UPDATE`, upgrading the caller's `FOR NO KEY UPDATE` when it holds one.
+  const business = await lockBusinessRow(tx, businessId, 'update');
   await lockGstin(tx, gstin);
 
   if ((await holderOf(tx, gstin, businessId)) !== null) throw gstinTaken();

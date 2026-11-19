@@ -157,6 +157,15 @@ export async function closeChainsBetween(tx: Tx, businessA: string, businessB: s
 }
 
 /**
+ * One thread's open chains → `closed` (`blocked`): an accept that finds the pair blocked under the listing lock (a
+ * block that missed this thread, final review: block race). Every row of a thread is on one listing, which the caller
+ * already holds, so the lock order holds (§8.5).
+ */
+export async function closeThreadChainsBlocked(tx: Tx, threadId: string): Promise<void> {
+  await closeOpenRowsWhere(tx, eq(offers.threadId, threadId), 'blocked');
+}
+
+/**
  * An owner suspended or blocked (§7.7): the chains where the business is the **buyer** close (`account_inactive`).
  * Its own listings' chains close through `reconcileOffersForListing` (they fail `publicListingWhere`), which the caller
  * runs first. Closed rows stay closed after a reinstatement.

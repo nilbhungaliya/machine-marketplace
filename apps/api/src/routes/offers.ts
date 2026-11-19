@@ -4,7 +4,7 @@ import { DEAL_LIMITS } from '@mpm/shared-types';
 import { groupRateLimit } from '../lib/group-limit.js';
 import { refuseViewer } from '../lib/member-guard.js';
 import { runIdempotent } from '../services/idempotency.service.js';
-import { acceptOffer, quantityNotAvailableBody } from '../services/offers/accept.service.js';
+import { acceptOffer, businessBlockedBody, quantityNotAvailableBody } from '../services/offers/accept.service.js';
 import {
   counterOffer,
   offersOptions,
@@ -73,6 +73,8 @@ const offerRoutes: FastifyPluginAsync = async (fastify) => {
     return runIdempotent(request, reply, fastify, async (tx) => {
       const result = await acceptOffer(tx, request.user!, id);
       if (result.outcome === 'backup') return { status: 409, body: quantityNotAvailableBody(result.available) };
+      // A blocked pair: the thread's chains closed (committed), 403 stored for a retried key.
+      if (result.outcome === 'blocked') return { status: 403, body: businessBlockedBody() };
       return { status: 200, body: { data: { offer: result.offer, dealId: result.dealId } } };
     });
   });

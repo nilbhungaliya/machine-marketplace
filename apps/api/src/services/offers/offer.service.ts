@@ -186,7 +186,8 @@ async function assertNoOpenNegotiation(tx: Tx, threadId: string): Promise<void> 
   if (open) throw new ConflictError('A negotiation is already open in this chat', 'NEGOTIATION_OPEN', { offerId: open.id });
 }
 
-async function assertNotBlocked(tx: Tx, a: string, b: string): Promise<void> {
+/** True when either business blocks the other (§6.11). */
+export async function isBlockedBetween(tx: Tx, a: string, b: string): Promise<boolean> {
   const [block] = await tx
     .select({ one: sql<number>`1` })
     .from(businessBlocks)
@@ -197,7 +198,20 @@ async function assertNotBlocked(tx: Tx, a: string, b: string): Promise<void> {
       ),
     )
     .limit(1);
-  if (block) throw new ForbiddenError("You can't message this business", 'BUSINESS_BLOCKED');
+  return !!block;
+}
+
+export function businessBlocked(): ForbiddenError {
+  return new ForbiddenError("You can't message this business", 'BUSINESS_BLOCKED');
+}
+
+/**
+ * `403 BUSINESS_BLOCKED` when either business blocks the other. Offer writers call it **after** the listing lock: a
+ * block locks the listings of the pair's threads first, so a block that committed while this transaction waited is
+ * seen here (final review: block race).
+ */
+export async function assertNotBlocked(tx: Tx, a: string, b: string): Promise<void> {
+  if (await isBlockedBetween(tx, a, b)) throw businessBlocked();
 }
 
 // ─── Limits (§7.8) ───
@@ -280,6 +294,9 @@ export async function sendOffer(
   const business = await lockBuyerBusiness(tx, user.businessId);
   let listing = await lockListingOnly(tx, listingId);
   const { thread, reader } = await openOrGetThread(tx, user, listingId);
+  // The block re-check under the listing lock (final review: block race). `openOrGetThread` already refuses a blocked
+  // pair, also after this lock; kept explicit so the rule doesn't hang on that helper's order.
+  await assertNotBlocked(tx, thread.buyerBusinessId, thread.sellerBusinessId);
 
   // Re-read under the lock: the listing may have changed since the pre-read (paused, owner suspended, model edited).
   if (!(await listingTakesOffers(tx, listingId))) throw listingNotFound();
@@ -391,6 +408,7 @@ export async function sendQuote(tx: Tx, user: UserTokenPayload, threadId: string
  */
 export async function counterOffer(tx: Tx, user: UserTokenPayload, offerId: string, input: OfferTermsBody): Promise<OfferView> {
   const { listing, offer, reader, thread } = await lockOfferForAction(tx, user, offerId);
+  await assertNotBlocked(tx, offer.buyerBusinessId, offer.sellerBusinessId);
   await assertOfferOpen(tx, offer);
   if (reader.side !== offer.turn) throw notYourTurn();
   const ctx = await chainContext(tx, offer);
@@ -501,6 +519,7 @@ export async function withdrawOffer(tx: Tx, user: UserTokenPayload, offerId: str
  */
 export async function reconfirmOffer(tx: Tx, user: UserTokenPayload, offerId: string): Promise<OfferView> {
   const { offer, reader, thread } = await lockOfferForAction(tx, user, offerId);
+  await assertNotBlocked(tx, offer.buyerBusinessId, offer.sellerBusinessId);
   await assertOfferOpen(tx, offer);
   if (reader.side !== 'seller' || offer.turn !== 'seller') throw notYourTurn();
   if (!offer.needsReconfirm) throw offerNotOpen(offer.status, 'no_reconfirm_needed');
