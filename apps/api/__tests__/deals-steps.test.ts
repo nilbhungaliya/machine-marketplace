@@ -7,6 +7,7 @@ import { buildApp } from '../src/app.js';
 import { db } from '../src/db/index.js';
 import { dealEvents, deals, listings, notifications, stockHolds, users } from '../src/db/schema.js';
 import { runTx, type TxApp } from '../src/lib/tx-effects.js';
+import { deleteObject } from '../src/lib/storage.js';
 import { finalizePrivatePhotos } from '../src/services/chat/private-photo.js';
 import { syncReservation } from '../src/services/deals/holds.js';
 import { createTestAdmin, deleteTestAdmins } from './_helpers/test-admins.js';
@@ -29,6 +30,11 @@ vi.mock('../src/services/chat/private-photo.js', async (importOriginal) => {
   };
 });
 const finalize = vi.mocked(finalizePrivatePhotos);
+vi.mock('../src/lib/storage.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../src/lib/storage.js')>()),
+  deleteObject: vi.fn(async () => undefined),
+}));
+const removed = vi.mocked(deleteObject);
 
 let app: FastifyInstance;
 let catalog: TestCatalog;
@@ -303,6 +309,29 @@ describe('retries (P11, plan review m3)', () => {
     expect(finalize).toHaveBeenCalledTimes(1);
     expect(await eventCount(d.dealId, 'handed_over')).toBe(1);
     expect((await dealRow(d.dealId)).handoverPhotoKey).toBe(`deal/${d.dealId}/final-0.jpg`);
+  });
+
+  it('a concurrent first use stores its reply while the retry finalizes: the retry replays and deletes its own finals', async () => {
+    const listingId = await listingOf('5');
+    const d = await dealOn(listingId, '1');
+    const key = randomUUID();
+    const body = { photoKey: `incoming-chat/${seller.businessId}/${randomUUID()}` };
+    finalize.mockClear();
+    removed.mockClear();
+    let first: Awaited<ReturnType<typeof post>> | undefined;
+    // The retry finalizes first; meanwhile the first use runs to commit (its own finalize uses the default mock).
+    finalize.mockImplementationOnce(async () => {
+      first = await post(seller.token, d.dealId, 'hand-over', body, key);
+      return [`deal/${d.dealId}/late-0.jpg`];
+    });
+    const retry = await post(seller.token, d.dealId, 'hand-over', body, key);
+    expect(first!.statusCode).toBe(200);
+    expect(retry.statusCode).toBe(200);
+    expect(retry.headers['idempotent-replay']).toBe('true');
+    expect(retry.json()).toEqual(first!.json());
+    expect(removed.mock.calls.map(([k]) => k)).toEqual([`deal/${d.dealId}/late-0.jpg`]);
+    expect((await dealRow(d.dealId)).handoverPhotoKey).toBe(`deal/${d.dealId}/final-0.jpg`);
+    expect(await eventCount(d.dealId, 'handed_over')).toBe(1);
   });
 });
 

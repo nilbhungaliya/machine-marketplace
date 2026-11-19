@@ -97,7 +97,7 @@ const dealRoutes: FastifyPluginAsync = async (fastify) => {
   /**
    * A write that finalizes photos before its transaction (P11, plan review m3): a stored reply for this key is replayed
    * without touching storage; otherwise the uploads are finalized, then the transaction runs, and the finals are deleted
-   * again if it fails (nothing points at them).
+   * again if it fails or turns out to be a replay of a concurrent first use (nothing points at them).
    */
   const actWithPhotos = async (
     request: FastifyRequest,
@@ -116,12 +116,18 @@ const dealRoutes: FastifyPluginAsync = async (fastify) => {
       }
     }
     const finals = await finalizeDealPhotos(fastify.db, request.user!, dealId, keys);
+    const dropFinals = () => Promise.allSettled(finals.map((k) => deleteObject(k)));
+    let sent: FastifyReply;
     try {
-      return await act(request, reply, (tx) => fn(tx, finals));
+      sent = await act(request, reply, (tx) => fn(tx, finals));
     } catch (err) {
-      await Promise.allSettled(finals.map((k) => deleteObject(k)));
+      await dropFinals();
       throw err;
     }
+    // A concurrent first use stored its reply while we finalized: `runIdempotent` replayed it, so nothing points at
+    // this request's finals (the stored reply names the first use's own copies).
+    if (reply.getHeader('idempotent-replay') === 'true') await dropFinals();
+    return sent;
   };
 
   fastify.get('/deals', read, async (request) => {

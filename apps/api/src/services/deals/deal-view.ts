@@ -3,7 +3,6 @@ import {
   dealYourTurn,
   milliToQuantity,
   quantityToMilli,
-  type ContactState,
   type Counterpart,
   type DealAction,
   type DealCancelReason,
@@ -15,14 +14,14 @@ import {
   type SignedPhoto,
 } from '@mpm/shared-types';
 import type { Db, Tx } from '../../db/index.js';
-import { businesses, chatThreads, contactShareConsents, dealDisputes, dealEvents, deals, listingMedia, users } from '../../db/schema.js';
+import { businesses, chatThreads, dealDisputes, dealEvents, deals, listingMedia, users } from '../../db/schema.js';
 import { AppError } from '../../lib/errors.js';
 import { publicUrl } from '../../lib/media-url.js';
 import type { UserTokenPayload } from '../../plugins/auth.js';
 import { publicText, visibleText } from '../chat/chat-view.js';
 import type { ChatReader } from '../chat/members.js';
 import { privatePhotoUrl } from '../chat/private-photo.js';
-import { validConsent } from '../consent/contact-consent.service.js';
+import { contactState } from '../consent/contact-consent.service.js';
 import { dealActions } from './deal-actions.js';
 
 /**
@@ -149,45 +148,6 @@ async function signedAll(keys: string[]): Promise<SignedPhoto[]> {
   return out;
 }
 
-/** The latest valid grant's number of a business in a thread (the number shown is the one consented to, §5.5). */
-async function grantedNumber(conn: Conn, threadId: string, businessId: string): Promise<string | null> {
-  const [row] = await conn
-    .select({ phone: contactShareConsents.phoneShown })
-    .from(contactShareConsents)
-    .where(and(eq(contactShareConsents.threadId, threadId), eq(contactShareConsents.businessId, businessId), eq(contactShareConsents.kind, 'grant')))
-    .orderBy(desc(contactShareConsents.createdAt))
-    .limit(1);
-  return row?.phone ?? null;
-}
-
-/**
- * The contact block on the Deal record (§6.6): `revealed` from the thread (set once, permanent); each side's tick read
- * at request time through `validConsent` (a grant of that business's current number); the other side's number only
- * once revealed, while their consent is valid, and never for a `viewer`. The tick is offered to non-viewers, and on the
- * owner-phone fallback (no verified contact number) only to the owner.
- */
-export async function dealContactState(conn: Conn, thread: ThreadRow, reader: ChatReader): Promise<ContactState> {
-  const otherId = reader.side === 'buyer' ? thread.sellerBusinessId : thread.buyerBusinessId;
-  const mine = await validConsent(conn, thread.id, reader.businessId);
-  const theirs = await validConsent(conn, thread.id, otherId);
-  const revealed = thread.contactUnlockedAt !== null;
-  const viewer = reader.memberRole === 'viewer';
-  const [business] = await conn
-    .select({ phone: businesses.contactPhone, verifiedAt: businesses.contactPhoneVerifiedAt })
-    .from(businesses)
-    .where(eq(businesses.id, reader.businessId));
-  const hasContactNumber = !!business?.phone && business.verifiedAt !== null;
-  const owner = reader.memberRole === 'owner';
-  return {
-    mine,
-    theirs,
-    revealed,
-    number: revealed && theirs && !viewer ? await grantedNumber(conn, thread.id, otherId) : null,
-    canTick: !viewer && (hasContactNumber || owner),
-    ownerOnlyHint: !viewer && !hasContactNumber && !owner,
-  };
-}
-
 async function timelineOf(conn: Conn, dealId: string): Promise<DealTimelineEntry[]> {
   const rows = await conn.select().from(dealEvents).where(eq(dealEvents.dealId, dealId)).orderBy(asc(dealEvents.createdAt), asc(dealEvents.id));
   return rows.map((e) => ({ code: e.code, actorSide: e.actorSide, values: e.values, at: e.createdAt.toISOString() }));
@@ -229,10 +189,11 @@ export async function buildDealView(conn: Conn, deal: DealRow, reader: ChatReade
   if (!thread) throw dealNotFound();
   const [row] = await toDealListRows(conn, [deal], reader.businessId);
   const notesSide = await notesSideOf(conn, deal);
-  const contact = await dealContactState(conn, thread, reader);
+  // L1's one definition of the share-my-number block (§6.6): current number only, `canTick` already false once mine.
+  const contact = await contactState(conn, thread, reader);
 
   const actions: DealAction[] = [...dealActions(deal, reader.side, reader.memberRole, now)];
-  if (contact.canTick && !contact.mine && deal.status !== 'cancelled') actions.push('share_contact');
+  if (contact.canTick && deal.status !== 'cancelled') actions.push('share_contact');
 
   return {
     ...row!,

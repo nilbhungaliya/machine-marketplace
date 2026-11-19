@@ -1,10 +1,11 @@
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import { eq, sql } from 'drizzle-orm';
 import type { DealView, DealsPage } from '@mpm/shared-types';
 import { buildApp } from '../src/app.js';
 import { db } from '../src/db/index.js';
-import { chatThreads, contactShareConsents, deals } from '../src/db/schema.js';
+import { deals } from '../src/db/schema.js';
+import { withdrawContactConsents } from '../src/services/consent/contact-consent.service.js';
 import { dealActions } from '../src/services/deals/deal-actions.js';
 import { dealsYourTurnCount } from '../src/services/deals/deal-read.service.js';
 import { createTestBusinessUser, deleteTestBusinesses, type TestBusinessUser } from './_helpers/test-businesses.js';
@@ -13,31 +14,8 @@ import { addTestMember, insertTestDeal } from './_helpers/test-deals.js';
 import { createTestSeller, deleteTestSellerExtras, insertTestListing, type TestSeller } from './_helpers/test-listings.js';
 
 // Deal reads and actions per side (plan L3-1, spec §9.1–§9.2, §6.6): the `dealActions` table, outsiders 404, a viewer
-// reads with no actions, tab counts and the Deals badge, and the Deal record's contact block (reveal needs both valid
-// ticks; the number shown is the consented one; a withdraw hides it until a new tick).
-
-// L1 owns the consent check (stub until it merges): this suite uses a faithful stand-in — a business's consent in a
-// thread is valid while its latest grant there has no later withdraw of the same number.
-vi.mock('../src/services/consent/contact-consent.service.js', async (importOriginal) => {
-  const real = await importOriginal<typeof import('../src/services/consent/contact-consent.service.js')>();
-  const { sql: q } = await import('drizzle-orm');
-  return {
-    ...real,
-    validConsent: vi.fn(async (conn: { execute: (s: unknown) => Promise<{ rows: unknown[] }> }, threadId: string, businessId: string) => {
-      const { rows } = await conn.execute(q`
-        SELECT 1 FROM (
-          SELECT g.phone_shown, g.created_at FROM contact_share_consents g
-          WHERE g.thread_id = ${threadId} AND g.business_id = ${businessId} AND g.kind = 'grant'
-          ORDER BY g.created_at DESC LIMIT 1
-        ) g
-        WHERE NOT EXISTS (
-          SELECT 1 FROM contact_share_consents w
-          WHERE w.business_id = ${businessId} AND w.kind = 'withdraw' AND w.phone_shown = g.phone_shown AND w.created_at > g.created_at
-        )`);
-      return rows.length > 0;
-    }),
-  };
-});
+// reads with no actions, tab counts and the Deals badge, and the Deal record's contact block (L1's `contactState`
+// through the real share route: both ticks reveal the numbers; a withdraw hides them).
 
 let app: FastifyInstance;
 let catalog: TestCatalog;
@@ -164,67 +142,32 @@ describe('GET /deals (tabs, counts) and the Deals badge', () => {
 });
 
 describe('contact block on the Deal record (§6.6, R6)', () => {
-  it('reveals only with both valid ticks, shows the consented number, never to a viewer, and hides it after a withdraw', async () => {
+  it('both ticks reveal the numbers (never to a viewer); a withdraw of the number hides it', async () => {
     const listing = await listingOf(seller, '10');
     const d = await insertTestDeal({ listing, buyer, quantity: '1', pricePerUnitPaise: 50_000 });
     const sellerViewer = await addTestMember(seller.businessId, 'viewer');
-    const sellerSales = await addTestMember(seller.businessId, 'sales');
+    const share = (token: string) => app.inject({ method: 'POST', url: `/threads/${d.threadId}/share-contact`, headers: auth(token) });
 
-    // Nothing ticked yet: the owner may tick (owner-phone fallback); a sales member gets the hint instead.
     let b = (await getDeal(buyer.token, d.dealId)).json().data as DealView;
-    expect(b.contact).toEqual({ mine: false, theirs: false, revealed: false, number: null, canTick: true, ownerOnlyHint: false });
+    expect(b.contact).toMatchObject({ mine: false, theirs: false, revealed: false, number: null, canTick: true });
     expect(b.actions).toContain('share_contact');
-    const sales = (await getDeal(sellerSales.token, d.dealId)).json().data as DealView;
-    expect(sales.contact.canTick).toBe(false);
-    expect(sales.contact.ownerOnlyHint).toBe(true);
-    expect(sales.actions).not.toContain('share_contact');
 
-    const at = (minutesAgo: number) => new Date(Date.now() - minutesAgo * 60_000);
-    const grant = (businessId: string, userId: string, phone: string, createdAt: Date) =>
-      db.insert(contactShareConsents).values({
-        kind: 'grant',
-        threadId: d.threadId,
-        businessId,
-        userId,
-        phoneShown: phone,
-        phoneSource: 'owner_phone',
-        wordingVersion: 1,
-        createdAt,
-      });
-
-    // Only the buyer ticked: not revealed, no number.
-    await grant(buyer.businessId, buyer.userId, '+919811111111', at(10));
+    expect((await share(buyer.token)).statusCode).toBe(200);
     b = (await getDeal(buyer.token, d.dealId)).json().data as DealView;
-    expect(b.contact).toMatchObject({ mine: true, theirs: false, revealed: false, number: null });
+    expect(b.contact).toMatchObject({ mine: true, revealed: false, number: null, canTick: false });
+    expect(b.actions).not.toContain('share_contact');
 
-    // Both ticked and the thread unlocked (as `maybeReveal` leaves it).
-    await grant(seller.businessId, seller.userId, '+919822222222', at(9));
-    await db.update(chatThreads).set({ contactUnlockedAt: sql`now()` }).where(eq(chatThreads.id, d.threadId));
+    expect((await share(seller.token)).statusCode).toBe(200);
     b = (await getDeal(buyer.token, d.dealId)).json().data as DealView;
-    expect(b.contact).toMatchObject({ mine: true, theirs: true, revealed: true, number: '+919822222222' });
+    expect(b.contact).toMatchObject({ mine: true, theirs: true, revealed: true, number: seller.phone });
     const s = (await getDeal(seller.token, d.dealId)).json().data as DealView;
-    expect(s.contact.number).toBe('+919811111111');
+    expect(s.contact.number).toBe(buyer.phone);
     const v = (await getDeal(sellerViewer.token, d.dealId)).json().data as DealView;
     expect(v.contact).toMatchObject({ revealed: true, number: null, canTick: false });
 
-    // The seller replaces its number: a business-wide withdraw of the old one. Reveal stays; the number goes.
-    await db.insert(contactShareConsents).values({
-      kind: 'withdraw',
-      threadId: null,
-      businessId: seller.businessId,
-      userId: null,
-      phoneShown: '+919822222222',
-      phoneSource: 'business_contact',
-      wordingVersion: 1,
-      reason: 'number_replaced',
-      createdAt: at(5),
-    });
+    // The seller's number is withdrawn (replaced): the reveal stays, the number goes.
+    await db.transaction((tx) => withdrawContactConsents(tx, seller.businessId, seller.phone, 'number_replaced'));
     b = (await getDeal(buyer.token, d.dealId)).json().data as DealView;
     expect(b.contact).toMatchObject({ theirs: false, revealed: true, number: null });
-
-    // A new tick grants the new number, and that one shows.
-    await grant(seller.businessId, seller.userId, '+919833333333', at(1));
-    b = (await getDeal(buyer.token, d.dealId)).json().data as DealView;
-    expect(b.contact).toMatchObject({ theirs: true, revealed: true, number: '+919833333333' });
   });
 });

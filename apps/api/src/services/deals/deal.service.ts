@@ -366,13 +366,21 @@ function assertReason(side: PartySide, reason: string): DealCancelReason {
 /**
  * Cancels a locked deal from `from` (the `UPDATE` re-checks it): `cancelled`, who and why, the request cleared; the
  * hold released (`stock: 'release'`) or converted (`'convert'`: a dispute closed with the goods not back, §9.6); the
- * listing's offers reconciled (backups revive). Writes the event and the line; the caller sends the notifications.
- * `null` when the deal had left `from`.
+ * listing's offers reconciled (backups revive) unless `reconcile: false` (a caller that reconciles after its own listing
+ * write, e.g. an admin removal, so backups aren't revived and notified only to be closed). Writes the event and the
+ * line; the caller sends the notifications. `null` when the deal had left `from`.
  */
 export async function applyCancellation(
   tx: Tx,
   deal: DealRow,
-  input: { by: DealCancelledBy; actor: DealActor; reason: DealCancelReason; note: string | null; stock: 'release' | 'convert' },
+  input: {
+    by: DealCancelledBy;
+    actor: DealActor;
+    reason: DealCancelReason;
+    note: string | null;
+    stock: 'release' | 'convert';
+    reconcile?: boolean;
+  },
   from: DealStatus[],
 ): Promise<DealRow | null> {
   const updated = await updateDeal(
@@ -394,7 +402,7 @@ export async function applyCancellation(
   if (!updated) return null;
   if (input.stock === 'release') await releaseHold(tx, deal.id);
   else await convertHold(tx, deal.id);
-  await reconcileOffersForListing(tx, deal.listingId);
+  if (input.reconcile !== false) await reconcileOffersForListing(tx, deal.listingId);
   await recordEvent(tx, updated, 'cancelled', input.actor, { by: input.by, reason: input.reason, stockReturned: input.stock === 'release' });
   await dealLine(tx, updated, 'deal_cancelled', { by: input.by, reason: input.reason }, input.actor);
   return updated;

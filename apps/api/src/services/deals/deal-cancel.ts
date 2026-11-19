@@ -25,7 +25,16 @@ export async function cancelAgreedDealsForRemovedListing(tx: Tx, listingId: stri
     const updated = await applyCancellation(
       tx,
       deal,
-      { by: 'system', actor: { side: 'system', userId: null, adminId }, reason: 'listing_removed', note: null, stock: 'release' },
+      // No reconcile here: the caller's `afterListingStatusWrite` reconciles once the listing is removed, so backups
+      // aren't revived (and notified) only to be closed.
+      {
+        by: 'system',
+        actor: { side: 'system', userId: null, adminId },
+        reason: 'listing_removed',
+        note: null,
+        stock: 'release',
+        reconcile: false,
+      },
       ['agreed'],
     );
     if (!updated) continue;
