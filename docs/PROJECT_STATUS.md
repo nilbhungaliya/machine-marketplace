@@ -133,7 +133,7 @@ The ten client decisions D1–D10 are listed at the end of `docs/product-scope.m
 2. ~~**F1 business profile + A2 verification**~~ — built 2026-11-18 (see What's built). R2 keys and a GST provider still to set.
 3. ~~**F2 + F3 listings** + A3 moderation~~ — built 2026-11-19 (see What's built). Public bucket, video device check and
    the owner's device pass still to do (Open items).
-4. **F4 + F5 discovery** — search, filters, side filter, complementary parts, nearby (PostGIS).
+4. **F4 + F5 discovery** — spec written 2026-11-19 (`docs/superpowers/specs/2026-11-19-f4-f5-discovery-design.md`), awaiting the owner's review; then the plan.
 5. **F6 + F7 enquiries, chat, offers, deals**, then rentals.
 6. **F8 part requests + matching job**, **F9 notifications** (FCM).
 7. A1 dashboard KPIs, A5 monitoring, A6 reports and flags.
@@ -245,3 +245,6 @@ The ten client decisions D1–D10 are listed at the end of `docs/product-scope.m
   `userInterfaceStyle: "light"` and no dark splash in `app.json` (shows after the next native build); the onboarding
   motion drawings lost their dark branches. Admin unchanged. Verified: app typecheck clean, app tests 421 (the five
   dark-palette checks removed). F4 + F5 discovery brainstorming started.
+- 2026-11-19 — F4 + F5 discovery spec written from the owner's answers (core now: search with query reader, filters,
+  sort, browse with counts, home, saved, recently viewed, guest browsing; GPS location; Pair shown under Left / Right;
+  live + reserved, rented only in rentals) after reading textile's M2/M5 and Part 2 specs and code. Awaiting review.
