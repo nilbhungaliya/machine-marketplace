@@ -3,6 +3,34 @@ import type { FastifyInstance } from 'fastify';
 import { loadActiveUser, verifyAdminToken, verifyUserToken } from '../plugins/auth.js';
 import { AppError } from '../lib/errors.js';
 import { ADMIN_ALL_ROOM, adminRoleRoom, adminUserRoom, businessRoom, userRoom } from './rooms.js';
+import { and, eq, or } from 'drizzle-orm';
+import { chatThreads, users as usersTable } from '../db/schema.js';
+import { setViewing } from '../services/chat/viewing.js';
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Sets (or clears) the user's viewing key when the thread is their business's; returns whether it changed anything. */
+async function onThreadViewing(fastify: FastifyInstance, userId: string, data: unknown): Promise<boolean> {
+  if (!fastify.redis) return false;
+  const threadId = (data as { threadId?: unknown } | null)?.threadId ?? null;
+  if (threadId === null) {
+    await setViewing(fastify.redis, userId, null);
+    return true;
+  }
+  if (typeof threadId !== 'string' || !UUID.test(threadId)) return false;
+  const [me] = await fastify.db
+    .select({ businessId: usersTable.businessId, status: usersTable.status })
+    .from(usersTable)
+    .where(eq(usersTable.id, userId));
+  if (!me?.businessId || me.status !== 'active') return false;
+  const [thread] = await fastify.db
+    .select({ id: chatThreads.id })
+    .from(chatThreads)
+    .where(and(eq(chatThreads.id, threadId), or(eq(chatThreads.buyerBusinessId, me.businessId), eq(chatThreads.sellerBusinessId, me.businessId))));
+  if (!thread) return false;
+  await setViewing(fastify.redis, userId, threadId);
+  return true;
+}
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -55,6 +83,18 @@ export function setupSocketIO(fastify: FastifyInstance): SocketIOServer {
   users.on('connection', (socket) => {
     socket.join(userRoom(socket.data.userId));
     if (socket.data.businessId) socket.join(businessRoom(socket.data.businessId));
+    // F6 + F7 §11.5, §13: `thread:viewing { threadId | null }` every 20 s while a thread is on screen, so a chat push
+    // skips a user reading that thread. Ignored unless the user's business (read from the database now) is a party.
+    // An optional ack answers `{ ok }` once handled.
+    socket.on('thread:viewing', async (data: unknown, ack?: (r: { ok: boolean }) => void) => {
+      let ok = false;
+      try {
+        ok = await onThreadViewing(fastify, socket.data.userId as string, data);
+      } catch (err) {
+        fastify.log.warn({ err }, 'thread:viewing failed');
+      }
+      if (typeof ack === 'function') ack({ ok });
+    });
   });
 
   const admins = io.of('/admin');

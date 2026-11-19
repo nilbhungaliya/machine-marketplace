@@ -1,18 +1,37 @@
 import type { FastifyPluginAsync } from 'fastify';
-import { notImplemented, ownerOnly } from '../lib/member-guard.js';
+import { z } from 'zod';
+import { OTP_LENGTH } from '@mpm/shared-types';
+import { ownerOnly } from '../lib/member-guard.js';
+import { perUser } from '../lib/per-user-limit.js';
+import { runTx } from '../lib/tx-effects.js';
+import { removeContactPhone, sendContactPhoneOtp, verifyContactPhone } from '../services/business/contact-phone.service.js';
 
-// The business contact number (F6 + F7 spec §6.6, §12.2): owner only, F1-style OTP. L1 owns this file; C0-4b stubs.
+// The business contact number (F6 + F7 spec §5.12, §6.6, §12.2): owner only (`403 OWNER_ONLY`), F1-style OTP and
+// limits (send 5, verify 10 per 10 minutes).
 
 const tags = ['Businesses'];
+const sendBody = z.object({ phone: z.string().max(20) }).strict();
+const verifyBody = z.object({ code: z.string().length(OTP_LENGTH) }).strict();
 
 const contactPhoneRoutes: FastifyPluginAsync = async (fastify) => {
-  const owner = { schema: { tags }, preHandler: [fastify.requireUser, ownerOnly] };
-  // F6F7-STUB(L1): L1-4 send the code.
-  fastify.post('/businesses/me/contact-phone/otp/send', owner, async () => notImplemented());
-  // F6F7-STUB(L1): L1-4 verify and save.
-  fastify.post('/businesses/me/contact-phone/otp/verify', owner, async () => notImplemented());
-  // F6F7-STUB(L1): L1-4 remove (writes a `withdraw` consent).
-  fastify.delete('/businesses/me/contact-phone', owner, async () => notImplemented());
+  const owner = (max: number) => ({ schema: { tags }, preHandler: [fastify.requireUser, ownerOnly], config: perUser(max) });
+
+  // → `{ resendAfter, devCode? }` (devCode outside production only, as sign-in).
+  fastify.post('/businesses/me/contact-phone/otp/send', owner(5), async (request) => {
+    const { phone } = sendBody.parse(request.body);
+    return { data: await sendContactPhoneOtp(fastify.redis, request.user!.businessId!, phone, (m) => request.log.info(m)) };
+  });
+  // → `{ contactPhone, verifiedAt }`.
+  fastify.post('/businesses/me/contact-phone/otp/verify', owner(10), async (request) => {
+    const { code } = verifyBody.parse(request.body);
+    const user = { userId: request.user!.userId, businessId: request.user!.businessId! };
+    return { data: await runTx(fastify, (tx) => verifyContactPhone(tx, fastify.redis, user, code)) };
+  });
+  // → `{ contactPhone: null, verifiedAt: null }` (writes a `withdraw` consent for the old number).
+  fastify.delete('/businesses/me/contact-phone', owner(10), async (request) => {
+    const user = { userId: request.user!.userId, businessId: request.user!.businessId! };
+    return { data: await runTx(fastify, (tx) => removeContactPhone(tx, user)) };
+  });
 };
 
 export default contactPhoneRoutes;
