@@ -6,7 +6,8 @@ import {
 import { Image } from 'expo-image';
 import { useTranslation } from 'react-i18next';
 import type { EffectiveTemplate, ListingDetail, ListingMediaItem } from '@mpm/shared-types';
-import { MapPin, Package, Play, ShieldCheck, TriangleAlert, Truck } from '@/lib/icons';
+import { MapPin, Package, Play, ShieldCheck, Star, TriangleAlert, Truck } from '@/lib/icons';
+import { availabilityLine } from '@/lib/listing-page';
 import { radius, spacing, useTheme } from '@/lib/theme';
 import { useType } from '@/hooks/use-type';
 import {
@@ -41,6 +42,7 @@ import StatusChip from '@/components/StatusChip';
  * - `onCheckFit`: shows "Check my machine" in the Fits block (L6's sheet).
  * - `onViewSeller`: shows "View all listings" on the seller card (L6 → `SellerListings`).
  * - `onReport`: shows "Report listing" (block 10); never on the viewer's own listing (`isOwner`).
+ * - `onViewReviews`: the seller's stars and review count link to Seller reviews (F6 + F7 §15.2, when `seller.score`).
  * - `bottomInset`: space under the last block for the screen's FooterBar.
  * - `now`: for "Updated 3 days ago" and the rental's availability (tests, stable renders).
  */
@@ -54,6 +56,7 @@ export interface ListingViewProps {
   onCheckFit?: () => void;
   onViewSeller?: () => void;
   onReport?: () => void;
+  onViewReviews?: () => void;
   bottomInset?: number;
   now?: number;
   testID?: string;
@@ -61,7 +64,7 @@ export interface ListingViewProps {
 }
 
 export default function ListingView({
-  listing, template, header, otherSide, moreFromSeller, onOpenMedia, onCheckFit, onViewSeller, onReport,
+  listing, template, header, otherSide, moreFromSeller, onOpenMedia, onCheckFit, onViewSeller, onReport, onViewReviews,
   bottomInset = spacing.xxxl, now, testID, style,
 }: ListingViewProps) {
   const { t } = useTranslation();
@@ -128,6 +131,12 @@ export default function ListingView({
     line: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
     sellerName: { ...type('cardTitle'), color: colors.text },
     report: { alignSelf: 'center' },
+    held: {
+      ...type('badge'), color: colors.warn, backgroundColor: colors.warnSoft, borderRadius: radius.full,
+      paddingHorizontal: spacing.sm + 2, paddingVertical: 3, overflow: 'hidden',
+    },
+    score: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+    scoreText: { ...type('label'), color: colors.text },
   }), [colors, shadows, type]);
 
   const media = useMemo(() => galleryOrder(listing.media), [listing.media]);
@@ -188,6 +197,7 @@ export default function ListingView({
   const seller = listing.seller;
   const sellerPlace = [seller.industrialAreaName, seller.city].filter(Boolean).join(', ');
   const memberSince = Date.parse(seller.memberSince);
+  const availability = availabilityLine(listing);
 
   return (
     <ScrollView
@@ -229,7 +239,19 @@ export default function ListingView({
             ) : null}
             {isRental ? <StatusChip label={t('listing.view.forRent')} tone="info" /> : null}
             {!isRental && listing.condition ? <Text style={s.pill}>{conditionLabel(listing.condition)}</Text> : null}
-            {!isRental && listing.quantity ? <Text style={s.pill}>{quantityText(listing.quantity, listing.unit)}</Text> : null}
+            {!isRental && listing.quantity ? (
+              availability?.kind === 'none' ? (
+                <Text style={s.held} testID="Listing-all-on-hold">{t('listing.available.allOnHold')}</Text>
+              ) : availability?.kind === 'partial' ? (
+                <Text style={s.pill} testID="Listing-available">
+                  {t('listing.available.partial', {
+                    available: quantityText(availability.available, null), quantity: quantityText(availability.quantity, listing.unit),
+                  })}
+                </Text>
+              ) : (
+                <Text style={s.pill}>{quantityText(listing.quantity, listing.unit)}</Text>
+              )
+            ) : null}
             {isRental && listing.rental?.operator ? <Text style={s.pill}>{t(`listing.rental.operator.${listing.rental.operator}`)}</Text> : null}
             {isRental && machine?.year != null ? <Text style={s.pill}>{String(machine.year)}</Text> : null}
           </View>
@@ -365,12 +387,23 @@ export default function ListingView({
           ) : null}
         </Card>
 
-        {/* 8. Seller (no rating, deals or reply time until M13 / M15 / M10, R24) */}
+        {/* 8. Seller: stars and review count once published (F6 + F7 §10.4); no deals or reply time yet */}
         <Card style={s.card}>
           <Text style={s.section}>{t('listing.view.sellerTitle')}</Text>
           <Text style={s.sellerName}>{seller.displayName}</Text>
           {sellerPlace ? <Text style={s.small}>{sellerPlace}</Text> : null}
           {seller.gstVerified ? <StatusChip label={t('listing.view.gstVerified')} tone="ok" icon={ShieldCheck} /> : null}
+          {seller.score ? (
+            <View style={s.score}>
+              <Star size={16} color={colors.star} fill={colors.star} />
+              <Text style={s.scoreText}>
+                {t('listing.view.sellerScore', { stars: seller.score.stars.toFixed(1), count: seller.score.count })}
+              </Text>
+              {onViewReviews ? (
+                <Button title={t('listing.view.reviews')} onPress={onViewReviews} variant="ghost" size="sm" phLabel="Listing-seller-reviews" />
+              ) : null}
+            </View>
+          ) : null}
           <Text style={s.small}>
             {[
               Number.isNaN(memberSince) ? '' : t('listing.view.memberSince', { date: formatMonthYear(memberSince) }),

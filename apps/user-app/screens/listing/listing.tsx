@@ -2,8 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import Toast from 'react-native-toast-message';
-import { PUBLIC_LISTING_STATUSES, type ListingStatus } from '@mpm/shared-types';
+import { PUBLIC_LISTING_STATUSES, quantityToMilli, type ListingStatus } from '@mpm/shared-types';
 import ScreenWrapper from '@/components/ScreenWrapper';
 import Header from '@/components/Header';
 import Button from '@/components/Button';
@@ -13,6 +12,8 @@ import Notice from '@/components/Notice';
 import Skeleton from '@/components/Skeleton';
 import StatusChip from '@/components/StatusChip';
 import SaveButton from '@/components/SaveButton';
+import EnquireSheet from '@/components/chat/EnquireSheet';
+import OfferSheet from '@/components/offers/OfferSheet';
 import { useCards } from '@/hooks/use-discover';
 import { useHeartViewer } from '@/hooks/use-saved';
 import { recordViewed } from '@/lib/recently-viewed';
@@ -23,10 +24,14 @@ import { useType } from '@/hooks/use-type';
 import { track } from '@/lib/analytics';
 import { LISTING_EVENTS } from '@/lib/analytics-events';
 import { Info, Package, TriangleAlert } from '@/lib/icons';
-import { contactActions, hasOtherSide, isListingGone } from '@/lib/listing-page';
+import { quantityText } from '@/lib/listing-format';
+import {
+  arrivalAction, contactButtons, hasOtherSide, isListingGone, pendingContactOf, sheetOf, signInReasonOf,
+  type ContactButtonAction,
+} from '@/lib/listing-page';
 import { editEntry, manageItems, ownerNote, statusChip, type ManageAction } from '@/lib/my-listings';
 import { radius, spacing, useTheme } from '@/lib/theme';
-import type { RootStackScreenProps } from '@/navigation/types';
+import type { ListingSheet, RootStackScreenProps } from '@/navigation/types';
 import ManageSheet, { openEdit } from '@/screens/my-listings/manage-sheet';
 import CheckMyMachineSheet from './check-my-machine-sheet';
 import ListingCardItem from './listing-card-item';
@@ -39,12 +44,14 @@ const MORE_LIMIT = 6;
 
 /**
  * The listing page (F2 spec §8; mockups "Part listing", "Machine listing", "Rental listing"): `ListingView` with the
- * Other side block, More from this seller, Check my machine and Report, under a FooterBar. Buyers get Enquire / Make
- * offer / Ask price, which answer "Coming soon" and track `listing_contact_tapped` until F6 (R6). The owner (any
- * status, through the owner view) gets Manage and Edit and a line saying whether buyers can see it.
+ * Other side block, More from this seller, Check my machine and Report, under a FooterBar. Buyers get the contact
+ * buttons of F6 + F7 §7.1 (`contactButtons`): Enquire / Make offer / Buy at this price / Ask price, "Open chat" once
+ * they have a thread, Make offer / Buy disabled while everything is on hold; a guest is asked to sign in with a
+ * pending action that reopens this page with the sheet (`openSheet`, §15.2). The owner (any status, through the owner
+ * view) gets Manage and Edit, a line saying whether buyers can see it and "On hold in deals: n".
  */
 export default function ListingScreen({ navigation, route }: RootStackScreenProps<'Listing'>) {
-  const { listingId } = route.params;
+  const { listingId, openSheet } = route.params;
   const { t } = useTranslation();
   const qc = useQueryClient();
   // Reporting needs an account (the API's `requireUser`): a guest gets the sign-in sheet (F4 + F5 spec §8.1).
@@ -56,7 +63,7 @@ export default function ListingScreen({ navigation, route }: RootStackScreenProp
   const template = useListingTemplate(listing);
   const otherSide = useOtherSide(listingId, !!listing && hasOtherSide(listing));
   const more = useSellerListings(listing?.businessId ?? null, { limit: MORE_LIMIT, exclude: listingId });
-  const [sheet, setSheet] = useState<'fit' | 'report' | null>(null);
+  const [sheet, setSheet] = useState<'fit' | 'report' | ListingSheet | null>(null);
   const [managing, setManaging] = useState(false);
   // The heart (F4 + F5 spec §8.5): the detail's `saved` isn't computed by the API, so a signed-in buyer's state comes
   // from this listing's card (`POST /discover/cards`, patched by every toggle like any other cached card).
@@ -72,6 +79,16 @@ export default function ListingScreen({ navigation, route }: RootStackScreenProp
     void recordViewed({ listingId, businessId: listing.businessId }, listing.isOwner ? listing.businessId : null);
   }, [loaded, listingId]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // A guest's pending Enquire / Offer / Buy / Ask price (F6 + F7 §15.2): opens that sheet once the listing is here,
+  // then clears the param so it opens once. Never sends anything by itself.
+  useEffect(() => {
+    if (!openSheet || !loaded || !listing) return;
+    navigation.setParams({ openSheet: undefined });
+    const next = arrivalAction(openSheet, contactButtons(listing));
+    if (next?.type === 'sheet') setSheet(next.sheet);
+    else if (next?.type === 'thread' && listing.myThreadId) navigation.navigate('Thread', { threadId: listing.myThreadId });
+  }, [openSheet, loaded]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const s = useMemo(() => StyleSheet.create({
     loading: { padding: spacing.lg, gap: spacing.md },
     gallerySkeleton: { height: 300, borderRadius: radius.xl },
@@ -79,6 +96,7 @@ export default function ListingScreen({ navigation, route }: RootStackScreenProp
     owner: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm },
     ownerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
     ownerNote: { ...type('caption'), color: colors.text },
+    heldLink: { alignSelf: 'flex-start' },
     more: { gap: spacing.md },
     section: { ...type('section'), color: colors.text },
     footer: { paddingTop: spacing.sm },
@@ -120,12 +138,25 @@ export default function ListingScreen({ navigation, route }: RootStackScreenProp
   const chip = statusChip(listing.status);
   const note = isOwner && 'version' in listing ? ownerNote(listing) : null;
   const canManage = isOwner && manageItems(listing).length > 0;
+  // F6 + F7 §8.4: the owner sees how much is on hold in open deals, linking to the Deals tab.
+  const heldRaw = isOwner && 'heldQuantity' in listing ? listing.heldQuantity : null;
+  const held = heldRaw && quantityToMilli(heldRaw) > 0n ? heldRaw : null;
 
   const ownerHeader = isOwner ? (
     <View style={s.owner}>
       <Notice tone={isPublic ? 'info' : 'warning'} icon={isPublic ? Info : TriangleAlert} text={t(isPublic ? 'listing.page.ownerPublic' : 'listing.page.ownerHiddenFromBuyers')}>
         <View style={s.ownerRow}><StatusChip label={t(chip.key)} tone={chip.tone} /></View>
         {note ? <Text style={s.ownerNote}>{t(note.key, note.values)}</Text> : null}
+        {held ? (
+          <Button
+            title={t('listing.owner.onHold', { qty: quantityText(held, listing.unit) })}
+            onPress={() => navigation.navigate('Main', { screen: 'Deals' })}
+            variant="ghost"
+            size="sm"
+            phLabel="Listing-on-hold"
+            style={s.heldLink}
+          />
+        ) : null}
       </Notice>
     </View>
   ) : null;
@@ -157,9 +188,20 @@ export default function ListingScreen({ navigation, route }: RootStackScreenProp
     </View>
   ) : null;
 
-  const contact = (action: ReturnType<typeof contactActions>[number]) => {
+  const contact = contactButtons(listing);
+  const tapContact = (action: ContactButtonAction) => {
     track(LISTING_EVENTS.contactTapped, { action, kind: listing.kind });
-    Toast.show({ type: 'info', text1: t('common.comingSoon') });
+    if (action === 'open_chat') {
+      if (listing.myThreadId) navigation.navigate('Thread', { threadId: listing.myThreadId });
+      return;
+    }
+    // Login at the moment of intent (R24): the pending action reopens this page with the sheet after sign-in.
+    if (!requireSignIn({ reason: signInReasonOf(action), pending: pendingContactOf(action, listingId) })) return;
+    setSheet(sheetOf(action));
+  };
+  const toThread = (threadId: string) => {
+    void qc.invalidateQueries({ queryKey: listingKeys.detail(listingId) });
+    navigation.navigate('Thread', { threadId });
   };
 
   const edit = () => void openEdit(navigation, qc, listing);
@@ -190,12 +232,33 @@ export default function ListingScreen({ navigation, route }: RootStackScreenProp
         onCheckFit={listing.fitments.length > 0 ? () => setSheet('fit') : undefined}
         onViewSeller={() => navigation.navigate('SellerListings', { businessId: listing.businessId })}
         onReport={isOwner ? undefined : () => { if (requireSignIn({ reason: 'report' })) setSheet('report'); }}
+        onViewReviews={() => navigation.navigate('SellerReviews', { businessId: listing.businessId })}
         bottomInset={spacing.lg}
       />
       <FooterBar style={s.footer}>
         {isOwner ? (
           <>
-            {canManage ? (
+            {!isOwner ? (
+        <>
+          <EnquireSheet
+            listing={listing}
+            visible={sheet === 'enquire' || sheet === 'ask_price'}
+            preset={sheet === 'ask_price' ? 'ask_price' : undefined}
+            onClose={() => setSheet(null)}
+            onSent={toThread}
+          />
+          {listing.priceModel === 'negotiable' || listing.priceModel === 'fixed' ? (
+            <OfferSheet
+              mode={sheet === 'buy' ? 'buy' : 'offer'}
+              listing={listing}
+              visible={sheet === 'offer' || sheet === 'buy'}
+              onClose={() => setSheet(null)}
+              onSent={(r) => toThread(r.threadId)}
+            />
+          ) : null}
+        </>
+      ) : null}
+      {canManage ? (
               <Button title={t('listing.owner.manage')} onPress={() => setManaging(true)} variant="outline" size="md" phLabel="Listing-manage" />
             ) : null}
             {editEntry(listing.status) ? (
@@ -203,14 +266,15 @@ export default function ListingScreen({ navigation, route }: RootStackScreenProp
             ) : null}
           </>
         ) : (
-          contactActions(listing).map((a, i, all) => (
+          contact.buttons.map((b, i, all) => (
             <Button
-              key={a}
-              title={t(`listing.contact.${a}`)}
-              onPress={() => contact(a)}
+              key={b.action}
+              title={b.disabled ? t('listing.contact.allOnHold') : t(`listing.contact.${b.action}`)}
+              onPress={() => tapContact(b.action)}
+              disabled={b.disabled}
               variant={all.length > 1 && i === 0 ? 'outline' : 'primary'}
               size="md"
-              phLabel={`Listing-contact-${a}`}
+              phLabel={`Listing-contact-${b.action}`}
             />
           ))
         )}

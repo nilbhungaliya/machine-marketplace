@@ -233,7 +233,10 @@
     "liveListings_one": "{{count}} લાઇવ લિસ્ટિંગ",
     "liveListings_other": "{{count}} લાઇવ લિસ્ટિંગ",
     "viewAll": "બધાં લિસ્ટિંગ જુઓ",
-    "report": "લિસ્ટિંગની ફરિયાદ કરો"
+    "report": "લિસ્ટિંગની ફરિયાદ કરો",
+    "sellerScore_one": "{{stars}} · {{count}} રિવ્યૂ",
+    "sellerScore_other": "{{stars}} · {{count}} રિવ્યૂ",
+    "reviews": "રિવ્યૂ"
   },
   "errors": {
     "kindImmutable": "લિસ્ટિંગનો પ્રકાર બદલી શકાતો નથી.",
@@ -290,11 +293,15 @@
   "contact": {
     "enquire": "પૂછપરછ કરો",
     "make_offer": "ઓફર આપો",
-    "ask_price": "ભાવ પૂછો"
+    "ask_price": "ભાવ પૂછો",
+    "buy": "આ ભાવે ખરીદો",
+    "open_chat": "ચેટ ખોલો",
+    "allOnHold": "બધું ડીલમાં હોલ્ડ પર"
   },
   "owner": {
     "manage": "મેનેજ કરો",
-    "edit": "બદલો"
+    "edit": "બદલો",
+    "onHold": "ડીલમાં હોલ્ડ પર: {{qty}}"
   },
   "otherSide": {
     "title": "બીજી સાઇડ",
@@ -462,5 +469,9 @@
       "zero": "બધું વેચાઈ ગયું? 'વેચાઈ ગયું માર્ક કરો' પસંદ કરો.",
       "tooLarge": "આ એક લિસ્ટિંગની મર્યાદા કરતાં વધુ છે."
     }
+  },
+  "available": {
+    "partial": "{{quantity}}માંથી {{available}} ઉપલબ્ધ",
+    "allOnHold": "બધું ડીલમાં હોલ્ડ પર"
   }
 }

@@ -233,7 +233,10 @@
     "liveListings_one": "{{count}} लाइव लिस्टिंग",
     "liveListings_other": "{{count}} लाइव लिस्टिंग",
     "viewAll": "सभी लिस्टिंग देखें",
-    "report": "लिस्टिंग की शिकायत करें"
+    "report": "लिस्टिंग की शिकायत करें",
+    "sellerScore_one": "{{stars}} · {{count}} रिव्यू",
+    "sellerScore_other": "{{stars}} · {{count}} रिव्यू",
+    "reviews": "रिव्यू"
   },
   "errors": {
     "kindImmutable": "लिस्टिंग का प्रकार बदला नहीं जा सकता।",
@@ -290,11 +293,15 @@
   "contact": {
     "enquire": "पूछताछ करें",
     "make_offer": "ऑफ़र दें",
-    "ask_price": "कीमत पूछें"
+    "ask_price": "कीमत पूछें",
+    "buy": "इस कीमत पर खरीदें",
+    "open_chat": "चैट खोलें",
+    "allOnHold": "सब डील में होल्ड पर"
   },
   "owner": {
     "manage": "मैनेज करें",
-    "edit": "बदलें"
+    "edit": "बदलें",
+    "onHold": "डील में होल्ड पर: {{qty}}"
   },
   "otherSide": {
     "title": "दूसरी साइड",
@@ -462,5 +469,9 @@
       "zero": "सब बिक गया? 'बिका हुआ मार्क करें' चुनें।",
       "tooLarge": "यह एक लिस्टिंग की सीमा से ज़्यादा है।"
     }
+  },
+  "available": {
+    "partial": "{{quantity}} में से {{available}} उपलब्ध",
+    "allOnHold": "सब डील में होल्ड पर"
   }
 }
