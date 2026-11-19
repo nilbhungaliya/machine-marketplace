@@ -66,13 +66,13 @@ snippets; the notes say which.
 | Platform | Best ideas to take | Weaknesses to avoid |
 |---|---|---|
 | **Fibre2Fashion Machinery** (textile machinery leads; web + "B2B Trade" app) | Sellers / buyers tab pair on every category; public buy leads with contact gated; Trade Match alerts (10 per user) with app push; Inquiry Basket (one enquiry to several sellers); Compare; listing statuses with reject reason, Paused and Expired; Express Posting of a requirement without login; used-machine fields (year, brand, model, condition, capacity) | Flat list of 465 product types with duplicates and typos; every photo "Image For Illustration Purpose Only"; ghost-written descriptions; stale stock (newest used offers from about 2020–2025); no condition, price, brand, year or distance filters; no part numbers, fitment, side or rental; no seller name, badge or rating on cards; USD plans, ad-heavy pages |
-| **IndiaMART** (largest Indian B2B, used machinery section with counts) | Post Buy Requirement validated before going live; BuyLeads pushed to relevant suppliers with "not relevant" feedback; Lead Manager (saved replies, quotation, reminders, labels); masked calling (PNS rings up to 5 staff phones); TrustSEAL checks (GST OTP, bank name match, video KYC with stock proof) | Paid leads (TrustSEAL Pro ₹60,000/yr for ~15 leads/week) and lead-quality complaints; escrow discontinued March 2024; the 2026 protection covers only complete non-delivery and needs an FIR and affidavit |
+| **IndiaMART** (largest Indian B2B, used machinery section with counts) | Post Buy Requirement validated before going live; BuyLeads pushed to relevant suppliers with "not relevant" feedback; Lead Manager (saved replies, quotation, reminders, labels); masked calling (PNS rings up to 5 staff phones); TrustSEAL checks (GST OTP, bank name match, video KYC with stock proof) | Paid leads (TrustSEAL Pro ₹60,000/yr for ~15 leads/week) and lead-quality complaints; escrow discontinued March 2024; the 2026 protection covers non-delivery only, needs an FIR only above ₹1 lakh (a registered police complaint below) and caps the payout at ₹5 lakh |
 | **TradeIndia** | TI Pay timers: 2 business days to report a wrong product, auto-release 3 business days after delivery; buy leads and quotation in app | Full upfront payment only (no advance + balance); lead-quality complaints |
 | **Machineseeker India** | Condition New / Ex-display / Used / Defective; location radius 10 km to unlimited; "only verified dealers"; images-only and video-only filters; category technical filters; sort by distance, year, runtime; saved search alerts cancellable any time; "Request more images" | EUR prices and global distances on the India site |
 | **Surplus Record** | Free Wanted posts emailed to dealers (budget band, best offer, private note); enquiry form with Make an Offer / shipping quote / financing ticks; category numeric ranges (swing, centers), motor search by HP / RPM / volts; "Dealer since 2006" and level badges; Create Alert | Wanted contacts visible only to paying advertisers; "buyer protection" while the terms disclaim all guarantees; no reviews |
 | **Mascus** | Advert type Sale / Auction / **Rent** as a filter; hours, year, power, emission filters; Want Ad; follow a seller; "Report suspicious ad"; years on Mascus; WhatsApp contact; saved searches with push | Year and hours sometimes only in free text; weak app (8 ratings); fees not published |
-| **MachineryTrader** | **Part-number search** with quantity available and price; Want-To-Buy ads and dealer "Auto-Search Matches"; watch list with price-drop email; "For Rent" section; well-rated app (4.7, 6.4K ratings) | Trustpilot 2.5/5; listing fees not published |
-| **eBay B&I / Motors** | **Structured fitment**: match by brand + part number, or add up to 3,000 vehicles, bulk CSV, "My Garage" filter; Best Offer with 24 h response, counter bounds, auto-accept / decline; Verified Condition inspection with per-component stars and video | Fitment only for vehicles; heavy equipment gets plain "compatible make" text; protection excludes off-platform payment |
+| **MachineryTrader** | **Part-number search** with quantity available and price; Want-To-Buy ads and dealer "Auto-Search Matches"; watch list with price-drop email; "For Rent" section; well-rated app (4.7, ~5.7K iOS ratings) | Trustpilot 2.5/5; listing fees not published |
+| **eBay B&I / Motors** | **Structured fitment**: match by brand + part number, or add up to 3,000 vehicles, bulk CSV, "My Garage" filter; Best Offer with timers (seller 24 h to respond; buyer 96 h to answer a counteroffer, US / UK since 2026) and seller auto-accept / auto-decline thresholds; Verified Condition inspection with per-component stars and video | Fitment only for vehicles; heavy equipment gets plain "compatible make" text; protection excludes off-platform payment |
 | **Alibaba.com** | RFQ: buyer posts specs, quantity, price range; platform reviews it; up to 15 quotes; "Test report: provided" and "Video inspection: provided" attributes | Compatibility only as free text in titles ("Used for 320D 320B …") |
 | **Exapro / Kitmondo / Machinio** | Evergreen model pages even with no stock; valuation help; inspection before purchase; dealer feeds and CRM | Agent in the middle and 5–10% commission slow quick parts deals; crawled stale listings; no apps |
 | **RockAuto, Cat, Amazon, boodmo** (parts fitment) | RockAuto: side convention stated, "no side = fits either side", "need both sides, order 2", axle sets and packs with per-unit price; Cat: saved machines with a green "verified fit", serial ranges, alternative and remanufactured parts; Amazon: fit badge only from structured data, never free text; boodmo: genuine / OES / aftermarket tiers for one OEM number | RockAuto customers still confused about sides; Cat prefix-only fitment misses mid-production changes; boodmo charges points for part-number lookups |
@@ -82,7 +82,7 @@ snippets; the notes say which.
 
 - **Left / Right / Pair** as a structured field, filter and matching rule, with the complementary side shown on every listing.
 - **Structured fitment** (machine brand → model → years, optional serial range) for industrial, agricultural and construction
-  machines, with "My machines" and a "fits your machine" check.
+  machines, with "Check my machine" (P2: saved "My machines" and a verified "fits your machine" badge).
 - **Requirements matched on part number, machine and side**, not a broad category; sellers reply with a live listing or a quote,
   and the buyer compares replies side by side.
 - **Availability alerts** that re-check every new listing against open requirements, including the missing side.
@@ -104,7 +104,7 @@ snippets; the notes say which.
 | M6 Listing page | U2, F3, F4 | IM (trust block, sticky actions), SR (request price, alert), MS (request more images) + New fit and side blocks |
 | M7 Listing lifecycle | F2, A3 | F2F (approve, reject with reason, paused, expired) + sold / rented / unavailable |
 | M8 Left / Right / Pair matching | F3 | RA (side convention, order 2 for both) + New pairing and complement |
-| M9 Enquiry, offers and negotiation | U1, U2, F6 | EB (Best Offer bounds and timers), SR (enquiry intent ticks), F2F (Inquiry Basket) + TSM M7 |
+| M9 Enquiry, offers and negotiation | U1, U2, F6 | EB (Best Offer timers and thresholds), SR (enquiry intent ticks), F2F (Inquiry Basket) + TSM M7 |
 | M10 Chat and calls | F6 | IM (masked calls, Lead Manager), MA (WhatsApp), TSM M8 |
 | M11 Buyer requirements (RFQ) and matching | U3, F8 | TSM M9, IM (BuyLead), AL (RFQ, 15 quotes), SR (Wanted), MT (Auto-Search Matches), F2F (buy leads) |
 | M12 Alerts, saved searches, follow seller | F8, F9 | F2F (Trade Match), MS (saved search, cancel any time), MT (price drop), MA (follow seller) |
@@ -125,14 +125,16 @@ One business account type can both buy and sell, plus team members inside a busi
 | Role | Who | Can do |
 |---|---|---|
 | Guest | Not logged in | Browse parts, machines, rentals and public requirements (contact details hidden); share links |
-| Registered (unverified) | Phone verified, profile started | Everything a guest can, plus save, enquire, make up to 3 open offers, post requirements, list up to 3 items (each reviewed before it goes live) |
-| Verified business | GST verified | Full free plan: listings within quota, offers within fair use, chat, masked calls, requirement replies, rental listings |
+| Registered (unverified) | Phone verified, profile started | Everything a guest can, plus save, enquire, make up to 3 open offers, post requirements, at most 3 open listings (any status except draft, sold, removed), each reviewed before it goes live |
+| Verified business | GST verified | Full free plan: listings within quota, offers within fair use, chat, requirement replies, rental listings |
 | Paid plan (P2) | Pro / Business | More live listings, bulk upload, boosts, stats, team members (M18) |
 | Team member (P2) | Added by the owner | Acts for the business: Listing manager, Sales (enquiries, offers, chats), Viewer |
 | Business owner | First user of the business | Team, plan, verification |
 
-**Verification levels** (badges): Phone verified → GST verified (automatic lookup + check) → Business verified (documents or
-video check, P2) → Trusted seller (deal history and ratings). Matches the `VERIFICATION_LEVELS` in `packages/shared-types`.
+**Verification levels** (badges), as `VERIFICATION_LEVELS` in `packages/shared-types` (`phone`, `gst`, `business`): Phone
+verified → GST verified (instant provider check, or officer review with documents as the fallback, MVP) → Business verified
+(documents or video KYC, P2). Deal count, rating and years on the platform show on the seller block; they are not a
+verification level.
 
 **Admin roles** (already in the codebase): super admin, moderator, verification officer, category manager, operations (deals,
 rentals, KPIs), support. Every admin action writes the audit log (who, what, when, before / after).
@@ -145,11 +147,11 @@ Three clients (mobile app, admin panel, later public web pages) share one API.
 |---|---|---|
 | Accounts | OTP login, business profile, GST lookup, location and industrial area, team, verification levels | MSG91 (OTP), GST provider (to choose) |
 | Catalogue | Category tree (machine category → machine type → part group), brands, models, fitment, spec templates, units, conditions, side options | — |
-| Listings | Parts, machines, rentals; dynamic spec fields (JSONB), fitment rows, side, media, moderation states | S3 / Cloudflare R2 |
+| Listings | Parts, machines, rentals; dynamic spec fields (JSONB), fitment rows, side, media, moderation states | Cloudflare R2 (S3-compatible client) |
 | Search | Full text + `pg_trgm`, normalised part numbers, facets, PostGIS distance, industrial area | PostgreSQL (Meilisearch later if volume needs it) |
 | Matching and alerts | Requirement-to-listing matching (part number, fitment, side, distance), complement finder, saved searches, follows, price drops | Background jobs |
 | Offers and deals | Offer / counter state machine, deal record, sold / rented status, history | — |
-| Rentals | Rates, availability calendar, booking state machine, extensions, off-rent | — |
+| Rentals | Rates, availability calendar, booking state machine, off-rent; extensions (P2) | — |
 | Chat and calls | Real-time threads with structured cards, masked calling, WhatsApp share links | Socket.IO, Exotel |
 | Notifications | Push, SMS, WhatsApp, in-app centre, user preferences, quiet hours | FCM, WhatsApp Business API |
 
@@ -175,13 +177,14 @@ selector (auto-detected, industrial area aware), search bar, notification bell, 
 | Mobile + OTP | +91 mobile; 6-digit OTP with SMS auto-read; resend after 30 s; "Buyers see your number only after you share it" |
 | Business profile | Your name, business name, what you'll do (Buy parts / Sell parts / Rent out machines, multi), machines you work with (machine categories, multi; seeds the feed and requirement matching) |
 | Location | Map pin with "use my location"; **industrial area** (searchable list of GIDC / MIDC / estates per city, or "Other"); city, state, pincode (pincode autofills city and state); stored as PostGIS point |
-| GST verification | GSTIN → lookup shows legal name, constitution, status, principal place; "Matches your profile" check; submit → admin review queue (AD2); listing and buying continue meanwhile |
+| GST verification | **Instant through a GST provider:** GSTIN → lookup shows legal name, constitution, status, principal place; "this is my business" declaration; a code sent to the GSTIN's registered phone or email → GST verified. **Fallback: admin review (AD2)** when the provider is down or off, the GSTIN isn't found, or the business can't receive the code: GSTIN + uploaded documents go to the verification officer. Listing and buying continue meanwhile |
 | Suspended account | Sign-in refused with "This account is suspended. Contact support." (built: `ACCOUNT_SUSPENDED`) |
 
 **Profile also holds** (shown publicly on the seller page, from F2F's company block): nature of business, year established,
 GST verified badge, years on the platform, deal count, rating, usual reply time.
 
-**Phase.** MVP (phone OTP, profile, location, GST lookup + admin approval). P2: document / video verification, team members.
+**Phase.** MVP (phone OTP, profile, location, instant GST verification through a provider, admin review with uploaded
+documents as the fallback). P2: "Business verified" level by documents or video KYC, team members.
 
 **Inspiration.** IM (OTP in the enquiry pop-up; TrustSEAL's GST OTP and bank name match), F2F (GST, IE code, year of
 establishment on the listing), TSM M1 (built pattern). Avoid F2F's job title / job function questions.
@@ -193,7 +196,8 @@ establishment on the listing), TSM M1 (built pattern). Avoid F2F's job title / j
 **Home sections (in order).**
 1. Location and radius chip (industrial area, "within 25 km"), notification bell.
 2. Search bar: "Part, machine, brand or part no."
-3. Root categories (admin-managed): Spare parts, Machinery, For rent, Electrical, Hydraulics, Bearings & transmission, Tools.
+3. Root categories (admin-managed): Spare parts, Machinery, For rent, Electrical, Hydraulics, Bearings & transmission, Tools,
+   Textile machinery (embroidery machines, water-jet looms: the seeded catalogue). Launch categories are the client's call (D9).
 4. **Side-match strip** when the user has an open requirement with matches ("2 right-side matches for your left tie rod end").
 5. Near you: live listings sorted by a blend of distance and freshness, filtered to the user's machine categories when set.
 6. Machines for rent nearby.
@@ -201,7 +205,8 @@ establishment on the listing), TSM M1 (built pattern). Avoid F2F's job title / j
 8. Recently viewed, saved searches with new results.
 
 **Browse tab.** The admin tree: machine category → machine type → part group (with live counts) → listings; or brand → model →
-parts that fit. Each node has **For sale / Wanted** tabs (F2F's sellers / buyers pair), so requirements are browsable demand.
+parts that fit. P2 (with M11's public demand): each node gets **For sale / Wanted** tabs (F2F's sellers / buyers pair), so
+requirements are browsable demand.
 
 **Near me map.** Clustered pins by industrial area with counts; switch City / Industrial area / State; list of areas with part
 and rental counts and distance.
@@ -219,7 +224,7 @@ type), New (industrial area browsing, side-match strip).
 - One box; the query reader recognises part numbers (normalised: uppercase, spaces / dashes / dots stripped), machine
   brand and model names, and side words ("left", "LH", "RH", "right hand", Hindi and Gujarati forms) and turns them into filters.
 - Typo tolerance (`pg_trgm`), admin-managed synonyms ("tie rod end" = "TRE"; "mudguard" = "fender"), suggestions while typing.
-- Cross-references: searching an OEM number also finds listings that declared it as an interchange or superseded number (M4).
+- Cross-references (P2): searching an OEM number also finds listings that declared it as an interchange or superseded number (M4).
 - Search by listing or requirement reference number (F2F), for phone and WhatsApp follow-ups.
 
 **Filters.**
@@ -227,8 +232,8 @@ type), New (industrial area browsing, side-match strip).
 | Filter | Values |
 |---|---|
 | Listing type | Parts, Machines for sale, Machines for rent |
-| **Side** | Left, Right, Pair (and "fits either side" counted for both) |
-| Fits machine | Brand → model → year; or one of "My machines" (M4) |
+| **Side** | Left, Right, Pair. Left shows Left first, then Pair (Right likewise); Pair shows only Pair; "not applicable" never matches a side filter. P2: "fits either side" counted for both |
+| Fits machine | Brand → model → year (P2: or one of "My machines", M4) |
 | Condition | New, Unused, Used, Excess (P2: Refurbished, Defective / for parts, from MS) |
 | Part origin (P2) | Genuine OEM, OES, Aftermarket, Remanufactured (BD) |
 | Distance | 10 / 25 / 50 / 100 / 200 km, state, all India (PostGIS) |
@@ -254,8 +259,10 @@ quantity), SR and MA (category numeric filters), TSM M3 (query reader). Avoid F2
 
 **Catalogue (managed in admin, AD4).**
 - Category tree, three levels: machine category (Tractors, Earthmoving, CNC & machine tools, Textile machinery, Plastic
-  moulding, Printing, Trucks, Pumps & compressors, …) → machine type (Backhoe loaders, Turning centres, Rapier looms, …) →
-  part group (Hydraulics, Transmission, Body parts, Steering & linkages, Electrical, Filters, …). Live counts on every node.
+  moulding, Printing, Trucks, Pumps & compressors, …) → machine type (Backhoe loaders, Turning centres, Rapier looms,
+  Embroidery machines, Water-jet looms, …) → part group (Hydraulics, Transmission, Body parts, Steering & linkages,
+  Electrical, Filters, …). Live counts on every node. The seeded catalogue is textile machinery (embroidery and water-jet
+  looms in full); the launch categories are the client's call (D9).
 - Brands and models (JCB 3DX, Mahindra 575 DI, Tata LPT 1613, Jyoti DX 200, Fanuc 0i-TF …), with year ranges and optional
   variants.
 - Spec templates per part group or machine type: field name, type (text, number + unit, choice, multi-choice), required,
@@ -274,19 +281,19 @@ quantity), SR and MA (category numeric filters), TSM M3 (query reader). Avoid F2
 | Year from / to | Open ranges allowed |
 | Serial range or prefix | Optional, P2 (CAT: parts change mid-production) |
 | Qualifier note | Free text, e.g. "with hydraulic tensioner" (RA limiting factors) |
-| Source | Seller declared / Admin verified / Catalogue. The **"Fits your machine" badge** shows only for verified or catalogue rows (AZ, CAT); seller-declared rows show "Seller says it fits" |
+| Source | MVP: seller declared only, shown as "Seller says it fits". P2: Admin verified / Catalogue rows; the green **"Fits your machine" badge** shows only for those (AZ, CAT) |
 
-**Part identity (P2 depth).** Part number (raw and normalised), part brand, OEM brand and OEM number, origin (genuine, OES,
-aftermarket, remanufactured, used / pulled), cross-references (interchange, supersedes, superseded by), **mirror part number**
-(links a left part to its right counterpart, powers M8), sold as (single, pair, set, pack) with units per sale and per-unit
-price (RA packs), quantity per machine (informational).
+**Part identity.** MVP core: part number (stored raw and normalised, searchable) and part brand. P2 depth: OEM brand and OEM
+number, origin (genuine, OES, aftermarket, remanufactured, used / pulled), cross-references (interchange, supersedes,
+superseded by), **mirror part number** (links a left part to its right counterpart, powers M8), sold as (single, pair, set,
+pack) with units per sale and per-unit price (RA packs), quantity per machine (informational).
 
-**My machines (P2, simple version MVP).** A business saves its machines (brand, model, year, optional serial, location). Search
+**My machines (P2).** A business saves its machines (brand, model, year, optional serial, location). Search
 can filter to "fits my machines"; requirement forms pre-fill from a saved machine; home shows parts that fit.
 
-**Phase.** MVP: tree, brands, models, years, fitment rows (seller declared), templates, master data, side switch. P2: serial
-ranges, cross-references, mirror numbers, verified fitment, My machines filter, bulk CSV fitment upload (EB), evergreen
-model pages (EX).
+**Phase.** MVP: tree, brands, models, years, fitment rows (seller declared), part number and part brand, templates, master
+data, side switch. P2: serial ranges, cross-references, mirror numbers, verified fitment and the "Fits your machine" badge,
+My machines, bulk CSV fitment upload (EB), evergreen model pages (EX).
 
 **Inspiration.** EB (fitment by brand + part number, 3,000-vehicle cap, CSV, My Garage, master list), CAT (saved equipment,
 green check, serial prefix and range, alternatives and reman), AZ (fit badge only from structured data), BD (genuine / OES /
@@ -336,11 +343,11 @@ what condition, how many, how much, how far, can I trust the seller.
 1. Gallery (photos, video badge, count); share, save.
 2. Side mark, condition, quantity in stock.
 3. Title; price (per unit, negotiable / fixed / on request; GST note).
-4. **Fits** block: machine chips; "Check my machine" (opens My machines or a brand / model picker) with a clear yes / seller
-   says / not listed answer.
+4. **Fits** block: machine chips; "Check my machine" (a brand / model picker; P2: also My machines). MVP answers "Seller says
+   it fits" or "Not listed by the seller"; a verified green "fits" answer needs catalogue / admin-verified fitment rows (P2).
 5. **Other side** block: "Right side also available, 8 pcs from Om Agro Spares, Gondal" (M8), or "Need the other side? Post a
    requirement".
-6. Specifications table (template fields, part number, brand, origin).
+6. Specifications table (template fields, part number, part brand).
 7. Delivery and location (area, distance; exact address only after a deal).
 8. Seller block: name, area, verified badge, rating, deals done, usual reply time, years on platform; "View all listings", follow.
 9. Similar parts nearby; parts that fit the same machine.
@@ -361,21 +368,27 @@ images), MA (report suspicious ad, follow seller). New: fits and other-side bloc
 | Status | Meaning | Who moves it |
 |---|---|---|
 | draft | Being written | Seller |
-| pending_review | Waiting for moderation (first 3 listings of a new seller, flagged content, edits to price / side / fit on reported listings) | System |
+| pending_review | Waiting for moderation (every listing of an unverified seller, the first 3 of a verified seller, sanity flags, a side or fit change while a report is open) | System |
 | rejected | Refused with a reason; seller can fix and resubmit | Moderator |
-| live | Visible and searchable | Moderator / auto-approve for trusted sellers |
+| live | Visible and searchable | Moderator / goes live at once for a verified seller after their first 3, unless flagged |
 | paused | Hidden by the seller (e.g. stock being checked) | Seller |
 | reserved | A deal is agreed on the full remaining quantity | System (M13) |
 | sold | All quantity sold | Seller / system |
 | rented | Rental listing currently on rent (M14) | System |
 | unavailable | Seller marked it unavailable (sold elsewhere, damaged) | Seller |
+| expired | Not refreshed for 60 days (admin-configurable); set by an hourly job; Renew brings it back | System / seller |
+| hidden | Hidden by a moderator (reversible: unhide) | Admin |
 | removed | Taken down by seller or admin | Seller / admin |
 
 **Rules.**
 - Quantity decreases with each deal; the listing stays live until quantity reaches zero.
-- **Freshness:** listings expire after 60 days without an update (admin-configurable); 7 days before, the seller gets "Still
-  available?" with one-tap Renew. Cards show "Updated 3 days ago". This answers F2F's stale stock and Kitmondo's availability checks.
-- Edits to price, quantity and photos go live at once; edits to category, side or fit on a reported listing go back to review.
+- **Freshness:** listings expire after 60 days without an update (admin-configurable; an hourly job moves them to
+  `expired`); 7 days before, the seller gets "Still available?" with one-tap Renew, which also brings an expired listing back.
+  Cards show "Updated 3 days ago". This answers F2F's stale stock and Kitmondo's availability checks.
+- **Review:** every listing from an unverified seller is reviewed; a verified seller's first 3 listings are reviewed; after
+  that, listings go live unless flagged (price / unit sanity checks).
+- **Edits:** price, quantity and photo edits go live at once. A side or fit change while a report is open, or an edit that
+  raises a new sanity flag, goes back to review. The category can change only in draft or rejected.
 - Every status change notifies the seller (M16) and writes history.
 
 **Phase.** MVP. **Inspiration.** F2F (approved, pending, rejected with reason, paused, expired, deleted with reason), EX /
@@ -393,11 +406,12 @@ numbers in the catalogue link left and right numbers explicitly.
 
 **Matching rules.**
 - A **left** listing complements requirements or listings for **right** of the same part, and the reverse
-  (`complementarySide()` in shared-types). A **pair** satisfies a need for either side or both. "Either" counts for both.
+  (`complementarySide()` in shared-types). A **pair** satisfies a need for either side or both. P2: "either" counts for both.
 - "Same part" means: same normalised part number or mirror number (strongest); else same part group + same part name +
   overlapping fitment (same machine model and years); distance and condition rank the results.
-- A buyer searching "right" sees right, pair and either listings; "pair" sees pair listings first, then a suggested left + right
-  combination from two sellers ("Buy both sides: ₹1,150 + ₹1,190 from 2 sellers 6 km apart").
+- A buyer searching "right" sees right listings first, then pair; "pair" sees only pair listings (P2: then a suggested left +
+  right combination from two sellers, "Buy both sides: ₹1,150 + ₹1,190 from 2 sellers 6 km apart"). "Not applicable" never
+  matches a side filter. No "either" side at MVP.
 
 **Where it shows.**
 - Listing page: "Other side" block (M6).
@@ -416,7 +430,7 @@ numbers in the catalogue link left and right numbers explicitly.
 **Purpose.** Turn interest into an agreed price and quantity with a record, not a lost phone call.
 
 **Enquiry.** From the listing: quick options (Is it still available? · Send more photos · Send a video · Full specifications ·
-Will it fit my machine? · Best price for N pcs) plus an optional message; "My machine" auto-attached when saved. Opens a
+Will it fit my machine? · Best price for N pcs) plus an optional message; the buyer's last "Check my machine" choice is attached. Opens a
 thread tied to that listing (M10). P2: **enquiry basket**, one enquiry to several sellers of the same part (F2F), capped at 5.
 
 **Offer.** Price per unit, quantity (≤ available, ≥ minimum order), validity (24 h / 48 h / 7 days), note. Shows the total and
@@ -424,17 +438,17 @@ thread tied to that listing (M10). P2: **enquiry basket**, one enquiry to severa
 that the seller confirms).
 
 **State machine** (built as `OFFER_STATUSES`): pending → countered → accepted / rejected / expired / withdrawn.
-- Receiver can accept, reject (optional reason) or counter. Counters bounded between the last offer and the asking price (EB).
+- Receiver can accept, reject (optional reason) or counter. Counters bounded between the last offer and the asking price (how bounds work after the first counter: F6 + F7 spec).
 - Maximum 5 counter rounds (`MAX_COUNTER_ROUNDS`); one open offer per buyer per listing.
-- Accept → deal created (M13); quantity reserved; other open offers on that quantity are told "quantity no longer available"
+- Accept → deal created (M13); quantity reserved (how reserved quantity works: F6 + F7 spec); other open offers on that quantity are told "quantity no longer available"
   and kept as backups if stock remains.
 - Expiry job closes offers at validity end; both sides notified.
-- Unverified buyers: up to 3 open offers at a time.
+- Unverified buyers: up to 3 open offers at a time (whether and how unverified buyers can chat: F6 + F7 spec).
 
 **P2.** Seller auto-accept / auto-decline thresholds (EB); "send offer to people who saved this" (EB offers to watchers);
 quotation PDF from the thread (IM Lead Manager).
 
-**Inspiration.** EB Best Offer (response window, bounds, thresholds), SR (offer, shipping quote ticks), TSM M7 (built pattern).
+**Inspiration.** EB Best Offer (seller 24 h / buyer 96 h response windows, auto-accept / auto-decline thresholds), SR (offer, shipping quote ticks), TSM M7 (built pattern).
 
 ## M10 · Chat, calls and sharing (MVP) — F6
 
@@ -476,14 +490,14 @@ enquire / make offer (M9) → deal (M13) → requirement **fulfilled** (or close
 | Part / machine name | Suggestions from the category |
 | Part number | Optional; strongest matching signal |
 | Side | Left / Right / Pair / not applicable (part categories with sides) |
-| Fits | Machine brand → model → year; or pick from My machines |
+| Fits | Machine brand → model → year (P2: or pick from My machines) |
 | Required specs | Category template fields; each can be "any" |
 | Quantity | Number + unit |
 | Condition accepted | New / Unused / Used / Excess (multi) |
 | Budget per unit | Optional; "show to sellers" or private |
 | Needed by | Date; "urgent" flag (machine down) raises distance weight |
 | Deliver to | Prefilled from profile; search radius 50 km / 200 km / state / all India |
-| Who can reply | Verified sellers only (default) / any seller |
+| Who can reply | Verified sellers only (default) / any seller (the default is settled in the F8 spec) |
 | Reference photo or drawing | Optional (photo of the broken part, nameplate) |
 | Validity | 7 / 15 / 30 days; renewable |
 | Quick mode | Three fields (what, quantity, city) for speed, completed later (TI short RFQ); no-login capture with OTP at submit (F2F Express Posting, but with machinery fields) |
@@ -492,8 +506,9 @@ enquire / make offer (M9) → deal (M13) → requirement **fulfilled** (or close
 **Matching rules.**
 - Score = part number / mirror / cross-reference match + category and part name match + fitment overlap + **side
   complement** + spec match + condition accepted + quantity fit + distance + seller response rate + verification.
-- Notify the **top 15 sellers** (admin-configurable); others can still reply from the Wanted tab or "Buyers looking for your
-  parts". Sellers on paid plans (P2) get early access, never more reach than the cap.
+- Notify the **top 15 sellers** (admin-configurable); others can still reply from "Buyers looking for your parts" (and
+  the Wanted tab, P2). Sellers on paid plans (P2) get early access, never more reach than the cap
+  (details: F8 spec).
 - Sellers see a requirement card: what, side, quantity, fit, condition accepted, budget (if shown), area and distance,
   needed by, buyer verification and history (requirements posted, deals done); **not the buyer's phone**.
 - Seller actions: **Reply with my listing** (pick from live listings, or create one inline), **Send a quote** (price per unit,
@@ -537,8 +552,8 @@ platforms records anything after first contact.
   date, notes.
 - Statuses (built as `DEAL_STATUSES`): agreed → completed / cancelled / disputed. Steps inside agreed: payment recorded
   (optional), handed over / delivered, confirmed by buyer.
-- Timers (TI): after "handed over", the buyer has 2 days to report a problem; with no report, the deal completes automatically
-  after 3 days.
+- Timers (TI): after "handed over", the buyer has 2 business days to report a problem; with no report, the deal completes
+  automatically after 3 business days.
 - Completing a deal reduces listing quantity; at zero the listing becomes sold (or rented for rentals).
 - Cancel with a reason (either side before handover; both must agree after); stock returns to the listing.
 - Problem report opens a support ticket (AD5); deal goes to disputed until resolved.
@@ -567,11 +582,12 @@ let contractors and factories find one nearby with clear terms.
 
 **Booking workflow.** Request booking (dates, charged by hour / day / week, site location, operator, fuel, note) → owner
 confirms, counters (reusing offers, M9) or declines → confirmed → advance recorded (off-app) → machine on site (hour meter +
-photos at handover) → on rent → extension requested / extended (one tap, DZ) → off-rent requested (now or scheduled; P2
+photos at handover) → on rent → (P2) extension requested / extended (one tap, DZ) → off-rent requested (now or scheduled; P2
 partial quantity, ES) → returned (closing hour meter, damage check) → closed → reviews both ways.
 Exit branches: cancelled by renter, cancelled by owner, expired (no owner reply in 24 h), disputed.
 
-Built enum today: `RENTAL_BOOKING_STATUSES` (to align with this list when M14 is designed in detail).
+Built enum today: `RENTAL_BOOKING_STATUSES` (to align with this list when M14 is designed in detail). How the listing's
+`rented` status follows bookings is also left to the M14 spec.
 
 **Search.** "For rent" listing type; filters for machine type, capacity, with operator, available on my dates, distance; rates
 shown per chosen period plus transport.
@@ -589,7 +605,7 @@ type). Avoid inconsistent terms on one page (BigRentz, TransRentals): one set of
 - Only the two parties of a **completed** deal or rental can review, within 14 days.
 - Buyer reviews seller: part matched the listing, communication, handover on time (1–5 each) + text. Seller reviews buyer:
   communication, payment as agreed, pickup on time. Rental: machine condition, operator, timeliness; owner rates renter's care.
-- Double-blind: published when both have reviewed or after 7 days. Scores show after 3 reviews; seller can reply once.
+- Double-blind: published when both have reviewed or after 7 days (exact blind rules: F6 + F7 spec). Scores show after 3 reviews; seller can reply once.
 - Report a review; moderators can hide abusive text.
 
 **Inspiration.** IM (rating facets), YC (two-way), TSM M14 (built pattern). Avoid MA / SR / MT, which show no buyer reviews.
@@ -601,7 +617,7 @@ type). Avoid inconsistent terms on one page (BigRentz, TransRentals): one set of
 | New enquiry, new message | ✓ | ✓ | digest |
 | New offer, counteroffer, accepted / rejected / expired | ✓ | ✓ | accepted only |
 | **New matching part** (requirement or saved search) | ✓ | ✓ | ✓ (opt-in) |
-| Booking request, confirmed, on site, extension, returned | ✓ | ✓ | confirmed |
+| Booking request, confirmed, on site, returned (P2: extension) | ✓ | ✓ | confirmed |
 | Listing approved / rejected / expiring / sold out | ✓ | ✓ | — |
 | Deal agreed, handed over, completed, problem reported | ✓ | ✓ | completed |
 | Verification approved / rejected | ✓ | ✓ | ✓ |
@@ -644,17 +660,19 @@ never buys badges, ranking in requirement matching, or reviews; boosts are label
 - Real photos required; duplicate and stock-image detection (perceptual hash, P2); price and unit sanity checks.
 - Report listing, user, review, message (reason + optional photo); "Report suspicious ad" on every listing (MA).
 - Moderation queues (AD3), suspensions (built: `account_status` suspended / blocked; sign-in refused), reasons shown to the user.
-- Rate limits on enquiries, offers and requirements; new-account limits (3 open offers, 3 listings in review).
+- Rate limits on enquiries, offers and requirements; new-account limits (3 open offers; an unverified business may have at most 3 open
+  listings, any status except draft, sold, removed).
 - Scam warnings in chat when a message asks for advance payment to an unverified account or contains a payment link; "never
   pay before inspecting a used machine" tip on machine listings (EX recommends inspection).
 - Hidden phone numbers until a deal or consent (M10).
 - Be explicit about what the platform does not guarantee (SR offers "buyer protection" while disclaiming all guarantees; IM's
-  protection needs an FIR).
+  protection covers non-delivery only, needs an FIR above ₹1 lakh (a registered police complaint below) and caps the payout
+  at ₹5 lakh).
 
 ## M20 · Payments (P2) — later
 
 MVP records payment outside the app (M13). P2 options, in order of value: advance for rentals and deposits; pay-in for parts
-with a hold until "received" (TI timers: 2 days to report, auto-release after 3); support **advance + balance** for machines
+with a hold until "received" (TI timers: 2 business days to report, auto-release after 3 business days); support **advance + balance** for machines
 (TI Pay's full-upfront rule doesn't fit machinery). Gateway: Razorpay (as in TSM). Decide with the client (Decision D7).
 
 ---
@@ -670,12 +688,14 @@ value), rental bookings, sold / closed listings, open requirements and match rat
 industrial areas and categories; requirement fulfilment time; reply rate. Filters by date, city, category.
 
 ### AD2 · Users and business verification (MVP) — A2
-Business list with search (name, phone, GSTIN, city); profile, listings, deals, reports, activity. Verification queue: GSTIN
-lookup data side by side with what the business entered; approve / reject with reason; request documents. Suspend / block /
+Business list with search (name, phone, GSTIN, city); profile, listings, deals, reports, activity. GST is verified instantly
+through the provider; the verification queue holds only the fallback reviews (provider down or off, GSTIN not found, code
+not receivable): GSTIN lookup data (when there is any) side by side with what the business entered and its uploaded
+documents; approve / reject with reason / ask for more documents; revoke GST. Suspend / block /
 reinstate with reason (sign-in refused while suspended). Reported users.
 
 ### AD3 · Listing moderation and management (MVP) — A3
-Queue: first listings of new sellers, reported listings, flagged price / unit / duplicate photos. Review screen: photos, specs,
+Queue: every listing of an unverified seller, the first 3 of a verified seller, reported listings, flagged price / unit / duplicate photos. Review screen: photos, specs,
 fit, side, price, seller history; actions approve, ask for changes, reject with reason, edit (category, fit, side), hide,
 remove. All-listings table with filters (status, type, category, city, side, seller), bulk actions, sold / unavailable monitor.
 Requirements queue (M11) for spam screening.
@@ -707,7 +727,7 @@ Admin users and roles (super admin, moderator, verification officer, category ma
 | Phase | Contents |
 |---|---|
 | **MVP** | M1–M3, M4 core, M5–M11, M12 saved searches and requirement alerts, M13, M14 basic, M15, M16 push and in-app, M17 basic, M19; admin AD1–AD7 |
-| **P2** | Fitment depth (serials, cross-references, mirror numbers, verified fit, My machines filter, CSV), enquiry basket, compare, masked calls, rental operations (logsheets, extensions, off-rent, deposits), plans and boosts (M18), payments (M20), public wanted and SEO pages, Pro analytics, team members, business video verification |
+| **P2** | Fitment depth (serials, cross-references, mirror numbers, verified fit, My machines, CSV), enquiry basket, compare, masked calls, rental operations (logsheets, extensions, off-rent, deposits), plans and boosts (M18), payments (M20), public wanted and SEO pages, Pro analytics, team members, "Business verified" level (documents or video KYC; GST review documents are MVP) |
 | **P3** | Dealer inventory feeds and synced dealer pages, auctions for used machines, inspection service with structured reports (EB Verified Condition), valuation help, financing partners, logistics quotes |
 
 ## Business model
@@ -724,8 +744,8 @@ No pay-per-lead and no paid trust badges.
 2. **D2 Visual direction.** Steel, ink and safety yellow (mockup). Approve or ask for a second direction.
 3. **D3 Side convention.** Left = seen from behind the machine, facing forward (operator's view). Confirm with sellers; some
    trades may use a different reference per machine type.
-4. **D4 First listing review.** First 3 listings of a new seller reviewed by the team; later ones from verified sellers go live
-   at once.
+4. **D4 First listing review.** Every listing from an unverified seller and the first 3 of a verified seller are reviewed by
+   the team; after that, a verified seller's listings go live at once unless flagged (as built in F2).
 5. **D5 Requirement reach.** Each requirement goes to up to 15 matching sellers. Raise or lower?
 6. **D6 Phone numbers.** Hidden until a deal or consent, or shown after the first reply?
 7. **D7 Payments and rental money.** Off-app at launch (recorded only). When should advances, deposits and payments move in?
@@ -736,7 +756,9 @@ No pay-per-lead and no paid trust badges.
 
 ## Open questions (product and engineering)
 
-- Add "either side" to `PART_SIDES` now or in P2? (RA "no side = fits either side".)
+- ~~Add "either side" to `PART_SIDES` now or in P2?~~ Settled (F2 + F4): P2. MVP sides are left, right, pair, not applicable;
+  a Left search shows Left then Pair, Pair shows only Pair, "not applicable" never matches a side filter. (RA "no side = fits
+  either side".)
 - Add Refurbished and Defective / for parts to `CONDITIONS`? (MS has Defective.)
 - Generalise `part_requests` to requirements of kind part / machine / rental (this document assumes yes).
 - Align `RENTAL_BOOKING_STATUSES` with the M14 workflow when the rental spec is written.
