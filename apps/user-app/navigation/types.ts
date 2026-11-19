@@ -1,9 +1,11 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { CompositeScreenProps, NavigatorScreenParams } from '@react-navigation/native';
-import type { ListingStatus, MyListingsGroup } from '@mpm/shared-types';
+import type { DiscoveryOrigin, ListingKind, ListingStatus, MyListingsGroup, SearchFacets } from '@mpm/shared-types';
 import type { FormMode } from '@/lib/onboarding-step';
 import type { SellStep } from '@/lib/sell-steps';
+import type { ResultsRequest } from '@/lib/search-request';
+import type { SearchTabParams } from '@/lib/search-start';
 
 export type RootStackParamList = {
   Welcome: undefined;
@@ -46,6 +48,27 @@ export type RootStackParamList = {
   RemovedByTeam: undefined;
   /** Other side matches (Task 28): from the listing page or from the seller's own listing (Published, manage sheet). */
   OtherSide: { listingId: string; from: 'listing' | 'mine' };
+
+  // F4 + F5 search (B5). Registered in the guest group too: guests search.
+  /**
+   * Search results (spec §8.4). The params are the list's request (words, filters, removed chips, sort): the screen
+   * changes them with `setParams`, the Filters screen returns with `popTo`. `fitLabel` names the fits-machine filter on
+   * its chip ("JCB 3DX") when the brand view or Filters set it.
+   */
+  SearchResults: (ResultsRequest & { fitLabel?: string }) | undefined;
+  /**
+   * The Filters screen (spec §8.4): the list's request, its **frozen** origin (the live count uses it, R18), the
+   * origin's label, and page 1's facets for the counts beside the options.
+   */
+  SearchFilters: {
+    request: ResultsRequest;
+    origin: DiscoveryOrigin;
+    originLabel: string | null;
+    facets: SearchFacets | null;
+    fitLabel?: string;
+  };
+  /** The brand view (`POST /discover/browse/brand`), from Browse's "Popular brands here". */
+  SearchBrand: { brandId: string; brandName: string; kinds?: ListingKind[] };
 };
 
 export type AuthStackParamList = {
@@ -57,7 +80,8 @@ export type AuthStackParamList = {
 /** Five tabs (scope "App navigation map"); Profile sits behind the avatar. */
 export type TabParamList = {
   Home: undefined;
-  Search: undefined;
+  /** `browseNodeId`: Browse at that node (Home's category tiles); `focus`: the search box focused (Home's search bar). */
+  Search: SearchTabParams | undefined;
   Post: undefined;
   Chats: undefined;
   Deals: undefined;
