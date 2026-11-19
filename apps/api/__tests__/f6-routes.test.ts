@@ -63,6 +63,7 @@ const USER_ROUTES: Array<[Method, string]> = [
   ['DELETE', '/users/me/devices/install-1'],
   ['PUT', '/users/me/language'],
   ['GET', '/users/me/badges'],
+  ['GET', '/businesses/me/contact-phone'],
   ['POST', '/businesses/me/contact-phone/otp/send'],
   ['POST', '/businesses/me/contact-phone/otp/verify'],
   ['DELETE', '/businesses/me/contact-phone'],

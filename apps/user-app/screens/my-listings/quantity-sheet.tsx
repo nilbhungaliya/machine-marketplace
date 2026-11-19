@@ -9,9 +9,7 @@ import { FieldHint } from '@/components/Field';
 import Input from '@/components/Input';
 import { useStoreOwnerView } from '@/hooks/use-listing';
 import { patchListing } from '@/lib/listing-api';
-import { errorCode } from '@/lib/api-error';
-import { F6_ERROR_CODES, f6ErrorMessage } from '@/lib/f6-errors';
-import { listingErrorMessage } from '@/lib/listing-errors';
+import { listingWriteErrorMessage } from '@/lib/f6-errors';
 import { quantityText, unitLabel } from '@/lib/listing-format';
 import { holdsOf, isBelowHeld } from '@/lib/my-listings-holds';
 import { quantityToastKey } from '@/lib/my-listings';
@@ -72,9 +70,7 @@ export default function QuantitySheet({ listing, visible, onClose }: QuantityShe
           const key = quantityToastKey(listing.status, view.status);
           Toast.show({ type: key === 'listing.quantitySheet.saved' ? 'success' : 'info', text1: t(key) });
         },
-        onError: (err) => setError(
-          (F6_ERROR_CODES as readonly string[]).includes(errorCode(err)) ? f6ErrorMessage(err) : listingErrorMessage(err),
-        ),
+        onError: (err) => setError(listingWriteErrorMessage(err)),
       },
     );
   };

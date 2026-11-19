@@ -5,10 +5,11 @@ import { ConflictError } from '../lib/errors.js';
 import { ownerOnly } from '../lib/member-guard.js';
 import { perUser } from '../lib/per-user-limit.js';
 import { runTx } from '../lib/tx-effects.js';
-import { removeContactPhone, sendContactPhoneOtp, verifyContactPhone } from '../services/business/contact-phone.service.js';
+import { contactPhoneView, removeContactPhone, sendContactPhoneOtp, verifyContactPhone } from '../services/business/contact-phone.service.js';
 
-// The business contact number (F6 + F7 spec §5.12, §6.6, §12.2): owner only (`403 OWNER_ONLY`), F1-style OTP and
-// limits (send 5, verify 10 per 10 minutes).
+// The business contact number (F6 + F7 spec §5.12, §6.6, §12.2): writes are owner only (`403 OWNER_ONLY`), F1-style
+// OTP and limits (send 5, verify 10 per 10 minutes). The read is open to every member (it answers `canEdit: false` to a
+// non-owner, with no number), so the screen knows who may edit without a 403 first.
 
 const tags = ['Businesses'];
 const sendBody = z.object({ phone: z.string().max(20) }).strict();
@@ -22,6 +23,11 @@ async function needsBusiness(request: FastifyRequest): Promise<void> {
 const contactPhoneRoutes: FastifyPluginAsync = async (fastify) => {
   const owner = (max: number) => ({ schema: { tags }, preHandler: [fastify.requireUser, needsBusiness, ownerOnly], config: perUser(max) });
 
+  // → `ContactPhoneView` `{ contactPhone, verifiedAt, ownerPhoneFallback, canEdit }`.
+  fastify.get('/businesses/me/contact-phone', { schema: { tags }, preHandler: [fastify.requireUser, needsBusiness] }, async (request) => {
+    const user = { userId: request.user!.userId, businessId: request.user!.businessId! };
+    return { data: await contactPhoneView(fastify.db, user) };
+  });
   // → `{ resendAfter, devCode? }` (devCode outside production only, as sign-in).
   fastify.post('/businesses/me/contact-phone/otp/send', owner(5), async (request) => {
     const { phone } = sendBody.parse(request.body);

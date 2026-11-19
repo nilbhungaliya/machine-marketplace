@@ -1,8 +1,8 @@
 import { eq, sql } from 'drizzle-orm';
 import type { Redis } from 'ioredis';
-import { INDIAN_MOBILE_REGEX, type ContactPhoneState } from '@mpm/shared-types';
+import { INDIAN_MOBILE_REGEX, type ContactPhoneState, type ContactPhoneView } from '@mpm/shared-types';
 import type { Db, Tx } from '../../db/index.js';
-import { businesses } from '../../db/schema.js';
+import { businesses, users } from '../../db/schema.js';
 import { discoveryRedisPrefix } from '../../env.js';
 import { AppError, ValidationError } from '../../lib/errors.js';
 import { currentContactNumber, withdrawContactConsents } from '../consent/contact-consent.service.js';
@@ -37,6 +37,18 @@ async function stateOf(conn: Db | Tx, businessId: string): Promise<ContactPhoneS
     .from(businesses)
     .where(eq(businesses.id, businessId));
   return { contactPhone: b?.phone ?? null, verifiedAt: b?.verifiedAt?.toISOString() ?? null };
+}
+
+/**
+ * `GET /businesses/me/contact-phone`: the owner reads the number and whether the owner-phone fallback is in use (never
+ * the phone itself); any other member reads only `canEdit: false`, so the screen shows the owner-only line.
+ */
+export async function contactPhoneView(conn: Db | Tx, user: { userId: string; businessId: string }): Promise<ContactPhoneView> {
+  const [u] = await conn.select({ memberRole: users.memberRole }).from(users).where(eq(users.id, user.userId));
+  if (u?.memberRole !== 'owner') return { contactPhone: null, verifiedAt: null, ownerPhoneFallback: false, canEdit: false };
+  const state = await stateOf(conn, user.businessId);
+  const current = await currentContactNumber(conn, user.businessId);
+  return { ...state, ownerPhoneFallback: current?.source === 'owner_phone', canEdit: true };
 }
 
 /** `POST /businesses/me/contact-phone/otp/send { phone }`: sends the code and keeps the number pending. */

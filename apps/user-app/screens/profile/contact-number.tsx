@@ -5,18 +5,20 @@ import Toast from 'react-native-toast-message';
 import { OTP_LENGTH } from '@mpm/shared-types';
 import Button from '@/components/Button';
 import { useConfirm } from '@/components/ConfirmSheet';
+import EmptyState from '@/components/EmptyState';
 import Header from '@/components/Header';
 import Input from '@/components/Input';
 import Notice from '@/components/Notice';
 import OtpCells from '@/components/OtpCells';
 import ScreenWrapper from '@/components/ScreenWrapper';
+import Skeleton from '@/components/Skeleton';
 import { useContactPhoneState, useRemoveContactPhone, useSendContactPhoneOtp, useVerifyContactPhone } from '@/hooks/use-chat';
 import { useType } from '@/hooks/use-type';
 import { errorCode } from '@/lib/api-error';
 import { mapAuthError } from '@/lib/auth-errors';
 import { otpFieldState, sanitizePhoneInput } from '@/lib/auth-input';
 import { f6ErrorMessage } from '@/lib/f6-errors';
-import { Lock, Phone } from '@/lib/icons';
+import { Lock, Phone, TriangleAlert } from '@/lib/icons';
 import { fonts, radius, spacing, useTheme } from '@/lib/theme';
 import { isValidMobile, normalizeMobile } from '@/lib/validation/phone';
 import type { RootStackScreenProps } from '@/navigation/types';
@@ -28,9 +30,9 @@ const messageFor = (err: unknown): string =>
 
 /**
  * Profile › Contact number (F6 + F7 spec §6.6, owner only): the number shared after a deal when both sides tick, in
- * place of the owner's phone. Add or replace it with a code sent to the new number, or remove it. The API has no read
- * of the current number, so the screen shows the one it last saved or removed and otherwise offers add / replace; a
- * non-owner learns from the first answer (`403 OWNER_ONLY`) and sees the owner-only line.
+ * place of the owner's phone. Add or replace it with a code sent to the new number, or remove it. The current number
+ * comes from `GET /businesses/me/contact-phone`; a non-owner gets `canEdit: false` there and sees the owner-only line
+ * (a `403 OWNER_ONLY` on a write, after a role change, shows it too).
  */
 export default function ContactNumberScreen(_props: RootStackScreenProps<'ContactNumber'>) {
   const { t } = useTranslation();
@@ -72,6 +74,7 @@ export default function ContactNumberScreen(_props: RootStackScreenProps<'Contac
     link: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center' },
     linkText: { ...type('caption'), fontFamily: fonts.bold, color: colors.primaryInk },
     linkWait: { color: colors.textMuted },
+    skeleton: { height: 72, borderRadius: radius.xl },
   }), [colors, type]);
 
   const fail = (err: unknown) => {
@@ -138,7 +141,36 @@ export default function ContactNumberScreen(_props: RootStackScreenProps<'Contac
     });
   };
 
-  if (ownerOnly) {
+  if (current.isLoading) {
+    return (
+      <ScreenWrapper>
+        <Header title={t('chats.contactNumber.title')} />
+        <View style={s.body} testID="Contact-number-screen">
+          <Skeleton style={s.skeleton} />
+        </View>
+      </ScreenWrapper>
+    );
+  }
+
+  if (current.isError && !ownerOnly) {
+    return (
+      <ScreenWrapper>
+        <Header title={t('chats.contactNumber.title')} />
+        <View style={s.body} testID="Contact-number-screen">
+          <EmptyState
+            icon={TriangleAlert}
+            title={t('chats.contactNumber.loadErrorTitle')}
+            subtitle={t('chats.contactNumber.loadErrorBody')}
+            ctaTitle={t('common.retry')}
+            ctaPhLabel="Contact-number-retry"
+            onCtaPress={() => void current.refetch()}
+          />
+        </View>
+      </ScreenWrapper>
+    );
+  }
+
+  if (ownerOnly || current.data?.canEdit === false) {
     return (
       <ScreenWrapper>
         <Header title={t('chats.contactNumber.title')} />
@@ -165,7 +197,7 @@ export default function ContactNumberScreen(_props: RootStackScreenProps<'Contac
             </View>
           </View>
         ) : (
-          <Text style={s.hint}>{t('chats.contactNumber.unknown')}</Text>
+          <Text style={s.hint}>{t('chats.contactNumber.none')}</Text>
         )}
 
         {stage === 'phone' ? (
@@ -182,13 +214,15 @@ export default function ContactNumberScreen(_props: RootStackScreenProps<'Contac
               testID="Contact-number-phone"
             />
             <Button title={t('chats.contactNumber.sendCode')} onPress={submitPhone} loading={sendOtp.isPending} phLabel="Contact-number-send-code" />
-            <Button
-              title={t('chats.contactNumber.remove')}
-              variant="ghost"
-              onPress={() => void onRemove()}
-              loading={remove.isPending}
-              phLabel="Contact-number-remove"
-            />
+            {saved ? (
+              <Button
+                title={t('chats.contactNumber.remove')}
+                variant="ghost"
+                onPress={() => void onRemove()}
+                loading={remove.isPending}
+                phLabel="Contact-number-remove"
+              />
+            ) : null}
           </>
         ) : (
           <>

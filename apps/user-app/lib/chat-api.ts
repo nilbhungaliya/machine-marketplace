@@ -1,5 +1,5 @@
 import type {
-  ApiSuccess, BlockedBusinessItem, ContactPhoneState, ConversationReportReason, InboxFilter, InboxPage, QuickEnquiry, SignedPhoto,
+  ApiSuccess, BlockedBusinessItem, ContactPhoneState, ContactPhoneView, ConversationReportReason, InboxFilter, InboxPage, QuickEnquiry, SignedPhoto,
   ThreadDetail, ThreadMessage,
 } from '@mpm/shared-types';
 import api from './api';
@@ -102,6 +102,11 @@ export function unblockBusiness(businessId: string): Promise<{ blocked: false }>
 }
 
 // ─── Business contact number (§5.12, owner only) ───
+
+/** GET /businesses/me/contact-phone → the reader's view: the owner gets the number, any other member `canEdit: false`. */
+export function fetchContactPhone(): Promise<ContactPhoneView> {
+  return data(api.get<ApiSuccess<ContactPhoneView>>('/businesses/me/contact-phone'));
+}
 
 /** POST /businesses/me/contact-phone/otp/send { phone } → `{ resendAfter, devCode? }` (devCode outside production). */
 export function sendContactPhoneOtp(phone: string): Promise<{ resendAfter: number; devCode?: string }> {

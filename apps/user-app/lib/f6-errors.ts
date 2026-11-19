@@ -1,6 +1,6 @@
 import { i18n } from '@/lib/i18n';
-import { errorKey } from './api-error';
-import { LISTING_ERROR_KEYS } from './listing-errors';
+import { errorCode, errorKey } from './api-error';
+import { LISTING_ERROR_KEYS, listingErrorMessage } from './listing-errors';
 
 // The F6 + F7 error codes (spec §18) → translated copy (`errors.trade.*`). Server messages are English and never shown.
 // F2's codes it reuses (`LISTING_NOT_FOUND`, `REPORT_EXISTS`, `REPORT_LIMIT`, `STORAGE_UNAVAILABLE`, `RATE_LIMITED`,
@@ -39,4 +39,12 @@ export function f6ErrorKey(err: unknown): string {
 
 export function f6ErrorMessage(err: unknown): string {
   return i18n.t(f6ErrorKey(err));
+}
+
+/**
+ * A listing write (wizard save, manage action, quantity): F6 + F7 codes (`UNIT_LOCKED`, `QUANTITY_BELOW_HELD`, …) read
+ * their own copy; F2's keep `listingErrorMessage` (it names caps).
+ */
+export function listingWriteErrorMessage(err: unknown): string {
+  return (F6_ERROR_CODES as readonly string[]).includes(errorCode(err)) ? f6ErrorMessage(err) : listingErrorMessage(err);
 }

@@ -191,7 +191,7 @@ export default function OfferSheet(props: OfferSheetProps) {
         Toast.show({ type: 'success', text1: t(`offers.sheet.sent.${mode}`) });
         onClose();
         onSent?.({ threadId: r.threadId });
-        if (mode === 'offer' || mode === 'buy') void askPushOnce('offer');
+        void askPushOnce('offer'); // after any send: offer, buy, quote or counter (once per install)
       },
       onError: (err) => {
         const code = errorCode(err);

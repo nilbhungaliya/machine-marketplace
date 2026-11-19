@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
 import { AppState } from 'react-native';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient, type InfiniteData } from '@tanstack/react-query';
-import type { ContactPhoneState, ConversationReportReason, InboxFilter, InboxPage, ThreadDetail } from '@mpm/shared-types';
+import type { ContactPhoneState, ContactPhoneView, ConversationReportReason, InboxFilter, InboxPage, ThreadDetail } from '@mpm/shared-types';
 import { CHAT_LIMITS } from '@mpm/shared-types';
 import { useSocketEmit } from '@/components/SocketProvider';
 import { track } from '@/lib/analytics';
 import { CHAT_EVENTS } from '@/lib/analytics-events';
 import { errorCode } from '@/lib/api-error';
 import {
-  blockThread, fetchBlocks, fetchMessages, fetchThread, fetchThreads, markThreadRead, presignThreadPhoto, removeContactPhone,
+  blockThread, fetchBlocks, fetchContactPhone, fetchMessages, fetchThread, fetchThreads, markThreadRead, presignThreadPhoto, removeContactPhone,
   reportThread, sendContactPhoneOtp, sendEnquiry, sendMessage, setThreadArchived, shareContact, unblockBusiness, verifyContactPhone,
   type EnquiryBody, type SendMessageBody,
 } from '@/lib/chat-api';
@@ -28,7 +28,7 @@ const CHAT_STALE_MS = 15_000;
 
 export const chatKeys = {
   blocks: ['users', 'me', 'blocks'] as const,
-  /** The contact number as last answered by verify / remove (the API has no read of it, see the screen). */
+  /** `GET /businesses/me/contact-phone`; verify / remove write their answer into it. */
   contactPhone: ['businesses', 'me', 'contact-phone'] as const,
 };
 
@@ -246,13 +246,11 @@ export function useSendEnquiry(listingId: string) {
 // ─── Contact number (owner only) ───
 
 export function useContactPhoneState() {
-  return useQuery<ContactPhoneState | null>({
-    queryKey: chatKeys.contactPhone,
-    queryFn: () => null,
-    staleTime: Infinity,
-    gcTime: Infinity,
-  });
+  return useQuery<ContactPhoneView>({ queryKey: chatKeys.contactPhone, queryFn: fetchContactPhone, staleTime: CHAT_STALE_MS });
 }
+
+/** Verify / remove answer the bare state; only the owner can call them, so the owner's view follows from it. */
+const ownerView = (state: ContactPhoneState): ContactPhoneView => ({ ...state, ownerPhoneFallback: state.contactPhone === null, canEdit: true });
 
 export function useSendContactPhoneOtp() {
   return useMutation({ mutationFn: (phone: string) => sendContactPhoneOtp(phone) });
@@ -263,7 +261,7 @@ export function useVerifyContactPhone() {
   return useMutation({
     mutationFn: (code: string) => verifyContactPhone(code),
     onSuccess: (state) => {
-      queryClient.setQueryData(chatKeys.contactPhone, state);
+      queryClient.setQueryData(chatKeys.contactPhone, ownerView(state));
       void queryClient.invalidateQueries({ queryKey: ['thread'] });
     },
   });
@@ -274,7 +272,7 @@ export function useRemoveContactPhone() {
   return useMutation({
     mutationFn: () => removeContactPhone(),
     onSuccess: (state) => {
-      queryClient.setQueryData(chatKeys.contactPhone, state);
+      queryClient.setQueryData(chatKeys.contactPhone, ownerView(state));
       void queryClient.invalidateQueries({ queryKey: ['thread'] });
     },
   });

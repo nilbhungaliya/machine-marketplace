@@ -270,7 +270,6 @@ export default function ListingScreen({ navigation, route }: RootStackScreenProp
           visible={sheet === 'enquire' || sheet === 'ask_price'}
           preset={sheet === 'ask_price' ? 'ask_price' : undefined}
           onClose={() => setSheet(null)}
-          onSent={toThread}
         />
       ) : null}
       {sheets.offer ? (

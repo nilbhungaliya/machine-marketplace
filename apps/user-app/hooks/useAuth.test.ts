@@ -13,8 +13,10 @@ vi.mock('@react-native-async-storage/async-storage', () => ({
     }),
   },
 }));
+const { unregisterPush } = vi.hoisted(() => ({ unregisterPush: vi.fn(async (_token: string | null) => {}) }));
+vi.mock('@/lib/push', () => ({ unregisterPush }));
 vi.mock('expo-secure-store', () => ({
-  getItemAsync: vi.fn(async () => null),
+  getItemAsync: vi.fn(async () => 'session-token'),
   setItemAsync: vi.fn(async () => {}),
   deleteItemAsync: vi.fn(async () => {}),
 }));
@@ -57,5 +59,7 @@ describe('sign-out clears on-device discovery data (DPDP, shared devices)', () =
     expect(asyncStore['discover.mode.v1']).toBe('auto');
     expect(originStore.getSnapshot()).toMatchObject({ mode: 'auto', pincode: null, fix: null, echo: null });
     expect(store.getState().auth).toMatchObject({ isAuthenticated: false, guest: false, pending: null });
+    // Every sign-out path deletes this phone's push device with the session's token (F6 + F7 §11.6).
+    expect(unregisterPush).toHaveBeenCalledWith('session-token');
   });
 });

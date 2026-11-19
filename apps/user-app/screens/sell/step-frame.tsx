@@ -13,7 +13,7 @@ import Skeleton from '@/components/Skeleton';
 import EmptyState from '@/components/EmptyState';
 import { useConfirm } from '@/components/ConfirmSheet';
 import { TriangleAlert } from '@/lib/icons';
-import { listingErrorMessage } from '@/lib/listing-errors';
+import { listingWriteErrorMessage } from '@/lib/f6-errors';
 import type { SellStep } from '@/lib/sell-steps';
 import { stepPosition } from '@/lib/sell-wizard';
 import { radius, spacing } from '@/lib/theme';
@@ -115,7 +115,7 @@ export default function StepFrame({
           return;
         } catch (err) {
           // The details were fine; the save itself failed (network, server): say that, not "incomplete".
-          return ask(`${listingErrorMessage(err)}\n${t('sell.leave.saveFailedMessage')}`);
+          return ask(`${listingWriteErrorMessage(err)}\n${t('sell.leave.saveFailedMessage')}`);
         } finally {
           setBusy(false);
         }
@@ -135,7 +135,7 @@ export default function StepFrame({
       try {
         if (await ctx.complete(p)) setSaved(snapshot(p));
       } catch (err) {
-        Toast.show({ type: 'error', text1: listingErrorMessage(err) });
+        Toast.show({ type: 'error', text1: listingWriteErrorMessage(err) });
         onSaveError?.(err);
       } finally {
         leaving.current = false;

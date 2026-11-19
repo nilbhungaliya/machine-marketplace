@@ -16,9 +16,8 @@ import {
   ArrowLeftRight, Ban, Check, CircleX, Eye, Package, Pause, Pencil, Play, RefreshCw, RotateCcw, Tag, Trash, type LucideIcon,
 } from '@/lib/icons';
 import { deleteDraft, fetchOwnerListing } from '@/lib/listing-api';
-import { errorCode } from '@/lib/api-error';
-import { F6_ERROR_CODES, f6ErrorMessage } from '@/lib/f6-errors';
-import { listingErrorMessage, needsGstVerification } from '@/lib/listing-errors';
+import { listingWriteErrorMessage } from '@/lib/f6-errors';
+import { needsGstVerification } from '@/lib/listing-errors';
 import { quantityText } from '@/lib/listing-format';
 import { holdsManageItems, holdsOf, openDealIds, pauseNeedsWarning } from '@/lib/my-listings-holds';
 import {
@@ -36,10 +35,6 @@ export type ManageTarget = Pick<
   ListingCard, 'id' | 'status' | 'kind' | 'side' | 'title' | 'quantity' | 'availableQuantity' | 'unit' | 'businessId'
 >;
 
-/** F6 + F7 codes read their own copy (`errors.trade.*`); F2's keep `listingErrorMessage` (it names caps). */
-function actionErrorMessage(err: unknown): string {
-  return (F6_ERROR_CODES as readonly string[]).includes(errorCode(err)) ? f6ErrorMessage(err) : listingErrorMessage(err);
-}
 
 const ICONS: Record<ManageItem, LucideIcon> = {
   edit: Pencil,
@@ -143,10 +138,10 @@ export function useRunListingAction() {
           else navigation.navigate('Main', { screen: 'Deals' });
         }
       } else if (step) {
-        Toast.show({ type: 'info', text1: actionErrorMessage(err) });
+        Toast.show({ type: 'info', text1: listingWriteErrorMessage(err) });
         navigation.navigate('Sell', { listingId: listing.id, step, mode: 'edit' });
       } else if (needsGstVerification(err)) {
-        const verify = await confirm({ title: actionErrorMessage(err), confirmLabel: t('listing.manage.verifyGst') });
+        const verify = await confirm({ title: listingWriteErrorMessage(err), confirmLabel: t('listing.manage.verifyGst') });
         if (verify) {
           try {
             openTarget(navigation, gstScreen(await qc.fetchQuery(gstStateQuery)));
@@ -155,7 +150,7 @@ export function useRunListingAction() {
           }
         }
       } else {
-        Toast.show({ type: 'error', text1: actionErrorMessage(err) });
+        Toast.show({ type: 'error', text1: listingWriteErrorMessage(err) });
       }
       return false;
     }

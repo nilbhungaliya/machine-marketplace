@@ -19,6 +19,7 @@ import { i18n } from '@/lib/i18n';
 import { sessionEndReason } from '@/lib/session-events';
 import { decodeJwtPayload, isExpired } from '@/lib/jwt';
 import { queryClient } from '@/lib/queryClient';
+import { unregisterPush } from '@/lib/push';
 import {
   cachedStep,
   cacheStep,
@@ -87,13 +88,18 @@ export async function signIn(
 }
 
 /**
- * Sign-out. Without these the next person on this device inherits the profile, the analytics identity and the
- * previous person's discovery (recently viewed, recent searches, pincode and location source: DPDP, shared devices).
+ * Sign-out, every path (Profile's logout, a session ended mid-use: expired, refused or suspended). Without these the
+ * next person on this device inherits the profile, the analytics identity and the previous person's discovery (recently
+ * viewed, recent searches, pincode and location source: DPDP, shared devices), and this phone keeps getting their
+ * pushes: the session's token is read before it is cleared to delete this install's push device (F6 + F7 §11.6), in the
+ * background, so sign-out never waits on the network.
  */
 export async function signOut(dispatch: AppDispatch): Promise<void> {
   track(AUTH_EVENTS.loggedOut);
   resetAnalytics();
   setErrorUser(null);
+  const token = await SecureStore.getItemAsync(TOKEN_KEY).catch(() => null);
+  void unregisterPush(token);
   await SecureStore.deleteItemAsync(TOKEN_KEY);
   await Promise.all([forgetGuest(), clearDiscoveryOnDevice()]);
   queryClient.clear();
@@ -158,6 +164,7 @@ export function useAuth() {
     const payload = decodeJwtPayload(token);
     if (!payload || isExpired(payload)) {
       await SecureStore.deleteItemAsync(TOKEN_KEY);
+      void unregisterPush(token); // a session that ended while the app was closed: stop its pushes on this phone too
       return 'rejected';
     }
     const userId = payload.userId;
@@ -179,6 +186,7 @@ export function useAuth() {
       const resumed = stepAfterBootError(failure, await cachedStep(userId));
       if (resumed === 'signed_out') {
         await SecureStore.deleteItemAsync(TOKEN_KEY);
+        void unregisterPush(token);
         setErrorUser(null);
         if (sessionEndReason(failure) === 'suspended') showSuspendedToast();
         return 'rejected';

@@ -27,6 +27,7 @@ export interface EnquireSheetProps {
   visible: boolean;
   preset?: 'ask_price';
   onClose: () => void;
+  /** After the send; the sheet itself opens the thread, so don't navigate here. */
   onSent?: (threadId: string) => void;
 }
 

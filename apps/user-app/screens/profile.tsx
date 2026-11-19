@@ -2,7 +2,6 @@ import React, { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import Toast from 'react-native-toast-message';
-import * as SecureStore from 'expo-secure-store';
 import { useQuery } from '@tanstack/react-query';
 import ScreenWrapper from '@/components/ScreenWrapper';
 import Header from '@/components/Header';
@@ -22,11 +21,9 @@ import { SETTINGS_EVENTS } from '@/lib/analytics-events';
 import { completionSegments, gstChip, profileRowTarget, type ProfileRow } from '@/lib/gst-flow';
 import { setLanguage, useLanguage } from '@/lib/i18n/language';
 import { LANGUAGE_OPTIONS } from '@/lib/i18n/language-names';
-import { TOKEN_KEY } from '@/lib/api';
 import {
   Ban, BellRing, Building2, ChevronRight, ClipboardList, Globe, Heart, MapPin, ShieldCheck, Star, User, type LucideIcon,
 } from '@/lib/icons';
-import { unregisterPush } from '@/lib/push';
 import { qk } from '@/lib/query-keys';
 import { scoreDisplay } from '@/lib/review-form';
 import { fetchMyReviews } from '@/lib/reviews-api';
@@ -85,10 +82,8 @@ export default function ProfileScreen({ navigation }: RootStackScreenProps<'Prof
       destructive: true,
     });
     if (!ok) return;
-    // Read before the session is cleared: it authorises deleting this phone's push device (§11.6), in the background.
-    const token = await SecureStore.getItemAsync(TOKEN_KEY).catch(() => null);
+    // `signOut` also deletes this phone's push device (§11.6), in the background.
     await logout();
-    void unregisterPush(token);
   };
 
 

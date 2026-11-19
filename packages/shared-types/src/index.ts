@@ -2657,6 +2657,17 @@ export interface ContactPhoneState {
   verifiedAt: string | null;
 }
 
+/**
+ * `GET /businesses/me/contact-phone` (Profile › Contact number, §6.6): the state for the reader. Only the owner
+ * (`canEdit`) reads the number; any other member gets `contactPhone` / `verifiedAt` null and `ownerPhoneFallback`
+ * false. The owner's personal phone is never returned: `ownerPhoneFallback` only says that a tick would share it
+ * (no verified contact number).
+ */
+export interface ContactPhoneView extends ContactPhoneState {
+  ownerPhoneFallback: boolean;
+  canEdit: boolean;
+}
+
 /** One row of `GET /users/me/blocks` (Profile › Blocked businesses, §6.11): name masked. */
 export interface BlockedBusinessItem {
   businessId: string;
