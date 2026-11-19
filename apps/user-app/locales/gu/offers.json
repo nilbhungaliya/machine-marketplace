@@ -34,7 +34,8 @@
     "note": "નોંધ (વૈકલ્પિક)",
     "noteHint": "ટૂંકી નોંધ લખો",
     "total": "કુલ",
-    "percentBelow": "માગેલા ભાવથી {{percent}}% ઓછું"
+    "percentBelow": "માગેલા ભાવથી {{percent}}% ઓછું",
+    "optionsError": "ઓફર કેટલો સમય ખુલ્લી રહી શકે, તે લોડ ન થયું."
   },
   "validity": {
     "hours_one": "{{count}} કલાક",

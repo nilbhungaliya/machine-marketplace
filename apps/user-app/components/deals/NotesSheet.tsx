@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import Toast from 'react-native-toast-message';
 import {
-  DEAL_FULFILMENT, DEAL_LIMITS, DEAL_PAYMENT_METHODS, type DealFulfilment, type DealPaymentMethod, type DealView,
+  DEAL_FULFILMENT, DEAL_LIMITS, DEAL_PAYMENT_METHODS, type DealView,
 } from '@mpm/shared-types';
 import BottomSheet from '@/components/BottomSheet';
 import Button from '@/components/Button';
@@ -15,11 +16,13 @@ import { useType } from '@/hooks/use-type';
 import { track } from '@/lib/analytics';
 import { DEAL_EVENTS } from '@/lib/analytics-events';
 import { errorCode } from '@/lib/api-error';
-import { advanceFits, balanceOf, dayInputText, parseDayInput, rupeesInputText } from '@/lib/deal-display';
-import type { DealNotesPatch } from '@/lib/deals-api';
+import { advanceFits, balanceOf, parseDayInput } from '@/lib/deal-display';
+import { notesFormOf, notesPatchBody, rebaseNotesForm, type NotesForm, type NotesSnapshot } from '@/lib/deal-notes-form';
+import { fetchDeal } from '@/lib/deals-api';
 import { f6ErrorMessage } from '@/lib/f6-errors';
 import { parseRupees } from '@/lib/money';
 import { formatPaiseText } from '@/lib/offer-form';
+import { qk } from '@/lib/query-keys';
 import { spacing, useTheme } from '@/lib/theme';
 
 interface NotesSheetProps {
@@ -28,39 +31,48 @@ interface NotesSheetProps {
   onClose: () => void;
 }
 
-interface Form {
-  paymentMethod: DealPaymentMethod | null;
-  advance: string;
-  fulfilment: DealFulfilment | null;
-  expectedOn: string;
-  text: string;
-}
+type Form = NotesForm;
 
-const formOf = (d: DealView): Form => ({
-  paymentMethod: d.notes.paymentMethod,
-  advance: rupeesInputText(d.notes.advancePaise),
-  fulfilment: d.notes.fulfilment,
-  expectedOn: dayInputText(d.notes.expectedOn),
-  text: d.notes.text ?? '',
-});
+const snapshotOf = (d: DealView): NotesSnapshot => ({ version: d.version, form: notesFormOf(d.notes) });
 
 /**
- * Edit the deal's shared notes (§9.1): one record for both sides, last write wins with `version`; a stale edit answers
- * `409 DEAL_STALE`, the record refetches (the next save carries the new version) and the user checks it again.
+ * Edit the deal's shared notes (§9.1): one record for both sides, last write wins with `version`. The sheet snapshots
+ * the notes it opened on and sends only what changed against that snapshot; a stale edit (`409 DEAL_STALE`) refetches
+ * the record and rebases the form onto it (untouched fields take the new values, edits stay) for the user to check.
  */
 export default function NotesSheet({ deal, visible, onClose }: NotesSheetProps) {
   const { t } = useTranslation();
   const { colors } = useTheme();
   const type = useType();
+  const qc = useQueryClient();
   const write = useDealWrite(deal.id);
-  const [form, setForm] = useState<Form>(() => formOf(deal));
+  const [base, setBase] = useState<NotesSnapshot>(() => snapshotOf(deal));
+  const [form, setForm] = useState<Form>(() => base.form);
   const [tried, setTried] = useState(false);
+  const [rebasing, setRebasing] = useState(false);
 
   useEffect(() => {
     if (!visible) return;
-    setForm(formOf(deal));
+    const snap = snapshotOf(deal);
+    setBase(snap);
+    setForm(snap.form);
     setTried(false);
   }, [visible]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // DEAL_STALE: fetch the record now, rebase the user's edits onto it and keep the sheet open.
+  const rebase = async () => {
+    setRebasing(true);
+    try {
+      const fresh = await qc.fetchQuery({ queryKey: qk.deal(deal.id), queryFn: () => fetchDeal(deal.id), staleTime: 0 });
+      const next = rebaseNotesForm(form, base, snapshotOf(fresh));
+      setBase(next.base);
+      setForm(next.form);
+    } catch {
+      // The record stays as it was; the next save answers DEAL_STALE again.
+    } finally {
+      setRebasing(false);
+    }
+  };
 
   const s = useMemo(() => StyleSheet.create({
     chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
@@ -80,15 +92,9 @@ export default function NotesSheet({ deal, visible, onClose }: NotesSheetProps) 
   const save = () => {
     setTried(true);
     if (advanceError || dayError || textError) return;
-    // Only what changed goes out, with the version the form was opened on (or refetched to).
-    const before = formOf(deal);
-    const body: DealNotesPatch = { version: deal.version };
-    if (form.paymentMethod !== before.paymentMethod) body.paymentMethod = form.paymentMethod;
-    if (form.advance.trim() !== before.advance) body.advancePaise = advanceText;
-    if (form.fulfilment !== before.fulfilment) body.fulfilment = form.fulfilment;
-    if (form.expectedOn.trim() !== before.expectedOn) body.expectedOn = day === '' ? null : day;
-    if (form.text.trim() !== before.text.trim()) body.text = form.text.trim() === '' ? null : form.text.trim();
-    if (Object.keys(body).length === 1) {
+    // Only what changed against the snapshot goes out, with the snapshot's version.
+    const body = notesPatchBody(form, base);
+    if (!body) {
       onClose();
       return;
     }
@@ -99,7 +105,12 @@ export default function NotesSheet({ deal, visible, onClose }: NotesSheetProps) 
         onClose();
       },
       onError: (err) => {
-        Toast.show({ type: 'error', text1: errorCode(err) === 'DEAL_STALE' ? t('errors.trade.dealStale') : f6ErrorMessage(err) });
+        if (errorCode(err) === 'DEAL_STALE') {
+          Toast.show({ type: 'error', text1: t('errors.trade.dealStale') });
+          void rebase();
+          return;
+        }
+        Toast.show({ type: 'error', text1: f6ErrorMessage(err) });
       },
     });
   };
@@ -164,7 +175,7 @@ export default function NotesSheet({ deal, visible, onClose }: NotesSheetProps) 
         error={textError}
         testID="Deal-notes-text"
       />
-      <Button title={t('deals.notes.save')} onPress={save} loading={write.isPending} phLabel="Deal-notes-save" />
+      <Button title={t('deals.notes.save')} onPress={save} loading={write.isPending || rebasing} phLabel="Deal-notes-save" />
     </BottomSheet>
   );
 }

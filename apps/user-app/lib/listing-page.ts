@@ -25,6 +25,21 @@ export function contactActions(l: { kind: ListingKind; priceModel: PriceModel | 
   return ['enquire'];
 }
 
+/**
+ * Which contact sheets the listing page mounts (F6 + F7 §7.1, §15.2): never on the owner's own listing; the enquiry
+ * sheet (Enquire / Ask price) for every buyer, the offer sheet (Make offer / Buy) only where the price model has one.
+ * Mounted beside the page's other sheets, outside the footer, so a guest's pending action can open them on arrival.
+ */
+export function contactSheets(l: { isOwner: boolean; kind: ListingKind; priceModel: PriceModel | null }):
+  { enquire: boolean; offer: boolean } {
+  if (l.isOwner) return { enquire: false, offer: false };
+  const actions = contactActions(l);
+  return {
+    enquire: actions.includes('enquire') || actions.includes('ask_price'),
+    offer: actions.includes('make_offer') || actions.includes('buy'),
+  };
+}
+
 /** A footer button of the listing page: the action, or `open_chat` when the buyer already has a thread here. */
 export type ContactButtonAction = ContactAction | 'open_chat';
 

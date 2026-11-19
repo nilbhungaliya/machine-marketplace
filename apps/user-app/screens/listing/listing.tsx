@@ -26,7 +26,7 @@ import { LISTING_EVENTS } from '@/lib/analytics-events';
 import { Info, Package, TriangleAlert } from '@/lib/icons';
 import { quantityText } from '@/lib/listing-format';
 import {
-  arrivalAction, contactButtons, hasOtherSide, isListingGone, pendingContactOf, sheetOf, signInReasonOf,
+  arrivalAction, contactButtons, contactSheets, hasOtherSide, isListingGone, pendingContactOf, sheetOf, signInReasonOf,
   type ContactButtonAction,
 } from '@/lib/listing-page';
 import { editEntry, manageItems, ownerNote, statusChip, type ManageAction } from '@/lib/my-listings';
@@ -189,6 +189,7 @@ export default function ListingScreen({ navigation, route }: RootStackScreenProp
   ) : null;
 
   const contact = contactButtons(listing);
+  const sheets = contactSheets({ isOwner, kind: listing.kind, priceModel: listing.priceModel });
   const tapContact = (action: ContactButtonAction) => {
     track(LISTING_EVENTS.contactTapped, { action, kind: listing.kind });
     if (action === 'open_chat') {
@@ -238,27 +239,7 @@ export default function ListingScreen({ navigation, route }: RootStackScreenProp
       <FooterBar style={s.footer}>
         {isOwner ? (
           <>
-            {!isOwner ? (
-        <>
-          <EnquireSheet
-            listing={listing}
-            visible={sheet === 'enquire' || sheet === 'ask_price'}
-            preset={sheet === 'ask_price' ? 'ask_price' : undefined}
-            onClose={() => setSheet(null)}
-            onSent={toThread}
-          />
-          {listing.priceModel === 'negotiable' || listing.priceModel === 'fixed' ? (
-            <OfferSheet
-              mode={sheet === 'buy' ? 'buy' : 'offer'}
-              listing={listing}
-              visible={sheet === 'offer' || sheet === 'buy'}
-              onClose={() => setSheet(null)}
-              onSent={(r) => toThread(r.threadId)}
-            />
-          ) : null}
-        </>
-      ) : null}
-      {canManage ? (
+            {canManage ? (
               <Button title={t('listing.owner.manage')} onPress={() => setManaging(true)} variant="outline" size="md" phLabel="Listing-manage" />
             ) : null}
             {editEntry(listing.status) ? (
@@ -282,6 +263,24 @@ export default function ListingScreen({ navigation, route }: RootStackScreenProp
 
       {listing.fitments.length > 0 ? (
         <CheckMyMachineSheet visible={sheet === 'fit'} fitments={listing.fitments} onClose={() => setSheet(null)} />
+      ) : null}
+      {sheets.enquire ? (
+        <EnquireSheet
+          listing={listing}
+          visible={sheet === 'enquire' || sheet === 'ask_price'}
+          preset={sheet === 'ask_price' ? 'ask_price' : undefined}
+          onClose={() => setSheet(null)}
+          onSent={toThread}
+        />
+      ) : null}
+      {sheets.offer ? (
+        <OfferSheet
+          mode={sheet === 'buy' ? 'buy' : 'offer'}
+          listing={listing}
+          visible={sheet === 'offer' || sheet === 'buy'}
+          onClose={() => setSheet(null)}
+          onSent={(r) => toThread(r.threadId)}
+        />
       ) : null}
       {!isOwner ? (
         <ReportSheet visible={sheet === 'report'} listingId={listingId} listingTitle={listing.title} onClose={() => setSheet(null)} />

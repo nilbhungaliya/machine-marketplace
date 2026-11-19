@@ -21,7 +21,8 @@ export interface OfferFormValues {
   price: string;
   /** Quantity as typed. */
   quantity: string;
-  validityHours: number;
+  /** One of the server's choices (`GET /offers/options`); null until they arrive, and nothing is sent without it. */
+  validityHours: number | null;
   note: string;
 }
 
@@ -177,7 +178,7 @@ export function defaultOfferQuantity(minOrderQty: string | null, available: stri
   return milliToQuantity(a < want ? a : want);
 }
 
-/** The sheet's starting values per mode (§7.2): validity is the settings' default (the middle choice). */
+/** The sheet's starting values per mode (§7.2): validity is the settings' default (null until the options arrive). */
 export function offerFormState(input: {
   mode: OfferMode;
   listing?: Pick<ListingDetail, 'minOrderQty' | 'availableQuantity'> | null;
@@ -188,7 +189,7 @@ export function offerFormState(input: {
   /** Quote / counter: what the strip says is available and the minimum, for the default. */
   strip?: { minOrderQty: string | null; availableQuantity: string | null } | null;
 }): OfferFormValues {
-  const validityHours = input.options?.defaultValidityHours ?? 48;
+  const validityHours = input.options?.defaultValidityHours ?? null;
   if (input.mode === 'counter') {
     return { price: '', quantity: input.offer?.quantity ?? '', validityHours, note: '' };
   }
@@ -204,6 +205,16 @@ export function offerFormState(input: {
     validityHours,
     note: '',
   };
+}
+
+/**
+ * The options arrived after the sheet opened: only the validity takes the server's default, and only when the user
+ * hasn't picked one the server offers. Price, quantity and note stay as typed. The same object when nothing changes.
+ */
+export function withOfferOptions(values: OfferFormValues, options: Pick<OffersOptions, 'validityHours' | 'defaultValidityHours'>):
+  OfferFormValues {
+  if (values.validityHours != null && options.validityHours.includes(values.validityHours)) return values;
+  return { ...values, validityHours: options.defaultValidityHours };
 }
 
 /** Prefills a typed price (e.g. "Use asking price") as the input shows it. */
@@ -256,9 +267,13 @@ export interface OfferTermsBody {
   note?: string;
 }
 
-/** The request body for valid values (call after `validateOfferForm` found nothing). */
+/**
+ * The request body for valid values (call after `validateOfferForm` found nothing); null without a validity from the
+ * server's options, so a fallback the server may refuse is never sent.
+ */
 export function offerRequestBody(values: OfferFormValues, ctx: Pick<OfferFormContext, 'mode' | 'unitDecimals' | 'askingPaise'>):
-  SendOfferBody | OfferTermsBody {
+  SendOfferBody | OfferTermsBody | null {
+  if (values.validityHours == null) return null;
   const q = parseQuantity(values.quantity, ctx.unitDecimals);
   const quantity = q.ok ? q.value : values.quantity.trim();
   const note = values.note.trim();

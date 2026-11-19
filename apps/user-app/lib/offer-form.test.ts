@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { counterBounds } from '@mpm/shared-types';
 import {
   boundsHint, counterLimitReached, formatPaiseText, defaultOfferQuantity, isNegotiableChain, offerFormState, offerRequestBody, offerTotals,
-  ownLatestFor, roundLabel, validateOfferForm, type OfferFormContext, type OfferFormValues,
+  ownLatestFor, roundLabel, validateOfferForm, withOfferOptions, type OfferFormContext, type OfferFormValues,
 } from './offer-form';
 
 const values = (over: Partial<OfferFormValues> = {}): OfferFormValues => ({
@@ -124,6 +124,17 @@ describe('defaults and labels', () => {
       .toEqual({ kind: 'offer', pricePerUnitPaise: 34_000, quantity: '2', validityHours: 48, note: 'hi' });
     expect(offerRequestBody(values(), { mode: 'counter', unitDecimals: 0, askingPaise: 1 }))
       .toEqual({ pricePerUnitPaise: 34_000, quantity: '2', validityHours: 48 });
+  });
+  it('validity: nothing is sent until the options arrive; their arrival keeps what was typed', () => {
+    const opened = offerFormState({ mode: 'offer', listing: { minOrderQty: null, availableQuantity: '5' }, options: null });
+    expect(opened.validityHours).toBeNull();
+    expect(offerRequestBody({ ...opened, price: '340' }, { mode: 'offer', unitDecimals: 0, askingPaise: 1 })).toBeNull();
+    const typed = { ...opened, price: '340', quantity: '3', note: 'ok' };
+    const options = { validityHours: [24, 48, 168], defaultValidityHours: 48 };
+    expect(withOfferOptions(typed, options)).toEqual({ price: '340', quantity: '3', note: 'ok', validityHours: 48 });
+    const picked = values({ validityHours: 168 });
+    expect(withOfferOptions(picked, options)).toBe(picked);
+    expect(withOfferOptions(values({ validityHours: 72 }), options).validityHours).toBe(48);
   });
 });
 

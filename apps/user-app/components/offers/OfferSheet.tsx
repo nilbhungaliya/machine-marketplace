@@ -9,6 +9,7 @@ import Button from '@/components/Button';
 import Chip from '@/components/Chip';
 import Field from '@/components/Field';
 import Input from '@/components/Input';
+import Notice from '@/components/Notice';
 import PriceText from '@/components/PriceText';
 import { useOffersOptions, useOfferWrite } from '@/hooks/use-offers';
 import { useType } from '@/hooks/use-type';
@@ -17,10 +18,11 @@ import { OFFER_EVENTS } from '@/lib/analytics-events';
 import { errorCode, errorDetails } from '@/lib/api-error';
 import { f6ErrorMessage } from '@/lib/f6-errors';
 import { quantityText, unitPer } from '@/lib/listing-format';
+import { TriangleAlert } from '@/lib/icons';
 import { formatRupees } from '@/lib/money';
 import {
   boundsHint, effectivePricePaise, formatPaiseText, hasOfferErrors, isNegotiableChain, offerFormState, offerRequestBody,
-  offerTotals, ownLatestFor, roundLabel, validateOfferForm, validityParts, type OfferFormContext, type OfferFormErrors,
+  offerTotals, ownLatestFor, roundLabel, validateOfferForm, validityParts, withOfferOptions, type OfferFormContext, type OfferFormErrors,
   type OfferFormValues, type OfferTermsBody, type SendOfferBody,
 } from '@/lib/offer-form';
 import { askPushOnce } from '@/lib/push-ask';
@@ -80,7 +82,7 @@ export default function OfferSheet(props: OfferSheetProps) {
   const [values, setValues] = useState<OfferFormValues>(() => offerFormState({ mode }));
   const [tried, setTried] = useState(false);
 
-  // A fresh form each time the sheet opens (and once the validity choices arrive).
+  // A fresh form each time the sheet opens.
   useEffect(() => {
     if (!visible) return;
     setValues(offerFormState({
@@ -91,7 +93,14 @@ export default function OfferSheet(props: OfferSheetProps) {
       strip: { minOrderQty: ctx.minOrderQty, availableQuantity: ctx.available },
     }));
     setTried(false);
-  }, [visible, mode, listing?.id, offer?.id, options.data?.defaultValidityHours]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [visible, mode, listing?.id, offer?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // The validity choices arrived (or changed) while open: only the validity follows, what was typed stays.
+  useEffect(() => {
+    if (!visible || !options.data) return;
+    const data = options.data;
+    setValues((v) => withOfferOptions(v, data));
+  }, [visible, options.data]);
 
   const s = useMemo(() => StyleSheet.create({
     asked: {
@@ -110,6 +119,7 @@ export default function OfferSheet(props: OfferSheetProps) {
     totalAmount: { ...type('price'), color: colors.text },
     totalNote: { ...type('caption'), color: colors.textSecondary },
     locked: { ...type('caption'), color: colors.textMuted },
+    retry: { alignSelf: 'flex-start', marginTop: spacing.sm },
   }), [colors, type]);
 
   const errors: OfferFormErrors = validateOfferForm(values, ctx);
@@ -163,6 +173,7 @@ export default function OfferSheet(props: OfferSheetProps) {
     setTried(true);
     if (hasOfferErrors(errors)) return;
     const body = offerRequestBody(values, ctx);
+    if (!body) return;
     const threadId = props.threadId ?? offer?.threadId ?? null;
     const w = mode === 'counter' && offer
       ? { type: 'counter' as const, offer, body: body as OfferTermsBody }
@@ -199,7 +210,7 @@ export default function OfferSheet(props: OfferSheetProps) {
   };
 
   const set = (patch: Partial<OfferFormValues>) => setValues((v) => ({ ...v, ...patch }));
-  const choices = options.data?.validityHours ?? [24, 48, 168];
+  const choices = options.data?.validityHours ?? [];
 
   return (
     <BottomSheet visible={visible} onClose={onClose} title={title} subtitle={round ? t(round.key, round.values) : undefined} testID="Offer-sheet-backdrop">
@@ -245,6 +256,18 @@ export default function OfferSheet(props: OfferSheetProps) {
       {quantityHint && !shown.quantity ? <Text style={s.hint}>{quantityHint}</Text> : null}
 
       <Field label={t('offers.sheet.validity')}>
+        {options.isError && !options.data ? (
+          <Notice tone="warning" icon={TriangleAlert} text={t('offers.sheet.optionsError')}>
+            <Button
+              title={t('common.retry')}
+              onPress={() => void options.refetch()}
+              variant="outline"
+              size="sm"
+              phLabel="Offer-options-retry"
+              style={s.retry}
+            />
+          </Notice>
+        ) : null}
         <View style={s.chips}>
           {choices.map((h) => {
             const v = validityParts(h);
@@ -280,7 +303,13 @@ export default function OfferSheet(props: OfferSheetProps) {
         </View>
       </View>
 
-      <Button title={submitLabel} onPress={submit} loading={write.isPending} phLabel={`Offer-submit-${mode}`} />
+      <Button
+        title={submitLabel}
+        onPress={submit}
+        loading={write.isPending || options.isLoading}
+        disabled={values.validityHours == null}
+        phLabel={`Offer-submit-${mode}`}
+      />
     </BottomSheet>
   );
 }

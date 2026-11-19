@@ -34,7 +34,8 @@
     "note": "Note (optional)",
     "noteHint": "Add a short note",
     "total": "Total",
-    "percentBelow": "{{percent}}% below asking"
+    "percentBelow": "{{percent}}% below asking",
+    "optionsError": "Couldn't load how long an offer can stay open."
   },
   "validity": {
     "hours_one": "{{count}} hour",

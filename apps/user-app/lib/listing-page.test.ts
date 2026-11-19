@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import type { OtherSideCard, OtherSideResult } from '@mpm/shared-types';
 import { cardFixture } from './listing-fixtures.test-helper';
 import {
-  REPORT_DETAILS_MAX, arrivalAction, availabilityLine, contactActions, contactButtons, hasOtherSide, pendingContactOf, signInReasonOf, isListingGone, otherSideBlock, parseFitChoice, parseFitYear, reportBody,
-  reportProblem, serializeFitChoice,
+  REPORT_DETAILS_MAX, arrivalAction, availabilityLine, contactActions, contactSheets, contactButtons, hasOtherSide, pendingContactOf, signInReasonOf, isListingGone, otherSideBlock, parseFitChoice, parseFitYear, reportBody,
+  reportProblem, serializeFitChoice, sheetOf,
 } from './listing-page';
 
 const match = (over: Partial<OtherSideCard> = {}): OtherSideCard => ({
@@ -26,6 +26,25 @@ describe('contactActions (F6 + F7 §7.1)', () => {
       expect(contactActions({ kind: 'machine_rental', priceModel })).toEqual(['enquire']);
     }
     expect(contactActions({ kind: 'part', priceModel: null })).toEqual(['enquire']);
+  });
+});
+
+describe('contactSheets (§7.1, §15.2)', () => {
+  it('a buyer gets the sheets their buttons open; the owner gets none', () => {
+    expect(contactSheets({ isOwner: false, kind: 'part', priceModel: 'negotiable' })).toEqual({ enquire: true, offer: true });
+    expect(contactSheets({ isOwner: false, kind: 'part', priceModel: 'fixed' })).toEqual({ enquire: true, offer: true });
+    expect(contactSheets({ isOwner: false, kind: 'part', priceModel: 'on_request' })).toEqual({ enquire: true, offer: false });
+    expect(contactSheets({ isOwner: false, kind: 'machine_rental', priceModel: null })).toEqual({ enquire: true, offer: false });
+    expect(contactSheets({ isOwner: true, kind: 'part', priceModel: 'negotiable' })).toEqual({ enquire: false, offer: false });
+  });
+  it('every contact action a buyer can tap has its sheet mounted', () => {
+    for (const priceModel of ['negotiable', 'fixed', 'on_request'] as const) {
+      const sheets = contactSheets({ isOwner: false, kind: 'part', priceModel });
+      for (const a of contactActions({ kind: 'part', priceModel })) {
+        const sheet = sheetOf(a);
+        expect(sheet === 'enquire' || sheet === 'ask_price' ? sheets.enquire : sheets.offer).toBe(true);
+      }
+    }
   });
 });
 

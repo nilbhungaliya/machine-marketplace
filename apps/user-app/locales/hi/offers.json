@@ -34,7 +34,8 @@
     "note": "नोट (वैकल्पिक)",
     "noteHint": "छोटा नोट लिखें",
     "total": "कुल",
-    "percentBelow": "माँगी गई कीमत से {{percent}}% कम"
+    "percentBelow": "माँगी गई कीमत से {{percent}}% कम",
+    "optionsError": "ऑफ़र कितने समय तक खुला रह सकता है, यह लोड नहीं हो सका।"
   },
   "validity": {
     "hours_one": "{{count}} घंटा",
