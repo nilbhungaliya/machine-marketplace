@@ -24,6 +24,8 @@ export const discoverKeys = {
   browse: (body: BrowseRequest) => ['discover', 'browse', body] as const,
   brand: (body: BrandBrowseRequest) => ['discover', 'brand', body] as const,
   cards: (ids: readonly string[], origin: DiscoveryOrigin) => ['discover', 'cards', ids, origin] as const,
+  /** Every `cards` query (the listing page's heart reads its state from one). */
+  allCards: ['discover', 'cards'] as const,
   suggest: (q: string) => ['discover', 'suggest', q] as const,
   trending: ['discover', 'trending'] as const,
   saved: ['discover', 'saved'] as const,

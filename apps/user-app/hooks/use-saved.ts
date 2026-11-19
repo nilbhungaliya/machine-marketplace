@@ -121,6 +121,8 @@ export async function runPendingAction(
     applySaved(qc, listingId, true);
     // The listing page may have been refetched (sign-in clears the cache) before the save landed.
     void qc.invalidateQueries({ queryKey: listingKeys.detail(listingId) });
+    // ...and so may its heart's `/discover/cards` read: refetch it, so a stale `saved: false` can't land over the patch.
+    void qc.invalidateQueries({ queryKey: discoverKeys.allCards });
     void qc.invalidateQueries({ queryKey: discoverKeys.saved });
     track(AUTH_EVENTS.pendingActionCompleted, { type: pending.type });
     track(SAVED_EVENTS.listingSaved, { listingId });

@@ -20,12 +20,15 @@ import CountPill from './count-pill';
  * brand chip's meaning); a model row opens results with the fits-machine filter for that model.
  */
 export default function SearchBrandScreen({ navigation, route }: RootStackScreenProps<'SearchBrand'>) {
-  const { brandId, brandName, kinds } = route.params;
+  const { brandId, brandName, kinds, radiusKm } = route.params;
   const { t } = useTranslation();
   const { colors } = useTheme();
   const type = useType();
   const origin = useDiscoveryOrigin();
-  const view = useBrandView({ brandId, kinds, origin: origin.origin, radiusKm: origin.radiusKm }, origin.ready);
+  // Browse's "Show all India" (radiusKm null) wins over the location sheet's radius, here and in the results it opens.
+  const viewRadiusKm = radiusKm !== undefined ? radiusKm : origin.radiusKm;
+  const listRadius = radiusKm !== undefined ? { radiusKm } : {};
+  const view = useBrandView({ brandId, kinds, origin: origin.origin, radiusKm: viewRadiusKm }, origin.ready);
   const name = view.data?.brand.name ?? brandName;
 
   const s = useMemo(() => StyleSheet.create({
@@ -66,7 +69,7 @@ export default function SearchBrandScreen({ navigation, route }: RootStackScreen
             hint={t('discover.search.brand.allHint')}
             trailing={trailing(allCount)}
             last
-            onPress={() => navigation.navigate('SearchResults', { filters: { brandId, ...(kinds?.length ? { kinds } : {}) } })}
+            onPress={() => navigation.navigate('SearchResults', { filters: { brandId, ...(kinds?.length ? { kinds } : {}), ...listRadius } })}
             testID="Search-brand-all"
           />
         </Card>
@@ -80,7 +83,7 @@ export default function SearchBrandScreen({ navigation, route }: RootStackScreen
                 trailing={trailing(m.liveCount)}
                 last={i === models.length - 1}
                 onPress={() => navigation.navigate('SearchResults', {
-                  filters: { fit: { brandId, modelId: m.id }, ...(kinds?.length ? { kinds } : {}) },
+                  filters: { fit: { brandId, modelId: m.id }, ...(kinds?.length ? { kinds } : {}), ...listRadius },
                   fitLabel: `${name} ${m.name}`,
                 })}
                 testID="Search-brand-model"

@@ -30,6 +30,22 @@ export function browseCrumbs(view: Pick<BrowseView, 'crumbs'> | null | undefined
   ];
 }
 
+/**
+ * Where Android Back goes from Browse node `nodeId`, read from the **last loaded** view (the node on screen can still be
+ * loading): the node's parent when it is in the view's crumbs, the view's own node when `nodeId` is one of its rows (a
+ * drill still loading), else the root.
+ */
+export function browseBackTarget(
+  nodeId: string,
+  lastView: Pick<BrowseView, 'crumbs' | 'children'> | null | undefined,
+): string | null {
+  const crumbs = browseCrumbs(lastView);
+  const at = crumbs.findIndex((c) => c.id === nodeId);
+  if (at >= 1) return crumbs[at - 1].id;
+  if (lastView?.children.some((c) => c.id === nodeId)) return crumbs[crumbs.length - 1].id;
+  return null;
+}
+
 /** A Browse row opens its children, except a part group (the tree's last level), which opens its results. */
 export function browseRowOpens(child: Pick<BrowseView['children'][number], 'level'>): 'drill' | 'results' {
   return child.level === 'part_group' ? 'results' : 'drill';

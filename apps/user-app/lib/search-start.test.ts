@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Suggestion } from '@mpm/shared-types';
-import { browseCrumbs, browseRowOpens, startState, suggestionRow, suggestionTarget } from './search-start';
+import { browseBackTarget, browseCrumbs, browseRowOpens, startState, suggestionRow, suggestionTarget } from './search-start';
 
 const sug = (s: Partial<Suggestion> & Pick<Suggestion, 'type'>): Suggestion => ({ id: 'x', name: 'n', path: [], liveCount: 3, ...s });
 
@@ -25,6 +25,24 @@ describe('browseCrumbs', () => {
   it('a part group opens its results; other levels drill down', () => {
     expect(browseRowOpens({ level: 'part_group' })).toBe('results');
     expect(browseRowOpens({ level: 'machine_type' })).toBe('drill');
+  });
+});
+
+describe('browseBackTarget (Android Back in Browse)', () => {
+  const view = {
+    crumbs: [{ id: 'a', name: 'Earthmoving' }, { id: 'b', name: 'Backhoe loaders' }],
+    children: [{ id: 'c' }],
+  } as unknown as Parameters<typeof browseBackTarget>[1];
+  it("goes to the node's parent when the view is loaded or the node is up the crumbs", () => {
+    expect(browseBackTarget('b', view)).toBe('a');
+    expect(browseBackTarget('a', view)).toBeNull();
+  });
+  it('goes to the last loaded node while a drilled row is still loading', () => {
+    expect(browseBackTarget('c', view)).toBe('b');
+  });
+  it('goes to the root when nothing loaded knows the node', () => {
+    expect(browseBackTarget('x', view)).toBeNull();
+    expect(browseBackTarget('x', null)).toBeNull();
   });
 });
 

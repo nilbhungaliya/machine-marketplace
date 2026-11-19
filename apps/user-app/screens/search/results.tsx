@@ -140,12 +140,20 @@ export default function SearchResultsScreen({ navigation, route }: RootStackScre
     });
   };
 
-  const openLocation = () => setLocationOpen(true);
+  // The sheet's origin and radius when it opened: closing it unchanged keeps the list (and a Widen / Filters distance).
+  const beforeSheet = useRef<Frozen | null>(null);
+  const openLocation = () => {
+    beforeSheet.current = captureOrigin(origin.freeze);
+    setLocationOpen(true);
+  };
   const closeLocation = () => {
     setLocationOpen(false);
     // A location changed in the sheet starts a new list with the new origin and radius (R18).
     const next = captureOrigin(origin.freeze);
-    if (!frozen || (JSON.stringify(next.origin) === JSON.stringify(frozen.origin) && next.radiusKm === radiusKm)) return;
+    const before = beforeSheet.current;
+    beforeSheet.current = null;
+    if (!frozen || !before) return;
+    if (JSON.stringify(next.origin) === JSON.stringify(before.origin) && next.radiusKm === before.radiusKm) return;
     setFrozen(next);
     update(withRadius(request, next.radiusKm));
   };

@@ -1,7 +1,7 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { CompositeScreenProps, NavigatorScreenParams } from '@react-navigation/native';
-import type { DiscoveryOrigin, ListingKind, ListingStatus, MyListingsGroup, SearchFacets } from '@mpm/shared-types';
+import type { DiscoveryOrigin, DiscoveryRadiusKm, ListingKind, ListingStatus, MyListingsGroup, SearchFacets } from '@mpm/shared-types';
 import type { FormMode } from '@/lib/onboarding-step';
 import type { SellStep } from '@/lib/sell-steps';
 import type { ResultsRequest } from '@/lib/search-request';
@@ -69,8 +69,11 @@ export type RootStackParamList = {
     facets: SearchFacets | null;
     fitLabel?: string;
   };
-  /** The brand view (`POST /discover/browse/brand`), from Browse's "Popular brands here". */
-  SearchBrand: { brandId: string; brandName: string; kinds?: ListingKind[] };
+  /**
+   * The brand view (`POST /discover/browse/brand`), from Browse's "Popular brands here". `radiusKm` (null = All India,
+   * from Browse's "Show all India") replaces the location sheet's radius for the view and the results it opens.
+   */
+  SearchBrand: { brandId: string; brandName: string; kinds?: ListingKind[]; radiusKm?: DiscoveryRadiusKm | null };
 };
 
 export type AuthStackParamList = {

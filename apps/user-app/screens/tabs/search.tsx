@@ -18,7 +18,7 @@ import { track } from '@/lib/analytics';
 import { SEARCH_EVENTS } from '@/lib/analytics-events';
 import { ChevronRight, Clock, Inbox, MapPin, Package, Search, TriangleAlert } from '@/lib/icons';
 import { clearRecentSearches, loadRecentSearches, recordRecentSearch } from '@/lib/recent-searches';
-import { browseCrumbs, browseRowOpens, startState, suggestionRow, suggestionTarget } from '@/lib/search-start';
+import { browseBackTarget, browseCrumbs, browseRowOpens, startState, suggestionRow, suggestionTarget } from '@/lib/search-start';
 import { radius, spacing, useTheme } from '@/lib/theme';
 import type { TabScreenProps } from '@/navigation/types';
 import CountPill from '@/screens/search/count-pill';
@@ -71,16 +71,19 @@ export default function SearchScreen({ navigation, route }: TabScreenProps<'Sear
   const suggest = useSuggest(query);
   const view = browse.data;
 
-  // Android Back walks up the tree before leaving the tab.
+  // Android Back walks up the tree before leaving the tab. It reads the last loaded view, so Back while a node is
+  // still loading goes to that node's parent (not the root); the tree shows its skeleton meanwhile.
   const crumbs = browseCrumbs(view);
+  const lastView = useRef<BrowseView | null>(null);
+  if (view) lastView.current = view;
   useFocusEffect(useCallback(() => {
     if (!nodeId || typing) return undefined;
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      setNodeId(crumbs.length >= 2 ? crumbs[crumbs.length - 2].id : null);
+      setNodeId(browseBackTarget(nodeId, lastView.current));
       return true;
     });
     return () => sub.remove();
-  }, [nodeId, typing, crumbs]));
+  }, [nodeId, typing]));
 
   const submit = (text = query) => {
     const q = text.trim();
@@ -95,9 +98,12 @@ export default function SearchScreen({ navigation, route }: TabScreenProps<'Sear
     else navigation.navigate('SearchResults', target.request);
   };
 
+  // "Show all India" (the near-empty state) carries into what Browse opens: results and the brand view search all India.
+  const allIndiaRadius = allIndia ? { radiusKm: null } : {};
+
   const openChild = (child: BrowseView['children'][number]) => {
     track(SEARCH_EVENTS.browseNodeOpened, { level: child.level });
-    if (browseRowOpens(child) === 'results') navigation.navigate('SearchResults', { filters: { categoryId: child.id } });
+    if (browseRowOpens(child) === 'results') navigation.navigate('SearchResults', { filters: { categoryId: child.id, ...allIndiaRadius } });
     else setNodeId(child.id);
   };
 
@@ -211,7 +217,7 @@ export default function SearchScreen({ navigation, route }: TabScreenProps<'Sear
               label={t('discover.search.browse.seeAll', { name: view.node.name })}
               chevron
               last
-              onPress={() => navigation.navigate('SearchResults', { filters: { categoryId: view.node!.id } })}
+              onPress={() => navigation.navigate('SearchResults', { filters: { categoryId: view.node!.id, ...allIndiaRadius } })}
               testID="Search-browse-see-all"
             />
           </Card>
@@ -251,7 +257,7 @@ export default function SearchScreen({ navigation, route }: TabScreenProps<'Sear
                   key={b.id}
                   label={b.name}
                   role="button"
-                  onPress={() => navigation.navigate('SearchBrand', { brandId: b.id, brandName: b.name })}
+                  onPress={() => navigation.navigate('SearchBrand', { brandId: b.id, brandName: b.name, ...allIndiaRadius })}
                   testID="Search-popular-brand"
                 />
               ))}
