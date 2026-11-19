@@ -1,18 +1,25 @@
 import type { FastifyPluginAsync } from 'fastify';
-import { notImplemented } from '../../lib/member-guard.js';
+import { z } from 'zod';
+import { reasonBody } from '../../lib/admin-text.js';
+import { runTx } from '../../lib/tx-effects.js';
+import { adminReadThread } from '../../services/chat/admin-read.service.js';
 
-// Admin conversation reads (F6 + F7 spec §16.3, R23): only with an open report or dispute, reason required, every read
-// audit-logged. L1 owns this file (L1-5); C0-4b stub. Roles: moderator, support (the dispute read is support's).
+// Admin conversation reads (F6 + F7 spec §16.3, R23): only with a report or a dispute (an open dispute counts only for
+// `support` and `super_admin`), reason required, every read audit-logged. Roles: moderator, support.
 
 const tags = ['Admin conversations'];
+const params = z.object({ id: z.string().uuid() });
 
 const adminConversationRoutes: FastifyPluginAsync = async (fastify) => {
-  // F6F7-STUB(L1): L1-5 → `AdminThreadRead`. Read basis per role: an open dispute on one of the thread's deals counts
-  // only for `support` (and `super_admin`); a `moderator` needs an open conversation report on the thread.
+  // → `AdminThreadRead`.
   fastify.post(
     '/admin/threads/:id/read',
     { schema: { tags }, preHandler: fastify.requireAdminRole('moderator', 'support') },
-    async () => notImplemented(),
+    async (request) => {
+      const { id } = params.parse(request.params);
+      const { reason } = reasonBody.parse(request.body);
+      return { data: await runTx(fastify, (tx) => adminReadThread(tx, request.admin!, id, reason)) };
+    },
   );
 };
 
