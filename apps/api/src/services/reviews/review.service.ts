@@ -95,7 +95,7 @@ export async function notifyPublished(
     await notify(tx, {
       type: 'review_received',
       recipientBusinessId: row.reviewedBusinessId,
-      params: { businessName: await tradeNameOf(tx, row.reviewerBusinessId), listingTitle: deal.listingTitle, dealRef: deal.ref },
+      params: { businessName: maskContact(await tradeNameOf(tx, row.reviewerBusinessId)), listingTitle: maskContact(deal.listingTitle), dealRef: deal.ref },
       destination: { dealId: deal.id, reviewId: row.id },
       dedupeKey: `review_received:${row.id}`,
     });
@@ -177,7 +177,12 @@ export async function submitReview(
     await notify(tx, {
       type: 'review_waiting',
       recipientBusinessId: otherBusinessId,
-      params: { businessName: await tradeNameOf(tx, user.businessId!), dealRef: deal.ref, dueAt: dueAt.toISOString() },
+      params: {
+        businessName: maskContact(await tradeNameOf(tx, user.businessId!)),
+        listingTitle: maskContact(deal.listingTitle),
+        dealRef: deal.ref,
+        dueAt: dueAt.toISOString(),
+      },
       destination: { dealId: deal.id },
       dedupeKey: `review_waiting:${deal.id}`,
     });

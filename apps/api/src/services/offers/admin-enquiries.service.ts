@@ -4,6 +4,7 @@ import {
   milliToQuantity,
   quantityToMilli,
   type AdminEnquiryDetail,
+  type AdminEnquiryList,
   type AdminEnquiryRow,
   type AdminOfferChainEntry,
   type EnquiryStatus,
@@ -36,14 +37,6 @@ export interface AdminEnquiryFilters {
   to?: string;
   /** Buyer or seller business name. */
   q?: string;
-  page: number;
-  pageSize: number;
-}
-
-/** `GET /admin/enquiries` (no shared type yet: the admin list shape of `AdminListingList`). */
-export interface AdminEnquiryList {
-  rows: AdminEnquiryRow[];
-  total: number;
   page: number;
   pageSize: number;
 }

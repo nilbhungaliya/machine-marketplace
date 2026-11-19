@@ -62,6 +62,11 @@
     "disputeNotOpen": "This problem report is already closed.",
     "adminReadNotAllowed": "This conversation can't be opened.",
     "idempotencyKeyReused": "Something went wrong. Please try again.",
-    "requestInProgress": "Still working on your last tap. Please wait a moment."
+    "requestInProgress": "Still working on your last tap. Please wait a moment.",
+    "noDealInThread": "You can share your number once you have a deal here.",
+    "clientMessageIdReused": "This message couldn't be sent. Please try again.",
+    "invalidCursor": "This list changed. Pull down to refresh.",
+    "contactPhoneMissing": "Add your business's contact number first.",
+    "notificationNotFound": "This notification is no longer available."
   }
 }

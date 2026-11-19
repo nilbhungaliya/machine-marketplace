@@ -138,7 +138,7 @@ export async function markSellerReplied(tx: Tx, threadId: string): Promise<void>
 
 /**
  * One offer notification to `side`'s business (§11.3). Params are safe values only (§11.4): the other business's name
- * and the listing title, both masked, price per unit and quantity.
+ * and the listing title, both masked, price per unit, quantity and unit label (render.ts params contract).
  */
 export async function notifyOffer(
   tx: Tx,
@@ -150,9 +150,10 @@ export async function notifyOffer(
 ): Promise<void> {
   const counterpartId = side === 'buyer' ? offer.sellerBusinessId : offer.buyerBusinessId;
   const [names] = await tx
-    .select({ businessName: businesses.tradeName, listingTitle: listings.title })
+    .select({ businessName: businesses.tradeName, listingTitle: listings.title, unitLabel: units.label })
     .from(listings)
     .innerJoin(businesses, eq(businesses.id, counterpartId))
+    .leftJoin(units, offer.unitId ? eq(units.id, offer.unitId) : eq(units.id, listings.unitId))
     .where(eq(listings.id, offer.listingId));
   await notify(tx, {
     type,
@@ -162,6 +163,7 @@ export async function notifyOffer(
       listingTitle: publicText(names?.listingTitle ?? null),
       pricePerUnitPaise: offer.pricePerUnitPaise,
       quantity: offer.quantity,
+      unitLabel: names?.unitLabel ?? null,
     },
     destination: { threadId: offer.threadId, offerId: offer.id, ...(extra.dealId ? { dealId: extra.dealId } : {}) },
     dedupeKey,

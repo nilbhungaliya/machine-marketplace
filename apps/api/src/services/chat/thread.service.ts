@@ -15,8 +15,10 @@ import { ForbiddenError } from '../../lib/errors.js';
 import { publicUrl } from '../../lib/media-url.js';
 import type { UserTokenPayload } from '../../plugins/auth.js';
 import { contactState } from '../consent/contact-consent.service.js';
+import { toDealListRows } from '../deals/deal-view.js';
 import { availableQuantityOf, trimQuantity } from '../listings/listing-view.service.js';
 import { publicListingWhere } from '../listings/public-where.service.js';
+import { loadOfferViews } from '../offers/offer-view.js';
 import { publicText } from './chat-view.js';
 import { getThreadForParty, type ChatReader, type ThreadRow } from './members.js';
 
@@ -122,24 +124,26 @@ export async function threadEnquiryStatus(conn: Conn, thread: ThreadRow): Promis
 }
 
 /**
- * The open negotiation and the offer cards as the reader sees them (`OfferView`, with actions and bounds) are L2's
- * `services/offers/offer-view.ts`, which this lane can't import: until the Wave A merge wires it here, offer cards
- * carry `offer: null` and `openNegotiation` is null.
+ * The offer cards as the reader sees them (`OfferView`, with actions and bounds): L2's `loadOfferViews`
+ * (`services/offers/offer-view.ts`), notes through `visibleText` per reader. Rows of another thread are skipped.
  */
-// F6F7-STUB(L2 merge): call L2's offer view builder (`toOfferView` / `loadOfferViews`) for these ids.
 export async function offerViewsFor(
-  _conn: Conn,
-  _offerIds: string[],
-  _reader: ChatReader,
-  _thread: ThreadRow,
+  conn: Conn,
+  offerIds: string[],
+  reader: ChatReader,
+  thread: ThreadRow,
 ): Promise<Map<string, OfferView>> {
-  return new Map();
+  return loadOfferViews(conn, offerIds, reader, thread);
 }
 
-/** The deals of a thread as list rows (`DealListRow`) are L3's `services/deals/deal-view.ts`; empty until the merge. */
-// F6F7-STUB(L3 merge): call L3's deal list-row builder for the thread's deals.
-export async function threadDealRows(_conn: Conn, _reader: ChatReader, _thread: ThreadRow): Promise<DealListRow[]> {
-  return [];
+/** The deals of a thread as list rows for the reader's business, newest first (L3's `toDealListRows`). */
+export async function threadDealRows(conn: Conn, reader: ChatReader, thread: ThreadRow): Promise<DealListRow[]> {
+  const rows = await conn
+    .select()
+    .from(deals)
+    .where(eq(deals.threadId, thread.id))
+    .orderBy(desc(deals.acceptedAt), desc(deals.id));
+  return toDealListRows(conn, rows, reader.businessId);
 }
 
 /** Whether the thread has any deal (share my number is offered only then, §6.6). */
@@ -169,7 +173,8 @@ export async function getThreadDetail(conn: Conn, user: UserTokenPayload, thread
     .select({ id: offers.id })
     .from(offers)
     .where(and(eq(offers.threadId, thread.id), inArray(offers.status, ['pending', 'backup'])))
-    .orderBy(desc(offers.createdAt))
+    // L2's open negotiation (R11: one per thread): the newest `pending` or `backup` row.
+    .orderBy(desc(offers.createdAt), desc(offers.id))
     .limit(1);
   const openViews = openRow ? await offerViewsFor(conn, [openRow.id], reader, thread) : new Map<string, OfferView>();
 

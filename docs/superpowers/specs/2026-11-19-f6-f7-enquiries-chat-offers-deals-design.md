@@ -466,7 +466,7 @@ aren't caught (accepted, as in textile and F2).
   its reason). That number then stops showing in every thread until a side ticks again, which grants the new number.
 - **Reveal:** in the transaction that makes the second condition true (accept, or the second side's valid tick),
   `contact_unlocked_at` is set, a `contact_shared` system line and deal event are written, and every member's open
-  thread refetches. Only **valid** consents count (§5.5: a `grant` whose `phone_shown` equals the current number).
+  thread refetches (`thread:updated` and `deal:updated` to both businesses, §13, build change 5). Only **valid** consents count (§5.5: a `grant` whose `phone_shown` equals the current number).
   From then on non-viewers read every message of the thread unmasked, old ones included.
 - **Showing the number:** the Deal record and the thread header (call button, `tel:`) show a side's number only while
   that side's consent in this thread is valid, read at request time. A cancelled deal keeps the thread unlocked.
@@ -685,8 +685,8 @@ support. Account deletion doesn't exist yet (DPDP work); it will need its own ru
 ### 7.9 Expiry and reminders
 
 Job `offer-expiry` (every minute): `pending` rows with `expires_at ≤ now()` → `expired`, and `backup` rows with
-`backup_since` older than `offer_backup_max_days` (14) → `expired`; line and card update,
-notification to both sides **(our call: both)**. Job `offer-expiring-soon` (every 5 min): `pending` rows expiring within
+`backup_since` older than `offer_backup_max_days` (14) → `expired`; line, card update and `offer:updated`, **no
+notification** (build change 1: the `offer_expiring` notice already warned the turn side; §28). Job `offer-expiring-soon` (every 5 min): `pending` rows expiring within
 `offer_expiring_notice_hours` (6) → one `offer_expiring` notification to the turn side (dedupe key
 `offer_expiring:<offerId>:<expires_at>`, so a revived offer gets its own). Both use `FOR UPDATE SKIP LOCKED`.
 
@@ -816,7 +816,9 @@ auto_complete_at ≤ now()` and completes it; a disputed deal fails the re-check
 ### 9.4 Completion
 
 In one transaction: status `completed`, `completed_at`, hold converted (§8.1, `sell_out` at 0), reconcile, deal event
-and line, notifications `deal_completed` to both sides with the review prompt. Reviews open (§10).
+and line, notifications `deal_completed` with the review prompt (P14: the buyer's confirm → the seller only; auto-complete
+→ both). A dispute resolved as **completed** sends only `deal_dispute_resolved` to both: the Deal record's review card
+carries "Rate this deal" (build change 3, §28). Reviews open (§10).
 
 ### 9.5 Cancelling (R19)
 
@@ -861,8 +863,8 @@ is a non-viewer member of the reviewer business. Window: until `completed_at + r
 | Of the seller | Buyer | Part / machine matched the listing · Communication · Handed over on time | Text ≤ 1 000, public |
 | Of the buyer | Seller | Communication · Paid as agreed · Pickup on time | None in MVP: stars are stored, not shown yet (§10.4) |
 
-Missing, extra or non-integer ratings, or text on a seller → buyer review → `400 REVIEW_ANSWERS_INVALID`. Text is masked always (it can be public) and
-scam-checked. No edits or withdrawal after submitting (textile).
+Missing, extra or non-integer ratings, or text on a seller → buyer review → `400 REVIEW_ANSWERS_INVALID`. Text is masked always (it can be public);
+it is **not** scam-flagged (no column; masking already removes numbers and handles, build change 4, §28). No edits or withdrawal after submitting (textile).
 
 ### 10.3 Blind publishing (R22)
 
@@ -873,8 +875,9 @@ scam-checked. No edits or withdrawal after submitting (textile).
 | Second side submits before `publish_due_at` | Both publish at once, in that transaction. |
 | `publish_due_at` passes with one review | Job `review-publish` (every 15 min, `FOR UPDATE SKIP LOCKED`) publishes it; the other side can no longer review. |
 
-Publishing a buyer → seller review sends `review_received` to the seller; a seller → buyer review publishes silently
-(nothing about it shows yet).
+Publishing a buyer → seller review sends `review_received` to the seller, **also when the seller's own submit publishes
+it** (the one exception to P14 / §11.1: the row only points at the review and its Reply, build change 2, §28); a seller →
+buyer review publishes silently (nothing about it shows yet).
 
 ### 10.4 Scores and where they show
 
@@ -911,7 +914,12 @@ the same "exactly once per event and user" without one **(our call)**. Unique `d
 no-op.
 
 **Recipients:** every active member of the business the event concerns (viewers too: they read), never the actor's
-own business for the actor's own action **(our call)**.
+own business for the actor's own action **(our call)**. One exception: `review_received` goes to the seller even when
+the seller's own submit publishes the buyer's review (it only points at the review and Reply; §10.3, build change 2).
+
+**Params contract** (`services/notifications/render.ts`): `businessName` (the other / acting business), `listingTitle`
+(the deal's title snapshot for deal events), `pricePerUnitPaise`, `quantity` (decimal string) + `unitLabel`, `dealRef`,
+`dueAt` (ISO). Names and titles are stored masked (`publicText`) and masked again at render.
 
 ### 11.2 Grouped chat rows (textile Part 1 §5.9)
 
@@ -1056,7 +1064,8 @@ No thread room (textile D2; `threadRoom` in `rooms.ts` is removed). `emitToThrea
 |---|---|---|
 | `message:new` | server → each member | `{ threadId, message: ThreadMessage, row: InboxRow }` (per reader) |
 | `offer:updated` | server → each member | `{ threadId, offer: OfferView }` (per reader: note masked, can-act) |
-| `deal:updated` | server → each member of both businesses | `{ dealId, threadId, status, version }` (no text; clients refetch) |
+| `deal:updated` | server → each member of both businesses | `{ dealId, threadId, status, version }` (no text; clients refetch); also sent on the number reveal (§6.6) |
+| `thread:updated` | server → each member of both businesses | `{ threadId, reason: 'contact_shared' }` (ids only): on the reveal, every member's open thread refetches (old messages now read unmasked) |
 | `thread:read` | server → the reader's own room | `{ threadId, seq }` (badges on the user's other devices) |
 | `notification:new` | server → recipient | `{ unreadCount }` |
 | `thread:viewing` | client → server | `{ threadId \| null }`, every 20 s while a thread is on screen; ignored unless the user's business is a party (checked in the DB). |
@@ -1173,8 +1182,9 @@ before / after. Admin socket: `dispute:new` to `adminRoleRoom('support')`, `repo
 ### 16.3 Reading a conversation (R23)
 
 `POST /admin/threads/:id/read` (a POST because it records the read): allowed only while the thread has a
-`conversation` report that is `open` or `reviewing` or was resolved within the last 30 days, or a deal in it has an
-`open` dispute or one resolved within the last 30 days (`403 ADMIN_READ_NOT_ALLOWED` otherwise), with a reason
+`conversation` report that is `open` or `reviewing` or was resolved within the last 30 days, or (for `support` and
+`super_admin` only: disputes are support's queue) a deal in it has an `open` dispute or one resolved within the last 30
+days (`403 ADMIN_READ_NOT_ALLOWED` otherwise), with a reason
 (`ADMIN_REASON_MIN`–`MAX`). Writes `audit_log` `thread.read` (admin, thread, reason, report / dispute id) **on every
 read**. Returns messages as stored (unmasked: the reader is staff), photos as 300 s signed URLs, never the revealed
 contact numbers. The page keeps the result in memory only (no caching in the browser).
@@ -1218,6 +1228,11 @@ _1`; `deal_problem_window_days < deal_auto_complete_days`; `review_blind_days �
 `CONTACT_PHONE_INVALID`, `REVIEW_NOT_ELIGIBLE`, `REVIEW_WINDOW_CLOSED`, `REVIEW_EXISTS`, `REVIEW_ANSWERS_INVALID`,
 `REVIEW_NOT_FOUND`, `REVIEW_NOT_PUBLISHED` (reply or report before publishing), `REPLY_EXISTS`, `DISPUTE_NOT_OPEN`,
 `ADMIN_READ_NOT_ALLOWED`, `IDEMPOTENCY_KEY_REUSED`, `REQUEST_IN_PROGRESS`.
+
+Added in the build (§28): `NO_DEAL_IN_THREAD` (share my number before a deal), `CLIENT_MESSAGE_ID_REUSED` (a message
+retry id used in another thread), `INVALID_CURSOR` (every keyset list), `CONTACT_PHONE_MISSING` (share with no number on
+the business), `NOTIFICATION_NOT_FOUND`; admin only (no app copy): `REPORT_NOT_FOUND`, `REPORT_NOT_OPEN`,
+`REVIEW_ALREADY_HIDDEN`, `REVIEW_NOT_HIDDEN`, `REPLY_NOT_FOUND`.
 
 Reused: F2's `LISTING_NOT_FOUND`, `REPORT_EXISTS` (a second open report by the same business on the same thread or
 review), `REPORT_LIMIT`; `STORAGE_UNAVAILABLE`; the OTP service's `OTP_WRONG`, `OTP_EXPIRED`,
@@ -1458,3 +1473,20 @@ Independent review of the draft; every point applied.
 | 28 | Scam-flag count on the admin business page cut (P2). | §16.1, §24, §26 |
 | 29 | Push preferences: one global switch (`users.push_enabled`). | §5.13, §11.1, §11.6, §12.2, §24, §26 |
 | 30 | Cancel request after handover: decline / withdraw collapsed into one "clear" action. | §9.2, §9.5, §12.2, §18, §26 |
+
+## 28. Build changes (2026-11-19)
+
+Controller rulings at the wave A integration (API lanes L1–L4 merged); each section above is edited to match.
+
+| # | Change | Sections |
+|---|---|---|
+| 1 | Offer expiry (`offer-expiry` job): line, card update and `offer:updated`, **no notification** (the `offer_expiring` notice already warned the turn side). | §7.9 |
+| 2 | `review_received` goes to the seller even when the seller's own submit publishes the buyer's review: the one exception to §11.1 / plan P14 (the row only points at the review and its Reply). | §10.3, §11.1 |
+| 3 | A dispute resolved as completed sends only `deal_dispute_resolved` to both (no `deal_completed`); the Deal record's review card (`DealView.review`, `review` action) carries "Rate this deal". | §9.4 |
+| 4 | Review text is masked, not scam-flagged (no column). | §10.2 |
+| 5 | New socket event `thread:updated { threadId, reason }` (ids only) to every member of both businesses on the number reveal; `deal:updated { dealId, threadId, status, version }` is sent on the reveal too. | §6.6, §13 |
+| 6 | Admin conversation reads based on a dispute are `support` / `super_admin` only; a moderator reads through a conversation report only. | §16.3 |
+| 7 | Viewers may archive (plan P15; already in §12). | §12 |
+| 8 | New error codes: `NO_DEAL_IN_THREAD`, `CLIENT_MESSAGE_ID_REUSED`, `INVALID_CURSOR`, `CONTACT_PHONE_MISSING`, `NOTIFICATION_NOT_FOUND` (app copy in en / hi / gu); admin only: `REPORT_NOT_FOUND`, `REPORT_NOT_OPEN`, `REVIEW_ALREADY_HIDDEN`, `REVIEW_NOT_HIDDEN`, `REPLY_NOT_FOUND`. | §18 |
+| 9 | Notification params contract fixed (`businessName`, `listingTitle`, `pricePerUnitPaise`, `quantity` + `unitLabel`, `dealRef`, `dueAt`), names and titles stored masked. | §11.1, §11.4 |
+| 10 | `DealView.review` is L4's `reviewStateFor` once the deal is completed (null before); the `review` action is offered when the reader may submit now (never to a viewer). | §9.1, §10.1 |

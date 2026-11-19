@@ -22,6 +22,7 @@ import { publicText, visibleText } from '../chat/chat-view.js';
 import type { ChatReader } from '../chat/members.js';
 import { privatePhotoUrl } from '../chat/private-photo.js';
 import { contactState } from '../consent/contact-consent.service.js';
+import { reviewStateFor } from '../reviews/review-state.js';
 import { dealActions } from './deal-actions.js';
 
 /**
@@ -192,8 +193,12 @@ export async function buildDealView(conn: Conn, deal: DealRow, reader: ChatReade
   // L1's one definition of the share-my-number block (§6.6): current number only, `canTick` already false once mine.
   const contact = await contactState(conn, thread, reader);
 
+  // L4's review card (§10.1–§10.3): `eligible` already excludes viewers, closed windows and a published other side.
+  const review = deal.status === 'completed' ? await reviewStateFor(conn, deal, reader.side, reader.memberRole) : null;
+
   const actions: DealAction[] = [...dealActions(deal, reader.side, reader.memberRole, now)];
   if (contact.canTick && deal.status !== 'cancelled') actions.push('share_contact');
+  if (review?.eligible) actions.push('review');
 
   return {
     ...row!,
@@ -226,7 +231,6 @@ export async function buildDealView(conn: Conn, deal: DealRow, reader: ChatReade
     cancelReason: (deal.cancelReason as DealCancelReason | null) ?? null,
     cancelNote: visibleText(deal.cancelNote, reader, thread),
     dispute: await disputeOf(conn, deal, reader, thread),
-    // L4 (reviews) fills the review card; null until then.
-    review: null,
+    review,
   };
 }

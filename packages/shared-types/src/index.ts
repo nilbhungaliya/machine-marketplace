@@ -2651,6 +2651,19 @@ export interface EnquiryMachine {
   verdict: 'fits' | 'not_listed';
 }
 
+/** `POST /businesses/me/contact-phone/otp/verify` and `DELETE /businesses/me/contact-phone` (§6.6): the business's contact number, E.164. */
+export interface ContactPhoneState {
+  contactPhone: string | null;
+  verifiedAt: string | null;
+}
+
+/** One row of `GET /users/me/blocks` (Profile › Blocked businesses, §6.11): name masked. */
+export interface BlockedBusinessItem {
+  businessId: string;
+  name: string;
+  blockedAt: string;
+}
+
 /** The share-my-number state of a thread or deal for the reader (§6.6). */
 export interface ContactState {
   /** My business has a valid consent in this thread. */
@@ -3026,6 +3039,14 @@ export interface AdminOfferChainEntry {
   answeredAt: string | null;
 }
 
+/** `GET /admin/enquiries` page (the `AdminListingList` shape). */
+export interface AdminEnquiryList {
+  rows: AdminEnquiryRow[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
 /** `GET /admin/enquiries/:threadId`: the offer chain without text. */
 export interface AdminEnquiryDetail {
   row: AdminEnquiryRow;
@@ -3051,6 +3072,15 @@ export interface AdminDealRow {
   updatedAt: string;
 }
 
+/** `GET /admin/deals` page: `rows`, `total`, `page`, `pageSize` as the other admin lists, plus counts per status. */
+export interface AdminDealList {
+  rows: AdminDealRow[];
+  total: number;
+  page: number;
+  pageSize: number;
+  counts: Record<DealStatus, number>;
+}
+
 /** `GET /admin/disputes`. */
 export interface AdminDisputeRow {
   id: string;
@@ -3064,6 +3094,14 @@ export interface AdminDisputeRow {
   seller: AdminPartyRef;
   createdAt: string;
   resolvedAt: string | null;
+}
+
+/** `GET /admin/disputes` page. */
+export interface AdminDisputeList {
+  rows: AdminDisputeRow[];
+  total: number;
+  page: number;
+  pageSize: number;
 }
 
 /** `GET /admin/deals/:id`: structured notes only (no `notes_text`). */

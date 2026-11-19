@@ -1,6 +1,6 @@
 import { eq, sql } from 'drizzle-orm';
 import type { Redis } from 'ioredis';
-import { INDIAN_MOBILE_REGEX } from '@mpm/shared-types';
+import { INDIAN_MOBILE_REGEX, type ContactPhoneState } from '@mpm/shared-types';
 import type { Db, Tx } from '../../db/index.js';
 import { businesses } from '../../db/schema.js';
 import { discoveryRedisPrefix } from '../../env.js';
@@ -20,11 +20,6 @@ import { sendOtp, verifyOtp } from '../otp.service.js';
 
 const PENDING_TTL_SECONDS = 600;
 const pendingKey = (businessId: string) => `${discoveryRedisPrefix()}contact-phone:pending:${businessId}`;
-
-export interface ContactPhoneState {
-  contactPhone: string | null;
-  verifiedAt: string | null;
-}
 
 /** 10 digits, or +91 / 91 / 0 and 10 digits (spaces and hyphens allowed); stored E.164. */
 export function normaliseContactPhone(raw: string): string {

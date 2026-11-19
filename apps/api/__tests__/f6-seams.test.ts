@@ -16,6 +16,8 @@ import { assertCanWrite, getThreadForParty } from '../src/services/chat/members.
 import { openOrGetThread } from '../src/services/chat/open-thread.js';
 import { insertMessage, insertSystemLine, recomputeTurns } from '../src/services/chat/thread-lines.js';
 import { notify } from '../src/services/notifications/notify.js';
+import { getThreadDetail } from '../src/services/chat/thread.service.js';
+import { getDealView } from '../src/services/deals/deal-read.service.js';
 import { userRoom } from '../src/socket/rooms.js';
 import { createTestBusinessUser, deleteTestBusinesses, type TestBusinessUser } from './_helpers/test-businesses.js';
 import { createTestSeller, deleteTestSellerExtras, insertTestListing, type TestSeller } from './_helpers/test-listings.js';
@@ -213,6 +215,39 @@ describe('getThreadForParty / assertCanWrite', () => {
     const { reader } = await getThreadForParty(db, { userId: viewer.userId, businessId: buyer.businessId }, thread.id);
     expect(reader).toMatchObject({ memberRole: 'viewer', side: 'buyer' });
     expect(() => assertCanWrite(reader)).toThrow(expect.objectContaining({ statusCode: 403, code: 'VIEWER_READ_ONLY' }));
+  });
+});
+
+describe('wave A seams: thread detail and the Deal record', () => {
+  it('thread detail carries the open offer as each reader sees it (note masked, seller may answer) and the thread’s deal rows', async () => {
+    const d = await insertTestDeal({ listing: { id: await liveListing() }, buyer, quantity: '1', pricePerUnitPaise: 100_000, status: 'agreed' });
+    const open = await insertTestOffer({ threadId: d.threadId, pricePerUnitPaise: 95_000, quantity: '2', note: 'Call me on 9876543210' });
+
+    const asSeller = await getThreadDetail(db, tokenUser(seller), d.threadId);
+    expect(asSeller.openNegotiation).toMatchObject({ id: open.id, isMine: false, turn: 'seller' });
+    expect(asSeller.openNegotiation!.note).not.toContain('9876543210');
+    expect(asSeller.openNegotiation!.actions).toContain('accept');
+    expect(asSeller.deals.map((r) => [r.id, r.side, r.status])).toEqual([[d.dealId, 'seller', 'agreed']]);
+
+    const asViewer = await getThreadDetail(db, { userId: viewer.userId, businessId: buyer.businessId }, d.threadId);
+    expect(asViewer.openNegotiation).toMatchObject({ id: open.id, isMine: true, actions: [] });
+    expect(asViewer.deals[0]).toMatchObject({ id: d.dealId, side: 'buyer' });
+  });
+
+  it('the Deal record carries the review state once completed: `review` offered to a member, never to a viewer', async () => {
+    const agreed = await insertTestDeal({ listing: { id: await liveListing() }, buyer, quantity: '1', pricePerUnitPaise: 100_000, status: 'agreed' });
+    const before = await getDealView(db, tokenUser(buyer), agreed.dealId);
+    expect(before.review).toBeNull();
+    expect(before.actions).not.toContain('review');
+
+    const done = await insertTestDeal({ listing: { id: await liveListing() }, buyer, quantity: '1', pricePerUnitPaise: 100_000, status: 'completed' });
+    const mine = await getDealView(db, tokenUser(buyer), done.dealId);
+    expect(mine.review).toMatchObject({ dealId: done.dealId, mySide: 'buyer', eligible: true, reason: null, mine: null });
+    expect(mine.actions).toContain('review');
+
+    const asViewer = await getDealView(db, { userId: viewer.userId, businessId: buyer.businessId }, done.dealId);
+    expect(asViewer.review).toMatchObject({ eligible: false, reason: 'viewer' });
+    expect(asViewer.actions).not.toContain('review');
   });
 });
 

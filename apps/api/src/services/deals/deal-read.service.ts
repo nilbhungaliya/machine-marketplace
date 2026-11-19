@@ -75,7 +75,7 @@ function decodeCursor(raw: string): Cursor {
     if (typeof c.at !== 'string' || !/^\d{4}-\d{2}-\d{2}T[\d:.]+$/.test(c.at) || !/^[0-9a-f-]{36}$/i.test(c.id)) throw new Error();
     return c;
   } catch {
-    throw new ValidationError('Invalid cursor');
+    throw new ValidationError('Invalid cursor', undefined, 'INVALID_CURSOR');
   }
 }
 

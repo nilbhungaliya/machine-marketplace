@@ -5,8 +5,10 @@ import {
   milliToQuantity,
   quantityToMilli,
   type AdminDealDetail,
+  type AdminDealList,
   type AdminDealRow,
   type AdminDisputeDetail,
+  type AdminDisputeList,
   type AdminDisputeRow,
   type DealCancelReason,
   type DealStatus,
@@ -27,23 +29,6 @@ import { privatePhotoUrl } from '../chat/private-photo.js';
 type Conn = Db | Tx;
 
 export const ADMIN_DEALS_PAGE_SIZE_MAX = 100;
-
-/** `GET /admin/deals` (no shared page type yet: `rows`, `total`, `page`, `pageSize` as the other admin lists, plus counts). */
-export interface AdminDealList {
-  rows: AdminDealRow[];
-  total: number;
-  page: number;
-  pageSize: number;
-  counts: Record<DealStatus, number>;
-}
-
-/** `GET /admin/disputes`. */
-export interface AdminDisputeList {
-  rows: AdminDisputeRow[];
-  total: number;
-  page: number;
-  pageSize: number;
-}
 
 export interface AdminDealQuery {
   status?: DealStatus;

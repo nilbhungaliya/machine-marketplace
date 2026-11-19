@@ -1,4 +1,5 @@
 import { and, asc, desc, eq, or } from 'drizzle-orm';
+import type { BlockedBusinessItem } from '@mpm/shared-types';
 import type { Db, Tx } from '../../db/index.js';
 import { businessBlocks, businesses, chatThreads } from '../../db/schema.js';
 import { ValidationError } from '../../lib/errors.js';
@@ -79,7 +80,7 @@ export async function unblock(tx: Tx, user: UserTokenPayload, businessId: string
 export async function listBlocks(
   conn: Conn,
   user: UserTokenPayload,
-): Promise<{ items: Array<{ businessId: string; name: string; blockedAt: string }> }> {
+): Promise<{ items: BlockedBusinessItem[] }> {
   if (!user.businessId) return { items: [] };
   const rows = await conn
     .select({ businessId: businessBlocks.blockedBusinessId, name: businesses.tradeName, createdAt: businessBlocks.createdAt })
