@@ -310,14 +310,15 @@ describe('LISTING_TRANSITIONS (§7.2)', () => {
 });
 
 describe('APP_SETTINGS / validateSettings (§12)', () => {
-  it('has the four settings with their defaults', () => {
-    expect(appSettingDefaults()).toEqual({
+  it('has the four F2 settings with their defaults', () => {
+    expect(appSettingDefaults()).toMatchObject({
       listing_expiry_days: 60,
       listing_expiry_reminder_days: 7,
       listing_review_first_n: 3,
       unverified_listing_cap: 3,
     });
-    expect(APP_SETTINGS.map((s) => s.key)).toHaveLength(4);
+    // + the 15 F6 + F7 settings (spec §17).
+    expect(APP_SETTINGS.map((s) => s.key)).toHaveLength(19);
   });
 
   it('accepts the defaults', () => {

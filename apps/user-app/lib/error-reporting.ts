@@ -19,6 +19,9 @@ const SECRET_KEYS = new RegExp(
       'hint', 'officermessage',
       // Discovery (F4 + F5 spec §11): the request origin (GPS point, pincode) and the typed query.
       'origin', 'q',
+      // F6 + F7 (spec §19): chat and deal text, numbers, push tokens, private photo keys.
+      'text', 'note', 'notestext', 'description', 'replytext', 'messagetoparties', 'contactphone', 'number', 'fcmtoken',
+      'photokeys',
     ].join('|') +
     ')$',
   'i',

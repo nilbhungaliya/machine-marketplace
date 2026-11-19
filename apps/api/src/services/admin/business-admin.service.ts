@@ -15,6 +15,8 @@ import { ConflictError, NotFoundError } from '../../lib/errors.js';
 import { adminText } from '../../lib/admin-text.js';
 import { writeAudit } from '../audit.service.js';
 import { businessProfile } from '../business/profile.service.js';
+import { businessDealHistory } from '../deals/deal-read.service.js';
+import { sellerScore } from '../reviews/review-scores.js';
 import { lockGstin } from '../verification/gst-grant.service.js';
 import { gstHistory } from '../verification/gst-history.service.js';
 import { getGstState, openReview } from '../verification/gst-state.service.js';
@@ -209,6 +211,9 @@ export async function getBusinessDetail(conn: Db | Tx, id: string): Promise<Admi
     history: await gstHistory(conn, id),
     audit: audit.map((a) => ({ ...a, createdAt: a.createdAt.toISOString() })),
     listingsCount: Number(listingTotal?.n ?? 0),
+    // F6 + F7 §16.1: deals by status, disputes with outcomes and the review score.
+    dealHistory: await businessDealHistory(conn, id),
+    sellerScore: await sellerScore(conn, id),
   };
 }
 

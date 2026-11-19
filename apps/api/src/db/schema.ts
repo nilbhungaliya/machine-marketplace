@@ -9,7 +9,11 @@ import {
   LISTING_KINDS, LISTING_LOCATION_SOURCES, LISTING_STATUSES, MEDIA_TYPES, MEMBER_ROLES, MODERATION_OUTCOMES, PART_SIDES,
   PRICE_MODELS, RENTAL_FUEL_OPTIONS, RENTAL_OPERATOR_OPTIONS, RENTAL_PERIODS, RENTAL_TRANSPORT_OPTIONS, REPORT_STATUSES,
   REPORT_TARGETS, SEARCH_REFRESH_SCOPES, SEARCH_SCRIPTS, SYNONYM_TARGETS, VERIFICATION_LEVELS, VERIFICATION_STATUSES,
-  type BusinessActivity, type DeliveryOption,
+  CONSENT_KINDS, DEAL_ACTOR_SIDES, DEAL_CANCELLED_BY, DEAL_COMPLETED_HOW, DEAL_FULFILMENT, DEAL_PAYMENT_METHODS, DEAL_STATUSES,
+  DELIVERY_STATES, DEVICE_PLATFORMS, DISPUTE_OUTCOMES, DISPUTE_STATUSES, HOLD_STATUSES, MESSAGE_KINDS, NOTIFICATION_CATEGORIES,
+  OFFER_KINDS, OFFER_STATUSES, PARTY_SIDES,
+  type BusinessActivity, type ConsentPhoneSource, type ConsentWithdrawReason, type DealEventCode, type DeliveryOption,
+  type DisputeCategory, type EnquiryMachine, type NotificationType, type QuickEnquiry, type SystemLineCode,
   type GstDetails, type GstDocumentType, type GstEnteredDetails, type ListingFlag, type ReviewReason, type Specs,
 } from '@mpm/shared-types';
 
@@ -109,6 +113,9 @@ export const businesses = pgTable(
     verificationStatus: verificationStatus('verification_status').notNull().default('not_submitted'),
     verificationNote: text('verification_note'),
     verifiedAt: timestamp('verified_at', { withTimezone: true }),
+    /** F6 + F7 §5.12: the owner's OTP-verified contact number (E.164), revealed only after a deal and both ticks (R6). Never public. */
+    contactPhone: text('contact_phone'),
+    contactPhoneVerifiedAt: timestamp('contact_phone_verified_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -130,6 +137,8 @@ export const users = pgTable(
     language: language('language').notNull().default('en'),
     /** Suspend / block (scope A2). */
     status: accountStatus('status').notNull().default('active'),
+    /** F6 + F7 §5.13, §11.6: one switch for every push; in-app rows are always written. */
+    pushEnabled: boolean('push_enabled').notNull().default(true),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -475,6 +484,11 @@ export const listings = pgTable(
     side: partSide('side'),
     specs: jsonb('specs').$type<Specs>().notNull().default({}),
     quantity: numeric('quantity', { precision: 14, scale: 3 }),
+    /**
+     * F6 + F7 §5.7: the sum of active stock holds, written only by `services/deals/holds.ts` with the hold row.
+     * Available = quantity − held_quantity. CHECK `listings_held_quantity_range` (custom migration).
+     */
+    heldQuantity: numeric('held_quantity', { precision: 14, scale: 3 }).notNull().default('0'),
     unitId: uuid('unit_id').references(() => units.id),
     minOrderQty: numeric('min_order_qty', { precision: 14, scale: 3 }),
     conditionId: uuid('condition_id').references(() => conditions.id),
@@ -772,4 +786,578 @@ export const searchRefreshJobs = pgTable(
     lastError: text('last_error'),
   },
   (t) => ({ pendingIdx: index('search_refresh_jobs_pending_idx').on(t.doneAt, t.createdAt) }),
+);
+
+// ─── F6 + F7: enquiries, chat, offers, deals, reviews, notifications (spec 2026-11-19-f6-f7 §5) ───
+// What drizzle-kit 0.22 can't emit is in the custom migration that follows the generated one: the CHECKs (message
+// shape, ≤ 5 photos, review shape, advance ≤ total, 0 ≤ held_quantity ≤ quantity, thread parties differ), F2's
+// `listings_quantity_positive` relaxed to `>= 0`, `deals_ref_seq` restarted at 500001 and the append-only trigger on
+// `contact_share_consents`. No migration statement uses `report_target` 'review' (§5.17).
+// No ON DELETE CASCADE except a delivery's device and notification: test cleanup (`deleteF6Rows`) deletes in FK order.
+
+export const messageKind = pgEnum('message_kind', MESSAGE_KINDS);
+export const partySide = pgEnum('party_side', PARTY_SIDES);
+export const offerKind = pgEnum('offer_kind', OFFER_KINDS);
+export const offerStatus = pgEnum('offer_status', OFFER_STATUSES);
+export const holdStatus = pgEnum('hold_status', HOLD_STATUSES);
+export const dealStatus = pgEnum('deal_status', DEAL_STATUSES);
+export const dealCompletedHow = pgEnum('deal_completed_how', DEAL_COMPLETED_HOW);
+export const dealCancelledBy = pgEnum('deal_cancelled_by', DEAL_CANCELLED_BY);
+export const dealPaymentMethod = pgEnum('deal_payment_method', DEAL_PAYMENT_METHODS);
+export const dealFulfilment = pgEnum('deal_fulfilment', DEAL_FULFILMENT);
+export const dealActorSide = pgEnum('deal_actor_side', DEAL_ACTOR_SIDES);
+export const disputeStatus = pgEnum('dispute_status', DISPUTE_STATUSES);
+export const disputeOutcome = pgEnum('dispute_outcome', DISPUTE_OUTCOMES);
+export const consentKind = pgEnum('consent_kind', CONSENT_KINDS);
+export const notificationCategory = pgEnum('notification_category', NOTIFICATION_CATEGORIES);
+export const deliveryState = pgEnum('delivery_state', DELIVERY_STATES);
+export const devicePlatform = pgEnum('device_platform', DEVICE_PLATFORMS);
+
+/** One thread per buyer business + listing (§5.1, R1). Seller copied from the listing at creation. */
+export const chatThreads = pgTable(
+  'chat_threads',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    listingId: uuid('listing_id')
+      .notNull()
+      .references(() => listings.id),
+    buyerBusinessId: uuid('buyer_business_id')
+      .notNull()
+      .references(() => businesses.id),
+    sellerBusinessId: uuid('seller_business_id')
+      .notNull()
+      .references(() => businesses.id),
+    listingKind: listingKind('listing_kind').notNull(),
+    createdByUserId: uuid('created_by_user_id')
+      .notNull()
+      .references(() => users.id),
+    /** Of the newest message (inbox order, unread). Written only by `services/chat/thread-lines.ts`. */
+    lastMessageSeq: bigint('last_message_seq', { mode: 'number' }).notNull().default(0),
+    lastMessageAt: timestamp('last_message_at', { withTimezone: true }).notNull().defaultNow(),
+    /** First seller message, quote or offer answer (enquiry status, §6.2). */
+    firstSellerReplyAt: timestamp('first_seller_reply_at', { withTimezone: true }),
+    /** Deals ever made in the thread (status `converted`). */
+    dealCount: integer('deal_count').notNull().default(0),
+    /** Whether each side must act (§6.10); recomputed by every transaction that changes an input (`recomputeTurns`). */
+    buyerTurn: boolean('buyer_turn').notNull().default(false),
+    sellerTurn: boolean('seller_turn').notNull().default(false),
+    /** Newest message from each side (system lines raise both); unread = the other side's seq > my `last_read_seq`. */
+    lastBuyerSeq: bigint('last_buyer_seq', { mode: 'number' }).notNull().default(0),
+    lastSellerSeq: bigint('last_seller_seq', { mode: 'number' }).notNull().default(0),
+    /** Set once, never cleared (R6, §6.6). */
+    contactUnlockedAt: timestamp('contact_unlocked_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    listingBuyerUq: uniqueIndex('chat_threads_listing_buyer_uq').on(t.listingId, t.buyerBusinessId),
+    buyerInboxIdx: index('chat_threads_buyer_inbox_idx').on(t.buyerBusinessId, t.lastMessageAt.desc(), t.id),
+    sellerInboxIdx: index('chat_threads_seller_inbox_idx').on(t.sellerBusinessId, t.lastMessageAt.desc(), t.id),
+    buyerTurnIdx: index('chat_threads_buyer_turn_idx').on(t.buyerBusinessId).where(sql`${t.buyerTurn}`),
+    sellerTurnIdx: index('chat_threads_seller_turn_idx').on(t.sellerBusinessId).where(sql`${t.sellerTurn}`),
+  }),
+);
+
+/**
+ * Offers (§5.6, §7): one row per proposal; a counter closes the row as `countered` and inserts the next. One open
+ * negotiation per thread (`offers_one_open_per_thread`).
+ */
+export const offers = pgTable(
+  'offers',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    threadId: uuid('thread_id')
+      .notNull()
+      .references(() => chatThreads.id),
+    listingId: uuid('listing_id')
+      .notNull()
+      .references(() => listings.id),
+    buyerBusinessId: uuid('buyer_business_id')
+      .notNull()
+      .references(() => businesses.id),
+    sellerBusinessId: uuid('seller_business_id')
+      .notNull()
+      .references(() => businesses.id),
+    /** The first row's id; every counter carries it. */
+    negotiationId: uuid('negotiation_id').notNull(),
+    previousOfferId: uuid('previous_offer_id').references((): AnyPgColumn => offers.id),
+    /** 0 for the opening row; +1 per counter (≤ `MAX_COUNTER_ROUNDS`). */
+    round: smallint('round').notNull().default(0),
+    kind: offerKind('kind').notNull(),
+    senderSide: partySide('sender_side').notNull(),
+    senderUserId: uuid('sender_user_id')
+      .notNull()
+      .references(() => users.id),
+    /** Who must act now (open rows only). */
+    turn: partySide('turn').notNull(),
+    /** A revived backup the seller must reconfirm (§7.7). */
+    needsReconfirm: boolean('needs_reconfirm').notNull().default(false),
+    pricePerUnitPaise: bigint('price_per_unit_paise', { mode: 'number' }).notNull(),
+    quantity: numeric('quantity', { precision: 14, scale: 3 }).notNull(),
+    totalPaise: bigint('total_paise', { mode: 'bigint' }).notNull(),
+    /** The listing's price when the negotiation opened (bounds, "% below asking"); null for a quote. */
+    askingPricePaise: bigint('asking_price_paise', { mode: 'number' }),
+    unitId: uuid('unit_id').references(() => units.id),
+    gstMode: gstPriceMode('gst_mode'),
+    validityHours: smallint('validity_hours').notNull(),
+    /** Null while `backup`. */
+    expiresAt: timestamp('expires_at', { withTimezone: true }),
+    backupSince: timestamp('backup_since', { withTimezone: true }),
+    /** ≤ 500, stored as written, masked per reader. */
+    note: text('note'),
+    scamFlag: boolean('scam_flag').notNull().default(false),
+    status: offerStatus('status').notNull().default('pending'),
+    /** `OFFER_CLOSE_REASONS` when `closed`. */
+    closeReason: text('close_reason'),
+    answeredAt: timestamp('answered_at', { withTimezone: true }),
+    answeredByUserId: uuid('answered_by_user_id').references(() => users.id),
+    /** ≤ 300. */
+    rejectNote: text('reject_note'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    oneOpenPerThread: uniqueIndex('offers_one_open_per_thread')
+      .on(t.threadId)
+      .where(sql`${t.status} IN ('pending', 'backup')`),
+    listingStatusIdx: index('offers_listing_status_idx').on(t.listingId, t.status),
+    pendingExpiryIdx: index('offers_pending_expiry_idx').on(t.status, t.expiresAt).where(sql`${t.status} = 'pending'`),
+    buyerStatusIdx: index('offers_buyer_status_idx').on(t.buyerBusinessId, t.status),
+    negotiationIdx: index('offers_negotiation_idx').on(t.negotiationId, t.round),
+    threadIdx: index('offers_thread_idx').on(t.threadId, t.createdAt),
+  }),
+);
+
+/** The shared deal record (§5.8, §9). Created only by an accepted offer. `ref` starts at 500001 (custom migration). */
+export const deals = pgTable(
+  'deals',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    ref: bigserial('ref', { mode: 'number' }).notNull().unique(),
+    threadId: uuid('thread_id')
+      .notNull()
+      .references(() => chatThreads.id),
+    listingId: uuid('listing_id')
+      .notNull()
+      .references(() => listings.id),
+    offerId: uuid('offer_id')
+      .notNull()
+      .unique()
+      .references(() => offers.id),
+    buyerBusinessId: uuid('buyer_business_id')
+      .notNull()
+      .references(() => businesses.id),
+    sellerBusinessId: uuid('seller_business_id')
+      .notNull()
+      .references(() => businesses.id),
+    /** Snapshots at accept. */
+    listingTitle: text('listing_title').notNull(),
+    unitId: uuid('unit_id').references(() => units.id),
+    unitLabel: text('unit_label').notNull(),
+    gstMode: gstPriceMode('gst_mode'),
+    /** The accepted offer's terms; never change. */
+    pricePerUnitPaise: bigint('price_per_unit_paise', { mode: 'number' }).notNull(),
+    quantity: numeric('quantity', { precision: 14, scale: 3 }).notNull(),
+    totalPaise: bigint('total_paise', { mode: 'bigint' }).notNull(),
+    status: dealStatus('status').notNull().default('agreed'),
+    acceptedAt: timestamp('accepted_at', { withTimezone: true }).notNull().defaultNow(),
+    acceptedByUserId: uuid('accepted_by_user_id')
+      .notNull()
+      .references(() => users.id),
+    handedOverAt: timestamp('handed_over_at', { withTimezone: true }),
+    handedOverByUserId: uuid('handed_over_by_user_id').references(() => users.id),
+    handoverPhotoKey: text('handover_photo_key'),
+    /** ≤ 300, masked per reader. */
+    handoverNote: text('handover_note'),
+    /** Set at handover and on a resume (R18, R21). */
+    problemDeadlineAt: timestamp('problem_deadline_at', { withTimezone: true }),
+    autoCompleteAt: timestamp('auto_complete_at', { withTimezone: true }),
+    completedAt: timestamp('completed_at', { withTimezone: true }),
+    completedHow: dealCompletedHow('completed_how'),
+    cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
+    cancelledBySide: dealCancelledBy('cancelled_by_side'),
+    /** `DEAL_CANCEL_REASONS_*`. */
+    cancelReason: text('cancel_reason'),
+    cancelNote: text('cancel_note'),
+    /** A pending cancel request after handover (§9.5). */
+    cancelRequestedSide: partySide('cancel_requested_side'),
+    cancelRequestedAt: timestamp('cancel_requested_at', { withTimezone: true }),
+    cancelRequestedReason: text('cancel_requested_reason'),
+    cancelRequestedByUserId: uuid('cancel_requested_by_user_id').references(() => users.id),
+    /** Notes (R17): either side's non-viewer edits them while `agreed` / `handed_over`. */
+    paymentMethod: dealPaymentMethod('payment_method'),
+    /** CHECK 0 ≤ advance ≤ total (custom migration). */
+    advancePaise: bigint('advance_paise', { mode: 'bigint' }),
+    fulfilment: dealFulfilment('fulfilment'),
+    expectedOn: date('expected_on'),
+    /** ≤ 500, masked per reader; never shown to admins (§16.1). */
+    notesText: text('notes_text'),
+    /** §6.7: the notes text carries a payment phrase or handle (decided at write time). */
+    notesScamFlag: boolean('notes_scam_flag').notNull().default(false),
+    notesUpdatedAt: timestamp('notes_updated_at', { withTimezone: true }),
+    notesUpdatedByUserId: uuid('notes_updated_by_user_id').references(() => users.id),
+    /** +1 on every change; only a notes edit sends it back (`409 DEAL_STALE`). */
+    version: integer('version').notNull().default(1),
+    /** Last "still to hand over?" nudge (§9.3). */
+    agreedRemindedAt: timestamp('agreed_reminded_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    buyerStatusIdx: index('deals_buyer_status_updated_idx').on(t.buyerBusinessId, t.status, t.updatedAt.desc()),
+    sellerStatusIdx: index('deals_seller_status_updated_idx').on(t.sellerBusinessId, t.status, t.updatedAt.desc()),
+    handedOverDueIdx: index('deals_handed_over_due_idx')
+      .on(t.status, t.autoCompleteAt)
+      .where(sql`${t.status} = 'handed_over'`),
+    openPerListingIdx: index('deals_open_per_listing_idx')
+      .on(t.listingId)
+      .where(sql`${t.status} IN ('agreed', 'handed_over', 'disputed')`),
+    threadIdx: index('deals_thread_idx').on(t.threadId),
+  }),
+);
+
+/**
+ * Messages (§5.2): never edited or deleted. Written only by `services/chat/thread-lines.ts`. CHECK
+ * `chat_messages_shape` (per kind) and `chat_messages_photos_max` in the custom migration.
+ */
+export const chatMessages = pgTable(
+  'chat_messages',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    threadId: uuid('thread_id')
+      .notNull()
+      .references(() => chatThreads.id),
+    /** Global order; pages and unread use it. */
+    seq: bigserial('seq', { mode: 'number' }).notNull(),
+    kind: messageKind('kind').notNull(),
+    /** Null for `system`. */
+    senderSide: partySide('sender_side'),
+    senderUserId: uuid('sender_user_id').references(() => users.id),
+    /** ≤ 2 000 (text, photo caption), ≤ 500 (enquiry note). Stored as written. */
+    text: text('text'),
+    quickOptions: text('quick_options').array().$type<QuickEnquiry[]>(),
+    enquiryQuantity: numeric('enquiry_quantity', { precision: 14, scale: 3 }),
+    /** Snapshot of the buyer's Check my machine choice with the verdict at send time. */
+    fitMachine: jsonb('fit_machine').$type<EnquiryMachine>(),
+    /** ≤ 5 final private keys (§6.8). */
+    photoKeys: text('photo_keys').array().$type<string[]>(),
+    offerId: uuid('offer_id').references(() => offers.id),
+    dealId: uuid('deal_id').references(() => deals.id),
+    systemCode: text('system_code').$type<SystemLineCode>(),
+    systemValues: jsonb('system_values').$type<Record<string, string | number>>(),
+    /** R7, decided at insert. */
+    scamFlag: boolean('scam_flag').notNull().default(false),
+    /** The app's id for a retried send. */
+    clientMessageId: uuid('client_message_id'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    threadSeqIdx: index('chat_messages_thread_seq_idx').on(t.threadId, t.seq.desc()),
+    clientIdUq: uniqueIndex('chat_messages_client_id_uq').on(t.senderUserId, t.clientMessageId),
+  }),
+);
+
+/** Per-user thread state (§5.3): read position and archive. */
+export const chatThreadUserState = pgTable(
+  'chat_thread_user_state',
+  {
+    threadId: uuid('thread_id')
+      .notNull()
+      .references(() => chatThreads.id),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id),
+    lastReadSeq: bigint('last_read_seq', { mode: 'number' }).notNull().default(0),
+    archivedAt: timestamp('archived_at', { withTimezone: true }),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    pk: primaryKey({ name: 'chat_thread_user_state_pk', columns: [t.threadId, t.userId] }),
+    userIdx: index('chat_thread_user_state_user_idx').on(t.userId),
+  }),
+);
+
+/** A block between two businesses (§6.11). */
+export const businessBlocks = pgTable(
+  'business_blocks',
+  {
+    blockerBusinessId: uuid('blocker_business_id')
+      .notNull()
+      .references(() => businesses.id),
+    blockedBusinessId: uuid('blocked_business_id')
+      .notNull()
+      .references(() => businesses.id),
+    createdByUserId: uuid('created_by_user_id')
+      .notNull()
+      .references(() => users.id),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    pk: primaryKey({ name: 'business_blocks_pk', columns: [t.blockerBusinessId, t.blockedBusinessId] }),
+    blockedIdx: index('business_blocks_blocked_idx').on(t.blockedBusinessId),
+  }),
+);
+
+/**
+ * Share-my-number consents (§5.5, DPDP): append-only (trigger `contact_share_consents_append_only`, custom
+ * migration; only a transaction that ran `SET LOCAL mpm.consent_purge = 'on'` may delete). `thread_id` null on a
+ * business-wide `withdraw`.
+ */
+export const contactShareConsents = pgTable(
+  'contact_share_consents',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    kind: consentKind('kind').notNull(),
+    threadId: uuid('thread_id').references(() => chatThreads.id),
+    businessId: uuid('business_id')
+      .notNull()
+      .references(() => businesses.id),
+    /** Null for a withdraw the system writes. */
+    userId: uuid('user_id').references(() => users.id),
+    /** E.164: the number granted or withdrawn. */
+    phoneShown: text('phone_shown').notNull(),
+    /** `CONSENT_PHONE_SOURCES`. */
+    phoneSource: text('phone_source').$type<ConsentPhoneSource>().notNull(),
+    wordingVersion: smallint('wording_version').notNull(),
+    /** `CONSENT_WITHDRAW_REASONS` on a withdraw. */
+    reason: text('reason').$type<ConsentWithdrawReason>(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    threadBusinessIdx: index('contact_share_consents_thread_business_idx').on(t.threadId, t.businessId, t.createdAt.desc()),
+    businessPhoneIdx: index('contact_share_consents_business_phone_idx').on(t.businessId, t.phoneShown, t.createdAt.desc()),
+  }),
+);
+
+/** A deal's stock hold (§5.7, R16): the deal is inserted first, then its hold. Written only by `holds.ts`. */
+export const stockHolds = pgTable(
+  'stock_holds',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    listingId: uuid('listing_id')
+      .notNull()
+      .references(() => listings.id),
+    dealId: uuid('deal_id')
+      .notNull()
+      .unique()
+      .references(() => deals.id),
+    quantity: numeric('quantity', { precision: 14, scale: 3 }).notNull(),
+    status: holdStatus('status').notNull().default('active'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    settledAt: timestamp('settled_at', { withTimezone: true }),
+  },
+  (t) => ({
+    activeListingIdx: index('stock_holds_active_listing_idx').on(t.listingId).where(sql`${t.status} = 'active'`),
+  }),
+);
+
+/** The deal timeline (§5.9); each event also posts a system line in the thread. */
+export const dealEvents = pgTable(
+  'deal_events',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    dealId: uuid('deal_id')
+      .notNull()
+      .references(() => deals.id),
+    code: text('code').$type<DealEventCode>().notNull(),
+    actorSide: dealActorSide('actor_side').notNull(),
+    actorUserId: uuid('actor_user_id').references(() => users.id),
+    actorAdminId: uuid('actor_admin_id').references(() => adminUsers.id),
+    values: jsonb('values').$type<Record<string, string | number | boolean | null>>().notNull().default({}),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({ dealCreatedIdx: index('deal_events_deal_created_idx').on(t.dealId, t.createdAt) }),
+);
+
+/** Problems reported on a deal (§5.10, §9.6): the businesses' dispute history. One open per deal. */
+export const dealDisputes = pgTable(
+  'deal_disputes',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    dealId: uuid('deal_id')
+      .notNull()
+      .references(() => deals.id),
+    openedBySide: partySide('opened_by_side').notNull(),
+    openedByUserId: uuid('opened_by_user_id')
+      .notNull()
+      .references(() => users.id),
+    /** `DISPUTE_CATEGORIES`. */
+    category: text('category').$type<DisputeCategory>().notNull(),
+    /** 10–1 000, masked to the other party. */
+    description: text('description').notNull(),
+    /** ≤ 5 final private keys (CHECK `deal_disputes_photos_max`). */
+    photoKeys: text('photo_keys').array().$type<string[]>().notNull().default(sql`'{}'::text[]`),
+    status: disputeStatus('status').notNull().default('open'),
+    outcome: disputeOutcome('outcome'),
+    /** ≤ 500, shown in the thread's `deal_dispute_resolved` line. */
+    messageToParties: text('message_to_parties'),
+    /** Audit only. */
+    internalNote: text('internal_note'),
+    resolvedByAdminId: uuid('resolved_by_admin_id').references(() => adminUsers.id),
+    /** Asked when support closes as cancelled (§9.6). */
+    stockReturned: boolean('stock_returned'),
+    resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    oneOpen: uniqueIndex('deal_disputes_one_open').on(t.dealId).where(sql`${t.status} = 'open'`),
+    queueIdx: index('deal_disputes_status_created_idx').on(t.status, t.createdAt),
+  }),
+);
+
+/**
+ * Reviews (§5.11, §10): one per side of a completed deal, published blind. CHECK `deal_reviews_shape` (facets per side,
+ * 1–5, seller-side text null) in the custom migration.
+ */
+export const dealReviews = pgTable(
+  'deal_reviews',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    dealId: uuid('deal_id')
+      .notNull()
+      .references(() => deals.id),
+    /** `buyer` reviews the seller; `seller` reviews the buyer. */
+    reviewerSide: partySide('reviewer_side').notNull(),
+    reviewerBusinessId: uuid('reviewer_business_id')
+      .notNull()
+      .references(() => businesses.id),
+    reviewedBusinessId: uuid('reviewed_business_id')
+      .notNull()
+      .references(() => businesses.id),
+    reviewerUserId: uuid('reviewer_user_id')
+      .notNull()
+      .references(() => users.id),
+    rMatchedListing: smallint('r_matched_listing'),
+    rCommunication: smallint('r_communication'),
+    rOnTime: smallint('r_on_time'),
+    rPayment: smallint('r_payment'),
+    rPickup: smallint('r_pickup'),
+    /** ≤ 1 000; buyer side only. */
+    text: text('text'),
+    submittedAt: timestamp('submitted_at', { withTimezone: true }).notNull().defaultNow(),
+    publishDueAt: timestamp('publish_due_at', { withTimezone: true }).notNull(),
+    publishedAt: timestamp('published_at', { withTimezone: true }),
+    hiddenAt: timestamp('hidden_at', { withTimezone: true }),
+    hiddenByAdminId: uuid('hidden_by_admin_id').references(() => adminUsers.id),
+    hiddenReason: text('hidden_reason'),
+    /** The seller's one reply to a buyer → seller review (≤ 300). */
+    replyText: text('reply_text'),
+    replyUserId: uuid('reply_user_id').references(() => users.id),
+    replyAt: timestamp('reply_at', { withTimezone: true }),
+    replyHiddenAt: timestamp('reply_hidden_at', { withTimezone: true }),
+  },
+  (t) => ({
+    dealSideUq: uniqueIndex('deal_reviews_deal_side_uq').on(t.dealId, t.reviewerSide),
+    publishedVisibleIdx: index('deal_reviews_published_visible_idx')
+      .on(t.reviewedBusinessId, t.reviewerSide)
+      .where(sql`${t.publishedAt} IS NOT NULL AND ${t.hiddenAt} IS NULL`),
+    unpublishedIdx: index('deal_reviews_unpublished_idx').on(t.publishDueAt).where(sql`${t.publishedAt} IS NULL`),
+  }),
+);
+
+/** A user's push devices (§5.13, §11.6): one account per install. */
+export const userDevices = pgTable(
+  'user_devices',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id),
+    installId: text('install_id').notNull().unique(),
+    fcmToken: text('fcm_token').notNull(),
+    platform: devicePlatform('platform').notNull(),
+    appVersion: text('app_version'),
+    lastSeenAt: timestamp('last_seen_at', { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({ userIdx: index('user_devices_user_idx').on(t.userId) }),
+);
+
+/**
+ * In-app notifications (§5.13, §11), written in the change's transaction (`services/notifications/notify.ts`). Params
+ * hold ids and safe values only. One unread grouped chat row per thread and user (`notifications_open_chat_row`).
+ */
+export const notifications = pgTable(
+  'notifications',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id),
+    businessId: uuid('business_id')
+      .notNull()
+      .references(() => businesses.id),
+    type: text('type').$type<NotificationType>().notNull(),
+    category: notificationCategory('category').notNull(),
+    params: jsonb('params').$type<Record<string, string | number | null>>().notNull().default({}),
+    threadId: uuid('thread_id').references(() => chatThreads.id),
+    offerId: uuid('offer_id').references(() => offers.id),
+    dealId: uuid('deal_id').references(() => deals.id),
+    reviewId: uuid('review_id').references(() => dealReviews.id),
+    /** `<type>:<entityId>[:<qualifier>]`; unique per user, so a repeat is a no-op. */
+    dedupeKey: text('dedupe_key').notNull(),
+    /** Grouped chat rows: messages since the row opened. */
+    unreadCount: smallint('unread_count').notNull().default(1),
+    /** Grouped chat rows: the newest message's seq. */
+    lastSeq: bigint('last_seq', { mode: 'number' }),
+    /** Push delivery key `<id>:<version>`: an update re-sends and replaces the shown notification. */
+    version: integer('version').notNull().default(1),
+    readAt: timestamp('read_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    userDedupeUq: uniqueIndex('notifications_user_dedupe_uq').on(t.userId, t.dedupeKey),
+    userCreatedIdx: index('notifications_user_created_idx').on(t.userId, t.createdAt.desc()),
+    unreadIdx: index('notifications_unread_idx').on(t.userId).where(sql`${t.readAt} IS NULL`),
+    openChatRow: uniqueIndex('notifications_open_chat_row')
+      .on(t.userId, t.threadId)
+      .where(sql`${t.type} = 'message_new' AND ${t.readAt} IS NULL`),
+  }),
+);
+
+/** Push deliveries (§5.13, §11.5): one per notification version and device; at-least-once with backoff. */
+export const notificationDeliveries = pgTable(
+  'notification_deliveries',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    notificationId: uuid('notification_id')
+      .notNull()
+      .references(() => notifications.id, { onDelete: 'cascade' }),
+    version: integer('version').notNull(),
+    deviceId: uuid('device_id')
+      .notNull()
+      .references(() => userDevices.id, { onDelete: 'cascade' }),
+    state: deliveryState('state').notNull().default('queued'),
+    attempts: smallint('attempts').notNull().default(0),
+    nextAttemptAt: timestamp('next_attempt_at', { withTimezone: true }).notNull().defaultNow(),
+    providerMessageId: text('provider_message_id'),
+    lastError: text('last_error'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    notificationVersionDeviceUq: uniqueIndex('notification_deliveries_uq').on(t.notificationId, t.version, t.deviceId),
+    stateDueIdx: index('notification_deliveries_state_due_idx').on(t.state, t.nextAttemptAt),
+  }),
+);
+
+/**
+ * Stored replies of idempotent routes (§5.14, P11). Committed with the business change in one transaction; "still
+ * running" is a concurrent transaction holding the key's advisory lock. Deleted after 24 h. Never logged (§19).
+ */
+export const idempotencyKeys = pgTable(
+  'idempotency_keys',
+  {
+    /** `<routeId>:<userId>`. */
+    scope: text('scope').notNull(),
+    key: text('key').notNull(),
+    requestHash: text('request_hash').notNull(),
+    statusCode: smallint('status_code').notNull(),
+    response: jsonb('response').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    pk: primaryKey({ name: 'idempotency_keys_pk', columns: [t.scope, t.key] }),
+    createdIdx: index('idempotency_keys_created_idx').on(t.createdAt),
+  }),
 );

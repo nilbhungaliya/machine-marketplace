@@ -354,6 +354,17 @@ export async function deletePublicObject(key: string, opts: { timeoutMs?: number
     .catch(rethrowStorageError);
 }
 
+/** Writes bytes the server made (F6 + F7 §6.8: a re-encoded chat or deal photo) to the private bucket. */
+export async function putPrivateObject(key: string, body: Buffer, contentType: string): Promise<void> {
+  requireStorage();
+  assertSafeKey(key);
+  await buildClient()
+    .send(new PutObjectCommand({ Bucket: privateBucket(), Key: key, Body: body, ContentType: contentType, ContentLength: body.length }), {
+      abortSignal: AbortSignal.timeout(TRANSFER_TIMEOUT_MS),
+    })
+    .catch(rethrowStorageError);
+}
+
 /** Deletes one object. S3/R2 answer 204 for a key that was never there, so a re-run is a no-op. */
 export async function deleteObject(key: string, opts: { timeoutMs?: number } = {}): Promise<void> {
   requireStorage();

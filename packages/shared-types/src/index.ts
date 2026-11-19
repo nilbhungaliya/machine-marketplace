@@ -112,34 +112,161 @@ export const ROOT_CATEGORIES = [
 ] as const;
 export type RootCategory = (typeof ROOT_CATEGORIES)[number];
 
-// ─── enquiry & offer ───
-/** Enquiry lifecycle (scope F6): a buyer's question to a seller about one listing. */
+// ─── enquiry & offer (F6 + F7 spec 2026-11-19 §5.16) ───
+/**
+ * Enquiry lifecycle (scope F6). **Derived, never stored** (§6.2): `enquiryStatus()` computes it from the thread, so
+ * nothing can drift.
+ */
 export const ENQUIRY_STATUSES = ['open', 'replied', 'converted', 'closed'] as const;
 export type EnquiryStatus = (typeof ENQUIRY_STATUSES)[number];
 
-/** Quick enquiry options (scope F6). */
+/** Quick enquiry options (scope F6, §6.3). `price_request` is Ask price (price-on-request listings). */
 export const QUICK_ENQUIRIES = [
-  'is_available', 'more_photos', 'video', 'specifications', 'best_price', 'compatibility',
+  'is_available', 'more_photos', 'video', 'specifications', 'best_price', 'compatibility', 'price_request',
 ] as const;
 export type QuickEnquiry = (typeof QUICK_ENQUIRIES)[number];
 
-/** Offer state machine (scope F6): seller can accept, reject or counter. */
+/** Offer state machine (§7.5). `backup` waits on stock; `closed` is a system close with an `OFFER_CLOSE_REASONS` reason. */
 export const OFFER_STATUSES = [
-  'pending', 'countered', 'accepted', 'rejected', 'expired', 'withdrawn',
+  'pending', 'countered', 'accepted', 'rejected', 'expired', 'withdrawn', 'backup', 'closed',
 ] as const;
 export type OfferStatus = (typeof OFFER_STATUSES)[number];
 
-/** Counter rounds before the thread suggests a call. Admin-configurable later. */
+/** The opening row's kind (§7.1, R11–R13); counters keep `offer`. */
+export const OFFER_KINDS = ['offer', 'buy_now', 'quote'] as const;
+export type OfferKind = (typeof OFFER_KINDS)[number];
+
+/** Why the system closed an open or backup offer (§7.5). */
+export const OFFER_CLOSE_REASONS = ['listing_unavailable', 'listing_changed', 'blocked', 'account_inactive'] as const;
+export type OfferCloseReason = (typeof OFFER_CLOSE_REASONS)[number];
+
+/** The two parties of a thread, offer or deal. */
+export const PARTY_SIDES = ['buyer', 'seller'] as const;
+export type PartySide = (typeof PARTY_SIDES)[number];
+
+/** Counters in one negotiation (R11), then accept or reject only. */
 export const MAX_COUNTER_ROUNDS = 5;
 
-// ─── deal ───
-/** Deal record (scope F7): enquiry → offer → negotiation → deal. Payment may happen off-platform. */
-export const DEAL_STATUSES = ['agreed', 'completed', 'cancelled', 'disputed'] as const;
+// ─── chat (§5.2, §6) ───
+export const MESSAGE_KINDS = ['text', 'photos', 'enquiry', 'offer', 'deal', 'system'] as const;
+export type MessageKind = (typeof MESSAGE_KINDS)[number];
+
+/** System lines (§6.9): stored as code + values, rendered in the reader's language (`chat.system.<code>`). */
+export const SYSTEM_LINE_CODES = [
+  'offer_withdrawn', 'offer_rejected', 'offer_expired', 'offer_backup', 'offer_revived', 'offer_reconfirmed',
+  'offers_closed', 'deal_agreed', 'deal_notes_changed', 'deal_handed_over', 'deal_completed', 'deal_auto_completed',
+  'deal_cancel_requested', 'deal_cancel_request_withdrawn', 'deal_cancelled', 'deal_problem_reported',
+  'deal_dispute_resolved', 'contact_shared', 'blocked',
+] as const;
+export type SystemLineCode = (typeof SYSTEM_LINE_CODES)[number];
+
+/** Chat bounds (§5.16, §6.4, §6.8, §6.10, §11.5). */
+export const CHAT_LIMITS = {
+  messageMax: 2000,
+  noteMax: 500,
+  photosPerMessage: 5,
+  messagesPerMinute: 30,
+  photoMaxBytes: 10 * 1024 * 1024,
+  /** Long edge after the server re-encode (§6.8). */
+  photoMaxEdgePx: 2048,
+  photoJpegQuality: 80,
+  /** Life of a private photo's signed URL, seconds. */
+  photoUrlSeconds: 300,
+  inboxPageSize: 20,
+  messagesPageSize: 30,
+  /** Redis `viewing:<userId>` life and the app's `thread:viewing` refresh, seconds (§11.5). */
+  viewingTtlSeconds: 45,
+  viewingRefreshSeconds: 20,
+  reportDetailsMax: 500,
+} as const;
+
+/** Every other F6 / F7 text, photo and rate bound (plan Global constraints). */
+export const DEAL_LIMITS = {
+  offerNoteMax: 500,
+  rejectNoteMax: 300,
+  dealNotesMax: 500,
+  cancelNoteMax: 300,
+  handoverNoteMax: 300,
+  replyMax: 300,
+  reviewTextMax: 1000,
+  disputeDescriptionMin: 10,
+  disputeDescriptionMax: 1000,
+  disputePhotosMax: 5,
+  messageToPartiesMax: 500,
+  offerActionsPerMinute: 20,
+  dealActionsPerMinute: 20,
+  photoPresignPer10Min: 30,
+  reportsPerDay: 10,
+} as const;
+
+/** An admin may read a conversation this long after its report or dispute was resolved (§16.3). */
+export const ADMIN_READ_WINDOW_DAYS = 30;
+
+// ─── consent (§5.5, §6.6) ───
+export const CONSENT_KINDS = ['grant', 'withdraw'] as const;
+export type ConsentKind = (typeof CONSENT_KINDS)[number];
+export const CONSENT_WITHDRAW_REASONS = ['number_removed', 'number_replaced', 'owner_changed'] as const;
+export type ConsentWithdrawReason = (typeof CONSENT_WITHDRAW_REASONS)[number];
+export const CONSENT_PHONE_SOURCES = ['business_contact', 'owner_phone'] as const;
+export type ConsentPhoneSource = (typeof CONSENT_PHONE_SOURCES)[number];
+/** The "Share my number" wording shown with the tick; bump when the copy changes. */
+export const CONSENT_WORDING_VERSION = 1;
+
+// ─── deal (§5.7–§5.10, §9) ───
+/** Deal record (scope F7): an accepted offer → `agreed` → `handed_over` → `completed`. Payment happens off-platform. */
+export const DEAL_STATUSES = ['agreed', 'handed_over', 'completed', 'cancelled', 'disputed'] as const;
 export type DealStatus = (typeof DEAL_STATUSES)[number];
+
+export const DEAL_COMPLETED_HOW = ['buyer_confirmed', 'auto', 'support'] as const;
+export type DealCompletedHow = (typeof DEAL_COMPLETED_HOW)[number];
+export const DEAL_CANCELLED_BY = ['buyer', 'seller', 'both', 'system'] as const;
+export type DealCancelledBy = (typeof DEAL_CANCELLED_BY)[number];
+export const DEAL_CANCEL_REASONS_BUYER = ['no_longer_needed', 'found_elsewhere', 'seller_not_responding', 'other'] as const;
+export const DEAL_CANCEL_REASONS_SELLER = ['buyer_not_responding', 'payment_not_received', 'stock_problem', 'other'] as const;
+export const DEAL_CANCEL_REASONS_SYSTEM = ['listing_removed', 'support_closed'] as const;
+export type DealCancelReason =
+  | (typeof DEAL_CANCEL_REASONS_BUYER)[number]
+  | (typeof DEAL_CANCEL_REASONS_SELLER)[number]
+  | (typeof DEAL_CANCEL_REASONS_SYSTEM)[number];
+export const DEAL_PAYMENT_METHODS = ['bank', 'upi', 'cash', 'credit'] as const;
+export type DealPaymentMethod = (typeof DEAL_PAYMENT_METHODS)[number];
+export const DEAL_FULFILMENT = ['pickup', 'delivery'] as const;
+export type DealFulfilment = (typeof DEAL_FULFILMENT)[number];
+/** Timeline events (§5.9); each also posts a system line in the thread. */
+export const DEAL_EVENT_CODES = [
+  'agreed', 'notes_changed', 'handed_over', 'received', 'auto_completed', 'cancel_requested',
+  'cancel_request_withdrawn', 'cancelled', 'problem_reported', 'dispute_resolved', 'contact_shared',
+] as const;
+export type DealEventCode = (typeof DEAL_EVENT_CODES)[number];
+export const DEAL_ACTOR_SIDES = ['buyer', 'seller', 'system', 'support'] as const;
+export type DealActorSide = (typeof DEAL_ACTOR_SIDES)[number];
+/** A deal's stock hold (§5.7, R16). */
+export const HOLD_STATUSES = ['active', 'converted', 'released'] as const;
+export type HoldStatus = (typeof HOLD_STATUSES)[number];
+export const DISPUTE_CATEGORIES = [
+  'not_as_described', 'damaged', 'short_quantity', 'not_received', 'payment_not_received', 'other',
+] as const;
+export type DisputeCategory = (typeof DISPUTE_CATEGORIES)[number];
+export const DISPUTE_STATUSES = ['open', 'resolved'] as const;
+export type DisputeStatus = (typeof DISPUTE_STATUSES)[number];
+export const DISPUTE_OUTCOMES = ['completed', 'cancelled', 'resumed'] as const;
+export type DisputeOutcome = (typeof DISPUTE_OUTCOMES)[number];
 
 /** Rental booking lifecycle (scope F7 "Mark machinery as rented", F9 "Booking updates"). */
 export const RENTAL_BOOKING_STATUSES = ['requested', 'confirmed', 'active', 'returned', 'cancelled'] as const;
 export type RentalBookingStatus = (typeof RENTAL_BOOKING_STATUSES)[number];
+
+// ─── reviews (§5.11, §10) ───
+/** The three facets each side rates (§10.2), keyed by the reviewer's side: the buyer rates the seller and back. */
+export const REVIEW_FACETS = {
+  buyer: ['matched_listing', 'communication', 'on_time'],
+  seller: ['communication', 'payment', 'pickup'],
+} as const;
+export type ReviewFacet = (typeof REVIEW_FACETS)[PartySide][number];
+export const REVIEW_REPORT_REASONS = ['abusive', 'false', 'personal_information', 'other'] as const;
+export type ReviewReportReason = (typeof REVIEW_REPORT_REASONS)[number];
+export const CONVERSATION_REPORT_REASONS = ['spam', 'scam_or_advance_payment', 'abusive', 'fake_listing', 'other'] as const;
+export type ConversationReportReason = (typeof CONVERSATION_REPORT_REASONS)[number];
 
 // ─── part request ───
 /** Part request / availability alert lifecycle (scope F8, flow U3). Stays active until fulfilled or closed. */
@@ -147,20 +274,46 @@ export const PART_REQUEST_STATUSES = ['active', 'matched', 'fulfilled', 'closed'
 export type PartRequestStatus = (typeof PART_REQUEST_STATUSES)[number];
 
 // ─── reports ───
-/** Reports and flags (scope A2, A3, A6). */
-export const REPORT_TARGETS = ['user', 'business', 'listing', 'conversation'] as const;
+/**
+ * Reports and flags (scope A2, A3, A6). `review` added by F6 + F7 (§5.15); no migration statement uses it (§5.17: a
+ * new enum value can't be used in the transaction that adds it).
+ */
+export const REPORT_TARGETS = ['user', 'business', 'listing', 'conversation', 'review'] as const;
 export type ReportTarget = (typeof REPORT_TARGETS)[number];
 
 export const REPORT_STATUSES = ['open', 'reviewing', 'actioned', 'dismissed'] as const;
 export type ReportStatus = (typeof REPORT_STATUSES)[number];
 
 // ─── notifications ───
-/** Notification types (scope F9). */
+/** Notification types (scope F9; F6 + F7 §5.16, §11.3). */
 export const NOTIFICATION_TYPES = [
   'enquiry_new', 'message_new', 'offer_new', 'offer_countered', 'offer_accepted', 'offer_rejected',
   'part_match', 'booking_update', 'listing_status', 'deal_completed',
+  'offer_quote', 'offer_expiring', 'offer_backup', 'offer_revived', 'deal_handed_over', 'deal_cancel_requested',
+  'deal_cancelled', 'deal_problem', 'deal_dispute_resolved', 'deal_agreed_reminder', 'review_received',
+  // §10.3: the other side is told it has until `publish_due_at` to review (plan review I6).
+  'review_waiting',
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
+
+export const NOTIFICATION_CATEGORIES = ['chat', 'offers', 'deals', 'reviews'] as const;
+export type NotificationCategory = (typeof NOTIFICATION_CATEGORIES)[number];
+
+/**
+ * The category of a type (§11.3). `part_match`, `booking_update` and `listing_status` belong to later modules (F8,
+ * M14, F2 notices) and fall under `deals` until those modules give them one of their own.
+ */
+export function notificationCategory(type: NotificationType): NotificationCategory {
+  if (type === 'enquiry_new' || type === 'message_new') return 'chat';
+  if (type.startsWith('offer_')) return 'offers';
+  if (type === 'review_received' || type === 'review_waiting') return 'reviews';
+  return 'deals';
+}
+
+export const DELIVERY_STATES = ['queued', 'sent', 'sent_dev', 'failed', 'skipped'] as const;
+export type DeliveryState = (typeof DELIVERY_STATES)[number];
+export const DEVICE_PLATFORMS = ['android', 'ios'] as const;
+export type DevicePlatform = (typeof DEVICE_PLATFORMS)[number];
 
 // ─── admin ───
 /** Admin panel roles (scope flow U4, A1–A6). `super_admin` passes every check. Every admin action is audit-logged. */
@@ -691,6 +844,10 @@ export interface AdminBusinessDetail {
    * `/admin/listings?businessId=<id>` shows. The page links "Listings (n)" there.
    */
   listingsCount: number;
+  /** F6 + F7 §16.1: deals by status and disputes with outcomes. */
+  dealHistory: AdminBusinessDealHistory;
+  /** F6 + F7 §10.4: the seller score; null under `review_min_published` reviews. */
+  sellerScore: SellerScore | null;
 }
 
 // ─── Listings (F2 + F3 + A3; spec 2026-11-18-f2-f3-listings-design) ───
@@ -1153,6 +1310,82 @@ export const APP_SETTINGS = [
     label: 'Unverified listing cap',
     help: 'Open listings a business without GST verification may hold.',
   },
+  // ─── Negotiation, deals and reviews (F6 + F7 spec §17) ───
+  {
+    key: 'offer_validity_hours_1', type: 'int', default: 24, min: 1, max: 720,
+    label: 'Offer validity, short (hours)',
+    help: 'The shortest validity a buyer or seller can give an offer. Must be less than the middle one.',
+  },
+  {
+    key: 'offer_validity_hours_2', type: 'int', default: 48, min: 1, max: 720,
+    label: 'Offer validity, default (hours)',
+    help: 'The middle validity choice, picked by default. Must be less than the long one.',
+  },
+  {
+    key: 'offer_validity_hours_3', type: 'int', default: 168, min: 1, max: 720,
+    label: 'Offer validity, long (hours)',
+    help: 'The longest validity choice.',
+  },
+  {
+    key: 'offer_open_limit_unverified', type: 'int', default: 3, min: 1, max: 50,
+    label: 'Open offers, unverified buyer',
+    help: 'Open negotiations a business without GST verification may have at a time (backups and counters not counted).',
+  },
+  {
+    key: 'offer_open_limit_verified', type: 'int', default: 20, min: 1, max: 500,
+    label: 'Open offers, verified buyer',
+    help: 'Open negotiations a GST-verified business may have at a time.',
+  },
+  {
+    key: 'offer_expiring_notice_hours', type: 'int', default: 6, min: 1, max: 48,
+    label: 'Offer "expiring soon" notice (hours)',
+    help: 'The side whose turn it is hears this long before an offer expires. Must be less than the short validity.',
+  },
+  {
+    key: 'enquiry_new_per_day_unverified', type: 'int', default: 10, min: 1, max: 500,
+    label: 'New enquiries a day, unverified',
+    help: 'New conversations a business without GST verification may start in a day (IST).',
+  },
+  {
+    key: 'enquiry_new_per_day_verified', type: 'int', default: 40, min: 1, max: 2000,
+    label: 'New enquiries a day, verified',
+    help: 'New conversations a GST-verified business may start in a day (IST).',
+  },
+  {
+    key: 'deal_problem_window_days', type: 'int', default: 2, min: 1, max: 30,
+    label: 'Problem report window (days)',
+    help: 'The buyer may report a problem this long after handover. Must be less than the auto-complete time.',
+  },
+  {
+    key: 'deal_auto_complete_days', type: 'int', default: 3, min: 1, max: 60,
+    label: 'Auto-complete after handover (days)',
+    help: 'A handed-over deal completes by itself this long after handover.',
+  },
+  {
+    key: 'review_window_days', type: 'int', default: 14, min: 3, max: 90,
+    label: 'Review window (days)',
+    help: 'Both sides may review this long after a deal completes.',
+  },
+  {
+    key: 'review_blind_days', type: 'int', default: 7, min: 1, max: 30,
+    label: 'Blind review wait (days)',
+    help: 'After the first review the other side has this long before it publishes. At most the review window.',
+  },
+  {
+    key: 'review_min_published', type: 'int', default: 3, min: 1, max: 20,
+    label: 'Reviews before a score shows',
+    help: 'A seller shows "New seller" until this many reviews are published.',
+  },
+  {
+    key: 'offer_backup_max_days', type: 'int', default: 14, min: 1, max: 90,
+    label: 'Backup offer life (days)',
+    help: 'A backup offer waiting this long expires. At least as long as the long offer validity.',
+  },
+  {
+    key: 'deal_agreed_reminder_days', type: 'int', default: 7, min: 1, max: 60,
+    label: 'Hand-over reminder (days)',
+    help: 'Both sides of a deal still agreed after this long are reminded (no auto-cancel).',
+  },
 ] as const satisfies readonly AppSettingDef[];
 
 export type AppSettingKey = (typeof APP_SETTINGS)[number]['key'];
@@ -1172,6 +1405,25 @@ export function validateSettings(values: AppSettingsValues): { key: AppSettingKe
   }
   if (values.listing_expiry_reminder_days >= values.listing_expiry_days) {
     return { key: 'listing_expiry_reminder_days', message: 'The reminder must be shorter than the expiry' };
+  }
+  // F6 + F7 §17 cross-checks.
+  if (values.offer_validity_hours_1 >= values.offer_validity_hours_2) {
+    return { key: 'offer_validity_hours_1', message: 'The short validity must be less than the default one' };
+  }
+  if (values.offer_validity_hours_2 >= values.offer_validity_hours_3) {
+    return { key: 'offer_validity_hours_2', message: 'The default validity must be less than the long one' };
+  }
+  if (values.offer_expiring_notice_hours >= values.offer_validity_hours_1) {
+    return { key: 'offer_expiring_notice_hours', message: 'The "expiring soon" notice must be shorter than the short validity' };
+  }
+  if (values.deal_problem_window_days >= values.deal_auto_complete_days) {
+    return { key: 'deal_problem_window_days', message: 'The problem window must be shorter than the auto-complete time' };
+  }
+  if (values.review_blind_days > values.review_window_days) {
+    return { key: 'review_blind_days', message: 'The blind review wait must not be longer than the review window' };
+  }
+  if (values.offer_backup_max_days * 24 < values.offer_validity_hours_3) {
+    return { key: 'offer_backup_max_days', message: 'A backup must live at least as long as the long offer validity' };
   }
   return null;
 }
@@ -1238,6 +1490,8 @@ export interface ListingCard {
   side: PartSide | null;
   condition: { key: string; label: string } | null;
   quantity: string | null;
+  /** `quantity − held_quantity` (F6 + F7 §8.4): what buyers can still take; null when the listing has no quantity. */
+  availableQuantity: string | null;
   unit: { key: string; label: string; decimals: number } | null;
   priceModel: PriceModel | null;
   pricePaise: number | null;
@@ -1282,9 +1536,15 @@ export interface ListingDetail extends ListingCard {
     gstVerified: boolean;
     memberSince: string;
     liveListings: number;
+    /** F6 + F7 §10.4: null until `review_min_published` reviews are published ("New seller"). */
+    score: SellerScore | null;
   };
   isOwner: boolean;
   publishedAt: string | null;
+  /** F6 + F7 §12.2: the signed-in buyer's thread on this listing ("Open chat"); null for guests, owners and no thread. */
+  myThreadId: string | null;
+  /** F6 + F7 §12.2: the signed-in buyer's open negotiation on this listing, if any. */
+  openNegotiation: { offerId: string; status: OfferStatus; turn: PartySide; pricePerUnitPaise: number } | null;
 }
 
 /** A field today's rules would ask for (§7.3 nudges, `LISTING_INCOMPLETE` problems): `side` / `SIDE_REQUIRED`, `specs.<key>` / `required`… */
@@ -1296,6 +1556,8 @@ export interface ListingProblem {
 /** The owner's view of their listing, any status (`GET /listings/:id/owner`, §7.3–§7.5). */
 export interface ListingOwnerView extends ListingDetail {
   version: number;
+  /** F6 + F7 §8.4: quantity on hold in open deals (decimal string, "0" when none). */
+  heldQuantity: string;
   unitId: string | null;
   conditionId: string | null;
   partBrandId: string | null;
@@ -2204,4 +2466,698 @@ export function cleanFilters(filters: SearchFilters | null | undefined): SearchF
     draft[key] = value;
   }
   return Object.fromEntries(Object.keys(draft).sort().map((k) => [k, draft[k]])) as SearchFilters;
+}
+
+// ─── F6 + F7: enquiries, chat, offers, deals, reviews, notifications (spec 2026-11-19) ───
+// Money: `pricePerUnitPaise` is a JSON number (≤ 2 147 483 647, as listing prices); totals and advances are decimal
+// strings (plan P4). Quantities are decimal strings ("2", "2.5"); code works in thousandths as `bigint`.
+
+const QUANTITY_RE = /^\d+(?:\.\d{1,3})?$/;
+
+/** A decimal-string quantity in thousandths ("2.5" → 2500n). Throws on a negative, malformed or 4+ decimal value. */
+export function quantityToMilli(q: string): bigint {
+  const s = q.trim();
+  if (!QUANTITY_RE.test(s)) throw new Error(`Invalid quantity: ${q}`);
+  const [whole, frac = ''] = s.split('.');
+  return BigInt(whole!) * 1000n + BigInt((frac + '000').slice(0, 3));
+}
+
+/** Thousandths back to a decimal string, trailing zeros trimmed (2500n → "2.5", 3000n → "3"). */
+export function milliToQuantity(m: bigint): string {
+  const neg = m < 0n;
+  const abs = neg ? -m : m;
+  const whole = abs / 1000n;
+  const frac = (abs % 1000n).toString().padStart(3, '0').replace(/0+$/, '');
+  return `${neg ? '-' : ''}${whole}${frac ? `.${frac}` : ''}`;
+}
+
+/** Whether a quantity has no more decimals than the unit allows (trailing zeros don't count: "2.50" fits 1). */
+export function fitsUnitDecimals(q: string, decimals: number): boolean {
+  const s = q.trim();
+  if (!QUANTITY_RE.test(s)) return false;
+  const frac = (s.split('.')[1] ?? '').replace(/0+$/, '');
+  return frac.length <= decimals;
+}
+
+/** Price per unit × quantity, rounded half up to the paisa from thousandths of a unit (§7.2, our call 12). */
+export function totalPaise(pricePerUnitPaise: number | bigint, quantity: string): bigint {
+  return (BigInt(pricePerUnitPaise) * quantityToMilli(quantity) + 500n) / 1000n;
+}
+
+/** Whole % below the asking price, rounded down so it never overstates (P13); null at or above asking. */
+export function percentBelowAsking(price: number | bigint, asking: number | bigint): number | null {
+  const p = BigInt(price);
+  const a = BigInt(asking);
+  if (a <= 0n || p >= a) return null;
+  return Number(((a - p) * 100n) / a);
+}
+
+/**
+ * The inclusive price range a counter may take (§7.4, R14). B = the buyer's latest price (null before the buyer's first
+ * price, as after a quote), S = the seller's latest (the asking snapshot until the seller counters, or the quote).
+ * Buyer: `B ≤ c < S` (`0 < c < S` without B). Seller: `B < c ≤ S`. An empty range has `minPaise > maxPaise`.
+ */
+export function counterBounds(input: {
+  by: PartySide;
+  buyerLatestPaise: number | null;
+  sellerLatestPaise: number;
+}): { minPaise: number; maxPaise: number } {
+  const { by, buyerLatestPaise: b, sellerLatestPaise: s } = input;
+  if (by === 'buyer') return { minPaise: b ?? 1, maxPaise: s - 1 };
+  return { minPaise: (b ?? 0) + 1, maxPaise: s };
+}
+
+/** Derived enquiry status (§6.2): first match wins. */
+export function enquiryStatus(input: {
+  dealCount: number;
+  firstSellerReplyAt: string | Date | null;
+  hasOpenNegotiation: boolean;
+  listingPublic: boolean;
+  blocked: boolean;
+}): EnquiryStatus {
+  if (input.dealCount > 0) return 'converted';
+  if (input.blocked || (!input.listingPublic && !input.hasOpenNegotiation)) return 'closed';
+  if (input.firstSellerReplyAt) return 'replied';
+  return 'open';
+}
+
+/**
+ * Whether a deal waits on `side` (§9.2): the seller hands over an `agreed` deal, the buyer confirms a `handed_over` one;
+ * a pending cancel request waits on the other side only (the requester has asked and waits; our reading of §9.2).
+ */
+export function dealYourTurn(
+  deal: { status: DealStatus; cancelRequestedSide: PartySide | null },
+  side: PartySide,
+): boolean {
+  if (deal.status === 'agreed') return side === 'seller';
+  if (deal.status === 'handed_over') {
+    if (deal.cancelRequestedSide) return deal.cancelRequestedSide !== side;
+    return side === 'buyer';
+  }
+  return false;
+}
+
+/**
+ * Each side's "Your turn" for a thread (§6.10): the open negotiation's turn, an unanswered (`open`) enquiry for the
+ * seller, or a deal waiting on that side (`dealYourTurn`). Stored as `buyer_turn` / `seller_turn`.
+ */
+export function threadTurns(input: {
+  openTurn: PartySide | null;
+  enquiryOpen: boolean;
+  deals: { status: DealStatus; cancelRequestedSide: PartySide | null }[];
+}): { buyer: boolean; seller: boolean } {
+  const turn = (side: PartySide): boolean =>
+    input.openTurn === side ||
+    (side === 'seller' && input.enquiryOpen) ||
+    input.deals.some((d) => dealYourTurn(d, side));
+  return { buyer: turn('buyer'), seller: turn('seller') };
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** The last moment a completed deal can be reviewed (§10.1): `completedAt + windowDays` (plain days, R21). */
+export function reviewWindowEnd(completedAt: Date, windowDays: number): Date {
+  return new Date(completedAt.getTime() + windowDays * DAY_MS);
+}
+
+/** When the first review publishes on its own (§10.3): `min(submitted + blindDays, completed + windowDays)`. */
+export function publishDueAt(submittedAt: Date, completedAt: Date, blindDays: number, windowDays: number): Date {
+  const blind = submittedAt.getTime() + blindDays * DAY_MS;
+  const window = reviewWindowEnd(completedAt, windowDays).getTime();
+  return new Date(Math.min(blind, window));
+}
+
+/** Whether a deal can be reviewed at `now` (§10.1): completed, and inside the review window. */
+export function reviewApplicable(
+  deal: { status: DealStatus; completedAt: Date | null },
+  now: Date,
+  windowDays: number,
+): boolean {
+  return deal.status === 'completed' && deal.completedAt !== null && now < reviewWindowEnd(deal.completedAt, windowDays);
+}
+
+// ─── F6 + F7 views (what a client reads) ───
+
+/** The other business in a thread or deal. Name masked (`maskContact`) like every user-written public text. */
+export interface Counterpart {
+  businessId: string;
+  name: string;
+  gstVerified: boolean;
+}
+
+/** A private photo, read through a short-lived signed URL (§6.8: 300 s; refetch after `expiresAt`). */
+export interface SignedPhoto {
+  url: string;
+  expiresAt: string;
+}
+
+/**
+ * The listing as a thread shows it (§12.2, review change 8): read whatever the listing's status. `title` is the latest
+ * deal's snapshot when there is one; `noLongerListed` when the listing isn't public.
+ */
+export interface ThreadListingStrip {
+  listingId: string;
+  ref: number;
+  kind: ListingKind;
+  title: string;
+  thumbUrl: string | null;
+  status: ListingStatus;
+  priceModel: PriceModel | null;
+  pricePaise: number | null;
+  gstMode: GstPriceMode | null;
+  unit: { key: string; label: string; decimals: number } | null;
+  quantity: string | null;
+  availableQuantity: string | null;
+  minOrderQty: string | null;
+  noLongerListed: boolean;
+}
+
+/** The buyer's Check my machine choice on an enquiry card (§5.2 `fit_machine`), resolved by the server. */
+export interface EnquiryMachine {
+  brandId: string;
+  brandName: string;
+  modelId: string | null;
+  modelName: string | null;
+  year: number | null;
+  verdict: 'fits' | 'not_listed';
+}
+
+/** The share-my-number state of a thread or deal for the reader (§6.6). */
+export interface ContactState {
+  /** My business has a valid consent in this thread. */
+  mine: boolean;
+  /** The other business has a valid consent in this thread. */
+  theirs: boolean;
+  /** `contact_unlocked_at` is set (deal + both ticks, once). */
+  revealed: boolean;
+  /** The other side's number while their consent is valid and the reader may see it (never for a `viewer`). */
+  number: string | null;
+  /** The reader may tick now (a deal exists, not a viewer, and not the owner-phone fallback for a non-owner). */
+  canTick: boolean;
+  /** The number would be the owner's personal phone and the reader isn't the owner ("Your owner can share…"). */
+  ownerOnlyHint: boolean;
+}
+
+export type BlockState = 'none' | 'blocked_by_me' | 'blocked_me';
+
+export type OfferAction = 'accept' | 'reject' | 'counter' | 'withdraw' | 'reconfirm';
+
+/** One row of a negotiation as the reader sees it (§7). Note and reject note masked per reader. */
+export interface OfferView {
+  id: string;
+  threadId: string;
+  listingId: string;
+  negotiationId: string;
+  previousOfferId: string | null;
+  kind: OfferKind;
+  round: number;
+  /** Counters left in the negotiation (`MAX_COUNTER_ROUNDS − round`). */
+  roundsLeft: number;
+  status: OfferStatus;
+  closeReason: OfferCloseReason | null;
+  senderSide: PartySide;
+  isMine: boolean;
+  turn: PartySide;
+  needsReconfirm: boolean;
+  pricePerUnitPaise: number;
+  quantity: string;
+  totalPaise: string;
+  askingPricePaise: number | null;
+  /** Negotiable chains only, when below asking (P13). */
+  percentBelowAsking: number | null;
+  unit: { key: string; label: string; decimals: number } | null;
+  gstMode: GstPriceMode | null;
+  validityHours: number;
+  expiresAt: string | null;
+  backupSince: string | null;
+  note: string | null;
+  rejectNote: string | null;
+  /** The other side wrote a payment phrase or handle in the note (§6.7); false on the reader's own rows. */
+  scamWarning: boolean;
+  answeredAt: string | null;
+  createdAt: string;
+  /** What the reader may do now (empty for a `viewer`). */
+  actions: OfferAction[];
+  /** The counter range for the turn side (`counterBounds`), null when no counter is possible. */
+  bounds: { minPaise: number; maxPaise: number } | null;
+}
+
+/** A message as one reader sees it (§6.4–§6.9). Text masked per reader (`visibleText`). */
+export interface ThreadMessage {
+  id: string;
+  threadId: string;
+  /** Global order (bigserial as a string); `?before=<seq>` pages. */
+  seq: string;
+  kind: MessageKind;
+  senderSide: PartySide | null;
+  isMine: boolean;
+  clientMessageId: string | null;
+  text: string | null;
+  photos: SignedPhoto[];
+  /** Only for the other side's flagged messages (§6.7). */
+  scamWarning: boolean;
+  system: { code: SystemLineCode; values: Record<string, string | number> } | null;
+  enquiry: { quick: QuickEnquiry[]; quantity: string | null; note: string | null; machine: EnquiryMachine | null } | null;
+  offer: OfferView | null;
+  deal: { id: string; ref: number; status: DealStatus; totalPaise: string } | null;
+  createdAt: string;
+}
+
+export type InboxFilter = 'all' | 'buying' | 'selling' | 'your_turn';
+export type InboxPill = 'your_turn' | 'deal' | EnquiryStatus;
+
+/** A Chats tab row (§6.10). */
+export interface InboxRow {
+  threadId: string;
+  side: PartySide;
+  counterpart: Counterpart;
+  listing: { listingId: string; kind: ListingKind; title: string; thumbUrl: string | null };
+  /** Per reader: masked text, photo count, the system line's code, or an offer's price. */
+  lastMessage: {
+    kind: MessageKind;
+    text: string | null;
+    photoCount: number;
+    systemCode: SystemLineCode | null;
+    offer: { pricePerUnitPaise: number; unitLabel: string | null } | null;
+    isMine: boolean;
+    at: string;
+  } | null;
+  unread: number;
+  yourTurn: boolean;
+  enquiryStatus: EnquiryStatus;
+  pill: InboxPill;
+  archived: boolean;
+}
+
+export interface InboxPage {
+  items: InboxRow[];
+  nextCursor: string | null;
+  counts: { yourTurn: number };
+}
+
+/** A deal in a list (Deals tab, a thread's deals). */
+export interface DealListRow {
+  id: string;
+  ref: number;
+  threadId: string;
+  listingId: string;
+  side: PartySide;
+  counterpart: Counterpart;
+  listingTitle: string;
+  thumbUrl: string | null;
+  pricePerUnitPaise: number;
+  quantity: string;
+  unitLabel: string;
+  totalPaise: string;
+  gstMode: GstPriceMode | null;
+  status: DealStatus;
+  yourTurn: boolean;
+  acceptedAt: string;
+  handedOverAt: string | null;
+  autoCompleteAt: string | null;
+  completedAt: string | null;
+  cancelledAt: string | null;
+  updatedAt: string;
+}
+
+/** The thread screen (§12.2 `GET /threads/:id`). */
+export interface ThreadDetail {
+  id: string;
+  side: PartySide;
+  memberRole: MemberRole;
+  counterpart: Counterpart;
+  listingStrip: ThreadListingStrip;
+  enquiryStatus: EnquiryStatus;
+  /** False for a `viewer` and under a block. */
+  canWrite: boolean;
+  blockState: BlockState;
+  openNegotiation: OfferView | null;
+  deals: DealListRow[];
+  contact: ContactState;
+  archived: boolean;
+  lastReadSeq: string;
+  unread: number;
+  /** Machine listings: the "never pay before inspecting a used machine" tip (§6.7, M19). */
+  machineTip: boolean;
+}
+
+export interface DealNotes {
+  paymentMethod: DealPaymentMethod | null;
+  advancePaise: string | null;
+  /** total − advance, when an advance is set. */
+  balancePaise: string | null;
+  fulfilment: DealFulfilment | null;
+  /** `YYYY-MM-DD`. */
+  expectedOn: string | null;
+  /** Masked per reader. */
+  text: string | null;
+  /** The other side's notes text carries a payment phrase or handle (§6.7). */
+  scamWarning: boolean;
+  updatedAt: string | null;
+  updatedBySide: PartySide | null;
+}
+
+export interface DealTimelineEntry {
+  code: DealEventCode;
+  actorSide: DealActorSide;
+  values: Record<string, string | number | boolean | null>;
+  at: string;
+}
+
+export type DealAction =
+  | 'edit_notes'
+  | 'hand_over'
+  | 'confirm_received'
+  | 'cancel'
+  | 'request_cancel'
+  | 'accept_cancel_request'
+  | 'clear_cancel_request'
+  | 'report_problem'
+  | 'share_contact'
+  | 'review';
+
+/** A dispute as the parties see it (description masked to the other party). */
+export interface DealDisputeSummary {
+  id: string;
+  category: DisputeCategory;
+  description: string;
+  photos: SignedPhoto[];
+  openedBySide: PartySide;
+  status: DisputeStatus;
+  outcome: DisputeOutcome | null;
+  messageToParties: string | null;
+  createdAt: string;
+  resolvedAt: string | null;
+}
+
+/** The Deal record (§9.1, `GET /deals/:id`). */
+export interface DealView extends DealListRow {
+  version: number;
+  memberRole: MemberRole;
+  notes: DealNotes;
+  timeline: DealTimelineEntry[];
+  actions: DealAction[];
+  contact: ContactState;
+  problemDeadlineAt: string | null;
+  handover: { at: string; note: string | null; photo: SignedPhoto | null } | null;
+  cancelRequest: { side: PartySide; reason: DealCancelReason | null; at: string } | null;
+  completedHow: DealCompletedHow | null;
+  cancelledBySide: DealCancelledBy | null;
+  cancelReason: DealCancelReason | null;
+  cancelNote: string | null;
+  dispute: DealDisputeSummary | null;
+  review: ReviewState | null;
+}
+
+export interface DealsPage {
+  items: DealListRow[];
+  nextCursor: string | null;
+  counts: { active: number; completed: number; cancelled: number; yourTurn: number };
+}
+
+/** A facet → stars map (1–5); the facets are `REVIEW_FACETS[reviewerSide]`. */
+export type ReviewRatings = Partial<Record<ReviewFacet, number>>;
+
+/** `GET /deals/:id/review` (§10). */
+export interface ReviewState {
+  dealId: string;
+  mySide: PartySide;
+  /** The reader may submit now. */
+  eligible: boolean;
+  /** Why not, when not eligible. */
+  reason: 'not_completed' | 'window_closed' | 'submitted' | 'viewer' | 'other_published' | null;
+  windowEndsAt: string | null;
+  mine: {
+    id: string;
+    ratings: ReviewRatings;
+    text: string | null;
+    submittedAt: string;
+    publishedAt: string | null;
+    hidden: boolean;
+  } | null;
+  theirsSubmitted: boolean;
+  /** When the first review publishes on its own (§10.3). */
+  publishDueAt: string | null;
+}
+
+/** A published buyer → seller review (§10.4), public. Text and reply masked always. */
+export interface PublicReview {
+  id: string;
+  reviewerName: string;
+  listingTitle: string;
+  ratings: ReviewRatings;
+  /** Mean of the facets, one decimal. */
+  stars: number;
+  text: string | null;
+  publishedAt: string;
+  reply: { text: string; at: string } | null;
+  /** Only to its author: "Hidden by our team". */
+  hidden: boolean;
+}
+
+/** A seller's score (§10.4); null below `review_min_published` reviews. */
+export interface SellerScore {
+  count: number;
+  /** Mean of every facet rating, rounded half up to one decimal. */
+  stars: number;
+  /** Facet mean ÷ 5, whole %. */
+  facetsPercent: { matched_listing: number; communication: number; on_time: number };
+}
+
+export interface SellerReviewsPage {
+  score: SellerScore | null;
+  count: number;
+  items: PublicReview[];
+  nextCursor: string | null;
+}
+
+/** An in-app notification (§11), text rendered in the reader's language (never message text, §11.4). */
+export interface NotificationRow {
+  id: string;
+  type: NotificationType;
+  category: NotificationCategory;
+  title: string;
+  body: string;
+  threadId: string | null;
+  offerId: string | null;
+  dealId: string | null;
+  reviewId: string | null;
+  /** Grouped chat rows: messages since the row opened. */
+  unreadCount: number;
+  read: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface NotificationsPage {
+  items: NotificationRow[];
+  nextCursor: string | null;
+  unreadCount: number;
+}
+
+/** `GET /users/me/badges` (§12.2). */
+export interface Badges {
+  unreadThreads: number;
+  dealsYourTurn: number;
+  notificationsUnread: number;
+}
+
+/** `GET /offers/options` (§12.2). */
+export interface OffersOptions {
+  validityHours: number[];
+  defaultValidityHours: number;
+  maxCounterRounds: number;
+  openLimit: number;
+  openCount: number;
+}
+
+// ─── F6 + F7 admin views (§16): never message or note text except in a permitted thread read (§16.3) ───
+
+export interface AdminPartyRef {
+  businessId: string;
+  name: string;
+}
+
+/** `GET /admin/enquiries`. */
+export interface AdminEnquiryRow {
+  threadId: string;
+  listing: { id: string; ref: number; title: string; kind: ListingKind };
+  buyer: AdminPartyRef;
+  seller: AdminPartyRef;
+  enquiryStatus: EnquiryStatus;
+  negotiation: {
+    offerId: string;
+    round: number;
+    status: OfferStatus;
+    lastPricePerUnitPaise: number;
+    quantity: string;
+    turn: PartySide;
+    expiresAt: string | null;
+  } | null;
+  dealCount: number;
+  createdAt: string;
+  lastActivityAt: string;
+}
+
+export interface AdminOfferChainEntry {
+  id: string;
+  negotiationId: string;
+  round: number;
+  kind: OfferKind;
+  senderSide: PartySide;
+  status: OfferStatus;
+  closeReason: OfferCloseReason | null;
+  pricePerUnitPaise: number;
+  quantity: string;
+  totalPaise: string;
+  validityHours: number;
+  expiresAt: string | null;
+  needsReconfirm: boolean;
+  createdAt: string;
+  answeredAt: string | null;
+}
+
+/** `GET /admin/enquiries/:threadId`: the offer chain without text. */
+export interface AdminEnquiryDetail {
+  row: AdminEnquiryRow;
+  chain: AdminOfferChainEntry[];
+  deals: Array<{ id: string; ref: number; status: DealStatus }>;
+}
+
+/** `GET /admin/deals`. */
+export interface AdminDealRow {
+  id: string;
+  ref: number;
+  threadId: string;
+  listing: { id: string; ref: number; title: string };
+  buyer: AdminPartyRef;
+  seller: AdminPartyRef;
+  status: DealStatus;
+  pricePerUnitPaise: number;
+  quantity: string;
+  unitLabel: string;
+  totalPaise: string;
+  openDisputeId: string | null;
+  acceptedAt: string;
+  updatedAt: string;
+}
+
+/** `GET /admin/disputes`. */
+export interface AdminDisputeRow {
+  id: string;
+  dealId: string;
+  dealRef: number;
+  category: DisputeCategory;
+  status: DisputeStatus;
+  outcome: DisputeOutcome | null;
+  openedBySide: PartySide;
+  buyer: AdminPartyRef;
+  seller: AdminPartyRef;
+  createdAt: string;
+  resolvedAt: string | null;
+}
+
+/** `GET /admin/deals/:id`: structured notes only (no `notes_text`). */
+export interface AdminDealDetail extends AdminDealRow {
+  gstMode: GstPriceMode | null;
+  notes: {
+    paymentMethod: DealPaymentMethod | null;
+    advancePaise: string | null;
+    fulfilment: DealFulfilment | null;
+    expectedOn: string | null;
+    hasText: boolean;
+  };
+  handedOverAt: string | null;
+  problemDeadlineAt: string | null;
+  autoCompleteAt: string | null;
+  completedAt: string | null;
+  completedHow: DealCompletedHow | null;
+  cancelledAt: string | null;
+  cancelledBySide: DealCancelledBy | null;
+  cancelReason: DealCancelReason | null;
+  cancelRequest: { side: PartySide; reason: DealCancelReason | null; at: string } | null;
+  timeline: DealTimelineEntry[];
+  hold: { status: HoldStatus; quantity: string } | null;
+  reviews: { buyerSubmitted: boolean; sellerSubmitted: boolean; published: boolean };
+  disputes: AdminDisputeRow[];
+}
+
+/** `GET /admin/disputes/:id`. */
+export interface AdminDisputeDetail extends AdminDisputeRow {
+  description: string;
+  photos: SignedPhoto[];
+  messageToParties: string | null;
+  internalNote: string | null;
+  stockReturned: boolean | null;
+  resolvedByAdminName: string | null;
+  deal: AdminDealDetail;
+  threadId: string;
+}
+
+/** A message as stored (§16.3: the reader is staff, so unmasked), photos signed. Never revealed contact numbers. */
+export interface AdminThreadMessage {
+  id: string;
+  seq: string;
+  kind: MessageKind;
+  senderSide: PartySide | null;
+  senderName: string | null;
+  text: string | null;
+  photos: SignedPhoto[];
+  scamFlag: boolean;
+  system: { code: SystemLineCode; values: Record<string, string | number> } | null;
+  enquiry: { quick: QuickEnquiry[]; quantity: string | null; note: string | null; machine: EnquiryMachine | null } | null;
+  offerId: string | null;
+  dealId: string | null;
+  createdAt: string;
+}
+
+/** `POST /admin/threads/:id/read` (§16.3). */
+export interface AdminThreadRead {
+  threadId: string;
+  listing: { id: string; ref: number; title: string };
+  buyer: AdminPartyRef;
+  seller: AdminPartyRef;
+  messages: AdminThreadMessage[];
+}
+
+/** `GET /admin/reports?target=conversation|review`. */
+export interface AdminReportRow {
+  id: string;
+  target: 'conversation' | 'review';
+  targetId: string;
+  reason: string;
+  details: string | null;
+  status: ReportStatus;
+  reporter: AdminPartyRef;
+  createdAt: string;
+  resolvedAt: string | null;
+  resolutionNote: string | null;
+  /** Conversation reports: the two parties. */
+  parties: { buyer: AdminPartyRef; seller: AdminPartyRef } | null;
+  /** Review reports: the review as stored. */
+  review: {
+    id: string;
+    reviewer: AdminPartyRef;
+    reviewed: AdminPartyRef;
+    ratings: ReviewRatings;
+    text: string | null;
+    replyText: string | null;
+    hidden: boolean;
+    replyHidden: boolean;
+  } | null;
+}
+
+/** Deals by status and disputes with outcomes on the admin business page (§9.6, §16.1). */
+export interface AdminBusinessDealHistory {
+  byStatus: Record<DealStatus, number>;
+  disputes: Array<{
+    id: string;
+    dealId: string;
+    dealRef: number;
+    category: DisputeCategory;
+    status: DisputeStatus;
+    outcome: DisputeOutcome | null;
+    createdAt: string;
+    resolvedAt: string | null;
+  }>;
 }

@@ -6,6 +6,10 @@ import type { FormMode } from '@/lib/onboarding-step';
 import type { SellStep } from '@/lib/sell-steps';
 import type { ResultsRequest } from '@/lib/search-request';
 import type { SearchTabParams } from '@/lib/search-start';
+import type { PushAskTrigger } from '@/lib/push-ask';
+
+/** The sheet a listing page opens on arrival (F6 + F7 §15.2). */
+export type ListingSheet = 'enquire' | 'offer' | 'buy' | 'ask_price';
 
 export type RootStackParamList = {
   Welcome: undefined;
@@ -36,8 +40,11 @@ export type RootStackParamList = {
   SellPublished: { listingId: string; outcome: ListingStatus };
   /** The drafts list (Task 25), from the Post tab's "Drafts (n)" and My listings. */
   MyDrafts: undefined;
-  /** The listing page (Task 26). */
-  Listing: { listingId: string };
+  /**
+   * The listing page (Task 26). `openSheet` (F6 + F7 §15.2): a guest's pending Enquire / Offer / Buy / Ask price reopens
+   * the listing with that sheet after sign-in and onboarding (never sending anything by itself).
+   */
+  Listing: { listingId: string; openSheet?: ListingSheet };
   /** Full-screen photo / video viewer of a listing, opened at `index` (Task 26). */
   ListingMedia: { listingId: string; index: number };
   /** A seller's public listings (Task 26). */
@@ -74,6 +81,31 @@ export type RootStackParamList = {
    * from Browse's "Show all India") replaces the location sheet's radius for the view and the results it opens.
    */
   SearchBrand: { brandId: string; brandName: string; kinds?: ListingKind[]; radiusKm?: DiscoveryRadiusKm | null };
+
+  // F6 + F7 (spec §15.1). Signed-in only, except SellerReviews (public reviews; guests too). C0-5 registers
+  // placeholders; each lane replaces its screens.
+  /** A chat thread (L6). */
+  Thread: { threadId: string };
+  /** Profile › Contact number, with the OTP check (L6). */
+  ContactNumber: undefined;
+  /** Profile › Blocked businesses (L6). */
+  BlockedBusinesses: undefined;
+  /** The deal record (L7). */
+  DealRecord: { dealId: string };
+  /** Report a problem with a handed-over deal (L7). */
+  ReportProblem: { dealId: string };
+  /** Rate a completed deal (L8). */
+  ReviewDeal: { dealId: string };
+  /** A seller's public reviews (L8). */
+  SellerReviews: { businessId: string };
+  /** Profile › Reviews: my seller score and the reviews I received (L8). */
+  MyReviews: undefined;
+  /** The notifications list (L8). */
+  Notifications: undefined;
+  /** Profile › Notification settings (L8). */
+  NotificationSettings: undefined;
+  /** The push permission explainer shown before the system prompt (L8). */
+  PermissionExplainer: { trigger: PushAskTrigger };
 };
 
 export type AuthStackParamList = {

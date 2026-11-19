@@ -30,8 +30,8 @@ export function initSentry(): boolean {
   return true;
 }
 
-/** Header and body keys that must never leave the server. */
-const SECRET_KEYS = /^(authorization|cookie|x-api-key|token|refreshtoken|password|otp|phone|firebase_token|phone_token|razorpay_signature|gstin|pan|account_number|ifsc)$/i;
+/** Header and body keys that must never leave the server. F6 + F7 §19 adds message / note / review text, numbers, FCM tokens and photo keys. */
+const SECRET_KEYS = /^(authorization|cookie|x-api-key|token|refreshtoken|password|otp|phone|firebase_token|phone_token|razorpay_signature|gstin|pan|account_number|ifsc|text|note|notestext|description|replytext|messagetoparties|contactphone|number|fcmtoken|photokeys)$/i;
 
 export function redact(input: unknown): any {
   if (!input || typeof input !== 'object') return input;

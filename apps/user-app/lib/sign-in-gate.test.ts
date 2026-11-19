@@ -46,6 +46,10 @@ describe('guest tab guard (spec §8.1)', () => {
     for (const tab of ['Home', 'Search', 'Post', 'Chats', 'Deals'] as const) expect(tabSignInReason(tab, true)).toBeNull();
   });
 
+  it('has the F6 + F7 contact reasons (spec §15.2)', () => {
+    expect(SIGN_IN_REASONS).toEqual(expect.arrayContaining(['enquire', 'offer']));
+  });
+
   it('every reason has its sheet copy in en, hi and gu', () => {
     for (const lang of ['en', 'hi', 'gu'] as const) {
       const sheet = resources[lang].translation.auth.signInSheet as unknown as Record<string, Record<string, string>>;

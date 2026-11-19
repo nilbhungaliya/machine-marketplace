@@ -49,6 +49,19 @@ import guSaved from './gu/saved.json';
 import enDiscover from './en/discover.json';
 import hiDiscover from './hi/discover.json';
 import guDiscover from './gu/discover.json';
+// F6 + F7 (C0-5)
+import enOffers from './en/offers.json';
+import hiOffers from './hi/offers.json';
+import guOffers from './gu/offers.json';
+import enReviews from './en/reviews.json';
+import hiReviews from './hi/reviews.json';
+import guReviews from './gu/reviews.json';
+import enNotifications from './en/notifications.json';
+import hiNotifications from './hi/notifications.json';
+import guNotifications from './gu/notifications.json';
+import enHolds from './en/holds.json';
+import hiHolds from './hi/holds.json';
+import guHolds from './gu/holds.json';
 
 // One import per language per area. A new area: add its JSON in en/, hi/ and gu/, then register it here.
 export const resources = {
@@ -71,6 +84,10 @@ export const resources = {
       listing: enListing,
       saved: enSaved,
       discover: enDiscover,
+      offers: enOffers,
+      reviews: enReviews,
+      notifications: enNotifications,
+      holds: enHolds,
     },
   },
   hi: {
@@ -92,6 +109,10 @@ export const resources = {
       listing: hiListing,
       saved: hiSaved,
       discover: hiDiscover,
+      offers: hiOffers,
+      reviews: hiReviews,
+      notifications: hiNotifications,
+      holds: hiHolds,
     },
   },
   gu: {
@@ -113,6 +134,10 @@ export const resources = {
       listing: guListing,
       saved: guSaved,
       discover: guDiscover,
+      offers: guOffers,
+      reviews: guReviews,
+      notifications: guNotifications,
+      holds: guHolds,
     },
   },
 } as const;

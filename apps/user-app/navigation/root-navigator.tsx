@@ -32,6 +32,19 @@ import RemovedByTeamScreen from '@/screens/my-listings/removed-by-team';
 import SearchResultsScreen from '@/screens/search/results';
 import SearchFiltersScreen from '@/screens/search/filters';
 import SearchBrandScreen from '@/screens/search/brand';
+// F6 + F7 (C0-5 placeholders; each lane replaces its screens)
+import ThreadScreen from '@/screens/chat/thread';
+import ContactNumberScreen from '@/screens/profile/contact-number';
+import BlockedBusinessesScreen from '@/screens/profile/blocked-businesses';
+import DealRecordScreen from '@/screens/deals/deal-record';
+import ReportProblemScreen from '@/screens/deals/report-problem';
+import ReviewDealScreen from '@/screens/reviews/review-deal';
+import SellerReviewsScreen from '@/screens/reviews/seller-reviews';
+import MyReviewsScreen from '@/screens/reviews/my-reviews';
+import NotificationsScreen from '@/screens/notifications/notifications';
+import NotificationSettingsScreen from '@/screens/notifications/notification-settings';
+import PermissionExplainerScreen from '@/screens/notifications/permission-explainer';
+import SocketProvider from '@/components/SocketProvider';
 import { usePendingActionRunner } from '@/hooks/use-saved';
 import AuthStack from './auth-stack';
 import TabNavigator from './tab-navigator';
@@ -96,6 +109,8 @@ export default function RootNavigator() {
   const intro = <Stack.Screen key="GstIntro" name="GstIntro" component={GstIntroScreen} options={{ gestureEnabled: false }} />;
 
   return (
+    // One /user socket for the signed-in user (F6 + F7 §13); guests get none.
+    <SocketProvider enabled={isAuthenticated}>
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       {!isAuthenticated && guest ? (
         // Guests browse (F4 + F5 spec §8.1, R12): the tabs, the listing pages and the auth screens, pushed when needed.
@@ -112,6 +127,8 @@ export default function RootNavigator() {
           <Stack.Screen name="SearchResults" component={SearchResultsScreen} />
           <Stack.Screen name="SearchFilters" component={SearchFiltersScreen} />
           <Stack.Screen name="SearchBrand" component={SearchBrandScreen} />
+          {/* F6 + F7: a seller's public reviews, from the listing page. */}
+          <Stack.Screen name="SellerReviews" component={SellerReviewsScreen} />
           <Stack.Screen name="Auth" component={AuthStack} />
         </Stack.Group>
       ) : !isAuthenticated ? (
@@ -158,8 +175,21 @@ export default function RootNavigator() {
           <Stack.Screen name="SearchResults" component={SearchResultsScreen} />
           <Stack.Screen name="SearchFilters" component={SearchFiltersScreen} />
           <Stack.Screen name="SearchBrand" component={SearchBrandScreen} />
+          {/* F6 + F7 (L6 chat, L7 deals, L8 reviews and notifications) */}
+          <Stack.Screen name="Thread" component={ThreadScreen} />
+          <Stack.Screen name="ContactNumber" component={ContactNumberScreen} />
+          <Stack.Screen name="BlockedBusinesses" component={BlockedBusinessesScreen} />
+          <Stack.Screen name="DealRecord" component={DealRecordScreen} />
+          <Stack.Screen name="ReportProblem" component={ReportProblemScreen} />
+          <Stack.Screen name="ReviewDeal" component={ReviewDealScreen} />
+          <Stack.Screen name="SellerReviews" component={SellerReviewsScreen} />
+          <Stack.Screen name="MyReviews" component={MyReviewsScreen} />
+          <Stack.Screen name="Notifications" component={NotificationsScreen} />
+          <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} />
+          <Stack.Screen name="PermissionExplainer" component={PermissionExplainerScreen} options={{ presentation: 'modal' }} />
         </Stack.Group>
       )}
     </Stack.Navigator>
+    </SocketProvider>
   );
 }

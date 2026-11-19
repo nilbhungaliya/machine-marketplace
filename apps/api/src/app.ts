@@ -7,6 +7,7 @@ import dbPlugin from './plugins/db.js';
 import redisPlugin from './plugins/redis.js';
 import rateLimitPlugin from './plugins/rate-limit.js';
 import authPlugin from './plugins/auth.js';
+import idempotencyPlugin from './plugins/idempotency.js';
 import healthRoutes from './routes/health.js';
 import adminAuthRoutes from './routes/admin/auth.js';
 import authOtpRoutes from './routes/auth-otp.js';
@@ -32,6 +33,22 @@ import adminListingMediaRoutes from './routes/admin/listing-media.js';
 import discoverRoutes from './routes/discover.js';
 import savedListingRoutes from './routes/saved-listings.js';
 import adminSearchRoutes from './routes/admin/search.js';
+// F6 + F7 (enquiries, chat, offers, deals, reviews, notifications)
+import threadRoutes from './routes/threads.js';
+import blockRoutes from './routes/blocks.js';
+import contactPhoneRoutes from './routes/contact-phone.js';
+import badgeRoutes from './routes/badges.js';
+import offerRoutes from './routes/offers.js';
+import dealRoutes from './routes/deals.js';
+import reviewRoutes from './routes/reviews.js';
+import notificationRoutes from './routes/notifications.js';
+import deviceRoutes from './routes/devices.js';
+import adminEnquiryRoutes from './routes/admin/enquiries.js';
+import adminDealRoutes from './routes/admin/deals.js';
+import adminDisputeRoutes from './routes/admin/disputes.js';
+import adminConversationRoutes from './routes/admin/conversations.js';
+import adminReportRoutes from './routes/admin/reports.js';
+import adminReviewRoutes from './routes/admin/reviews.js';
 
 export interface BuildAppOptions {
   /** false in unit tests that must not touch Postgres/Redis. */
@@ -71,6 +88,8 @@ export async function buildApp({ infra = true, logger = true }: BuildAppOptions 
   await app.register(cors, { origin: true, credentials: true });
   await app.register(errorHandlerPlugin);
   await app.register(authPlugin);
+  // After auth, before every route: its onRoute hook adds the replay preHandler to F6 + F7 idempotent routes.
+  await app.register(idempotencyPlugin);
   await app.register(healthRoutes);
 
   if (infra) {
@@ -101,6 +120,21 @@ export async function buildApp({ infra = true, logger = true }: BuildAppOptions 
     await app.register(adminListingRoutes);
     await app.register(adminListingMediaRoutes);
     await app.register(adminSearchRoutes);
+    await app.register(threadRoutes);
+    await app.register(blockRoutes);
+    await app.register(contactPhoneRoutes);
+    await app.register(badgeRoutes);
+    await app.register(offerRoutes);
+    await app.register(dealRoutes);
+    await app.register(reviewRoutes);
+    await app.register(notificationRoutes);
+    await app.register(deviceRoutes);
+    await app.register(adminEnquiryRoutes);
+    await app.register(adminDealRoutes);
+    await app.register(adminDisputeRoutes);
+    await app.register(adminConversationRoutes);
+    await app.register(adminReportRoutes);
+    await app.register(adminReviewRoutes);
   }
 
   return app;

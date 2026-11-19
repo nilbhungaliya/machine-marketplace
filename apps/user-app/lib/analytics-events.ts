@@ -120,12 +120,63 @@ export const HOME_EVENTS = {
   tileOpened: 'home_tile_opened',
 } as const;
 
+// F6 + F7 (spec §15.4): ids, kinds, counts and reason codes only. Never message text, notes, phone numbers, amounts or
+// names. Declared here once (C0-5); the lanes only fire them.
+
+/**
+ * Chat (L6).
+ * - `enquirySent` (`quickCount`, `hasNote`, `hasMachine`), `messageSent` (`photos`: count),
+ *   `conversationReported` (`reason`: code).
+ */
+export const CHAT_EVENTS = {
+  enquirySent: 'chat_enquiry_sent',
+  messageSent: 'chat_message_sent',
+  threadArchived: 'chat_thread_archived',
+  conversationReported: 'chat_conversation_reported',
+  businessBlocked: 'chat_business_blocked',
+  listingShared: 'chat_listing_shared',
+  contactShared: 'chat_contact_shared',
+} as const;
+
+/** Offers (L7). `offerSent` (`kind`, `validityHours`), `offerCountered` (`round`). */
+export const OFFER_EVENTS = {
+  offerSent: 'offer_sent',
+  offerCountered: 'offer_countered',
+  offerAccepted: 'offer_accepted',
+  offerRejected: 'offer_rejected',
+  offerWithdrawn: 'offer_withdrawn',
+  quoteSent: 'offer_quote_sent',
+} as const;
+
+/** Deals (L7). `handedOver` (`withPhoto`), `cancelled` (`side`, `reason`: code), `problemReported` (`category`). */
+export const DEAL_EVENTS = {
+  handedOver: 'deal_handed_over',
+  receivedConfirmed: 'deal_received_confirmed',
+  cancelled: 'deal_cancelled',
+  cancelRequested: 'deal_cancel_requested',
+  problemReported: 'deal_problem_reported',
+  notesSaved: 'deal_notes_saved',
+} as const;
+
+/** Reviews (L8). `reviewSubmitted` (`side`). */
+export const REVIEW_EVENTS = {
+  reviewSubmitted: 'review_submitted',
+  reviewReplied: 'review_replied',
+  reviewReported: 'review_reported',
+} as const;
+
+/** Notifications and push (L8). `pushPermissionAnswered` (`granted`), `notificationOpened` (`type`). */
+export const NOTIFICATION_EVENTS = {
+  pushPermissionAnswered: 'push_permission_answered',
+  notificationOpened: 'notification_opened',
+} as const;
+
 /**
  * Route params allowed onto screen events. Everything else is dropped, so a param
  * carrying a phone or a price never reaches analytics by accident. Ids only (plus `mode` and `category`): never the
  * listing routes' `step`, `group`, `from`, `outcome` or `index`.
  */
-export const SCREEN_PARAM_ALLOWLIST = ['listingId', 'businessId', 'partRequestId', 'dealId', 'category', 'mode'] as const;
+export const SCREEN_PARAM_ALLOWLIST = ['listingId', 'businessId', 'partRequestId', 'dealId', 'threadId', 'category', 'mode'] as const;
 
 export function pickAllowedParams(params: unknown): Record<string, string | number> {
   if (!params || typeof params !== 'object') return {};

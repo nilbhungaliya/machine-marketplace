@@ -35,6 +35,8 @@ export default defineConfig({
       REDIS_URL: testRedisUrl,
       // Suites fire hundreds of requests a minute from one client; the 120/min production limit would 429 them.
       RATE_LIMIT_MAX: '1000000',
+      // F6 + F7 (P8): the message / offer / deal group limits, raised the same way; a limit test builds its own app.
+      GROUP_RATE_LIMIT_MAX: '1000000',
       // Same for the GST per-IP limit (lookup, otp/send): every suite calls from 127.0.0.1. One test lowers it.
       GST_IP_RATE_MAX: '1000000',
       // No proxy in tests, whatever a developer's .env says: request.ip (and the per-IP limits) must be the client's.

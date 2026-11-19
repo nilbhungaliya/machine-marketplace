@@ -106,6 +106,8 @@ function cardFrom(row: ListingRow, p: CardParts): ListingCard {
     side: row.side,
     condition: p.condition,
     quantity: trimQuantity(row.quantity),
+    // F6 + F7 §8.4: quantity − held_quantity from C1-3; the full quantity until then.
+    availableQuantity: trimQuantity(row.quantity),
     unit: p.unit,
     priceModel: row.priceModel,
     pricePaise: row.pricePaise,
@@ -360,9 +362,14 @@ export async function loadListing(conn: Conn, row: ListingRow): Promise<LoadedLi
       gstVerified: !!b?.b.verificationLevels.includes('gst'),
       memberSince: b ? b.b.createdAt.toISOString() : '',
       liveListings: live?.n ?? 0,
+      // F6 + F7 §10.4: filled with the seller score in C1-3 / L4.
+      score: null,
     },
     isOwner: false,
     publishedAt: iso(row.publishedAt),
+    // F6 + F7 §12.2: the signed-in buyer's thread and negotiation, from C1-3.
+    myThreadId: null,
+    openNegotiation: null,
   };
 
   return {
@@ -470,6 +477,8 @@ export async function toOwnerView(conn: Conn, row: ListingRow, settings: AppSett
     ...d,
     isOwner: true,
     version: row.version,
+    // F6 + F7 §8.4: listings.held_quantity from C1-3.
+    heldQuantity: '0',
     unitId: row.unitId,
     conditionId: row.conditionId,
     partBrandId: row.partBrandId,

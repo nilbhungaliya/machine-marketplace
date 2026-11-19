@@ -9,9 +9,6 @@ export const userRoom = (userId: string) => `user:${userId}`;
 /** Everyone in a business — offers, chats and deals belong to the business. */
 export const businessRoom = (businessId: string) => `business:${businessId}`;
 
-/** A chat thread (one listing × one buyer), joined while the thread is open. */
-export const threadRoom = (threadId: string) => `thread:${threadId}`;
-
 /** Every admin on the /admin namespace. */
 export const ADMIN_ALL_ROOM = 'admin:all';
 

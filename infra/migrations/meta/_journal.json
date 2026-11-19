@@ -85,6 +85,20 @@
       "when": 1795067830553,
       "tag": "0011_f4_discovery_checks_normalizer",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1795097835486,
+      "tag": "0012_f6_deals_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1795097848115,
+      "tag": "0013_f6_checks_triggers",
+      "breakpoints": true
     }
   ]
 }

@@ -1,16 +1,34 @@
 import { describe, expect, it } from 'vitest';
 import reducer, { browseAsGuest, logout, setAuth, setOnboarding, setPending, takePending } from '@/store/authSlice';
-import { isPendingAction, pendingToRun } from './pending-action';
+import { isPendingAction, PENDING_CONTACT_TYPES, pendingRoute, pendingToRun } from './pending-action';
 
 const save = { type: 'save', listingId: '6f1c2b1e-1111-4a4a-8a8a-000000000001' } as const;
 
 describe('pending action (spec §8.1, R12)', () => {
-  it('recognises a serialisable save action only', () => {
+  it('recognises serialisable save and contact actions only', () => {
     expect(isPendingAction(save)).toBe(true);
     expect(isPendingAction({ type: 'save' })).toBe(false);
-    expect(isPendingAction({ type: 'enquire', listingId: 'x' })).toBe(false);
+    expect(isPendingAction({ type: 'enquire', listingId: 'x' })).toBe(true);
+    expect(isPendingAction({ type: 'call', listingId: 'x' })).toBe(false);
     expect(isPendingAction(null)).toBe(false);
     expect(isPendingAction('save')).toBe(false);
+  });
+
+  // F6 + F7 §15.2 (plan C0-5): the four contact actions wait like Save, then go to openPendingContact, never to save.
+  it.each(PENDING_CONTACT_TYPES)('%s waits for sign-in and onboarding, then runs with its listing id', (type) => {
+    const action = { type, listingId: save.listingId };
+    let s = reducer(undefined, browseAsGuest());
+    s = reducer(s, setPending(action));
+    expect(pendingToRun(s)).toBeNull();
+    s = reducer(s, setAuth({ token: 't', userId: 'u1', onboarding: 'profile' }));
+    expect(pendingToRun(s)).toBeNull();
+    s = reducer(s, setOnboarding({ step: 'done', gstIntro: true }));
+    expect(pendingToRun(s)).toEqual(action);
+    expect(pendingRoute(action)).toBe('contact');
+  });
+
+  it('routes save to the save path', () => {
+    expect(pendingRoute(save)).toBe('save');
   });
 
   it('is stored for a guest and waits until sign-in and onboarding are done', () => {

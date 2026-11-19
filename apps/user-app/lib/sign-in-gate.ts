@@ -5,7 +5,7 @@ import type { TabParamList } from '@/navigation/types';
 // choice. Login is asked only at the moment of intent (business rule 2).
 
 /** Why the sign-in sheet opened: its title and body copy (`auth.signInSheet.{title,body}.<reason>`), analytics `reason`. */
-export const SIGN_IN_REASONS = ['save', 'post', 'chats', 'deals', 'report'] as const;
+export const SIGN_IN_REASONS = ['save', 'post', 'chats', 'deals', 'report', 'enquire', 'offer'] as const;
 export type SignInReason = (typeof SIGN_IN_REASONS)[number];
 
 const TAB_REASONS: Partial<Record<keyof TabParamList, SignInReason>> = {

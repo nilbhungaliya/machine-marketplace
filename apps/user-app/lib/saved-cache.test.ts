@@ -5,7 +5,7 @@ import { canShowHeart, patchSaved } from './saved-cache';
 
 const card = (id: string, saved: boolean | null = false): ListingCard => ({
   id, ref: 100000 + Number(id.slice(-1)), kind: 'part', status: 'live', title: `Part ${id}`, side: null, condition: null,
-  quantity: '1', unit: null, priceModel: 'fixed', pricePaise: 1000, gstMode: null, rate: null, thumbUrl: null, city: null,
+  quantity: '1', availableQuantity: '1', unit: null, priceModel: 'fixed', pricePaise: 1000, gstMode: null, rate: null, thumbUrl: null, city: null,
   industrialAreaName: null, distanceKm: null, refreshedAt: null, businessId: 'biz', saved, tags: [],
 });
 

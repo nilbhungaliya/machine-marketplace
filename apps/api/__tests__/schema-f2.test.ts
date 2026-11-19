@@ -61,12 +61,17 @@ describe('F2 schema', () => {
     ).rejects.toMatchObject({ code: '23514', constraint: 'listings_area_one_of' });
   });
 
-  it('refuses a zero quantity', async () => {
+  // F6 + F7 §5.7 relaxed the CHECK to `>= 0` so a sell-out can store 0; input still refuses 0 (routes, go-live gate).
+  it('refuses a negative quantity', async () => {
     await expect(
       db.execute(sql`
         INSERT INTO listings (business_id, created_by_user_id, kind, quantity)
-        VALUES (${seller.businessId}, ${seller.userId}, 'part', 0)`),
-    ).rejects.toMatchObject({ code: '23514', constraint: 'listings_quantity_positive' });
+        VALUES (${seller.businessId}, ${seller.userId}, 'part', -1)`),
+    ).rejects.toMatchObject({
+      code: '23514',
+      // -1 also breaks 0 ≤ held_quantity ≤ quantity; either CHECK may be the one reported.
+      constraint: expect.stringMatching(/^listings_(quantity_positive|held_quantity_range)$/),
+    });
   });
 
   it('refuses a fitment row whose years run backwards', async () => {

@@ -3,6 +3,12 @@ import { DISCOVERY_LIMITS } from '@mpm/shared-types';
 import { runSearchRefreshTick } from '../services/discovery/refresh-jobs.js';
 import { deleteOldSearchQueries } from '../services/discovery/search-log.service.js';
 import { runListingExpiry } from '../services/listings/listing-jobs.service.js';
+import { autoCompleteDeals, remindAgreedDeals } from '../services/deals/deal-jobs.js';
+import { sweepIdempotencyKeys } from '../services/idempotency.service.js';
+import { sendDuePushes } from '../services/notifications/push-sender.js';
+import { deleteOldNotifications } from '../services/notifications/retention.js';
+import { expireOffers, notifyExpiringOffers } from '../services/offers/offer-jobs.js';
+import { publishDueReviews } from '../services/reviews/review-jobs.js';
 import type { JobSpec } from './runner.js';
 
 /**
@@ -39,6 +45,31 @@ export function allJobs(app: FastifyInstance): JobSpec[] {
       run: async () => {
         const deleted = await deleteOldSearchQueries(app.db);
         if (deleted > 0) app.log.info({ job: 'search-query-retention', deleted }, 'old search queries deleted');
+      },
+    },
+    // F6 + F7 (spec §14). Each claims rows FOR UPDATE SKIP LOCKED with a per-row savepoint and runs through runJobTx.
+    { name: 'offer-expiry', everyMs: 60_000, run: () => expireOffers(app) },
+    { name: 'offer-expiring-soon', everyMs: 300_000, run: () => notifyExpiringOffers(app) },
+    { name: 'deal-auto-complete', everyMs: 300_000, run: () => autoCompleteDeals(app) },
+    { name: 'deal-agreed-reminder', everyMs: 86_400_000, firstRunMs: 900_000, run: () => remindAgreedDeals(app) },
+    { name: 'review-publish', everyMs: 900_000, run: () => publishDueReviews(app) },
+    { name: 'notification-push', everyMs: 3_000, run: () => sendDuePushes(app) },
+    {
+      name: 'notification-retention',
+      everyMs: 86_400_000,
+      firstRunMs: 1_200_000,
+      run: async () => {
+        const deleted = await deleteOldNotifications(app.db);
+        if (deleted > 0) app.log.info({ job: 'notification-retention', deleted }, 'old notifications deleted');
+      },
+    },
+    {
+      name: 'idempotency-cleanup',
+      everyMs: 3_600_000,
+      firstRunMs: 300_000,
+      run: async () => {
+        const deleted = await sweepIdempotencyKeys(app.db);
+        if (deleted > 0) app.log.info({ job: 'idempotency-cleanup', deleted }, 'old idempotency keys deleted');
       },
     },
   ];

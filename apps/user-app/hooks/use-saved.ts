@@ -6,6 +6,7 @@ import type { SavedListingsPage } from '@mpm/shared-types';
 import { useBusiness } from '@/hooks/use-business';
 import { discoverKeys } from '@/hooks/use-discover';
 import { listingKeys } from '@/hooks/use-listing';
+import { openPendingContact } from '@/hooks/use-pending-contact';
 import { useRequireSignIn } from '@/hooks/use-require-sign-in';
 import { track } from '@/lib/analytics';
 import { AUTH_EVENTS, SAVED_EVENTS } from '@/lib/analytics-events';
@@ -115,6 +116,12 @@ export async function runPendingAction(
   const pending = pendingToRun(store.getState().auth);
   if (!pending) return;
   store.dispatch(takePending());
+  // F6 + F7 §15.2: a pending Enquire / Offer / Buy / Ask price reopens its sheet; it is never saved.
+  if (pending.type !== 'save') {
+    track(AUTH_EVENTS.pendingActionCompleted, { type: pending.type });
+    openPendingContact(pending);
+    return;
+  }
   const { listingId } = pending;
   try {
     await save(listingId);
