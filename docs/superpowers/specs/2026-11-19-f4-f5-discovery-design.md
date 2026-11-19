@@ -1,7 +1,7 @@
 # F4 + F5 discovery: search, filters, browse, home, saved — design
 
-Date: 2026-11-19. Status: **approved in conversation by the owner (design summary); revised after the owner's review
-(§16); awaits the owner's approval before the plan.**
+Date: 2026-11-19. Status: **approved by the owner (2026-11-19) after three review rounds (§16, §16.1, §16.2); the
+plan is `docs/superpowers/plans/2026-11-19-f4-f5-discovery.md`.**
 
 Scope IDs: **F4** (search and filters), **F5** (browse, nearby, machines for rent), the search half of **F3** (side
 filter, side words, Pair), **U2** (buyer finds a part) in `docs/product-scope.txt`; modules **M2** (home and discovery),
@@ -74,7 +74,8 @@ search (P2).
 | R14 | The search log is **anonymous**: normalised query, result count, day; no user, device, IP or location; queries that look like personal data are never logged. Deleted after 90 days. |
 | R15 | Home's first three tiles are **kind shortcuts** (Spare parts → parts, Machinery → machines for sale, For rent → rentals), then the root categories in admin order (mockup). |
 | R16 | The **has video** filter (§5.7) is hidden in the app while `LISTING_VIDEO_UPLOAD_ENABLED` is false; the API accepts it. |
-| R17 | Rate limits are **per user** (signed in) or **per install id** (guests), with a high per-IP outer cap (carrier NAT puts many Jio / Airtel users behind one IP). |
+| R17 | Rate limits are **per user** (signed in) or **per install id** (guests), with a high per-IP outer cap (carrier NAT puts many Jio / Airtel users behind one IP). The install id is client-chosen and can be faked on every request, so for guests the per-IP cap is the only real limit: **accepted for launch**, and the install-id limit is a fairness limit, not a security control. |
+| R18 | **Origin is frozen per results list:** the app sends page 1's origin with every later page; a GPS refresh never changes a list being scrolled. Only a location change by the user (or a new search) starts a new list. |
 
 ---
 
@@ -88,6 +89,11 @@ search (P2).
 | `search_text` | `text NOT NULL DEFAULT ''` | `search_title_text` + fitment and machine brand / model names (and `*_other` text) + spec values (option label for select fields, raw text / numbers otherwise) + condition label. **No side words** (the side is a filter, R8). Starts with `search_title_text` (prefix, as textile). |
 | `search_point` | `geography(Point,4326)` | R5. Null only when neither a point nor a pincode with points exists. |
 | `search_refreshed_at` | `timestamptz` | When the three columns were last rebuilt. |
+
+**`brands` (new column):** `chip_needs_context boolean NOT NULL DEFAULT false` — "read as a chip only with a model of the
+brand or a machine type". For brands whose name is an ordinary word (Bull Machines → "bull", ACE, Action Construction Equipment →
+"action"), so "bull gear" stays words. Set in the A4 brand dialog (checkbox, audit-logged as a brand edit); the catalogue
+seed sets it for the plan's list (at least Bull and ACE).
 
 Catalogue names and option labels are English only today; Hindi and Gujarati words reach search through synonyms
 (seeded for common terms). If A4 later adds translated names, the refresh includes them.
@@ -210,7 +216,10 @@ against a Redis version key `discovery:reader:version` (incremented by every syn
    response adds `refSuggestion: { listingId, ref }`, shown as a "Listing #123456" row above the results.
 2. **Synonym phrases** (longest first, up to 4 words): `word` synonyms replace the phrase with their words; `category`
    / `brand` / `model` / `side` synonyms mark the phrase as that name.
-3. **Names**: brand names (all words of the name as a phrase) → `reading.brand`; model names → `reading.model` (a model
+3. **Names**: brand names (all words of the name as a phrase) → `reading.brand`, except a brand with
+   `chip_needs_context` becomes a chip only when a model of that brand or a **machine type** (level `machine_type`, e.g.
+   backhoe loader) is also read in the same query; a part group ("gears") or a machine category never unlocks it
+   (else its words stay words); model names → `reading.model` (a model
    whose brand was also read wins; a model name shared by two brands with no brand read is left as words); category
    names, deepest level first, tie broken by most public listings, still tied → none (textile `readCategory`) →
    `reading.category`. Tokens consumed here are never part numbers, so `JS205`, `EX200`, `PC210` become a model chip.
@@ -233,8 +242,9 @@ screen) override what the reader found.
 
 For each remaining word `w` (normalised):
 - `len(w) ≥ 3`: hit = `search_text LIKE '%' || w || '%'` (served by `listings_search_text_trgm_idx`); words ≥ 5 chars with
-  no digit also hit by `w <% search_text` (typos) at the database default `pg_trgm.word_similarity_threshold` of 0.6, so
-  no session setting is needed (a test asserts the default).
+  no digit also hit by `w <% search_text` (typos) at `pg_trgm.word_similarity_threshold` 0.6. The database or role
+  default is **not** relied on: every search (and count-only) runs its queries in one read-only transaction that first
+  calls `set_config('pg_trgm.word_similarity_threshold', '0.6', true)`.
 - `len(w) < 3`: hit = whole-word match `(' ' || search_text || ' ') LIKE '% ' || w || ' %'` (not indexed; such words are
   rare once side words are read, and the other conditions narrow the rows first).
 
@@ -242,8 +252,10 @@ Part number `pn`: hit = `part_number_norm = norm(pn) OR part_number_base = base(
 `search_text LIKE '%' || lower(norm(pn)) || '%'`, which matches the compact form stored in §4.1 (so "AB-123/X" typed as
 "ab123x" or "AB 123 X" hits).
 
-Suggestions use a 0.5 threshold: `suggest` runs its queries in one read-only transaction with
-`set_config('pg_trgm.word_similarity_threshold', '0.5', true)` (`SET LOCAL` needs a transaction).
+Suggestions use 0.5 the same way: `suggest` runs in one read-only transaction with
+`set_config('pg_trgm.word_similarity_threshold', '0.5', true)`. Facet queries run inside the search's transaction
+**sequentially** on its connection, so they see the same setting (a few more milliseconds on page 1, accepted for
+simplicity).
 
 ### 5.5 Order keys (R6, R7)
 
@@ -252,8 +264,9 @@ Every sort orders by **(`tier` DESC, sort key, `id`)**:
   (1 for everything when no side filter), and `rentTier` = 1 for every listing except a `rented` rental (0). So under
   Left every Left listing comes before every Pair, and every available rental before every rented one, whatever the
   sort.
-- Best match key: `match · 1e5 + clamp(relevance · 1000, 0, 99 999)` DESC, where `match` = Σ per word: title hit 3, other
-  text hit 1; + 10 per exact part-number hit (`part_number_norm`), + 6 per base hit. Chips filter, so they add nothing.
+- Best match key: `match · 1e5 + clamp(relevance · 1000, 0, 99 999)` DESC, where `match` = Σ per word of its best hit:
+  substring hit in the title 4, elsewhere 2; **typo (`<%`) hit worth half**: title 2, elsewhere 1; + 20 per exact
+  part-number hit (`part_number_norm`), + 12 per base hit. Chips filter, so they add nothing.
 - `relevance` = §6.1, computed from the cursor's `asOf` (§5.10), not from now.
 
 ### 5.6 Full, partial, widen, empty
@@ -291,8 +304,8 @@ Zod schema strict; unknown keys → 400. `cleanFilters()` drops empty values so 
 
 ### 5.8 Sort
 
-`best_match` (§5.5), `nearest` (displayed km, §6.2; `400 LOCATION_REQUIRED` with no origin), `newest` (`refreshed_at`
-DESC), `price_asc` / `price_desc` (per-unit or day rate; price on request last), `year_desc` and `hours_asc` (machines;
+`best_match` (§5.5), `nearest` (order **tier, km, relevance DESC, id**: km is whole, so many listings tie and relevance
+breaks the tie; `400 LOCATION_REQUIRED` with no origin), `newest` (`refreshed_at` DESC), `price_asc` / `price_desc` (per-unit or day rate; price on request last), `year_desc` and `hours_asc` (machines;
 `400 SORT_NEEDS_MACHINES` unless `kinds` ⊆ machine, machine_rental). All under §5.5's tier first and `id` last.
 
 ### 5.9 Facets (first page only)
@@ -301,20 +314,24 @@ Disjunctive, as textile `facets.ts`: each group counted with every filter except
 `conditions`, `gstVerified`, `delivers`, `states` (top 10), and for a category in play its filterable spec fields
 (select: count per option; number: min / max). The **side** facet counts what each choice returns: Left = Left + Pair,
 Right = Right + Pair, Pair = Pair (so the facet equals the result count). One scalar query with
-`count(*) FILTER (WHERE …)` plus grouped queries in parallel.
+`count(*) FILTER (WHERE …)` plus the grouped queries, run one after another inside the search transaction (§5.4).
 
 ### 5.10 Cursor
 
 Sealed with AES-256-GCM under `sha256('mpm:discovery:cursor:v1:' + DISCOVERY_CURSOR_SECRET)`, base64url. Payload
-`{ asOf, tier, key, id }`; AAD = sort + sha256 of the canonical request without the cursor. `asOf` is the first page's
+`{ asOf, tier, key, key2, id }` (`key2` = relevance for `nearest`); AAD = sort + sha256 of the canonical request without the cursor. `asOf` is the first page's
 time: relevance ages are computed from it, and later pages only include listings with `refreshed_at ≤ asOf`, so scores
 and membership don't move between pages (a renewal after page 1 shows on the next fresh search). Tampered, foreign or
-mismatched → `400 CURSOR_INVALID`. Saved listings use the same seal for their own keyset.
+mismatched → `400 CURSOR_INVALID`. The request hash includes the origin, so the app freezes it per list (R18, §8.4).
+Saved listings use the same seal for their own keyset.
 
 ### 5.11 Count-only
 
-`countOnly: true` returns `{ total }` without items, facets or log, for the Filters screen's live "Show 14 results"
-button (debounced 300 ms in the app; own rate-limit bucket, §7).
+`POST /discover/search/count` takes the same `SearchRequest` (without `cursor`) and returns `{ total, partialTotal }`
+without items, facets or log, for the Filters screen's live footer (debounced 300 ms in the app). It is its **own path**
+so its rate-limit bucket is chosen by the route (the limiter runs before the body is parsed, §7). `partialTotal` is computed only when `total` is 0 (and there
+are ≥ 2 words), else null. Footer: "Show 14 results"; when the full total is 0 and partials exist, "No exact matches ·
+Show 6 close ones"; when both are 0, "No results" (button disabled).
 
 ### 5.12 Suggestions and trending
 
@@ -329,14 +346,23 @@ button (debounced 300 ms in the app; own rate-limit bucket, §7).
 ### 5.13 Search log
 
 Written on the first page of a search with words or part numbers (not count-only, not suggest). **Not logged** when the
-normalised query has a run of 8 or more digits (spaces and dashes between digits ignored), contains `@`, or matches the
-GSTIN or PAN pattern — so phone numbers, emails and tax ids never reach the zero-result report. Job
+**raw** query, lower-cased but **not normalised** (the normaliser turns `@` and `+` into spaces), with spaces and dashes
+between digits ignored, contains a personal-data shape:
+- an Indian mobile number: a 10-digit run starting with 6–9, optionally prefixed by `0`, `91` or `+91`;
+- a 12-digit run (Aadhaar);
+- a "run" is a **maximal** run of digits (not touching another digit: `(?<!\d)…(?!\d)`), so a 13-digit part number
+  that contains a 10-digit stretch starting with 6–9 is not a mobile number and is logged;
+- `@` (email);
+- a GSTIN (`\d{2}[a-z]{5}\d{4}[a-z][a-z\d]z[a-z\d]`) or PAN (`[a-z]{5}\d{4}[a-z]`), case-insensitive.
+
+Only after these checks pass is the normalised text stored. Other long numbers (numeric part numbers) are logged, so
+they reach the zero-result report. Job
 `search-query-retention` (daily, `FOR UPDATE SKIP LOCKED` batches) deletes rows older than 90 days. Zero-result report:
 top 50 of the last 30 days with `result_total = 0`.
 
 ---
 
-## 6. Ranking, distance, origin (C0: shared by search and discovery)
+## 6. Ranking, distance, origin (B0: shared by search and discovery)
 
 ### 6.1 Relevance
 
@@ -375,13 +401,14 @@ All public routes use `fastify.optionalUser`; replies `{ data }`. New files: `ro
 `services/discovery/*`.
 
 **Rate limits (R17)**, keyed by user id when signed in, else by `X-Install-Id` (a random UUID the app creates once and
-keeps in AsyncStorage; not personal data; requests without it fall back to the IP key): search 120 / min, count-only 240
-/ min (own bucket), suggest 240 / min, other discovery routes 120 / min; an outer per-IP cap of 1 200 / min across all
+keeps in AsyncStorage; not personal data; requests without it fall back to the IP key): search 120 / min, count
+(`/discover/search/count`, own path and bucket) 240 / min, suggest 240 / min, other discovery routes 120 / min; an outer per-IP cap of 1 200 / min across all
 discovery routes.
 
 | Route | Body / params | Reply |
 |---|---|---|
-| `POST /discover/search` | `SearchRequest { q?, filters?, removedChips?, sort?, origin?, cursor?, countOnly? }` | `SearchPage { items: ListingCard[], nextCursor, total?, reading: QueryReading, partial, widen, refSuggestion, facets?, origin }`, or `{ redirect: { listingId } }` for a `#ref`. |
+| `POST /discover/search/count` | `SearchRequest` without `cursor` | `{ total, partialTotal }` (§5.11). |
+| `POST /discover/search` | `SearchRequest { q?, filters?, removedChips?, sort?, origin?, cursor? }` | `SearchPage { items: ListingCard[], nextCursor, total?, reading: QueryReading, partial, widen, refSuggestion, facets?, origin }`, or `{ redirect: { listingId } }` for a `#ref`. |
 | `GET /discover/suggest?q=` | | `Suggestion[]` |
 | `GET /discover/trending` | | `string[]` |
 | `POST /discover/home` | `{ origin?, radiusKm? }` | `HomeView { origin, radiusKm, kindTiles, rootCategories: { id, name, icon }[], topNearYou: ListingCard[] (8), rentNearby: ListingCard[] (8) }` |
@@ -479,6 +506,10 @@ opens Browse at that node) · **Top items near you** (2-column `GridCard`s, "See
   card waits for F8.
 - State: screen `useState` for the request (as textile), route params seed it; React Query keys under `['discover', …]`
   so a save toggle patches every cached card.
+- **Frozen origin (R18):** the results screen captures the origin when page 1 is requested and sends that same origin
+  with every later page and with count-only calls; the 10-minute GPS refresh only affects the next new list. Changing
+  location in the location sheet, editing the query or applying filters starts a new list. A `CURSOR_INVALID` still
+  resets to page 1 as a safety net.
 
 ### 8.5 Saved and recently viewed
 
@@ -519,7 +550,8 @@ App error copy for each in en / hi / gu.
 - Coordinates: POST only, snapped, never stored or logged (R3); request bodies are not logged (Fastify's default; keep it
   so, and redact `origin` if body logging is ever turned on).
 - Search log anonymous and filtered for personal data (R14, §5.13); app analytics never carry query text, pincode or
-  coordinates. The install id is random and only keys rate limits.
+  coordinates. The install id is random and only keys rate limits; it can be faked, so it is not a security control
+  (R17).
 - Cursor sealed with its own secret (§5.10); a tampered or foreign cursor is `400 CURSOR_INVALID`.
 - Public cards and suggestions never expose pincode, address, point or phone (F2 rule kept).
 - Saved and recently-viewed data never leave the owner's account / phone; DPDP export and deletion include
@@ -543,12 +575,19 @@ App error copy for each in en / hi / gu.
   - Count-only; origin (gps snap, out of range → fallback + `out_of_range`, pincode, business, guest `business` 401).
   - Home (category restriction fallback), browse counts within radius, brand view, cards order; saved (own, limit,
     unavailable, idempotent, cascade); suggest (cached counts, listing entry); trending (distinct days, hidden list);
-    log written once, anonymous, skips 8+ digit runs / `@` / GSTIN / PAN; retention job.
-  - Synonym admin (RBAC, audit, version key bumped, a second "instance" — a fresh dictionary loader — sees the change
-    within 5 s, target checks).
+    log written once and anonymous; retention job.
+  - Synonym admin (RBAC, audit, version key bumped, target checks); a second "instance" — a fresh dictionary loader —
+    sees the change after its next version check, driven by a **fake clock** (advance 5 s), never a real wait.
+  - Reader: "bull gear" stays words when Bull has `chip_needs_context`; "bull gear" with a "Gears" part group in the catalogue still stays words (a part group doesn't unlock the chip);
+    "bull backhoe loader" (a machine type) and "bull <model>" read the chip.
+  - Log filter (on the raw input): "rahul@gmail.com" is skipped; a 10-digit mobile (with 0 / 91 / +91), a 12-digit run, `@`, GSTIN, PAN are skipped; a 9- or 11-digit
+    part number is logged.
+  - Count-only returns `partialTotal` when the full total is 0; nearest ties broken by relevance; page 2 with page 1's
+    origin is valid after the app's GPS cache refreshed.
+  - The search transaction sets the trigram threshold itself (a test sets a different role default and still matches
+    at 0.6).
   - Rate limits keyed by user / install id; count-only bucket separate.
-  - Postgres: `show_trgm()` of normalised "बायाँ" and "ડાબું" is non-empty; database ctype is UTF-8;
-    `pg_trgm.word_similarity_threshold` default is 0.6.
+  - Postgres: `show_trgm()` of normalised "बायाँ" and "ડાબું" is non-empty; database ctype is UTF-8.
   - `EXPLAIN`: with `enable_seqscan = off`, a three-word search, a Hindi-word search and a part-number search use
     `listings_search_text_trgm_idx` / `listings_part_number_norm_idx`; **and with default planner settings on ~3 000
     seeded listings (after `ANALYZE`)** a selective word and a part number still pick those indexes.
@@ -562,21 +601,21 @@ App error copy for each in en / hi / gu.
 
 ## 13. Build shape
 
-**C0 contracts** (sequential, before the lanes): shared types, migrations, schema, env (`DISCOVERY_CURSOR_SECRET`),
-error codes, `loadCards()` signature, route stubs, and the pieces both API lanes need: **origin resolution, `distance.ts`
-(moved from other side), `ranking.ts`, the cursor seal and the rate-limit key function**.
-
-Then parallel lanes as in F2 (worktrees on lane branches merged into `develop`, owner's lane rule):
-- **L1 API search**: normaliser, search text + refresh hooks + refresh job, reader + dictionary version key, synonyms
-  load, matching, filters, facets, sort, search route, count-only, suggest, trending, log + retention job, backfill.
-- **L2 API discovery**: home, browse, brand view, cards, saved, `?depth=1`, synonym and insights admin API, seed.
-- **L3 admin pages**.
-- **L4 app foundation**: guest navigation, sign-in sheet + pending action, install id, origin + location sheet, API
+Sequential batches on `develop`, one at a time, each reviewed before the next (owner, 2026-11-19: no parallel lanes):
+- **B0 contracts**: shared types, migrations, schema, env (`DISCOVERY_CURSOR_SECRET`), error codes, `loadCards()`
+  signature, route stubs, and the shared core: **origin resolution, `distance.ts` (moved from other side), `ranking.ts`,
+  the cursor seal, the rate-limit key function, and the reader version key (`discovery:reader:version`) with
+  `bumpReaderVersion()` / `readReaderVersion()`**.
+- **B1 API search**: normaliser, search text + refresh hooks + refresh job, reader + dictionary, matching, filters,
+  facets, sort, search route, count-only, suggest, trending, log + retention job, backfill.
+- **B2 API discovery**: home, browse, brand view, cards, saved, `?depth=1`, synonym and insights admin API, brand flag,
+  seed.
+- **B3 admin pages**.
+- **B4 app foundation**: guest navigation, sign-in sheet + pending action, install id, origin + location sheet, API
   clients and hooks, kit additions.
-- **L5 app search**: start, browse, suggestions, results, filters, sort, no results.
-- **L6 app home + saved + recently viewed**.
-
-L1, L2, L3 and L4 start after C0; L5 and L6 after L4.
+- **B5 app search**: start, browse, suggestions, results, filters, sort, no results.
+- **B6 app home + saved + recently viewed**.
+- **B7 integration and close-out**.
 
 ## 14. Risks
 
@@ -586,6 +625,9 @@ L1, L2, L3 and L4 start after C0; L5 and L6 after L4.
 - Category reading can pick the wrong node on short queries; the chip is removable and the test set covers the seed.
 - GPS on first Home open may be refused often; the fallbacks keep Home useful, and the chip makes the choice visible.
 - Search shows old catalogue names for up to a minute after a rename (background refresh): accepted.
+- `nearest` with All India computes the distance for every matching listing and sorts them; the GiST index can't speed
+  that sort up. Fine at launch volume; watch it with the slow-query log.
+- Guest rate limits rest on the per-IP cap (the install id can be faked, R17): accepted for launch.
 - Guest navigation touches the root navigator; regressions in sign-in / onboarding gating are covered by its tests and
   the device pass.
 
@@ -610,7 +652,7 @@ translated catalogue names (A4).
 | L1 depended on L2 | §13: origin, distance, ranking, cursor, rate-limit key in C0 |
 | Catalogue renames locked listings in the admin transaction | §4.5, §5.2: refresh job, short batches |
 | Per-IP rate limits throttle NAT users | R17, §7: per user / install id, count-only bucket, IP outer cap |
-| Search log could hold personal data | §5.13: skip 8+ digit runs, `@`, GSTIN, PAN |
+| Search log could hold personal data | §5.13 (narrowed in §16.1, raw input in §16.2) |
 | Trending easy to game | §5.12 ≥ 3 distinct days and ≥ 5 searches; §4.3 hide list; §7.1, §9 |
 | `ORIGIN_OUT_OF_RANGE` broke Home abroad | §6.3: fallback + `out_of_range` source, no error |
 | Hindi / Gujarati trigrams unproven | §4.8, §12: `show_trgm`, UTF-8 ctype, Hindi `EXPLAIN` (checked on dev: non-empty) |
@@ -619,3 +661,29 @@ translated catalogue names (A4).
 | Reader cache per process | §5.3: Redis version key, ≤ 5 s staleness |
 | `SET LOCAL` outside a transaction; `EXPLAIN` only with seqscan off | §5.4 default threshold 0.6, suggest in a transaction with `set_config`; §12 default-planner `EXPLAIN` on ~3 000 rows |
 | Nits: video filter, rented under All, side facet, snapped vs raw distance, unique key casts, cursor secret, translated names, suggest counts | R16 + §5.7; R7; §5.9; §6.2; §4.2; §4.8, §5.10; §4.1; §5.12 |
+
+### 16.1 Second review (owner, 2026-11-19)
+
+| Review point | Where fixed |
+|---|---|
+| GPS refresh mid-scroll reset the list (`CURSOR_INVALID`) | R18; §5.10; §8.4 frozen origin |
+| Log filter dropped long numeric part numbers | §5.13: only mobile, Aadhaar, `@`, GSTIN, PAN shapes |
+| Typo threshold relied on the database default | §5.4: `set_config(…, true)` in every search transaction |
+| Nearest tied on whole km, then uuid order | §5.8: tier, km, relevance, id; §14 All India note |
+| Brand names that are ordinary words | §4.1 `brands.chip_needs_context`; §5.3 step 3; §12 test |
+| Count-only said "Show 0" while partials exist | §5.11 `partialTotal` and footer copy |
+| Count-only bucket couldn't be chosen from the body (limiter runs before parsing) | §5.11, §7: own path `POST /discover/search/count` |
+| "Run" undefined in the personal-data check | §5.13: maximal digit runs |
+| Typo hit weight unspecified | §5.5: half a substring hit |
+| Install id can be faked | R17, §11, §14: accepted, not a security control |
+| Reader version key between lanes | §13: key and `bumpReaderVersion()` in C0 |
+| 5 s cache test would be flaky | §12: fake clock |
+
+### 16.2 Third review (owner, 2026-11-19)
+
+| Review point | Where fixed |
+|---|---|
+| Stale "8+ digit runs" test line | §12 |
+| Facet queries parallel vs sequential | §5.4, §5.9: sequential inside the search transaction |
+| "bull gear" unlocked by the Gears part group | §4.1, §5.3 step 3: only a model of the brand or a machine type unlocks; §12 test |
+| Log filter ran after normalising | §5.13: checks on the raw lower-cased input, then store the normalised text; §12 test |
