@@ -1,0 +1,71 @@
+{
+  "location": {
+    "sheetTitle": "ક્યાં શોધવું",
+    "useGps": "મારું લોકેશન વાપરો",
+    "useGpsHint": "તમે અત્યારે જ્યાં છો ત્યાંથી સૌથી નજીકનું પહેલાં",
+    "gpsBlocked": "આ ઍપ માટે લોકેશન બંધ છે. સેટિંગ્સમાં ચાલુ કરો.",
+    "gpsDenied": "લોકેશનની પરવાનગી મળી નથી. અમે તમારો બીજો વિકલ્પ વાપરીશું.",
+    "useBusiness": "મારા બિઝનેસનું લોકેશન વાપરો",
+    "useBusinessHint": "તમારો ઇન્ડસ્ટ્રિયલ એરિયા અને શહેર",
+    "pincodeLabel": "અથવા પિનકોડ દાખલ કરો",
+    "pincodePlaceholder": "6 અંકનો પિનકોડ",
+    "pincodeApply": "આ પિનકોડ વાપરો",
+    "pincodeInvalid": "સાચો 6 અંકનો પિનકોડ દાખલ કરો",
+    "pincodeUnknown": "આ પિનકોડ હજી અમારી પાસે નથી",
+    "radiusLabel": "કેટલે દૂર સુધી",
+    "inUse": "વપરાશમાં",
+    "nearYou": "તમારી નજીક",
+    "locating": "તમારું લોકેશન શોધી રહ્યા છીએ…",
+    "chipA11y": "લોકેશન: {{label}}, {{radius}}. બદલો",
+    "chipA11yAllIndia": "લોકેશન: આખું ભારત. બદલો"
+  },
+  "radius": {
+    "km": "{{km}} કિમી",
+    "within": "{{km}} કિમીની અંદર",
+    "allIndia": "આખું ભારત"
+  },
+  "tags": {
+    "reserved": "રિઝર્વ્ડ",
+    "on_rent": "ભાડે છે",
+    "pair_contains_left": "જોડી: તેમાં લેફ્ટ છે",
+    "pair_contains_right": "જોડી: તેમાં રાઇટ છે"
+  },
+  "save": {
+    "add": "લિસ્ટિંગ સેવ કરો",
+    "remove": "સેવમાંથી કાઢો",
+    "saved": "સેવ થયું",
+    "removed": "સેવમાંથી કાઢી નાખ્યું"
+  },
+  "chips": {
+    "remove": "{{label}} કાઢો",
+    "side": {
+      "left": "લેફ્ટ સાઇડ",
+      "right": "રાઇટ સાઇડ",
+      "pair": "જોડી"
+    },
+    "conditions_one": "{{count}} કન્ડિશન",
+    "conditions_other": "{{count}} કન્ડિશન",
+    "fit": "મશીનમાં ફિટ",
+    "place_one": "{{count}} જગ્યા",
+    "place_other": "{{count}} જગ્યાઓ",
+    "priceRange": "{{min}} – {{max}}",
+    "priceFrom": "{{min}}થી",
+    "priceUpTo": "{{max}} સુધી",
+    "priceShown": "ભાવ સાથે",
+    "minQty": "{{qty}}+ ઉપલબ્ધ",
+    "gstVerified": "GST વેરિફાઇડ",
+    "delivers": "ડિલિવરી આપે છે",
+    "hasVideo": "વીડિયો સાથે",
+    "specs_one": "{{count}} સ્પેસિફિકેશન",
+    "specs_other": "{{count}} સ્પેસિફિકેશન"
+  },
+  "errors": {
+    "locationRequired": "અંતર પ્રમાણે ગોઠવવા લોકેશન ચાલુ કરો અથવા કોઈ જગ્યા પસંદ કરો.",
+    "sortNeedsMachines": "આ ગોઠવણી ફક્ત મશીનો માટે છે.",
+    "filterNotAvailable": "આ ફિલ્ટર અહીં ઉપલબ્ધ નથી. તેને કાઢીને ફરી પ્રયત્ન કરો.",
+    "cursorInvalid": "લિસ્ટ બદલાઈ ગયું છે. શરૂઆતથી બતાવીએ છીએ.",
+    "pincodeUnknown": "આ પિનકોડ હજી અમારી પાસે નથી.",
+    "cannotSaveOwn": "તમે તમારું પોતાનું લિસ્ટિંગ સેવ કરી શકતા નથી.",
+    "savedLimit": "તમે {{cap}} લિસ્ટિંગ સેવ કર્યાં છે. વધુ સેવ કરવા થોડાં કાઢો."
+  }
+}

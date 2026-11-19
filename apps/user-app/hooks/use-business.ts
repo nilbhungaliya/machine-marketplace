@@ -29,9 +29,9 @@ export function useGstState(enabled = true) {
   return useQuery({ ...gstStateQuery, enabled, refetchOnMount: 'always' });
 }
 
-/** The signed-in user's business; `data` is `null` before onboarding has created it. */
-export function useBusiness() {
-  return useQuery({ queryKey: businessKeys.me, queryFn: () => fetchMyBusiness() });
+/** The signed-in user's business; `data` is `null` before onboarding has created it. Pass `enabled: false` for a guest. */
+export function useBusiness(enabled = true) {
+  return useQuery({ queryKey: businessKeys.me, queryFn: () => fetchMyBusiness(), enabled });
 }
 
 export function useMachineCategories() {

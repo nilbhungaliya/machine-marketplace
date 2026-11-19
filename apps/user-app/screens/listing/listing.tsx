@@ -13,6 +13,7 @@ import Notice from '@/components/Notice';
 import Skeleton from '@/components/Skeleton';
 import StatusChip from '@/components/StatusChip';
 import { listingKeys, useListing, useListingTemplate, useOtherSide, useSellerListings } from '@/hooks/use-listing';
+import { useRequireSignIn } from '@/hooks/use-require-sign-in';
 import { useType } from '@/hooks/use-type';
 import { track } from '@/lib/analytics';
 import { LISTING_EVENTS } from '@/lib/analytics-events';
@@ -41,6 +42,8 @@ export default function ListingScreen({ navigation, route }: RootStackScreenProp
   const { listingId } = route.params;
   const { t } = useTranslation();
   const qc = useQueryClient();
+  // Reporting needs an account (the API's `requireUser`): a guest gets the sign-in sheet (F4 + F5 spec §8.1).
+  const { requireSignIn } = useRequireSignIn();
   const { colors } = useTheme();
   const type = useType();
   const query = useListing(listingId);
@@ -163,7 +166,7 @@ export default function ListingScreen({ navigation, route }: RootStackScreenProp
         onOpenMedia={(index) => navigation.navigate('ListingMedia', { listingId, index })}
         onCheckFit={listing.fitments.length > 0 ? () => setSheet('fit') : undefined}
         onViewSeller={() => navigation.navigate('SellerListings', { businessId: listing.businessId })}
-        onReport={isOwner ? undefined : () => setSheet('report')}
+        onReport={isOwner ? undefined : () => { if (requireSignIn({ reason: 'report' })) setSheet('report'); }}
         bottomInset={spacing.lg}
       />
       <FooterBar style={s.footer}>

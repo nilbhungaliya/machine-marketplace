@@ -1,4 +1,4 @@
-import type { ListingProblem } from '@mpm/shared-types';
+import { DISCOVERY_LIMITS, type ListingProblem } from '@mpm/shared-types';
 import { i18n } from '@/lib/i18n';
 import { errorCode, errorDetails, errorKey } from './api-error';
 
@@ -48,6 +48,14 @@ export const LISTING_ERROR_KEYS: Record<string, string> = {
   UPLOAD_FAILED: 'listing.errors.uploadFailed',
   PHOTO_PREPARE_FAILED: 'listing.errors.photoPrepare',
   VIDEO_PREPARE_FAILED: 'listing.errors.videoPrepare',
+  // Discovery and saved listings (F4 + F5 spec §10); `LISTING_NOT_FOUND` above covers a non-public listing.
+  LOCATION_REQUIRED: 'discover.errors.locationRequired',
+  SORT_NEEDS_MACHINES: 'discover.errors.sortNeedsMachines',
+  FILTER_NOT_AVAILABLE: 'discover.errors.filterNotAvailable',
+  CURSOR_INVALID: 'discover.errors.cursorInvalid',
+  PINCODE_UNKNOWN: 'discover.errors.pincodeUnknown',
+  CANNOT_SAVE_OWN_LISTING: 'discover.errors.cannotSaveOwn',
+  SAVED_LIMIT: 'discover.errors.savedLimit',
 };
 
 /** The translation key for a failed listing call (network and suspension lines from `errorKey`). */
@@ -55,10 +63,11 @@ export function listingErrorKey(err: unknown): string {
   return errorKey(err, LISTING_ERROR_KEYS);
 }
 
-/** Translated copy for a failed listing call; `UNVERIFIED_LISTING_CAP` names the cap from `details.cap`. */
+/** Translated copy for a failed listing call; `UNVERIFIED_LISTING_CAP` and `SAVED_LIMIT` name the cap from `details.cap`. */
 export function listingErrorMessage(err: unknown): string {
   const cap = errorDetails(err).cap;
-  return i18n.t(listingErrorKey(err), { cap: typeof cap === 'number' ? cap : 3 });
+  const fallback = errorCode(err) === 'SAVED_LIMIT' ? DISCOVERY_LIMITS.savedCap : 3;
+  return i18n.t(listingErrorKey(err), { cap: typeof cap === 'number' ? cap : fallback });
 }
 
 /** The problems of a `400 LISTING_INCOMPLETE` (`details.problems`), else []. */

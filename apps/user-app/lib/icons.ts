@@ -10,6 +10,8 @@ import {
   LocateFixed, Camera, Images, FileText, X, Clock, ShieldAlert, Building2, Square, SquareCheck,
   // F2 listings (C0, for the app lanes): media tiles, sell steps, listing page, manage sheet, other side.
   Play, Pause, Pencil, RefreshCw, Tag, Flag, Star, Video, ImagePlus, EllipsisVertical, ArrowLeftRight, Truck, RotateCcw, CircleX, Ban, Inbox, Trash, Eye, Gauge,
+  // F4 + F5 discovery (B4): the heart, the location chip, the filter row.
+  Heart, ChevronDown, SlidersHorizontal,
 } from 'lucide-react-native';
 
 export type { LucideIcon };
@@ -18,6 +20,7 @@ export {
   CircleCheck, TriangleAlert, Info, Wrench, Factory, CalendarClock, BellRing, LocateFixed, Camera, Images, FileText, X,
   Clock, ShieldAlert, Building2, Square, SquareCheck,
   Play, Pause, Pencil, RefreshCw, Tag, Flag, Star, Video, ImagePlus, EllipsisVertical, ArrowLeftRight, Truck, RotateCcw, CircleX, Ban, Inbox, Trash, Eye, Gauge,
+  Heart, ChevronDown, SlidersHorizontal,
 };
 
 export const TAB_ICONS = {

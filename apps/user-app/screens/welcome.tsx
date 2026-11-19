@@ -7,6 +7,7 @@ import HeroGlow from '@/components/HeroGlow';
 import HubAssembly, { HUB_LOOP_MS, HUB_REST } from '@/components/art/HubAssembly';
 import MatchToken from '@/components/art/MatchToken';
 import { ArtIn, SlideIn, WipeTitle } from '@/components/motion/Entrance';
+import { useAuth } from '@/hooks/useAuth';
 import { useLoop } from '@/hooks/use-loop';
 import { useType } from '@/hooks/use-type';
 import { spacing, useTheme } from '@/lib/theme';
@@ -25,6 +26,7 @@ export default function WelcomeScreen({ navigation }: RootStackScreenProps<'Welc
   const type = useType();
   const { width } = useWindowDimensions();
   const clock = useLoop(HUB_LOOP_MS, HUB_REST);
+  const { browseAsGuest } = useAuth();
   const artWidth = Math.min(ART_MAX, width - 2 * spacing.xxl - spacing.xxxl);
 
   const s = useMemo(() => StyleSheet.create({
@@ -33,6 +35,7 @@ export default function WelcomeScreen({ navigation }: RootStackScreenProps<'Welc
     art: { alignItems: 'center', gap: spacing.xs, paddingVertical: spacing.md, marginBottom: spacing.sm },
     title: { ...type('display'), color: colors.text },
     subtitle: { ...type('lead'), color: colors.textSecondary, marginBottom: spacing.sm },
+    actions: { gap: spacing.xs },
   }), [colors, type]);
 
   return (
@@ -47,8 +50,10 @@ export default function WelcomeScreen({ navigation }: RootStackScreenProps<'Welc
         <SlideIn delay={950}>
           <Text style={s.subtitle}>{t('auth.welcome.subtitle')}</Text>
         </SlideIn>
-        <SlideIn delay={1100}>
+        <SlideIn delay={1100} style={s.actions}>
           <Button title={t('auth.welcome.cta')} phLabel="Get-started" onPress={() => navigation.navigate('Auth')} />
+          {/* Guests browse first (F4 + F5 spec §8.1); sign-in is asked at the moment of intent. */}
+          <Button title={t('auth.welcome.browse')} phLabel="Welcome-browse" variant="ghost" onPress={() => void browseAsGuest()} />
         </SlideIn>
       </ScrollView>
     </ScreenWrapper>

@@ -43,6 +43,9 @@ import guSell from './gu/sell.json';
 import enListing from './en/listing.json';
 import hiListing from './hi/listing.json';
 import guListing from './gu/listing.json';
+import enDiscover from './en/discover.json';
+import hiDiscover from './hi/discover.json';
+import guDiscover from './gu/discover.json';
 
 // One import per language per area. A new area: add its JSON in en/, hi/ and gu/, then register it here.
 export const resources = {
@@ -63,6 +66,7 @@ export const resources = {
       verification: enVerification,
       sell: enSell,
       listing: enListing,
+      discover: enDiscover,
     },
   },
   hi: {
@@ -82,6 +86,7 @@ export const resources = {
       verification: hiVerification,
       sell: hiSell,
       listing: hiListing,
+      discover: hiDiscover,
     },
   },
   gu: {
@@ -101,6 +106,7 @@ export const resources = {
       verification: guVerification,
       sell: guSell,
       listing: guListing,
+      discover: guDiscover,
     },
   },
 } as const;

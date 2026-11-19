@@ -26,6 +26,10 @@ interface ListingCardProps {
   status?: { label: string; tone: StatusTone } | null;
   /** The yellow tag above the title ("Possibly the other side", "Still available?"). */
   tag?: string;
+  /** Translated card tags (F4 + F5 §4.7: "Reserved", "On rent", "Pair: contains a left"), yellow, after `tag`. */
+  tags?: string[];
+  /** The heart (`SaveButton`), drawn on the thumbnail's top-right corner. */
+  heart?: React.ReactNode;
   /** A one-line nudge or message under the card body ("Add a video", the moderator's note). */
   nudge?: string;
   /** Extra content under the body (a Renew banner, buttons). */
@@ -36,10 +40,13 @@ interface ListingCardProps {
   style?: StyleProp<ViewStyle>;
 }
 
-/** A listing row (v2 `.listing`, F2 spec §15.2): thumbnail, title, side, condition, quantity, price, place. */
+/**
+ * A listing row (v2 `.listing`, F2 spec §15.2): thumbnail, title, side, condition, quantity, price, place. F4 + F5
+ * (§8.6) adds the heart on the thumbnail and the card tags; the distance is in the place line ("Under 2 km away").
+ */
 export default function ListingCard({
-  title, thumbUrl, side, condition, quantity, price, subtitle, subtitleIsPlace = false, status, tag, nudge, children,
-  onPress, testID, accessibilityLabel, style,
+  title, thumbUrl, side, condition, quantity, price, subtitle, subtitleIsPlace = false, status, tag, tags, heart, nudge,
+  children, onPress, testID, accessibilityLabel, style,
 }: ListingCardProps) {
   const { colors } = useTheme();
   const type = useType();
@@ -54,6 +61,8 @@ export default function ListingCard({
       alignItems: 'center', justifyContent: 'center',
     },
     image: { width: '100%', height: '100%' },
+    heart: { position: 'absolute', top: 4, right: 4 },
+    tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
     body: { flex: 1, minWidth: 0, gap: spacing.xs, paddingVertical: 2, paddingRight: spacing.xs },
     tag: {
       ...type('badge'), alignSelf: 'flex-start', color: colors.onSun, backgroundColor: colors.sun, borderRadius: radius.full,
@@ -80,9 +89,17 @@ export default function ListingCard({
         ) : (
           <Package size={32} color={colors.textMuted} />
         )}
+        {heart ? <View style={s.heart}>{heart}</View> : null}
       </View>
       <View style={s.body}>
-        {tag ? <Text style={s.tag} numberOfLines={1}>{tag}</Text> : null}
+        {tag || tags?.length ? (
+          <View style={s.tagRow}>
+            {[...(tag ? [tag] : []), ...(tags ?? [])].map((label, i) => (
+              // Two tags can translate to the same text: keyed by position.
+              <Text key={i} style={s.tag} numberOfLines={1}>{label}</Text>
+            ))}
+          </View>
+        ) : null}
         <View style={s.titleRow}>
           <Text style={s.title} numberOfLines={2}>{title}</Text>
           {status ? <StatusChip label={status.label} tone={status.tone} /> : null}

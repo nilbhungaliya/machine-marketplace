@@ -1,0 +1,71 @@
+{
+  "location": {
+    "sheetTitle": "Where to look",
+    "useGps": "Use my location",
+    "useGpsHint": "Nearest first, from where you are now",
+    "gpsBlocked": "Location is off for this app. Turn it on in Settings.",
+    "gpsDenied": "No location permission. We'll use your other choice.",
+    "useBusiness": "Use my business location",
+    "useBusinessHint": "Your industrial area and city",
+    "pincodeLabel": "Or enter a pincode",
+    "pincodePlaceholder": "6-digit pincode",
+    "pincodeApply": "Use this pincode",
+    "pincodeInvalid": "Enter a valid 6-digit pincode",
+    "pincodeUnknown": "We don't know this pincode yet",
+    "radiusLabel": "How far",
+    "inUse": "In use",
+    "nearYou": "Near you",
+    "locating": "Finding you…",
+    "chipA11y": "Location: {{label}}, {{radius}}. Change",
+    "chipA11yAllIndia": "Location: All India. Change"
+  },
+  "radius": {
+    "km": "{{km}} km",
+    "within": "Within {{km}} km",
+    "allIndia": "All India"
+  },
+  "tags": {
+    "reserved": "Reserved",
+    "on_rent": "On rent",
+    "pair_contains_left": "Pair: contains a left",
+    "pair_contains_right": "Pair: contains a right"
+  },
+  "save": {
+    "add": "Save listing",
+    "remove": "Remove from saved",
+    "saved": "Saved",
+    "removed": "Removed from saved"
+  },
+  "chips": {
+    "remove": "Remove {{label}}",
+    "side": {
+      "left": "Left side",
+      "right": "Right side",
+      "pair": "Pair"
+    },
+    "conditions_one": "{{count}} condition",
+    "conditions_other": "{{count}} conditions",
+    "fit": "Fits a machine",
+    "place_one": "{{count}} place",
+    "place_other": "{{count}} places",
+    "priceRange": "{{min}} – {{max}}",
+    "priceFrom": "From {{min}}",
+    "priceUpTo": "Up to {{max}}",
+    "priceShown": "With a price",
+    "minQty": "{{qty}}+ available",
+    "gstVerified": "GST verified",
+    "delivers": "Delivers",
+    "hasVideo": "Has video",
+    "specs_one": "{{count}} spec",
+    "specs_other": "{{count}} specs"
+  },
+  "errors": {
+    "locationRequired": "Turn on location or choose a place to sort by distance.",
+    "sortNeedsMachines": "This sort works for machines only.",
+    "filterNotAvailable": "That filter isn't available here. Clear it and try again.",
+    "cursorInvalid": "The list changed. Showing it from the top.",
+    "pincodeUnknown": "We don't know this pincode yet.",
+    "cannotSaveOwn": "You can't save your own listing.",
+    "savedLimit": "You've saved {{cap}} listings. Remove some to save more."
+  }
+}

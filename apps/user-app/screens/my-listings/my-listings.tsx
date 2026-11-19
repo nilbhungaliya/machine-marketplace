@@ -114,6 +114,7 @@ export default function MyListingsScreen({ navigation, route }: RootStackScreenP
     return (
       <ListingCardItem
         card={item}
+        save={false}
         subtitle={myCardSubtitle(item)}
         status={{ label: t(chip.key), tone: chip.tone }}
         nudge={nudge ? t(nudge.key, nudge.values) : undefined}

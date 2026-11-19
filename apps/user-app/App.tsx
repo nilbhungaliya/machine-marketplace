@@ -25,6 +25,7 @@ import { initAnalytics, pickAllowedParams, screen } from '@/lib/analytics';
 import { ThemeProvider, useTheme } from '@/lib/ThemeContext';
 import AppToast from '@/components/AppToast';
 import { ConfirmSheetProvider } from '@/components/ConfirmSheet';
+import { SignInSheetProvider } from '@/components/SignInSheet';
 import RootNavigator from '@/navigation/root-navigator';
 import { navigationRef } from '@/navigation/navigationRef';
 
@@ -62,31 +63,33 @@ function AppContent() {
       <Provider store={store}>
         <QueryClientProvider client={queryClient}>
           <ConfirmSheetProvider>
-            <NavigationContainer
-              ref={navigationRef}
-              theme={navTheme}
-              // onStateChange does not fire for the initial route.
-              onReady={handleNavigationStateChange}
-              onStateChange={handleNavigationStateChange}
-            >
-              {posthog ? (
-                <PostHogProvider
-                  client={posthog}
-                  autocapture={{
-                    captureTouches: true,
-                    captureScreens: false,
-                    // testID doubles as the English analytics label (Button's phLabel).
-                    // Labels only, never children: tapped text can be a phone or a price.
-                    propsToCapture: ['testID'],
-                  }}
-                >
+            <SignInSheetProvider>
+              <NavigationContainer
+                ref={navigationRef}
+                theme={navTheme}
+                // onStateChange does not fire for the initial route.
+                onReady={handleNavigationStateChange}
+                onStateChange={handleNavigationStateChange}
+              >
+                {posthog ? (
+                  <PostHogProvider
+                    client={posthog}
+                    autocapture={{
+                      captureTouches: true,
+                      captureScreens: false,
+                      // testID doubles as the English analytics label (Button's phLabel).
+                      // Labels only, never children: tapped text can be a phone or a price.
+                      propsToCapture: ['testID'],
+                    }}
+                  >
+                    <RootNavigator />
+                  </PostHogProvider>
+                ) : (
+                  // Not client={undefined}: the provider would build a live client.
                   <RootNavigator />
-                </PostHogProvider>
-              ) : (
-                // Not client={undefined}: the provider would build a live client.
-                <RootNavigator />
-              )}
-            </NavigationContainer>
+                )}
+              </NavigationContainer>
+            </SignInSheetProvider>
             <AppToast />
           </ConfirmSheetProvider>
         </QueryClientProvider>

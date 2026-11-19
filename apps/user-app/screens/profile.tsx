@@ -11,6 +11,7 @@ import Skeleton from '@/components/Skeleton';
 import StatusChip from '@/components/StatusChip';
 import { useConfirm } from '@/components/ConfirmSheet';
 import { useAuth } from '@/hooks/useAuth';
+import { useRequireSignIn } from '@/hooks/use-require-sign-in';
 import { gstStateQuery, useBusiness, useGstState } from '@/hooks/use-business';
 import { useMyListings } from '@/hooks/use-my-listings';
 import { useType } from '@/hooks/use-type';
@@ -31,9 +32,11 @@ export default function ProfileScreen({ navigation }: RootStackScreenProps<'Prof
   const { colors } = useTheme();
   const type = useType();
   const language = useLanguage();
-  const { logout, name } = useAuth();
+  const { logout, name, isAuthenticated } = useAuth();
+  const { openSignIn } = useRequireSignIn();
   const confirm = useConfirm();
-  const business = useBusiness();
+  // A guest (F4 + F5 spec §8.1) has no business: a "Sign in" card instead of the business rows, language kept.
+  const business = useBusiness(isAuthenticated);
   const profile = business.data ?? null;
   const gst = useGstState(!!profile);
   // The "My listings" row's live count (F2 spec §10).
@@ -94,6 +97,9 @@ export default function ProfileScreen({ navigation }: RootStackScreenProps<'Prof
     retry: { ...type('caption'), fontFamily: fonts.bold, color: colors.primaryInk, marginTop: spacing.xs },
     sectionTitle: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.md },
     sectionText: { flex: 1, ...type('section'), color: colors.text },
+    guestCard: { gap: spacing.md },
+    guestTitle: { ...type('cardTitle'), color: colors.text },
+    guestText: { ...type('body'), color: colors.textSecondary },
   }), [colors, type]);
 
   const chipView = (state: Parameters<typeof gstChip>[0], style?: StyleProp<ViewStyle>) => {
@@ -121,7 +127,13 @@ export default function ProfileScreen({ navigation }: RootStackScreenProps<'Prof
     <ScreenWrapper>
       <Header title={t('profile.title')} />
       <ScrollView contentContainerStyle={s.body}>
-        {business.isLoading ? (
+        {!isAuthenticated ? (
+          <Card style={s.guestCard}>
+            <Text style={s.guestTitle}>{t('auth.guest.title')}</Text>
+            <Text style={s.guestText}>{t('auth.guest.subtitle')}</Text>
+            <Button title={t('auth.guest.cta')} phLabel="Profile-sign-in" size="md" onPress={openSignIn} />
+          </Card>
+        ) : business.isLoading ? (
           <View style={s.loading}>
             <Skeleton style={s.headSkeleton} />
             <Skeleton style={s.meterSkeleton} />
@@ -217,7 +229,9 @@ export default function ProfileScreen({ navigation }: RootStackScreenProps<'Prof
           </Card>
         </View>
 
-        <Button title={t('profile.logout')} phLabel="Log-out" variant="outline" onPress={() => void confirmLogout()} />
+        {isAuthenticated ? (
+          <Button title={t('profile.logout')} phLabel="Log-out" variant="outline" onPress={() => void confirmLogout()} />
+        ) : null}
       </ScrollView>
     </ScreenWrapper>
   );

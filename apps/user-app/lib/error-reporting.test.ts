@@ -83,6 +83,17 @@ describe('redact: the F1 business and GST bodies', () => {
   });
 });
 
+describe('redact: discovery (F4 + F5 spec §11)', () => {
+  it('removes the origin and the query text by key', () => {
+    expect(redact({
+      q: 'tie rod end 9825041736',
+      origin: { point: { lat: 22.3, lng: 70.8 }, fallback: { pincode: '360003' } },
+      filters: { side: 'left' },
+      sort: 'nearest',
+    })).toEqual({ q: '[redacted]', origin: '[redacted]', filters: { side: 'left' }, sort: 'nearest' });
+  });
+});
+
 describe('scrubEvent', () => {
   it('strips the query string from the request URL', () => {
     const e = scrubEvent({ request: { url: 'https://api.example/locations/nearest-pincode?lat=21.1&lng=72.8' } });

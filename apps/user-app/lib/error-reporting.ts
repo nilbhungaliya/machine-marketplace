@@ -17,6 +17,8 @@ const SECRET_KEYS = new RegExp(
       'gstin', 'pan', 'email', 'username', 'legalname', 'tradename', 'businessname', 'displayname',
       'address', 'addressline', 'gstaddress', 'industrialareaother', 'lat', 'lng', 'latitude', 'longitude', 'pincode',
       'hint', 'officermessage',
+      // Discovery (F4 + F5 spec §11): the request origin (GPS point, pincode) and the typed query.
+      'origin', 'q',
     ].join('|') +
     ')$',
   'i',

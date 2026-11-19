@@ -10,8 +10,8 @@ interface ChipProps {
   onPress?: () => void;
   icon?: LucideIcon;
   disabled?: boolean;
-  /** `checkbox` for multi-select groups, `radio` for single-select. */
-  role?: 'checkbox' | 'radio';
+  /** `checkbox` for multi-select groups, `radio` for single-select, `button` for a chip that opens something (a filter row's Filters, radius). */
+  role?: 'checkbox' | 'radio' | 'button';
   /** English, hyphenated: the analytics label and e2e selector. */
   testID: string;
   style?: StyleProp<ViewStyle>;
@@ -39,7 +39,7 @@ export default function Chip({ label, selected = false, onPress, icon: Icon, dis
       disabled={disabled || !onPress}
       testID={testID}
       accessibilityRole={role}
-      accessibilityState={{ checked: selected, disabled }}
+      accessibilityState={role === 'button' ? { selected, disabled } : { checked: selected, disabled }}
       hitSlop={4}
     >
       {Icon ? <Icon size={16} color={selected ? colors.primaryInk : colors.textSecondary} /> : null}

@@ -132,7 +132,7 @@
     "expired": "Expired"
   },
   "distance": {
-    "near": "Less than 1 km away",
+    "near": "Under 2 km away",
     "km": "{{km}} km away"
   },
   "fits": {

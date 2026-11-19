@@ -107,10 +107,13 @@ export function fitLine(f: Pick<Fitment, 'brandName' | 'modelName' | 'modelOther
   return [machine, yearRange(f.yearFrom, f.yearTo), f.note ?? ''].filter(Boolean).join(' · ');
 }
 
-/** "2 km away", "Less than 1 km away"; '' when unknown. */
+/**
+ * "18 km away", "Under 2 km away"; '' when unknown. The API sends whole km of the snapped distance, at least 1, so 1
+ * means "under 2 km" (F4 + F5 spec §6.2).
+ */
 export function distanceText(km: number | null | undefined): string {
   if (km == null) return '';
-  return km < 1 ? i18n.t('listing.distance.near') : i18n.t('listing.distance.km', { km: Math.round(km) });
+  return km <= 1 ? i18n.t('listing.distance.near') : i18n.t('listing.distance.km', { km: Math.round(km) });
 }
 
 /** Where a listing is: "Aji GIDC, Rajkot". */

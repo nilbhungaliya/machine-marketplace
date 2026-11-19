@@ -71,3 +71,7 @@ export const Inbox = makeIcon('Inbox');
 export const Trash = makeIcon('Trash');
 export const Eye = makeIcon('Eye');
 export const Gauge = makeIcon('Gauge');
+// F4 + F5 discovery (B4)
+export const Heart = makeIcon('Heart');
+export const ChevronDown = makeIcon('ChevronDown');
+export const SlidersHorizontal = makeIcon('SlidersHorizontal');

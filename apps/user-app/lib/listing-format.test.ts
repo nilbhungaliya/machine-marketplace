@@ -83,7 +83,10 @@ describe('time, distance, place, side', () => {
     expect(expiresText('2026-11-17T20:00:00.000Z', now)).toBe('Expired');
   });
   it('distance and place', () => {
-    expect(distanceText(0.4)).toBe('Less than 1 km away');
+    // The API sends whole km, at least 1; 1 means under 2 km (F4 + F5 spec §6.2).
+    expect(distanceText(1)).toBe('Under 2 km away');
+    expect(distanceText(0.4)).toBe('Under 2 km away');
+    expect(distanceText(2)).toBe('2 km away');
     expect(distanceText(18)).toBe('18 km away');
     expect(distanceText(null)).toBe('');
     expect(placeText({ industrialAreaName: 'Aji GIDC', city: 'Rajkot' })).toBe('Aji GIDC, Rajkot');

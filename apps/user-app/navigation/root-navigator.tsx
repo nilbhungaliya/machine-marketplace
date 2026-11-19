@@ -3,6 +3,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { showSuspendedToast, useAuth } from '@/hooks/useAuth';
 import { appEntry } from '@/lib/onboarding-step';
 import { onSessionEnded } from '@/lib/session-events';
+import { shouldRestoreGuest } from '@/lib/sign-in-gate';
 import WelcomeScreen from '@/screens/welcome';
 import ProfileScreen from '@/screens/profile';
 import YourBusinessScreen from '@/screens/onboarding/your-business';
@@ -26,6 +27,7 @@ import OtherSideScreen from '@/screens/listing/other-side';
 import MyListingsScreen from '@/screens/my-listings/my-listings';
 import EditMenuScreen from '@/screens/my-listings/edit-menu';
 import RemovedByTeamScreen from '@/screens/my-listings/removed-by-team';
+import { usePendingActionRunner } from '@/hooks/use-saved';
 import AuthStack from './auth-stack';
 import TabNavigator from './tab-navigator';
 import type { RootStackParamList } from './types';
@@ -43,11 +45,15 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
  * first in the `app` group (`appEntry`); otherwise it comes after the tabs. Re-ordering later keeps the routes on the
  * stack, so clearing the flag on Verify / Skip doesn't move anyone.
  *
+ * Guests (F4 + F5 spec §8.1): Welcome's "Browse first" opens the `guest` group (remembered for the next cold start);
+ * sign-in is asked at the moment of intent through the sign-in sheet, and a pending action (Save) runs once after OTP
+ * and onboarding (`usePendingActionRunner`).
+ *
  * A suspended or blocked account (F1 spec §8.2): any API call refused with `403 ACCOUNT_SUSPENDED` signs out here,
  * with the same message the sign-in screen shows.
  */
 export default function RootNavigator() {
-  const { isAuthenticated, onboarding, gstIntro, loadToken, logout } = useAuth();
+  const { isAuthenticated, guest, onboarding, gstIntro, loadToken, restoreGuest, logout } = useAuth();
   const [isReady, setIsReady] = useState(false);
   const signedIn = useRef(isAuthenticated);
   signedIn.current = isAuthenticated;
@@ -70,8 +76,14 @@ export default function RootNavigator() {
   );
 
   useEffect(() => {
-    loadToken().finally(() => setIsReady(true));
-  }, [loadToken]);
+    loadToken()
+      // A refused saved session goes to Welcome; only "nothing saved" may reopen the guest tabs.
+      .then((boot) => (shouldRestoreGuest(boot) ? restoreGuest() : undefined))
+      .finally(() => setIsReady(true));
+  }, [loadToken, restoreGuest]);
+
+  // A guest's Save (or another pending action) finishes here, once, after sign-in and onboarding.
+  usePendingActionRunner();
 
   if (!isReady) return null;
 
@@ -80,7 +92,22 @@ export default function RootNavigator() {
 
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      {!isAuthenticated ? (
+      {!isAuthenticated && guest ? (
+        // Guests browse (F4 + F5 spec §8.1, R12): the tabs, the listing pages and the auth screens, pushed when needed.
+        // Same `navigationKey` as the signed-in group, so a returning user who signs in from a listing stays on it
+        // (only `Auth` is dropped); a new user goes through onboarding first.
+        <Stack.Group navigationKey="app">
+          <Stack.Screen name="Main" component={TabNavigator} />
+          <Stack.Screen name="Profile" component={ProfileScreen} />
+          <Stack.Screen name="Listing" component={ListingScreen} />
+          <Stack.Screen name="ListingMedia" component={MediaViewerScreen} options={{ animation: 'fade' }} />
+          <Stack.Screen name="SellerListings" component={SellerListingsScreen} />
+          <Stack.Screen name="OtherSide" component={OtherSideScreen} />
+          {/* TODO(B5): register SearchResults, SearchFilters and SearchBrand here too (guests search), next to the
+              signed-in group's, once B5 adds them to RootStackParamList. */}
+          <Stack.Screen name="Auth" component={AuthStack} />
+        </Stack.Group>
+      ) : !isAuthenticated ? (
         <Stack.Group navigationKey="signed-out">
           <Stack.Screen name="Welcome" component={WelcomeScreen} />
           <Stack.Screen name="Auth" component={AuthStack} />

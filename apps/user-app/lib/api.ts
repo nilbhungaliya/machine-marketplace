@@ -1,6 +1,7 @@
 import axios, { type InternalAxiosRequestConfig } from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import { i18n, isLanguage } from '@/lib/i18n';
+import { getInstallId } from '@/lib/install-id';
 import { notifySessionEnded, sessionEndReason } from '@/lib/session-events';
 
 export const TOKEN_KEY = 'jwt_token';
@@ -21,6 +22,8 @@ export function withLanguageHeader(config: InternalAxiosRequestConfig): Internal
 
 api.interceptors.request.use(async (config) => {
   withLanguageHeader(config);
+  // Keys a guest's discovery rate limits (F4 + F5 spec §7, R17): random, per install, not personal data.
+  config.headers['X-Install-Id'] = await getInstallId();
   const token = await SecureStore.getItemAsync(TOKEN_KEY);
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;

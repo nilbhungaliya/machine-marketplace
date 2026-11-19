@@ -1,0 +1,71 @@
+{
+  "location": {
+    "sheetTitle": "कहाँ ढूँढें",
+    "useGps": "मेरी लोकेशन इस्तेमाल करें",
+    "useGpsHint": "आप अभी जहाँ हैं, वहाँ से सबसे नज़दीक पहले",
+    "gpsBlocked": "इस ऐप के लिए लोकेशन बंद है। सेटिंग्स में चालू करें।",
+    "gpsDenied": "लोकेशन की अनुमति नहीं मिली। हम आपका दूसरा विकल्प इस्तेमाल करेंगे।",
+    "useBusiness": "मेरे बिज़नेस की लोकेशन इस्तेमाल करें",
+    "useBusinessHint": "आपका इंडस्ट्रियल एरिया और शहर",
+    "pincodeLabel": "या पिनकोड डालें",
+    "pincodePlaceholder": "6 अंकों का पिनकोड",
+    "pincodeApply": "यह पिनकोड इस्तेमाल करें",
+    "pincodeInvalid": "सही 6 अंकों का पिनकोड डालें",
+    "pincodeUnknown": "यह पिनकोड अभी हमारे पास नहीं है",
+    "radiusLabel": "कितनी दूर तक",
+    "inUse": "इस्तेमाल में",
+    "nearYou": "आपके पास",
+    "locating": "आपकी लोकेशन ढूँढ रहे हैं…",
+    "chipA11y": "लोकेशन: {{label}}, {{radius}}। बदलें",
+    "chipA11yAllIndia": "लोकेशन: पूरा भारत। बदलें"
+  },
+  "radius": {
+    "km": "{{km}} किमी",
+    "within": "{{km}} किमी के अंदर",
+    "allIndia": "पूरा भारत"
+  },
+  "tags": {
+    "reserved": "रिज़र्व्ड",
+    "on_rent": "किराए पर",
+    "pair_contains_left": "जोड़ी: इसमें लेफ़्ट है",
+    "pair_contains_right": "जोड़ी: इसमें राइट है"
+  },
+  "save": {
+    "add": "लिस्टिंग सेव करें",
+    "remove": "सेव से हटाएँ",
+    "saved": "सेव हो गई",
+    "removed": "सेव से हटा दी गई"
+  },
+  "chips": {
+    "remove": "{{label}} हटाएँ",
+    "side": {
+      "left": "लेफ़्ट साइड",
+      "right": "राइट साइड",
+      "pair": "जोड़ी"
+    },
+    "conditions_one": "{{count}} कंडीशन",
+    "conditions_other": "{{count}} कंडीशन",
+    "fit": "मशीन में फ़िट",
+    "place_one": "{{count}} जगह",
+    "place_other": "{{count}} जगहें",
+    "priceRange": "{{min}} – {{max}}",
+    "priceFrom": "{{min}} से",
+    "priceUpTo": "{{max}} तक",
+    "priceShown": "कीमत के साथ",
+    "minQty": "{{qty}}+ उपलब्ध",
+    "gstVerified": "GST वेरिफ़ाइड",
+    "delivers": "डिलीवरी देते हैं",
+    "hasVideo": "वीडियो के साथ",
+    "specs_one": "{{count}} स्पेसिफ़िकेशन",
+    "specs_other": "{{count}} स्पेसिफ़िकेशन"
+  },
+  "errors": {
+    "locationRequired": "दूरी से क्रम लगाने के लिए लोकेशन चालू करें या कोई जगह चुनें।",
+    "sortNeedsMachines": "यह क्रम सिर्फ़ मशीनों के लिए है।",
+    "filterNotAvailable": "यह फ़िल्टर यहाँ उपलब्ध नहीं है। इसे हटाकर फिर से कोशिश करें।",
+    "cursorInvalid": "लिस्ट बदल गई है। इसे शुरू से दिखा रहे हैं।",
+    "pincodeUnknown": "यह पिनकोड अभी हमारे पास नहीं है।",
+    "cannotSaveOwn": "आप अपनी ही लिस्टिंग सेव नहीं कर सकते।",
+    "savedLimit": "आपने {{cap}} लिस्टिंग सेव की हैं। और सेव करने के लिए कुछ हटाएँ।"
+  }
+}

@@ -15,6 +15,14 @@ export const AUTH_EVENTS = {
   otpVerifyFailed: 'auth_otp_verify_failed',
   onboardingCompleted: 'auth_onboarding_completed',
   loggedOut: 'auth_logged_out',
+  /** Welcome's "Browse first" (F4 + F5 spec §8.1). */
+  guestBrowseStarted: 'auth_guest_browse_started',
+  /** The sign-in sheet opened for a guest (`reason`: save, post, chats, deals, report). */
+  signInPrompted: 'auth_sign_in_prompted',
+  /** Not now, the backdrop or Back on the sign-in sheet (`reason`). */
+  signInPromptDismissed: 'auth_sign_in_prompt_dismissed',
+  /** A guest's pending action ran after sign-in and onboarding (`type`: save). */
+  pendingActionCompleted: 'auth_pending_action_completed',
 } as const;
 
 /** Your business and Where are you? (F1), in onboarding and in edit mode (`mode`). */
@@ -65,6 +73,22 @@ export const LISTING_EVENTS = {
   fitChecked: 'listing_fit_checked',
   otherSideOpened: 'listing_other_side_opened',
   reported: 'listing_reported',
+} as const;
+
+/**
+ * Discovery (F4 + F5 spec §8.6). Never the query text, a pincode or coordinates (§11).
+ * - `locationPermissionAnswered` (`granted`): the system location prompt was answered.
+ * - `locationChanged` (`source`: gps | business | pincode | radius, `radiusKm`: a number or null for All India).
+ */
+export const DISCOVERY_EVENTS = {
+  locationPermissionAnswered: 'location_permission_answered',
+  locationChanged: 'location_changed',
+} as const;
+
+/** Saved listings (F4 + F5 spec §8.5): `listingId` only, fired by `useSaveToggle` on success. */
+export const SAVED_EVENTS = {
+  listingSaved: 'listing_saved',
+  listingUnsaved: 'listing_unsaved',
 } as const;
 
 export const SETTINGS_EVENTS = {

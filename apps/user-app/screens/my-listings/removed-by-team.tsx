@@ -36,6 +36,7 @@ export default function RemovedByTeamScreen(_props: RootStackScreenProps<'Remove
     return (
       <ListingCardItem
         card={item}
+        save={false}
         status={{ label: t(chip.key), tone: chip.tone }}
         subtitle={Number.isNaN(at) ? undefined : t('listing.removed.on', { date: formatDate(at) })}
         nudge={item.statusReason ? t('listing.removed.reason', { reason: item.statusReason }) : t('listing.removed.noReason')}
