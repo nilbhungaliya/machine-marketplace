@@ -12,6 +12,8 @@ import {
   Play, Pause, Pencil, RefreshCw, Tag, Flag, Star, Video, ImagePlus, EllipsisVertical, ArrowLeftRight, Truck, RotateCcw, CircleX, Ban, Inbox, Trash, Eye, Gauge,
   // F4 + F5 discovery (B4): the heart, the location chip, the filter row.
   Heart, ChevronDown, SlidersHorizontal,
+  // F6 + F7 app chat (L6): composer send, call, masked-number notice, share, archive.
+  Send, Phone, Lock, Share2, Archive,
 } from 'lucide-react-native';
 
 export type { LucideIcon };
@@ -21,6 +23,7 @@ export {
   Clock, ShieldAlert, Building2, Square, SquareCheck,
   Play, Pause, Pencil, RefreshCw, Tag, Flag, Star, Video, ImagePlus, EllipsisVertical, ArrowLeftRight, Truck, RotateCcw, CircleX, Ban, Inbox, Trash, Eye, Gauge,
   Heart, ChevronDown, SlidersHorizontal,
+  Send, Phone, Lock, Share2, Archive,
 };
 
 export const TAB_ICONS = {

@@ -1,5 +1,316 @@
 {
   "title": "Chats",
   "emptyTitle": "No chats yet",
-  "emptySubtitle": "Enquiries, offers and counteroffers for each listing appear in one thread."
+  "emptySubtitle": "Enquiries, offers and counteroffers for each listing appear in one thread.",
+  "segments": {
+    "label": "Show chats",
+    "all": "All",
+    "buying": "Buying",
+    "selling": "Selling",
+    "yourTurn": "Your turn",
+    "yourTurnCount": "Your turn {{count}}"
+  },
+  "filterEmptyTitle": "Nothing here",
+  "filterEmptySubtitle": "No conversations in this list right now.",
+  "loadErrorTitle": "Couldn't load your chats",
+  "loadErrorBody": "Check your connection and try again.",
+  "archivedLink": "Archived",
+  "archivedTitle": "Archived chats",
+  "archivedEmptyTitle": "No archived chats",
+  "archivedEmptySubtitle": "Chats you archive appear here. A new message brings one back.",
+  "unread_one": "{{count}} unread message",
+  "unread_other": "{{count}} unread messages",
+  "gstVerified": "GST verified",
+  "pill": {
+    "your_turn": "Your turn",
+    "deal": "Deal",
+    "open": "Waiting",
+    "replied": "Replied",
+    "converted": "Deal done",
+    "closed": "Closed"
+  },
+  "preview": {
+    "none": "No messages yet",
+    "mine": "You: {{text}}",
+    "photos_one": "{{count}} photo",
+    "photos_other": "{{count}} photos",
+    "photosCaption_one": "{{count}} photo: {{text}}",
+    "photosCaption_other": "{{count}} photos: {{text}}",
+    "enquiry": "Enquiry",
+    "offer": "Offer {{price}}",
+    "offerPerUnit": "Offer {{price}} /{{unit}}",
+    "offerNoPrice": "Offer",
+    "deal": "Deal agreed"
+  },
+  "systemPreview": {
+    "offer_withdrawn": "Offer withdrawn",
+    "offer_rejected": "Offer rejected",
+    "offer_expired": "Offer expired",
+    "offer_backup": "Offer on hold as a backup",
+    "offer_revived": "Backup offer open again",
+    "offer_reconfirmed": "Offer confirmed again",
+    "offers_closed": "Offers closed",
+    "deal_agreed": "Deal agreed",
+    "deal_notes_changed": "Deal notes updated",
+    "deal_handed_over": "Marked handed over",
+    "deal_completed": "Deal completed",
+    "deal_auto_completed": "Deal completed",
+    "deal_cancel_requested": "Cancel requested",
+    "deal_cancel_request_withdrawn": "Cancel request withdrawn",
+    "deal_cancelled": "Deal cancelled",
+    "deal_problem_reported": "Problem reported",
+    "deal_dispute_resolved": "Problem resolved by support",
+    "contact_shared": "Numbers shared",
+    "blocked": "Business blocked"
+  },
+  "system": {
+    "offer_withdrawn": {
+      "mine": "You withdrew your offer.",
+      "theirs": "{{name}} withdrew their offer."
+    },
+    "offer_rejected": {
+      "mine": "You rejected the offer.",
+      "theirs": "{{name}} rejected the offer."
+    },
+    "offer_expired": "The offer expired.",
+    "offer_backup": "The offer is on hold as a backup while the stock is in another deal.",
+    "offer_revived": "Stock is free again: the backup offer is open.",
+    "offer_reconfirmed": "The seller confirmed the offer again.",
+    "offers_closed": {
+      "listing_unavailable": "Offers closed: the listing is no longer available.",
+      "listing_changed": "Offers closed: the listing changed.",
+      "blocked": "Offers closed: a business was blocked.",
+      "account_inactive": "Offers closed: an account is no longer active."
+    },
+    "deal_agreed": "Deal #{{ref}} agreed.",
+    "deal_notes_changed": {
+      "mine": "You updated the deal notes: {{fields}}.",
+      "theirs": "{{name}} updated the deal notes: {{fields}}."
+    },
+    "deal_handed_over": "Deal #{{ref}} marked handed over.",
+    "deal_completed": "Receipt confirmed. Deal #{{ref}} completed.",
+    "deal_auto_completed": "Deal #{{ref}} completed automatically.",
+    "deal_cancel_requested": {
+      "mine": "You asked to cancel deal #{{ref}}.",
+      "theirs": "{{name}} asked to cancel deal #{{ref}}."
+    },
+    "deal_cancel_request_withdrawn": {
+      "mine": "You withdrew your cancel request.",
+      "theirs": "{{name}} withdrew their cancel request."
+    },
+    "deal_cancelled": {
+      "mine": "You cancelled deal #{{ref}}: {{reason}}.",
+      "theirs": "{{name}} cancelled deal #{{ref}}: {{reason}}.",
+      "both": "Deal #{{ref}} cancelled by both sides.",
+      "system": "Deal #{{ref}} was cancelled: {{reason}}."
+    },
+    "deal_problem_reported": {
+      "mine": "You reported a problem with deal #{{ref}}: {{category}}.",
+      "theirs": "{{name}} reported a problem with deal #{{ref}}: {{category}}."
+    },
+    "deal_dispute_resolved": {
+      "completed": "Support closed the problem: deal #{{ref}} completed.",
+      "cancelled": "Support closed the problem: deal #{{ref}} cancelled.",
+      "resumed": "Support closed the problem: deal #{{ref}} continues."
+    },
+    "contact_shared": "You both shared your numbers for this deal.",
+    "blocked": {
+      "mine": "You blocked this business.",
+      "theirs": "This conversation is closed."
+    },
+    "supportMessage": "Support: {{message}}"
+  },
+  "noteField": {
+    "payment_method": "payment",
+    "advance": "advance",
+    "fulfilment": "pickup or delivery",
+    "expected_on": "date",
+    "text": "note"
+  },
+  "cancelReason": {
+    "no_longer_needed": "no longer needed",
+    "found_elsewhere": "found elsewhere",
+    "seller_not_responding": "seller not responding",
+    "buyer_not_responding": "buyer not responding",
+    "payment_not_received": "payment not received",
+    "stock_problem": "stock problem",
+    "listing_removed": "listing removed",
+    "support_closed": "closed by support",
+    "other": "other reason"
+  },
+  "problemCategory": {
+    "not_as_described": "not as described",
+    "damaged": "damaged",
+    "short_quantity": "short quantity",
+    "not_received": "not received",
+    "payment_not_received": "payment not received",
+    "other": "other problem"
+  },
+  "quick": {
+    "is_available": "Is it still available?",
+    "more_photos": "Send more photos",
+    "video": "Send a video",
+    "specifications": "Full specifications",
+    "compatibility": "Will it fit my machine?",
+    "best_price": "Best price",
+    "price_request": "Price please"
+  },
+  "thread": {
+    "title": "Chat",
+    "loadErrorTitle": "Couldn't open this chat",
+    "loadErrorBody": "It may have been removed, or the connection dropped.",
+    "menu": "More options",
+    "call": "Call {{name}}",
+    "openListing": "Open the listing",
+    "noLongerListed": "No longer listed",
+    "available": "{{available}} of {{quantity}} {{unit}} available",
+    "allOnHold": "All on hold in deals",
+    "priceOnRequest": "Price on request",
+    "perUnit": "/{{unit}}",
+    "machineTip": "Never pay before you inspect a used machine.",
+    "masked": "Phone numbers and emails stay hidden until you both share your numbers after a deal.",
+    "scamWarning": "Be careful with advance payments. Pay only after you have checked the part or machine; we can't recover money paid outside the app.",
+    "photo": "Photo {{n}} of {{total}}",
+    "closePhoto": "Close photo",
+    "sendQuote": "Send a quote",
+    "noMessages": "No messages yet. Say hello."
+  },
+  "enquiryCard": {
+    "mine": "Your enquiry",
+    "theirs": "Enquiry",
+    "quantity": "Quantity: {{quantity}}",
+    "machine": "Buyer's machine: {{machine}}",
+    "fits": "listed as fitting",
+    "notListed": "not in the listed fits"
+  },
+  "composer": {
+    "placeholder": "Message",
+    "send": "Send",
+    "addPhotos": "Add photos",
+    "removePhoto": "Remove photo {{n}}",
+    "takePhoto": "Take a photo",
+    "chooseGallery": "Choose from gallery",
+    "photosTitle": "Add photos",
+    "cameraDenied": "Allow camera access to take a photo.",
+    "photoPrepareFailed": "Couldn't prepare this photo. Try another.",
+    "uploadFailed": "The photo didn't upload. Try again.",
+    "photosLimit": "You can send up to 5 photos at a time.",
+    "tooLong": "A message can be up to 2,000 characters.",
+    "notSent": "Not sent. Tap send to try again.",
+    "viewer": "You can read this conversation but not reply.",
+    "blockedByMe": "You blocked {{name}}. Unblock them in Profile › Blocked businesses to reply.",
+    "blockedMe": "You can't reply in this conversation.",
+    "readOnly": "You can't reply in this conversation."
+  },
+  "contact": {
+    "bannerTitle": "Share your number for this deal?",
+    "bannerBody": "{{name}} sees your number only when you both share.",
+    "share": "Share my number",
+    "sharedMine": "You shared your number. Waiting for {{name}}.",
+    "theirsShared": "{{name}} shared their number. Share yours to see it.",
+    "revealed": "Numbers shared for this deal.",
+    "revealedNumber": "Numbers shared. {{name}}'s number:",
+    "ownerOnly": "Your owner can share the business's number.",
+    "sheetTitle": "Share my number",
+    "tick": "Share my number with {{name}} for this deal",
+    "sheetBody": "{{name}} sees your number only when you both share it here. Numbers and emails already written in this chat also become visible to them, and that can't be taken back.",
+    "sheetFallback": "If your business has no contact number, the owner's phone is shared.",
+    "confirm": "Share my number",
+    "tickFirst": "Tick the box to share your number.",
+    "shared": "Number shared. It shows once they share too.",
+    "sharedRevealed": "Numbers shared. You can now call each other."
+  },
+  "menu": {
+    "share": "Share listing",
+    "report": "Report conversation",
+    "block": "Block business",
+    "archive": "Archive chat",
+    "unarchive": "Move to inbox",
+    "archived": "Chat archived",
+    "unarchived": "Chat moved to your inbox",
+    "archiveFailed": "Couldn't change this chat. Try again."
+  },
+  "block": {
+    "title": "Block {{name}}?",
+    "message": "You won't be able to message each other or make offers, and open offers close. Deals in progress continue. You can unblock from Profile.",
+    "confirm": "Block",
+    "done": "Business blocked"
+  },
+  "report": {
+    "title": "Report conversation",
+    "reason": {
+      "spam": "Spam",
+      "scam_or_advance_payment": "Scam or asks for advance money",
+      "abusive": "Abusive or rude",
+      "fake_listing": "Fake listing",
+      "other": "Something else"
+    },
+    "details": "Details",
+    "detailsHint": "Optional",
+    "detailsRequired": "Tell us what happened",
+    "detailsTooLong": "Up to 500 characters",
+    "alsoBlock": "Also block this business",
+    "send": "Send report",
+    "reasonRequired": "Choose a reason first.",
+    "sent": "Thanks. Our team will look at this conversation."
+  },
+  "enquire": {
+    "title": "Ask the seller",
+    "askPriceTitle": "Ask for a price",
+    "quantity": "Quantity",
+    "quantityUnit": "Quantity ({{unit}})",
+    "note": "Add a message",
+    "noteHint": "Optional",
+    "notePlaceholder": "Ask about size, condition or delivery",
+    "machine": "Send my machine: {{machine}}",
+    "machineSaved": "the machine I checked",
+    "send": "Send enquiry",
+    "empty": "Pick a question or write a message.",
+    "noteTooLong": "A message can be up to 500 characters.",
+    "quantityProblem": {
+      "empty": "Enter a quantity.",
+      "invalid": "Enter a number.",
+      "decimals": "Too many decimals for this unit.",
+      "zero": "The quantity must be more than 0.",
+      "tooLarge": "That quantity is too large."
+    },
+    "sent": "Enquiry sent"
+  },
+  "contactNumber": {
+    "title": "Contact number",
+    "intro": "The number shared with a buyer or seller after a deal, when you both choose to share. Without one, the owner's phone is shared.",
+    "current": "Current contact number",
+    "unknown": "Add a number for your business, or replace the one you have.",
+    "phone": "Mobile number",
+    "phonePlaceholder": "10-digit mobile number",
+    "sendCode": "Send code",
+    "codeTitle": "Enter the code",
+    "codeSent": "We sent a code to {{phone}}.",
+    "code": "Code",
+    "verify": "Verify and save",
+    "resend": "Resend code",
+    "resendIn": "Resend in {{seconds}} s",
+    "devCode": "Dev code: {{code}}",
+    "changeNumber": "Use another number",
+    "invalid": "Enter a 10-digit mobile number.",
+    "saved": "Contact number saved",
+    "remove": "Remove contact number",
+    "removeTitle": "Remove the contact number?",
+    "removeMessage": "The owner's phone will be shared after deals instead. Shares of the old number stop showing.",
+    "removed": "Contact number removed",
+    "ownerOnly": "Only the business owner can change the contact number."
+  },
+  "blocked": {
+    "title": "Blocked businesses",
+    "subtitle": "They can't message you or make offers, and you can't contact them.",
+    "emptyTitle": "No blocked businesses",
+    "emptySubtitle": "Businesses you block from a chat appear here.",
+    "since": "Blocked on {{date}}",
+    "unblock": "Unblock",
+    "unblockTitle": "Unblock {{name}}?",
+    "unblockMessage": "You'll be able to message each other again. Offers that closed stay closed.",
+    "unblocked": "{{name}} unblocked",
+    "loadErrorTitle": "Couldn't load the list",
+    "loadErrorBody": "Check your connection and try again."
+  }
 }

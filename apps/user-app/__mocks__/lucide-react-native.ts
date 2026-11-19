@@ -75,3 +75,9 @@ export const Gauge = makeIcon('Gauge');
 export const Heart = makeIcon('Heart');
 export const ChevronDown = makeIcon('ChevronDown');
 export const SlidersHorizontal = makeIcon('SlidersHorizontal');
+// F6 + F7 app chat (L6)
+export const Send = makeIcon('Send');
+export const Phone = makeIcon('Phone');
+export const Lock = makeIcon('Lock');
+export const Share2 = makeIcon('Share2');
+export const Archive = makeIcon('Archive');
