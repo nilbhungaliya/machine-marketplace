@@ -49,7 +49,8 @@ version), `listing_machines`, `listing_rentals`, `listing_fitments`, `listing_me
 6. GST in dev: the stub answers any valid GSTIN (code `123456`; `24AAACC0000C1ZY` cancelled, `24AAACN0000N1Z0` not
    found, `24AAACU0000U1ZF` provider down). Start the API with `GST_PROVIDER=off` to try the review path. Review
    uploads need the R2 variables (see Open items); without them they answer `503 STORAGE_UNAVAILABLE`.
-7. Listing photos need the public bucket (`AWS_S3_PUBLIC_BUCKET`, `MEDIA_PUBLIC_BASE_URL`); until then media answers
+7. Listing photos need the public bucket (`AWS_S3_PUBLIC_BUCKET`, `MEDIA_PUBLIC_BASE_URL`: the same values as the
+   textile-style `AWS_S3_BUCKET` / `AWS_S3_PUBLIC_URL`); until then media answers
    `503 STORAGE_UNAVAILABLE`. In dev, `LISTING_MEDIA_OPTIONAL=true` lets a listing publish without photos (ignored in
    production). R2 round trips for listing media: `R2_TESTS=1 pnpm --filter @mpm/api exec vitest run
    __tests__/media-r2-spike.test.ts __tests__/listing-media-r2.test.ts`.
@@ -58,11 +59,14 @@ version), `listing_machines`, `listing_rentals`, `listing_fitments`, `listing_me
 
 - **R2 private bucket: set** (2026-11-18); the three GST document round trips run and pass against it. Lifecycle rules
   wanted on the private bucket: delete `incoming-verification/` and `incoming-listing/` after 1 day.
-- **R2 public bucket for listing media, not set:** `AWS_S3_PUBLIC_BUCKET`, `MEDIA_PUBLIC_BASE_URL` (a custom domain on
-  Cloudflare once D1 is settled; `r2.dev` for dev only), and for cache purge `CLOUDFLARE_ZONE_ID` +
-  `CLOUDFLARE_API_TOKEN` (Zone · Cache Purge on that zone only). The R2 token needs Object Read & Write on both buckets;
-  no CORS. Then run the listing-media R2 suites (How to run step 7): copy with `REPLACE` metadata, `If-Match` /
-  `CopySourceIfMatch` and range reads (206) are unverified until then.
+- **R2 public bucket for listing media: set** (2026-11-19). The owner's `.env` has the textile project's names and
+  buckets (`AWS_S3_BUCKET`, `AWS_S3_PUBLIC_URL`, an `r2.dev` URL); `AWS_S3_PUBLIC_BUCKET` and `MEDIA_PUBLIC_BASE_URL`
+  were added to `.env` with the same values. Both listing-media R2 suites pass (copy with `REPLACE` metadata,
+  `If-Match` / `CopySourceIfMatch`, range reads). Still to do for production: a custom domain on Cloudflare once D1 is
+  settled (`r2.dev` is for dev only) and `CLOUDFLARE_ZONE_ID` + `CLOUDFLARE_API_TOKEN` (Zone · Cache Purge) for purge.
+- **Buckets shared with textile:** both projects use the same private and public buckets and keys. Both write
+  `verification/` keys in the private bucket (IDs keep them apart), so any lifecycle rule or orphan sweep must not
+  touch the other project's objects; give each project its own buckets (or a key prefix) before production.
 - **Video off** (F2 amendment 3): the native media spike couldn't run (no device). The owner runs the checklist in
   `docs/superpowers/spikes/2026-11-18-f2-native-media.md`, then sets `LISTING_VIDEO_UPLOAD_ENABLED = true` and flips
   the API test "the shipped video switch". Video on iOS is unverified (`videoUploadEnabled()` is Android only).
@@ -233,3 +237,6 @@ The ten client decisions D1–D10 are listed at the end of `docs/product-scope.m
   `GstinCaliper` (reads the typed GSTIN part by part); `Steps` racks its current segment. Verified: typecheck, tests
   (app 426 after rebasing onto the F2 listings work), `CI=1 npx expo export --platform android` bundles. **Not yet run on a device**: motion, both themes and
   performance unchecked. Committed and pushed on `develop`.
+- 2026-11-19 — Public bucket: no new bucket needed. The owner's `.env` already had the textile buckets under textile's
+  names (`AWS_S3_BUCKET`, `AWS_S3_PUBLIC_URL`); added `AWS_S3_PUBLIC_BUCKET` and `MEDIA_PUBLIC_BASE_URL` with the same
+  values (local `.env` only). Both listing-media R2 suites pass. Noted that the buckets are shared with textile.
