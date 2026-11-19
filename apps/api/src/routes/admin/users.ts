@@ -3,6 +3,7 @@ import type { Server as SocketIOServer } from 'socket.io';
 import { z } from 'zod';
 import type { Tx } from '../../db/index.js';
 import { reasonBody } from '../../lib/admin-text.js';
+import { runTx } from '../../lib/tx-effects.js';
 import {
   blockUser,
   disconnectUserSockets,
@@ -21,7 +22,8 @@ type StatusAction = (tx: Tx, admin: StatusActor, userId: string, reason: string)
 
 // Account status (F1 + A2 spec §8.2, §10). Thin: validate → service → `{ data }`. Suspend / reinstate: verification
 // officers and moderators; block / unblock: super admins only (super_admin passes every role check). Suspend and block
-// drop the user's open sockets after the commit.
+// drop the user's open sockets after the commit. Every action runs in `runTx` (F6 + F7 plan L2-4): an owner's
+// suspension or block closes offers, and their lines and `offer:updated` emits go out after the commit.
 const adminUserRoutes: FastifyPluginAsync = async (fastify) => {
   const officerOrModerator = fastify.requireAdminRole('verification_officer', 'moderator');
   const superAdminOnly = fastify.requireAdminRole('super_admin');
@@ -31,7 +33,7 @@ const adminUserRoutes: FastifyPluginAsync = async (fastify) => {
       const { id } = idParams.parse(request.params);
       const { reason } = reasonBody.parse(request.body ?? {});
       const admin = { id: request.admin!.adminId, role: request.admin!.role };
-      const data = await fastify.db.transaction((tx) => action(tx, admin, id, reason));
+      const data = await runTx(fastify, (tx) => action(tx, admin, id, reason));
       // `io` is decorated only when Socket.IO is attached (index.ts, socket tests).
       if (disconnect) disconnectUserSockets(fastify.io as SocketIOServer | undefined, id);
       return { data };
