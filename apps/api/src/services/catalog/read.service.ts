@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import type {
   CategoryIcon,
@@ -73,6 +73,15 @@ export async function getCategoryTree(db: Db, opts: { includeInactive: boolean }
       .sort(bySortOrder);
 
   return build(null, null);
+}
+
+/** The active roots only (machine categories), children empty (F4 + F5 spec §7, `GET /categories?depth=1`). */
+export async function getCategoryRoots(db: Db): Promise<CategoryNode[]> {
+  const rows = await db
+    .select()
+    .from(categories)
+    .where(and(isNull(categories.parentId), eq(categories.isActive, true)));
+  return rows.map((row) => toNode(row, null)).sort(bySortOrder);
 }
 
 /** Exported for the admin field service. */

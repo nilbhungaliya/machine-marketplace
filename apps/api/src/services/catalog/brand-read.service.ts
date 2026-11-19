@@ -22,6 +22,7 @@ export function toBrand(row: BrandRow): Brand {
     needsReview: row.needsReview,
     sortOrder: row.sortOrder,
     isActive: row.isActive,
+    chipNeedsContext: row.chipNeedsContext,
   };
 }
 

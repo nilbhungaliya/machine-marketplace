@@ -35,7 +35,7 @@ const model = (id: string, brandId: string, machineTypeId: string): MachineModel
 
 function brand(id: string, name: string, over: Partial<BrandWithModels> = {}): BrandWithModels {
   return {
-    id, key: id, name, slug: id, makesMachines: true, makesParts: false, needsReview: false, sortOrder: 0, isActive: true,
+    id, key: id, name, slug: id, makesMachines: true, makesParts: false, needsReview: false, sortOrder: 0, isActive: true, chipNeedsContext: false,
     models: [], ...over,
   };
 }

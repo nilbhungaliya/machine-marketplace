@@ -39,7 +39,7 @@ afterEach(() => {
 });
 
 const brandRow = (id: string, name: string): BrandWithModels => ({
-  id, key: id, name, slug: id, makesMachines: true, makesParts: false, needsReview: false, sortOrder: 0, isActive: true, models: [],
+  id, key: id, name, slug: id, makesMachines: true, makesParts: false, needsReview: false, sortOrder: 0, isActive: true, chipNeedsContext: false, models: [],
 });
 
 describe('BrandsModelsPage', () => {

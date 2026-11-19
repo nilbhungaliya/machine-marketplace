@@ -44,8 +44,8 @@ describe('loadReaderDictionary', () => {
     const instanceB = createReaderDictionaryLoader();
     const term = testTerm(runId, 'tre');
     const q = `${term} lh`;
-    expect(readQuery(q, await instanceA(db, redis)).words).not.toContain('steering');
-    expect(readQuery(q, await instanceB(db, redis)).words).not.toContain('steering');
+    expect(readQuery(q, await instanceA(db, redis)).wordGroups).toEqual([]);
+    expect(readQuery(q, await instanceB(db, redis)).wordGroups).toEqual([]);
 
     // The synonym admin's write: insert, then bump after commit.
     await db.insert(searchSynonyms).values({
@@ -54,11 +54,12 @@ describe('loadReaderDictionary', () => {
     await bumpReaderVersion(redis);
 
     vi.advanceTimersByTime(4_999);
-    expect(readQuery(q, await instanceB(db, redis)).words).not.toContain('steering');
+    expect(readQuery(q, await instanceB(db, redis)).wordGroups).toEqual([]);
     vi.advanceTimersByTime(1);
-    expect(readQuery(q, await instanceB(db, redis)).words).toEqual(['steering', 'knuckle', 'lh']);
+    const group = [{ typed: term.split('-'), alternatives: [['steering', 'knuckle']] }];
+    expect(readQuery(q, await instanceB(db, redis))).toMatchObject({ wordGroups: group, words: ['lh'] });
     // Instance A checks on its own schedule: same moment, same answer.
-    expect(readQuery(q, await instanceA(db, redis)).words).toEqual(['steering', 'knuckle', 'lh']);
+    expect(readQuery(q, await instanceA(db, redis))).toMatchObject({ wordGroups: group, words: ['lh'] });
   });
 
   it('without a version bump the cached dictionary is kept after the 5 s check', async () => {
@@ -71,10 +72,10 @@ describe('loadReaderDictionary', () => {
       term, termNorm: term.replace(/-/g, ' '), script: 'latin', targetKind: 'word', targetWord: 'silent', createdBy: admin.id,
     });
     vi.advanceTimersByTime(10_000);
-    expect(readQuery(term, await loader(db, redis)).words).not.toContain('silent');
+    expect(readQuery(term, await loader(db, redis)).wordGroups).toEqual([]);
     await bumpReaderVersion(redis);
     vi.advanceTimersByTime(5_000);
-    expect(readQuery(term, await loader(db, redis)).words).toEqual(['silent']);
+    expect(readQuery(term, await loader(db, redis)).wordGroups).toEqual([{ typed: term.split('-'), alternatives: [['silent']] }]);
   });
 
   it('inactive synonyms are not read', async () => {
@@ -83,7 +84,7 @@ describe('loadReaderDictionary', () => {
     await db.insert(searchSynonyms).values({
       term, termNorm: term.replace(/-/g, ' '), script: 'latin', targetKind: 'word', targetWord: 'nowhere', isActive: false, createdBy: admin.id,
     });
-    expect(readQuery(term, await loader(db, redis)).words).not.toContain('nowhere');
+    expect(readQuery(term, await loader(db, redis)).wordGroups).toEqual([]);
   });
 
   it('stop words come from app_settings when set, else the defaults', async () => {

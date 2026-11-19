@@ -7,14 +7,16 @@ import {
   type RemovableChip,
   type SearchSide,
   type SynonymTarget,
+  type WordSynonymGroup,
 } from '@mpm/shared-types';
 import { normalizeSearchText, searchTokens } from './normalize.js';
 
 // The query reader (F4 + F5 spec §5.3, R8): pure, no database. It turns a typed query into removable chips (`#ref`,
 // brand, model, category, part numbers, side) and the remaining words, in this order:
 //   1. `#ref`: `#` followed by digits.
-//   2. Synonym phrases (longest first, up to 4 words): `word` synonyms replace the phrase with their words; category,
-//      brand, model and side synonyms mark the phrase as that name / side.
+//   2. Synonym phrases (longest first, up to 4 words): `word` synonyms make a word group (amended 2026-11-19: a word
+//      synonym ADDS its words — the group hits on the words as typed OR on any target's words); category, brand, model
+//      and side synonyms mark the phrase as that name / side.
 //   3. Names: brands, models (also by their compact form, "js 205" = "js205") and categories. A brand with
 //      `chip_needs_context` is a chip only when a model of that brand or a machine type is read too. A model whose
 //      brand was read wins; a model name shared by brands with none read stays words. Categories: deepest level first,
@@ -23,7 +25,7 @@ import { normalizeSearchText, searchTokens } from './normalize.js';
 //      one side is one or two letters or both are digits, such as "AB 123 X") with a letter and a digit, or ≥ 5
 //      digits, at least 4 characters after F2's part-number normaliser; at most 3.
 //   5. Side words: the first side synonym wins; side words never become words.
-//   6. Remaining words: stop words dropped, duplicates dropped, at most 10.
+//   6. Remaining words: stop words dropped, duplicates dropped, at most 10 together with the word groups.
 
 export interface ReaderSynonym {
   termNorm: string;
@@ -167,6 +169,7 @@ interface Tok {
 type Item =
   | { kind: 'tok'; tok: Tok }
   | { kind: 'side'; toks: Tok[]; side: SearchSide }
+  | { kind: 'group'; toks: Tok[]; alternatives: string[][] }
   | { kind: 'name'; toks: Tok[]; brands: ReaderBrand[]; models: ReaderModel[]; categories: ReaderCategory[] };
 
 const REF_RE = /(^|\s)#(\d{1,15})(?=\s|$)/;
@@ -189,7 +192,12 @@ function applySynonyms(toks: Tok[], dict: ReaderDictionary): Item[] {
       if (!targets?.length) continue;
       const side = targets.find((t) => t.kind === 'side' && t.side);
       const names = targets.filter((t) => t.kind === 'category' || t.kind === 'brand' || t.kind === 'model');
-      const word = [...targets].filter((t) => t.kind === 'word' && t.words).sort((a, b) => a.words!.localeCompare(b.words!))[0];
+      const typed = slice.map((t) => t.text).join(' ');
+      const alternatives = [...new Set(targets.filter((t) => t.kind === 'word' && t.words).map((t) => t.words!))]
+        .filter((w) => w !== typed)
+        .sort()
+        .map((w) => w.split(' ').filter((x) => x !== ''))
+        .filter((ws) => ws.length > 0);
       if (side) {
         items.push({ kind: 'side', toks: slice, side: side.side! });
       } else if (names.length) {
@@ -204,8 +212,8 @@ function applySynonyms(toks: Tok[], dict: ReaderDictionary): Item[] {
         };
         if (item.brands.length + item.models.length + item.categories.length === 0) continue;
         items.push(item);
-      } else if (word) {
-        for (const w of word.words!.split(' ')) if (w !== '') items.push({ kind: 'tok', tok: { text: w, chunk: -1, noPartNumber: true } });
+      } else if (alternatives.length) {
+        items.push({ kind: 'group', toks: slice, alternatives });
       } else {
         continue;
       }
@@ -374,14 +382,22 @@ export function readQuery(raw: string | null | undefined, dict: ReaderDictionary
   // 5. Side; 6. words.
   let side: SearchSide | null = null;
   const words: string[] = [];
+  const wordGroups: WordSynonymGroup[] = [];
+  const full = () => words.length + wordGroups.length >= DISCOVERY_LIMITS.maxWords;
   for (const it of items) {
     if (it.kind === 'side') {
       side ??= it.side;
       continue;
     }
+    if (it.kind === 'group') {
+      const typed = it.toks.map((t) => t.text);
+      if (full() || wordGroups.some((g) => g.typed.join(' ') === typed.join(' '))) continue;
+      wordGroups.push({ typed, alternatives: it.alternatives.map((a) => [...a]) });
+      continue;
+    }
     if (it.kind !== 'tok') continue;
     const w = it.tok.text;
-    if (dict.stopWords.has(w) || words.includes(w) || words.length >= DISCOVERY_LIMITS.maxWords) continue;
+    if (dict.stopWords.has(w) || words.includes(w) || full()) continue;
     words.push(w);
   }
 
@@ -394,6 +410,7 @@ export function readQuery(raw: string | null | undefined, dict: ReaderDictionary
     partNumbers: pn.partNumbers.map((p) => p.norm),
     side,
     words,
+    wordGroups,
     chipWords: {
       brand: wordsOf(brandItem),
       model: wordsOf(modelItem),
@@ -411,7 +428,9 @@ export function applyRemovedChips(reading: ReadQueryResult, removed: readonly Re
   if (!removed?.length) return reading;
   const out: ReadQueryResult = { ...reading, words: [...reading.words], chipWords: { ...reading.chipWords } };
   const giveBack = (ws: string[]) => {
-    for (const w of ws) if (!out.words.includes(w) && out.words.length < DISCOVERY_LIMITS.maxWords) out.words.push(w);
+    for (const w of ws) {
+      if (!out.words.includes(w) && out.words.length + out.wordGroups.length < DISCOVERY_LIMITS.maxWords) out.words.push(w);
+    }
   };
   if (removed.includes('side')) out.side = null;
   if (removed.includes('brand') && out.brand) {

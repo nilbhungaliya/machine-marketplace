@@ -17,7 +17,7 @@ import {
   type SearchWiden,
 } from '@mpm/shared-types';
 import type { Db, Tx } from '../../db/index.js';
-import { categories, listings } from '../../db/schema.js';
+import { brands, categories, listings } from '../../db/schema.js';
 import { ValidationError } from '../../lib/errors.js';
 import { loadCards } from '../listings/listing-view.service.js';
 import type { ListingRow } from '../listings/locks.js';
@@ -26,7 +26,7 @@ import { cursorAad, cursorInvalid, openCursor, requestHash, sealCursor, type Cur
 import { snappedKmSql } from './distance.js';
 import { computeFacets } from './facets.js';
 import { filterNotAvailable, filterParts, priceSql, specFieldsInPlay, whereSql, type FilterParts, type SpecFieldInPlay } from './filters.js';
-import { fullMatchSql, matchScoreSql, partialMatchSql, type MatchTerms } from './matching.js';
+import { fullMatchSql, matchScoreSql, partialMatchSql, unitCount, type MatchTerms } from './matching.js';
 import { normalizeSearchText, searchTokens } from './normalize.js';
 import { resolveOrigin, type OriginViewer, type ResolvedOrigin } from './origin.js';
 import { applyRemovedChips, publicReading, readQuery, type ReadQueryResult } from './query-reader.js';
@@ -104,7 +104,7 @@ async function publicRef(conn: Db | Tx, ref: number): Promise<{ id: string; ref:
 
 /**
  * Resolves a request (reader, chips, overrides, origin, sort, filters) inside the search transaction. Explicit filters
- * override the reader's chips of the same kind (§5.3): `side`, `categoryId`, and `fit` (brand / model).
+ * override the reader's chips of the same kind (§5.3): `side`, `categoryId`, `brandId` (brand) and `fit` (brand / model).
  */
 export async function prepareSearch(
   tx: Tx,
@@ -122,6 +122,13 @@ export async function prepareSearch(
     r.brand = null;
     r.model = null;
   }
+  // The brand filter replaces the reader's brand chip (and a model chip of another brand).
+  if (filters.brandId) {
+    const [brand] = await tx.select({ id: brands.id, name: brands.name }).from(brands).where(eq(brands.id, filters.brandId));
+    if (!brand) throw filterNotAvailable('brandId');
+    r.brand = { id: brand.id, name: brand.name };
+    if (r.model && r.model.brandId !== brand.id) r.model = null;
+  }
   // The category in play: the filter, else the reader's chip.
   let categoryPath: string | null = null;
   if (filters.categoryId) {
@@ -137,7 +144,7 @@ export async function prepareSearch(
     categoryPath = node?.path ?? null;
   }
 
-  const hasText = r.words.length > 0 || r.partNumbers.length > 0;
+  const hasText = r.words.length > 0 || r.wordGroups.length > 0 || r.partNumbers.length > 0;
   const sort: SearchSort = req.sort ?? (hasText ? 'best_match' : origin.point ? 'nearest' : 'newest');
   if (sort === 'nearest' && !origin.point) throw invalid('LOCATION_REQUIRED', 'Choose a location to sort by distance');
   if ((sort === 'year_desc' || sort === 'hours_asc') && (kinds.length === 0 || kinds.some((k) => !MACHINE_KINDS.includes(k)))) {
@@ -176,7 +183,7 @@ export async function prepareSearch(
     side,
     kinds,
     parts,
-    terms: { words: r.words, partNumbers: r.partNumbers, side },
+    terms: { words: r.words, groups: r.wordGroups.map((g) => [g.typed, ...g.alternatives]), partNumbers: r.partNumbers, side },
     specFields,
     aad: cursorAad(sort, hash),
   };
@@ -241,7 +248,7 @@ export function countSql(p: PreparedSearch, mode: 'full' | 'partial', asOf: Date
 }
 
 async function countOf(tx: Tx, p: PreparedSearch, mode: 'full' | 'partial'): Promise<number> {
-  if (mode === 'partial' && p.terms.words.length < 2) return 0;
+  if (mode === 'partial' && unitCount(p.terms) < 2) return 0;
   const { rows } = await tx.execute<{ n: number }>(countSql(p, mode));
   return Number(rows[0]?.n ?? 0);
 }
@@ -371,11 +378,11 @@ export async function search(db: Db, req: SearchRequest, viewer: SearchViewer | 
 
   // The anonymous log (§5.13): first page, words or part numbers, after the read-only transaction.
   const r = result.prepared.reading;
-  if (!req.cursor && (r.words.length > 0 || r.partNumbers.length > 0)) {
+  if (!req.cursor && (r.words.length > 0 || r.wordGroups.length > 0 || r.partNumbers.length > 0)) {
     await logSearch(db, {
       raw: req.q ?? '',
       normalized: normalizeSearchText(req.q),
-      words: r.words.length + r.partNumbers.length,
+      words: r.words.length + r.wordGroups.length + r.partNumbers.length,
       resultTotal: result.page.total ?? 0,
       kind: result.kinds.length === 1 ? result.kinds[0]! : null,
     });
@@ -394,7 +401,7 @@ export async function countSearch(db: Db, req: SearchCountRequest, viewer: Searc
   return inSearchTransaction(db, DISCOVERY_LIMITS.trigramThreshold, async (tx) => {
     const p = await prepareSearch(tx, req, reading, viewer);
     const total = await countOf(tx, p, 'full');
-    const partialTotal = total === 0 && p.terms.words.length >= 2 ? await countOf(tx, p, 'partial') : null;
+    const partialTotal = total === 0 && unitCount(p.terms) >= 2 ? await countOf(tx, p, 'partial') : null;
     return { total, partialTotal };
   });
 }

@@ -214,7 +214,7 @@ against a Redis version key `discovery:reader:version` (incremented by every syn
    answers `{ data: { redirect: { listingId } } }` and the app opens the listing. A **bare** number is never a redirect
    (six-digit part numbers are common): when it equals a public listing's `ref`, the search runs normally and the
    response adds `refSuggestion: { listingId, ref }`, shown as a "Listing #123456" row above the results.
-2. **Synonym phrases** (longest first, up to 4 words): `word` synonyms replace the phrase with their words; `category`
+2. **Synonym phrases** (longest first, up to 4 words): `word` synonyms **add** an alternative: the phrase matches its own words **or** the target's words (an OR group, each side AND-ed, the group AND-ed with the other words), so "fender" finds both "Fender" and "Mudguard" listings; `category`
    / `brand` / `model` / `side` synonyms mark the phrase as that name.
 3. **Names**: brand names (all words of the name as a phrase) → `reading.brand`, except a brand with
    `chip_needs_context` becomes a chip only when a model of that brand or a **machine type** (level `machine_type`, e.g.
@@ -413,7 +413,7 @@ discovery routes.
 | `GET /discover/trending` | | `string[]` |
 | `POST /discover/home` | `{ origin?, radiusKm? }` | `HomeView { origin, radiusKm, kindTiles, rootCategories: { id, name, icon }[], topNearYou: ListingCard[] (8), rentNearby: ListingCard[] (8) }` |
 | `POST /discover/browse` | `{ parentId?, kinds?, origin?, radiusKm? }` | `BrowseView { node, crumbs, children: { id, name, level, icon, liveCount }[], popularBrands: { id, name, liveCount }[] (6) }` |
-| `POST /discover/browse/brand` | `{ brandId, kinds?, origin?, radiusKm? }` | `{ brand, models: { id, name, liveCount }[], otherCount }` |
+| `POST /discover/browse/brand` | `{ brandId, kinds?, origin?, radiusKm? }` | `{ brand, models: { id, name, liveCount }[], allCount }` (`allCount` = the search total for the `brandId` filter, which has the brand chip's meaning) |
 | `POST /discover/cards` | `{ ids: uuid[] (≤ 20), origin? }` | `ListingCard[]` of the ids still public, in the given order (recently viewed). |
 | `GET /users/me/saved-listings?cursor=` | JWT | `{ items: SavedListingItem[], nextCursor }`; an item is `{ listingId, savedAt, card: ListingCard } \| { listingId, savedAt, unavailable: true }`. |
 | `PUT /users/me/saved-listings/:listingId` | JWT | `{ saved: true }`; `404 LISTING_NOT_FOUND` unless public (F2's code for a non-public listing); `409 CANNOT_SAVE_OWN_LISTING`; `409 SAVED_LIMIT`. Idempotent. |
@@ -674,6 +674,8 @@ translated catalogue names (A4).
 | Count-only said "Show 0" while partials exist | §5.11 `partialTotal` and footer copy |
 | Count-only bucket couldn't be chosen from the body (limiter runs before parsing) | §5.11, §7: own path `POST /discover/search/count` |
 | "Run" undefined in the personal-data check | §5.13: maximal digit runs |
+| Word synonyms replaced the term, so "fender" lost "Fender" listings (B2 review) | §5.3 step 2: word synonyms add an OR alternative |
+| Brand view "Other" count matched no query the app could open (B2 review) | §7 brand view: `allCount` = search total for the `brandId` filter |
 | Typo hit weight unspecified | §5.5: half a substring hit |
 | Install id can be faked | R17, §11, §14: accepted, not a security control |
 | Reader version key between lanes | §13: key and `bumpReaderVersion()` in C0 |

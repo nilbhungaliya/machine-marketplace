@@ -22,7 +22,7 @@ const slug = z.string().max(80).regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, 'lowercase let
 const nonEmpty = (patch: object) => Object.keys(patch).length > 0;
 
 const createBrandBody = z
-  .object({ key, name, slug: slug.optional(), makesMachines: z.boolean(), makesParts: z.boolean() })
+  .object({ key, name, slug: slug.optional(), makesMachines: z.boolean(), makesParts: z.boolean(), chipNeedsContext: z.boolean().optional() })
   .strict();
 // No `key` on updates: keys are fixed once created (.strict() rejects them).
 const updateBrandBody = z
@@ -33,6 +33,7 @@ const updateBrandBody = z
     makesParts: z.boolean().optional(),
     needsReview: z.boolean().optional(),
     isActive: z.boolean().optional(),
+    chipNeedsContext: z.boolean().optional(),
   })
   .strict()
   .refine(nonEmpty, 'Nothing to update');

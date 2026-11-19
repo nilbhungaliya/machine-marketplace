@@ -346,6 +346,7 @@ export async function loadCatalog(tx: Tx, seed: CatalogSeed, opts: { reset: bool
     slug: slugify(b.name),
     makesMachines: b.makesMachines,
     makesParts: b.makesParts,
+    chipNeedsContext: b.chipNeedsContext ?? false,
     needsReview: true,
     sortOrder: i,
   }));

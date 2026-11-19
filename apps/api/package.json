@@ -17,6 +17,7 @@
     "db:seed:catalog": "tsx src/db/seed-catalog.ts",
     "db:seed:locations": "tsx src/db/seed-locations.ts",
     "db:seed:industrial-areas": "tsx src/db/seed-industrial-areas.ts",
+    "db:seed:search": "tsx src/db/seed-search.ts",
     "db:backfill:search": "tsx src/db/backfill-search.ts"
   },
   "dependencies": {

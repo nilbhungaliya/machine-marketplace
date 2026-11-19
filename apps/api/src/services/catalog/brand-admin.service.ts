@@ -125,6 +125,8 @@ export interface CreateBrandInput {
   slug?: string;
   makesMachines: boolean;
   makesParts: boolean;
+  /** F4 + F5 §4.1: a chip only with a model of the brand or a machine type (default false). */
+  chipNeedsContext?: boolean;
 }
 
 /** The new brand goes last. */
@@ -145,6 +147,7 @@ export async function createBrand(db: Db, adminId: string, input: CreateBrandInp
           slug,
           makesMachines: input.makesMachines,
           makesParts: input.makesParts,
+          chipNeedsContext: input.chipNeedsContext ?? false,
           sortOrder: nextOrder(last),
         })
         .returning();
@@ -164,6 +167,8 @@ export interface UpdateBrandPatch {
   makesParts?: boolean;
   needsReview?: boolean;
   isActive?: boolean;
+  /** F4 + F5 §4.1, §5.3: bumps the reader version like every brand edit (audited as `brand.update`). */
+  chipNeedsContext?: boolean;
 }
 
 /** "Makes machines" can't be turned off while the brand has models; at least one flag stays on. */
@@ -185,6 +190,7 @@ export async function updateBrand(db: Db, adminId: string, id: string, patch: Up
           makesParts: patch.makesParts,
           needsReview: patch.needsReview,
           isActive: patch.isActive,
+          chipNeedsContext: patch.chipNeedsContext,
           updatedAt: new Date(),
         })
         .where(eq(brands.id, id))

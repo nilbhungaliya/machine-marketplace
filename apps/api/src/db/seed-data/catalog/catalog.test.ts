@@ -217,6 +217,10 @@ describe('brands', () => {
     ]);
   });
 
+  it('reads ordinary-word brand names as a search chip only with context (F4 + F5 §4.1)', () => {
+    expect(catalogSeed.brands.filter((b) => b.chipNeedsContext).map((b) => b.name)).toEqual(['Happy']);
+  });
+
   it('slugs Lässer without the umlaut', () => {
     expect(slugify(brand('Lässer').name)).toBe('lasser');
   });

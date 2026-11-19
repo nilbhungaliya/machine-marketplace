@@ -40,7 +40,7 @@ const tree: CategoryNode[] = [
 
 const tajima: Brand = {
   id: 'tajima', key: 'tajima', name: 'Tajima', slug: 'tajima', makesMachines: true, makesParts: true,
-  needsReview: false, sortOrder: 0, isActive: true,
+  needsReview: false, sortOrder: 0, isActive: true, chipNeedsContext: false,
 };
 
 const tmar: MachineModel = {

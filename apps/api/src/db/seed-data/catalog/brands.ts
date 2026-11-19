@@ -36,7 +36,8 @@ export const BRANDS: SeedBrand[] = [
     ],
   },
   {
-    key: 'happy', name: 'Happy', makesMachines: true, makesParts: true,
+    // An ordinary English word (F4 + F5 §4.1): "happy" alone stays a search word.
+    key: 'happy', name: 'Happy', makesMachines: true, makesParts: true, chipNeedsContext: true,
     models: [
       { key: 'hcr3', name: 'HCR3', machineType: MULTI_HEAD },
       { key: 'hcs3', name: 'HCS3', machineType: SINGLE_HEAD },

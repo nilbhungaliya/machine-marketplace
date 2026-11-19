@@ -66,6 +66,11 @@ export interface SeedBrand {
   name: string;
   makesMachines: boolean;
   makesParts: boolean;
+  /**
+   * F4 + F5 §4.1: the name is an ordinary word ("happy", like "bull" or "ace"), so search reads it as the brand only
+   * with a model of the brand or a machine type in the same query.
+   */
+  chipNeedsContext?: boolean;
   models?: SeedModel[];
 }
 

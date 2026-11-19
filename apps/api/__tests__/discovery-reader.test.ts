@@ -184,19 +184,41 @@ describe('readQuery', () => {
   });
 
   describe('synonyms', () => {
-    it('TRE → tie rod end words', () => {
-      expect(read('TRE').words).toEqual(['tie', 'rod', 'end']);
+    // Amended 2026-11-19: a word synonym adds its words; it doesn't replace the typed ones.
+    it('TRE → a group: "tre" OR "tie rod end"', () => {
+      const r = read('TRE');
+      expect(r.words).toEqual([]);
+      expect(r.wordGroups).toEqual([{ typed: ['tre'], alternatives: [['tie', 'rod', 'end']] }]);
     });
 
-    it('tre lh → words + side', () => {
+    it('tre lh → a group + side', () => {
       const r = read('tre lh');
-      expect(r.words).toEqual(['tie', 'rod', 'end']);
+      expect(r.wordGroups).toEqual([{ typed: ['tre'], alternatives: [['tie', 'rod', 'end']] }]);
+      expect(r.words).toEqual([]);
       expect(r.side).toBe('left');
     });
 
     it('Hindi and Gujarati word synonyms', () => {
-      expect(read('गियर').words).toEqual(['gear']);
-      expect(read('બેરિંગ 6205').words).toEqual(['bearing', '6205']);
+      expect(read('गियर').wordGroups).toEqual([{ typed: ['गियर'], alternatives: [['gear']] }]);
+      const r = read('બેરિંગ 6205');
+      expect(r.wordGroups).toEqual([{ typed: ['બેરિંગ'], alternatives: [['bearing']] }]);
+      expect(r.words).toEqual(['6205']);
+    });
+
+    it('a term with several word targets keeps them all; a repeated term is one group', () => {
+      const d = buildReaderDictionary({
+        synonyms: [word('bush', 'bushing'), word('bush', 'bush sleeve'), word('bush', 'bush')],
+        brands: [], models: [], categories: [],
+      });
+      const r = readQuery('bush bush pin', d);
+      expect(r.wordGroups).toEqual([{ typed: ['bush'], alternatives: [['bush', 'sleeve'], ['bushing']] }]);
+      expect(r.words).toEqual(['pin']);
+    });
+
+    it('groups count toward the 10-word cap', () => {
+      const r = read('tre alpha beta gamma delta epsilon zeta eta theta iota kappa');
+      expect(r.wordGroups).toHaveLength(1);
+      expect(r.words).toHaveLength(9);
     });
 
     it('a brand synonym reads the brand', () => {

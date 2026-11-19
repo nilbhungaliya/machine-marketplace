@@ -21,6 +21,8 @@ import { discoveryWhere } from './visibility.js';
 type Conn = Db | Tx;
 
 const uuid = z.string().uuid();
+/** A listing-type filter: empty = all. */
+export const kindsSchema = z.array(z.enum(LISTING_KINDS)).max(LISTING_KINDS.length);
 const latLng = z.object({ lat: z.number().finite().min(-90).max(90), lng: z.number().finite().min(-180).max(180) }).strict();
 const pincode = z.string().regex(/^\d{6}$/);
 
@@ -38,7 +40,7 @@ export const originSchema = z
   .nullable();
 
 // The literals mirror DISCOVERY_RADII_KM and MIN_QTY_STEPS (a test checks they agree).
-const radius = z.union([z.literal(10), z.literal(25), z.literal(50), z.literal(100), z.literal(200), z.null()]);
+export const radiusSchema = z.union([z.literal(10), z.literal(25), z.literal(50), z.literal(100), z.literal(200), z.null()]);
 const minQty = z.union([z.literal(2), z.literal(10), z.literal(50)]);
 const money = z.number().int().min(0).max(1_000_000_000_000);
 const specKey = z.string().min(1).max(64).regex(/^[a-z0-9_]+$/);
@@ -46,12 +48,13 @@ const specRange = z.object({ min: z.number().finite().optional(), max: z.number(
 
 export const searchFiltersSchema = z
   .object({
-    kinds: z.array(z.enum(LISTING_KINDS)).max(LISTING_KINDS.length).optional(),
+    kinds: kindsSchema.optional(),
     categoryId: uuid.optional(),
     side: z.enum(['left', 'right', 'pair']).optional(),
     fit: z.object({ brandId: uuid, modelId: uuid.optional(), year: z.number().int().min(1900).max(2100).optional() }).strict().optional(),
+    brandId: uuid.optional(),
     conditionIds: z.array(uuid).max(20).optional(),
-    radiusKm: radius.optional(),
+    radiusKm: radiusSchema.optional(),
     states: z.array(z.string().trim().min(1).max(100)).max(40).optional(),
     cities: z.array(z.string().trim().min(1).max(100)).max(40).optional(),
     industrialAreaIds: z.array(uuid).max(50).optional(),
@@ -187,6 +190,16 @@ export function sideFilterSql(side: SearchSide): SQL {
   return side === 'pair' ? sql`${listings.side} = 'pair'` : sql`${listings.side} IN (${side}, 'pair')`;
 }
 
+/**
+ * The brand chip (§5.3) and the `brandId` filter: the listing's part brand, a fitment's brand or its machine make. The
+ * brand view's `allCount` counts this too, so the count and the search it opens can't drift.
+ */
+export function brandChipSql(brandId: string): SQL {
+  return sql`(${listings.partBrandId} = ${brandId}
+    OR EXISTS (SELECT 1 FROM listing_fitments bf WHERE bf.listing_id = ${listings.id} AND bf.brand_id = ${brandId})
+    OR EXISTS (SELECT 1 FROM listing_machines bm WHERE bm.listing_id = ${listings.id} AND bm.brand_id = ${brandId}))`;
+}
+
 /** Per unit for parts and machines; a rental's headline rate (day, hour, week, month); NULL for Price on request. */
 export const priceSql: SQL = sql`(CASE
   WHEN ${listings.kind} = 'machine_rental' THEN (SELECT COALESCE(r.rate_day_paise, r.rate_hour_paise, r.rate_week_paise, r.rate_month_paise)
@@ -214,21 +227,17 @@ export function filterParts(ctx: FilterContext): FilterParts {
     const mYear = year !== undefined ? sql` AND m.year = ${year}` : sql``;
     base.push(sql`(EXISTS (SELECT 1 FROM listing_fitments f WHERE f.listing_id = ${listings.id} AND f.brand_id = ${brandId}${fModel}${fYear})
       OR EXISTS (SELECT 1 FROM listing_machines m WHERE m.listing_id = ${listings.id} AND m.brand_id = ${brandId}${mModel}${mYear}))`);
-  } else {
-    if (ctx.brandChipId) {
-      const b = ctx.brandChipId;
-      base.push(sql`(${listings.partBrandId} = ${b}
-        OR EXISTS (SELECT 1 FROM listing_fitments f WHERE f.listing_id = ${listings.id} AND f.brand_id = ${b})
-        OR EXISTS (SELECT 1 FROM listing_machines m WHERE m.listing_id = ${listings.id} AND m.brand_id = ${b}))`);
-    }
-    if (ctx.modelChipId) {
-      const m = ctx.modelChipId;
-      const brandWide = ctx.modelChipBrandId
-        ? sql` OR (f.brand_id = ${ctx.modelChipBrandId} AND f.model_id IS NULL AND f.model_other IS NULL)`
-        : sql``;
-      base.push(sql`(EXISTS (SELECT 1 FROM listing_fitments f WHERE f.listing_id = ${listings.id} AND (f.model_id = ${m}${brandWide}))
-        OR EXISTS (SELECT 1 FROM listing_machines mm WHERE mm.listing_id = ${listings.id} AND mm.model_id = ${m}))`);
-    }
+  }
+  // The brand: the `brandId` filter (with or without `fit`), else the reader's chip unless `fit` overrides it.
+  const brandId = f.brandId ?? (f.fit ? null : ctx.brandChipId);
+  if (brandId) base.push(brandChipSql(brandId));
+  if (!f.fit && ctx.modelChipId) {
+    const m = ctx.modelChipId;
+    const brandWide = ctx.modelChipBrandId
+      ? sql` OR (f.brand_id = ${ctx.modelChipBrandId} AND f.model_id IS NULL AND f.model_other IS NULL)`
+      : sql``;
+    base.push(sql`(EXISTS (SELECT 1 FROM listing_fitments f WHERE f.listing_id = ${listings.id} AND (f.model_id = ${m}${brandWide}))
+      OR EXISTS (SELECT 1 FROM listing_machines mm WHERE mm.listing_id = ${listings.id} AND mm.model_id = ${m}))`);
   }
 
   if (f.cities?.length) base.push(sql`lower(${listings.city}) IN (${list(f.cities.map((c) => c.toLowerCase()))})`);

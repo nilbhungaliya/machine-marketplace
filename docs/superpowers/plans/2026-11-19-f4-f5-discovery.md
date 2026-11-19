@@ -345,7 +345,7 @@ or part numbers only; retention deletes > 90 days in `SKIP LOCKED` batches. Rate
 **Rules (§7):** home top 8 parts + machines by relevance within radius, business-category restriction only when it
 yields ≥ 4; rent 8 available first; kind tiles with counts; root categories. Browse: grouped count by `path` prefix,
 within radius when an origin is given, zero children hidden, crumbs, 6 popular brands (part brand or fitment brand).
-Brand view: models with counts + `otherCount`. Cards: public ids only, in the given order, ≤ 20. All through
+Brand view: models with counts + `allCount` (= search total for the `brandId` filter; B2 review). Cards: public ids only, in the given order, ≤ 20. All through
 `discoveryWhere`, `resolveOrigin`, `loadCards`.
 
 - [ ] **Step 1: Failing tests:** home restriction and fallback; rentals available first; counts within radius vs All
@@ -477,7 +477,7 @@ Home's search bar), `locales/*/discover.json`, `lib/analytics-events.ts` (declar
 - [ ] **Step 1: Failing tests (pure helpers):** breadcrumb builder; suggestion row mapping (category path, brand, model,
   listing); start-state from params (`browseNodeId` → Browse at that node with its crumbs; none → root).
   **Step 2:** FAIL. **Step 3:** Implement per mockup "Browse by machine" (crumbs, tree rows with counts, popular brands
-  chips → brand view → results with fit filter), recent + trending, suggestions with 250 ms debounce. **Step 4:** PASS;
+  chips → brand view → a model row opens results with the fit filter, the "All <brand>" row (`allCount`) opens results with the `brandId` filter; word-synonym groups (`wordGroups`) are words, not removable chips), recent + trending, suggestions with 250 ms debounce. **Step 4:** PASS;
   typecheck. **Step 5:** Stage.
 
 ### B5-2: Results, sort sheet, filters screen, no results

@@ -273,6 +273,8 @@ export interface Brand {
   needsReview: boolean;
   sortOrder: number;
   isActive: boolean;
+  /** F4 + F5 §4.1: the name reads as a search chip only with a model of the brand or a machine type ("bull gear"). */
+  chipNeedsContext: boolean;
 }
 
 export interface MachineModel {
@@ -1882,6 +1884,11 @@ export interface SearchFilters {
   categoryId?: string;
   side?: SearchSide;
   fit?: { brandId: string; modelId?: string; year?: number };
+  /**
+   * The brand chip's meaning, as a filter (the brand view's "All" opens it): the listing's part brand, a fitment's
+   * brand or its machine make. Overrides the reader's brand chip (§5.3).
+   */
+  brandId?: string;
   conditionIds?: string[];
   /** Absent = `DEFAULT_RADIUS_KM`; `null` = All India. Ignored with no origin. */
   radiusKm?: DiscoveryRadiusKm | null;
@@ -1924,8 +1931,20 @@ export interface QueryReading {
   /** Normalised part numbers (max 3). */
   partNumbers: string[];
   side: SearchSide | null;
-  /** Remaining normalised words, stop words dropped (max 10). */
+  /** Remaining normalised words, stop words dropped (max 10 together with `wordGroups`). */
   words: string[];
+  /**
+   * Word synonyms read in the query (§5.3 step 2, amended 2026-11-19: a word synonym ADDS, it doesn't replace). A group
+   * hits when all its `typed` words hit OR all the words of any one of its `alternatives` hit; each group counts as one
+   * word (AND with the other words, the partial threshold, the 10-word cap).
+   */
+  wordGroups: WordSynonymGroup[];
+}
+
+/** One word synonym read in a query: the words as typed, and the synonym targets' words. */
+export interface WordSynonymGroup {
+  typed: string[];
+  alternatives: string[][];
 }
 
 /** One option of a select spec facet. */
@@ -2033,11 +2052,11 @@ export interface BrandBrowseRequest {
   radiusKm?: DiscoveryRadiusKm | null;
 }
 
-/** `POST /discover/browse/brand` reply (§7): `otherCount` = listings of the brand with no catalogue model. */
+/** `POST /discover/browse/brand` reply (§7): `allCount` = the search total for the `brandId` filter (the brand chip's meaning). */
 export interface BrandBrowseView {
   brand: { id: string; name: string };
   models: Array<{ id: string; name: string; liveCount: number }>;
-  otherCount: number;
+  allCount: number;
 }
 
 /** `POST /discover/cards` body: recently viewed ids (≤ 20); the reply keeps the given order and drops non-public ones. */
@@ -2097,6 +2116,18 @@ export interface SearchSynonymInput {
   targetSide?: SearchSide | null;
   targetWord?: string | null;
   isActive?: boolean;
+}
+
+/** `GET /admin/search/synonyms?q=&targetKind=&cursor=` reply (§7.1). */
+export interface SearchSynonymPage {
+  items: SearchSynonym[];
+  nextCursor: string | null;
+}
+
+/** `PUT` / `DELETE /admin/search/trending-hidden/:normalized` reply (§7.1). */
+export interface TrendingHiddenResult {
+  normalized: string;
+  hidden: boolean;
 }
 
 /** `GET /admin/search/trending` row (§7.1). */

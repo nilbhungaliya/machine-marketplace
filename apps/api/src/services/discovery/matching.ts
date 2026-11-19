@@ -22,6 +22,8 @@ export const MATCH_WEIGHTS = { title: 4, text: 2, typoTitle: 2, typoText: 1, par
 
 export interface MatchTerms {
   words: string[];
+  /** Word-synonym groups (§5.3 step 2 amended): each a list of alternatives (the typed words first), each all-must-hit. */
+  groups?: string[][][];
   /** Normalised part numbers (F2's `normalizePartNumber`). */
   partNumbers: string[];
   /** The side in play: picks the side-stripped base of a typed part number. */
@@ -81,32 +83,66 @@ export function partNumberScoreSql(pn: string, side: SearchSide | null): SQL<num
     WHEN ${listings.searchTitleText} LIKE ${lower} THEN ${lit(W.title)} WHEN ${listings.searchText} LIKE ${lower} THEN ${lit(W.text)} ELSE 0 END)`;
 }
 
-/** Full match (§5.6 step 1): every word and every part number hits. Null when there is nothing to match. */
+/**
+ * A search unit (§5.4, §5.3 step 2 amended): a plain word, or a word-synonym group. A group hits when every word of any
+ * one alternative hits (the words as typed, or a synonym target's words): `(a1 AND a2) OR (b1 AND b2 AND b3)`, each hit
+ * in the indexable forms above, so the trigram index serves every branch (a BitmapOr of the branches' index scans).
+ */
+type Unit = { word: string } | { alternatives: string[][] };
+
+function unitsOf(m: MatchTerms): Unit[] {
+  return [...m.words.map((word) => ({ word })), ...(m.groups ?? []).map((alternatives) => ({ alternatives }))];
+}
+
+const andAll = (parts: SQL[]): SQL => (parts.length === 1 ? parts[0]! : sql`(${sql.join(parts, sql` AND `)})`);
+
+function unitHitSql(u: Unit, hit: (w: string) => SQL = wordHitSql): SQL {
+  if ('word' in u) return hit(u.word);
+  return sql`(${sql.join(u.alternatives.map((alt) => andAll(alt.map(hit))), sql` OR `)})`;
+}
+
+/**
+ * A unit's score: a word's best hit; a group's best alternative, an alternative scoring the mean of its words' scores
+ * (so a three-word synonym target can't outweigh the one word typed).
+ */
+function unitScoreSql(u: Unit): SQL<number> {
+  if ('word' in u) return wordScoreSql(u.word);
+  const alts = u.alternatives.map((alt) => sql`((${sql.join(alt.map(wordScoreSql), sql` + `)})::float8 / ${lit(alt.length)})`);
+  return sql<number>`${alts.length === 1 ? alts[0]! : sql`GREATEST(${sql.join(alts, sql`, `)})`}`;
+}
+
+/** How many units (plain words and word groups) the terms hold: the partial threshold counts these. */
+export function unitCount(m: MatchTerms): number {
+  return m.words.length + (m.groups?.length ?? 0);
+}
+
+/** Full match (§5.6 step 1): every unit and every part number hits. Null when there is nothing to match. */
 export function fullMatchSql(m: MatchTerms): SQL | null {
-  const parts = [...m.words.map(wordHitSql), ...m.partNumbers.map((pn) => partNumberHitSql(pn, m.side))];
+  const parts = [...unitsOf(m).map((u) => unitHitSql(u)), ...m.partNumbers.map((pn) => partNumberHitSql(pn, m.side))];
   return parts.length ? sql.join(parts, sql` AND `) : null;
 }
 
 /**
- * Partial match (§5.6 step 2), only with 2+ words: at least ceil(n/2) words hit, at least one of them in the title text,
- * and every part number still hits (a part number is exact; only words relax). The OR of the word hits comes first so
- * the trigram index serves it.
+ * Partial match (§5.6 step 2), only with 2+ units: at least ceil(n/2) units hit, at least one of them in the title
+ * text, and every part number still hits (a part number is exact; only words relax). The OR of the unit hits comes
+ * first so the trigram index serves it.
  */
 export function partialMatchSql(m: MatchTerms): SQL | null {
-  if (m.words.length < 2) return null;
-  const need = Math.ceil(m.words.length / 2);
-  const anyHit = sql.join(m.words.map(wordHitSql), sql` OR `);
+  const units = unitsOf(m);
+  if (units.length < 2) return null;
+  const need = Math.ceil(units.length / 2);
+  const anyHit = sql.join(units.map((u) => unitHitSql(u)), sql` OR `);
   const count = sql.join(
-    m.words.map((w) => sql`(CASE WHEN ${wordHitSql(w)} THEN 1 ELSE 0 END)`),
+    units.map((u) => sql`(CASE WHEN ${unitHitSql(u)} THEN 1 ELSE 0 END)`),
     sql` + `,
   );
-  const anyTitle = sql.join(m.words.map(wordTitleHitSql), sql` OR `);
+  const anyTitle = sql.join(units.map((u) => unitHitSql(u, wordTitleHitSql)), sql` OR `);
   const pns = m.partNumbers.map((pn) => partNumberHitSql(pn, m.side));
   return sql.join([sql`(${anyHit})`, sql`(${count}) >= ${need}`, sql`(${anyTitle})`, ...pns], sql` AND `);
 }
 
-/** Σ of the words' and part numbers' scores (§5.5); chips filter, so they add nothing. */
+/** Σ of the units' and part numbers' scores (§5.5); chips filter, so they add nothing. */
 export function matchScoreSql(m: MatchTerms): SQL<number> {
-  const parts = [...m.words.map(wordScoreSql), ...m.partNumbers.map((pn) => partNumberScoreSql(pn, m.side))];
+  const parts = [...unitsOf(m).map(unitScoreSql), ...m.partNumbers.map((pn) => partNumberScoreSql(pn, m.side))];
   return parts.length ? sql<number>`(${sql.join(parts, sql` + `)})` : sql<number>`0`;
 }

@@ -387,32 +387,37 @@ describe('rate limits (R17, §7)', () => {
     expect(() => discoveryRateLimits({ DISCOVERY_RATE_LIMIT_MAX: 'x' })).toThrow();
   });
 
-  const ROUTES: Array<{ method: 'GET' | 'POST'; url: string }> = [
+  // Every route is built (B1, B2): each answers its normal status until the limit. The brand view is asked for a brand
+  // that doesn't exist (404): the limiter runs before the handler, so the request still counts.
+  const ROUTES: Array<{ method: 'GET' | 'POST'; url: string; payload?: object; ok?: number }> = [
     { method: 'POST', url: '/discover/search' },
     { method: 'POST', url: '/discover/search/count' },
     { method: 'GET', url: '/discover/suggest?q=be' },
     { method: 'GET', url: '/discover/trending' },
     { method: 'POST', url: '/discover/home' },
     { method: 'POST', url: '/discover/browse' },
-    { method: 'POST', url: '/discover/browse/brand' },
-    { method: 'POST', url: '/discover/cards' },
+    { method: 'POST', url: '/discover/browse/brand', payload: { brandId: randomUUID() }, ok: 404 },
+    { method: 'POST', url: '/discover/cards', payload: { ids: [] } },
   ];
-  // Built in B1 (200); the rest are stubs (501) until B2.
-  const BUILT = new Set(['/discover/search', '/discover/search/count', '/discover/suggest?q=be', '/discover/trending']);
-  const okStatus = (route: { url: string }) => (BUILT.has(route.url) ? 200 : 501);
+  const okStatus = (route: { ok?: number }) => route.ok ?? 200;
   let ipSeq = 0;
   const freshIp = () => `10.77.${Math.floor(ipSeq / 250)}.${(ipSeq++ % 250) + 1}`;
-  const hit = (route: { method: 'GET' | 'POST'; url: string }, install: string, remoteAddress: string) =>
-    app.inject({ method: route.method, url: route.url, remoteAddress, headers: { 'x-install-id': install }, payload: route.method === 'POST' ? {} : undefined });
+  const hit = (route: (typeof ROUTES)[number], install: string, remoteAddress: string) =>
+    app.inject({
+      method: route.method,
+      url: route.url,
+      remoteAddress,
+      headers: { 'x-install-id': install },
+      payload: route.method === 'POST' ? (route.payload ?? {}) : undefined,
+    });
 
-  it('answers 429 on every /discover route past its limit (200 when built, stubs 501 until then)', async () => {
+  it('answers 429 on every /discover route past its limit (home, browse, brand view and cards included)', async () => {
     for (const route of ROUTES) {
       const install = randomUUID();
       const ip = freshIp();
       for (let i = 0; i < 3; i++) {
         const res = await hit(route, install, ip);
         expect(res.statusCode, `${route.url} #${i + 1}`).toBe(okStatus(route));
-        if (okStatus(route) === 501) expect(res.json().code).toBe('NOT_IMPLEMENTED');
       }
       const over = await hit(route, install, ip);
       expect(over.statusCode, route.url).toBe(429);
@@ -459,17 +464,14 @@ describe('rate limits (R17, §7)', () => {
     expect((await hit(ROUTES[3]!, randomUUID(), freshIp())).statusCode).toBe(200);
   });
 
-  it('answers 501 on the saved and admin search stubs behind their auth', async () => {
+  it('keeps the saved routes behind a user token and the admin search routes behind the category manager role', async () => {
+    // Built in B2 (saved-listings.test.ts, admin-search.test.ts); here only the guards.
     const id = randomUUID();
-    expect((await app.inject({ method: 'GET', url: '/users/me/saved-listings' })).statusCode).toBe(401);
-    const auth = { authorization: `Bearer ${viewer.token}` };
-    expect((await app.inject({ method: 'GET', url: '/users/me/saved-listings', headers: auth })).statusCode).toBe(501);
-    expect((await app.inject({ method: 'PUT', url: `/users/me/saved-listings/${id}`, headers: auth })).statusCode).toBe(501);
-    expect((await app.inject({ method: 'DELETE', url: `/users/me/saved-listings/${id}`, headers: auth })).statusCode).toBe(501);
-    expect((await app.inject({ method: 'GET', url: '/admin/search/synonyms' })).statusCode).toBe(401);
-    const admin = { authorization: `Bearer ${signAdminToken({ adminId: randomUUID(), role: 'category_manager' })}` };
+    for (const method of ['GET', 'PUT', 'DELETE'] as const) {
+      const url = method === 'GET' ? '/users/me/saved-listings' : `/users/me/saved-listings/${id}`;
+      expect((await app.inject({ method, url })).statusCode, `${method} ${url}`).toBe(401);
+    }
     const support = { authorization: `Bearer ${signAdminToken({ adminId: randomUUID(), role: 'support' })}` };
-    expect((await app.inject({ method: 'GET', url: '/admin/search/synonyms', headers: support })).statusCode).toBe(403);
     for (const [method, url] of [
       ['GET', '/admin/search/synonyms'],
       ['POST', '/admin/search/synonyms'],
@@ -481,7 +483,8 @@ describe('rate limits (R17, §7)', () => {
       ['PUT', '/admin/search/trending-hidden/abc'],
       ['DELETE', '/admin/search/trending-hidden/abc'],
     ] as const) {
-      expect((await app.inject({ method, url, headers: admin })).statusCode, `${method} ${url}`).toBe(501);
+      expect((await app.inject({ method, url })).statusCode, `${method} ${url}`).toBe(401);
+      expect((await app.inject({ method, url, headers: support })).statusCode, `${method} ${url}`).toBe(403);
     }
   });
 });
