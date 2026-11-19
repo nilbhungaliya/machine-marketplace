@@ -1,6 +1,6 @@
 # F6 + F7 enquiries, chat, offers, deals, reviews (+ push notifications) — design
 
-Date: 2026-11-19. Status: **approved for build** (owner's instruction 2026-11-19: build after an independent spec review and plan review, both done; see §27 and the plan's review changes).
+Date: 2026-11-19. Status: **built** (2026-11-20, on `develop`; plan Batch I done, the owner's device pass open). Approved for build (owner's instruction 2026-11-19: build after an independent spec review and plan review, both done; see §27 and the plan's review changes).
 
 Scope IDs: **F6** (enquiry, chat and negotiation), **F7** (deal and transaction management, reviews), the push and in-app
 half of **F9** for these events, **A5** (enquiries, offers and deals) and the conversation / review part of **A6**, flows

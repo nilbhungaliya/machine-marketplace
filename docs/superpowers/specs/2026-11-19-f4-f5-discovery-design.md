@@ -42,7 +42,7 @@ said F4 adds the text-search columns and indexes; F2 R23 left "similar parts nea
 4. Home opens on what's useful nearby: top items near you and machines for rent nearby; Browse walks the admin catalogue
    with live counts.
 5. Guests browse, search and open listings without an account; sign-in is asked only at the moment of intent (Save
-   now; Enquire, Offer, Post later).
+   now; Enquire, Offer, Post later; the Enquire and Offer reasons exist since F6 + F7).
 6. Buyers save listings and see what they viewed recently.
 7. The category manager keeps search good: synonyms, a report of searches that found nothing, a trending hide list.
 
@@ -51,7 +51,7 @@ said F4 adds the text-search columns and indexes; F2 R23 left "similar parts nea
 Near-me map; saved searches and their alerts (M12, F8/F9); the side-match strip, "Buyers looking for your parts", Wanted
 tabs and the "Post a requirement" button on No results (all need part requests, F8); rental date availability ("free on
 your dates", needs bookings, F7); interchange / superseded part numbers (M4 depth); enquire-all basket (P2); featured
-listings (A6); "My machines" (M4); similar parts nearby on the listing page; notifications bell (F9); image and voice
+listings (A6); "My machines" (M4); similar parts nearby on the listing page; notifications bell (F9; built with F6 + F7); image and voice
 search (P2).
 
 ## 3. Rulings
@@ -485,7 +485,7 @@ end, fender → mudguard, bush → bushing, brg → bearing, cyl → cylinder, h
 (kind tiles then root categories, `thumb` art per mockup; a kind tile opens results with that kind, a category tile
 opens Browse at that node) · **Top items near you** (2-column `GridCard`s, "See all") · **Machines for rent nearby**
 (horizontal `MiniCard`s) · **Recently viewed** (list rows, hidden when empty). Pull to refresh; skeletons; empty state
-"Nothing within 50 km yet" with the widen button. No bell and no side-match strip until F9 / F8.
+"Nothing within 50 km yet" with the widen button. No side-match strip until F8 (the bell came with F6 + F7).
 
 ### 8.4 Search tab (mockups "Browse by machine", "Search results", "Filters", "No results", "Machines for rent")
 

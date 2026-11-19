@@ -77,8 +77,8 @@ look at how textile built it first — same stack, same conventions.
 | Tests | Vitest (+ Testing Library in admin) | Every package |
 | Package manager | pnpm 11 workspaces | Monorepo |
 
-Integrations listed but not installed (MSG91 delivery, GST provider, FCM, R2 client, Razorpay) are added with the
-feature that needs them — don't install them speculatively.
+Integrations listed but not installed (MSG91 delivery, GST provider, Razorpay) are added with the feature that needs
+them — don't install them speculatively. FCM (`firebase-admin`), `sharp` (chat photo re-encoding) and the R2 client are in.
 
 ---
 
@@ -180,6 +180,17 @@ notifications per request.
 `socket/rooms.ts` (never hand-typed room strings). Event names are `<domain>:<event>` (`offer:received`,
 `deal:updated`); clients match by prefix.
 
+**Writes with side effects (F6 + F7):** run the transaction with `runTx(app, fn)` (`lib/tx-effects.ts`) and queue socket
+emits on the `tx` (`queueUserEmit` / `queueBusinessEmit` / `queueAdminEmit`, or `emitToThreadMembers` /
+`emitToBusinesses` for chat, which build each reader's own masked payload): they go out only after commit (a queue
+outside `runTx` throws in tests). Notifications are rows written in the same transaction with `notify(tx, …)`
+(`services/notifications/notify.ts`, deduped per event and user, ids and safe params only, never message text or
+numbers); the `notification-push` job sends them. Money and deal writes take an optional `Idempotency-Key`
+(`config: { idempotent: true }` + `runIdempotent`, `services/idempotency.service.ts`). Row locks follow one order
+(buyer business → listings in id order → deal → offers → thread; `services/deals/locks.ts`), and every stock move keeps
+`listings.held_quantity` = Σ active holds (`services/deals/holds.ts`, `syncReservation`). **Push is opt-in**, like Sentry:
+`FIREBASE_SERVICE_ACCOUNT_B64`; without it deliveries are `sent_dev` (dev) or `skipped` (production).
+
 **Background jobs:** add a `JobSpec` to `src/jobs/index.ts`. Jobs start only from `index.ts` (never `buildApp`, so tests
 don't run them) unless `JOBS_ENABLED=false`. Each job's queries use `FOR UPDATE SKIP LOCKED`.
 
@@ -215,7 +226,7 @@ machine type or listing field needs no schema change or app release.
 ```
 
 ### API route prefixes
-- `/auth/*` public · `/users/*` user JWT · `/listings/*`, `/enquiries/*`, `/offers/*`, `/deals/*`, `/part-requests/*`, `/rentals/*` user JWT · `/admin/*` admin JWT + role
+- `/auth/*` public · `/users/*` user JWT · `/listings/*` (incl. `/listings/:id/enquiry`, `/listings/:id/offers`), `/threads/*`, `/offers/*`, `/deals/*`, `/notifications/*`, `/part-requests/*`, `/rentals/*` user JWT (business writes refuse a `viewer` member, `403 VIEWER_READ_ONLY`) · `/admin/*` admin JWT + role
 
 ### Errors
 - Services throw `AppError` subclasses (`ValidationError`, `NotFoundError`, `ConflictError`, `ForbiddenError(message, code)`…) with a stable `code`.

@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
 import type { FastifyRequest } from 'fastify';
 import { users } from '../db/schema.js';
-import { AppError, ForbiddenError } from './errors.js';
+import { ForbiddenError } from './errors.js';
 
 /**
  * Member-role preHandlers for F6 + F7 user routes (spec §12), placed after `requireUser`. The role is read from the
@@ -22,9 +22,4 @@ export async function refuseViewer(request: FastifyRequest): Promise<void> {
 
 export async function ownerOnly(request: FastifyRequest): Promise<void> {
   if ((await memberRoleOf(request)) !== 'owner') throw new ForbiddenError("Only your business's owner can do this", 'OWNER_ONLY');
-}
-
-/** A route stub (F6 + F7 plan C0-4b): registered with its final guards; the owning lane replaces the handler. */
-export function notImplemented(): never {
-  throw new AppError('Not implemented yet', 501, 'NOT_IMPLEMENTED');
 }

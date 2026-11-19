@@ -49,6 +49,13 @@ Scope: `apps/admin/` (Next.js 14 App Router, React 18, Tailwind 3, English only,
 - Menu groups live in `lib/nav.ts`. Each item lists the `roles` that see it (super_admin sees all). Adding a module = add its nav item + `app/(dashboard)/<route>/page.tsx`.
 - The nav only hides; the **API must enforce** the same roles with `requireAdminRole(...)`.
 - Every mutating admin endpoint writes `audit_log` with before/after values.
+- **F6 + F7 pages** (Queues and Marketplace groups): Disputes (`support`, nav badge from `/admin/disputes/count`),
+  Reports & flags (`moderator`, `support`), Enquiries & offers and Deals (`support`, `operations`), Conversations
+  (`moderator`, `support`). A conversation's messages are **never listed**: they are read only through
+  `components/conversations/read-reason-dialog.tsx` (a reason, then `POST /admin/threads/:id/read`, audit-logged), and
+  the API allows it only from an open or recently resolved report or dispute (a dispute read: `support` only). Clients
+  live in `lib/{enquiries,deals,disputes,conversations,reviews-admin}-api.ts`; dispute resolve and review hide dialogs in
+  `components/disputes/` and `components/reviews/`.
 
 ## Rules
 - Every page handles loading (`Skeleton`/`TableSkeleton`), empty (`EmptyState`) and error (`ErrorState` with retry) states.

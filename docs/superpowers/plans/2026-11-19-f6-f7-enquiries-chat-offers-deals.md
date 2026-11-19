@@ -5,7 +5,8 @@
 > as F2): each lane in its own git worktree on a local lane branch, one implementer per lane doing its tasks in order,
 > an independent review per lane, then the controller merges. Steps use checkbox (`- [ ]`) syntax.
 
-**Status:** **Approved for build** (owner's instruction 2026-11-19; reviewed, see Plan review changes).
+**Status:** **Built** (2026-11-20: C0, C1, waves A and B and Batch I on `develop`; I-5 is the owner's). Approved for build
+on the owner's instruction 2026-11-19; reviewed, see Plan review changes.
 
 **Spec:** `docs/superpowers/specs/2026-11-19-f6-f7-enquiries-chat-offers-deals-design.md` (with §26 our calls and §27
 review changes). Section numbers below (§n) refer to it. The spec is the source of truth: rulings R1–R26 and §26 are
@@ -1416,7 +1417,7 @@ analytics or logs, app runs without Firebase files); controller commits on `lane
 
 **Files:** Create `apps/api/__tests__/f6-core-loop.test.ts`.
 
-- [ ] **Step 1: Failing tests (the cases no single lane could write):** enquiry → offer → counter ×2 → accept (deal +
+- [x] **Step 1: Failing tests (the cases no single lane could write):** enquiry → offer → counter ×2 → accept (deal +
   hold) → second buyer's offer becomes backup → buyer cancels the `agreed` deal → backup revives, seller reconfirms,
   buyer accepts → hand over → `auto_complete_at` moved back → `autoCompleteDeals` → both reviews → published;
   `assertHeldInvariant` after each step; notifications rows of the right types exist for each step and the rendered
@@ -1427,7 +1428,7 @@ analytics or logs, app runs without Firebase files); controller commits on `lane
   (`GET /deals/:id`) shows each side's number only after both ticks and hides it again after one side withdraws;
   `confirm-received` racing `autoCompleteDeals` on the same deal (`Promise.all`) → exactly one completion and one hold
   conversion (quantity down once, `assertHeldInvariant`).
-- [ ] **Step 2:** run; fix in the owning lane's files on `develop`. **Step 3:** `grep -rn "F6F7-STUB\|NOT_IMPLEMENTED"
+- [x] **Step 2:** run; fix in the owning lane's files on `develop`. **Step 3:** `grep -rn "F6F7-STUB\|NOT_IMPLEMENTED"
   apps/api/src apps/user-app apps/admin` is empty. **Step 4:** PASS. **Step 5: Stage.**
 
 ### I-2: Full checks and builds
@@ -1436,11 +1437,13 @@ analytics or logs, app runs without Firebase files); controller commits on `lane
   `pnpm --filter user-app test`; a SQL count shows no rows left in the new tables of `mpm_test`; `pnpm --filter admin
   build`; `CI=1 npx expo export --platform android` in `apps/user-app`; `npx expo install --check`; if Docker is
   available, `docker build -f apps/api/Dockerfile .` (checks `sharp` on Alpine, §23), else an owner item.
-- [ ] Dev DB: `db:migrate` (0012, 0013).
+- [x] Dev DB: `db:migrate` (0012, 0013).
+  *(2026-11-20: all done except `expo export` (stopped by the machine running low on memory), `npx expo install
+  --check` and the Docker build: still to run; see PROJECT_STATUS.)*
 
 ### I-3: Agent walk-through on the dev DB
 
-- [ ] Scripted two-business API walk-through (§20 close-out): enquiry with a machine → offer → counter ×2 → accept →
+- [x] Scripted two-business API walk-through (§20 close-out): enquiry with a machine → offer → counter ×2 → accept →
   backup → cancel → revive → reconfirm → accept → hand over (photo only if R2 is set) → auto-complete with
   `auto_complete_at` moved back → reviews → publish (`review-publish` with `publish_due_at` moved back or both
   submitted); plus a quote on a price-on-request listing and a "Buy at this price"; share-my-number on both sides →
@@ -1450,14 +1453,14 @@ analytics or logs, app runs without Firebase files); controller commits on `lane
 
 ### I-4: Docs
 
-- [ ] `docs/PROJECT_STATUS.md`: What's built (F6 + F7 row, tables, routes, jobs, app and admin screens), How to run
+- [x] `docs/PROJECT_STATUS.md`: What's built (F6 + F7 row, tables, routes, jobs, app and admin screens), How to run
   (`FIREBASE_SERVICE_ACCOUNT_B64`, `google-services.json`, new dev-client build, R2 lifecycle for `incoming-chat/`),
   Open items (§25 list; P6 owner-change / phone-change withdraw wiring; Socket.IO Redis adapter; chat retention), D6 settled by R6, Suggested build order (item 5 done), session log line.
-- [ ] `CLAUDE.md` (services list: chat, offers, deals, reviews, notifications, consent; `runTx` / after-commit emits;
+- [x] `CLAUDE.md` (services list: chat, offers, deals, reviews, notifications, consent; `runTx` / after-commit emits;
   idempotency; push opt-in), `apps/user-app/CLAUDE.md` (chat / deals / push modules, query keys, socket handlers,
   `expo-notifications` build note), `apps/admin/CLAUDE.md` (new pages, reason-gated reads), `.env.example` (P7),
   `apps/user-app/.env.example` (`EXPO_PUBLIC_SHARE_BASE_URL`).
-- [ ] `docs/product-scope.md` per §22 (M9 / M15 pointers answered; M13 "business days" → calendar days; M10 sharing →
+- [x] `docs/product-scope.md` per §22 (M9 / M15 pointers answered; M13 "business days" → calendar days; M10 sharing →
   both sides tick after a deal); F4 spec §2 / §8.3: the bell and the Enquire / Offer sign-in reasons now exist.
 - [ ] Controller commits and pushes `develop` (milestone).
 

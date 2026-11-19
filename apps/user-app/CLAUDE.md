@@ -180,9 +180,10 @@ A feature folder owns its sub-screens, helpers and local types; promote to `comp
   Deals ask a guest to sign in (`screens/tabs/guest-gate.tsx`); Profile shows a Sign in card.
 - **Asking for sign-in:** never navigate to the phone screen yourself. Call `requireSignIn({ reason, pending })` from
   `useRequireSignIn()` (`hooks/use-require-sign-in.ts`): it returns true when signed in, else opens the sign-in sheet.
-  `pending` is a serialisable `PendingAction` (`lib/pending-action.ts`, only `{ type: 'save', listingId }` today) kept in
-  the auth slice; `usePendingActionRunner` (`hooks/use-saved.ts`) runs it once after OTP **and** onboarding; cancel drops
-  it. A new pending type (enquire, offer with F6) goes in `PendingAction` and the runner.
+  `pending` is a serialisable `PendingAction` (`lib/pending-action.ts`: `save`, and since F6 the contact types
+  `enquire` / `offer` / `buy` / `ask_price`) kept in the auth slice; `usePendingActionRunner` (`hooks/use-saved.ts`)
+  runs it once after OTP **and** onboarding (contact types reopen the listing with that sheet through
+  `openPendingContact`, `hooks/use-pending-contact.ts`; nothing is sent until the user taps Send); cancel drops it.
 - **Origin:** `useDiscoveryOrigin()` (`hooks/use-discovery-origin.ts`, pure store in `lib/discovery-origin.ts`) is the one
   origin for Home, Search, results and the location sheet. GPS fixes live in memory only: **never store coordinates**
   (AsyncStorage keeps the radius, a typed pincode and the source) and never put a coordinate or pincode in analytics or
@@ -191,6 +192,26 @@ A feature folder owns its sub-screens, helpers and local types; promote to `comp
 - **Server data:** discovery calls live in `lib/discover-api.ts` / `lib/saved-api.ts` and the hooks in
   `hooks/use-discover.ts` / `hooks/use-saved.ts`; React Query keys sit under `['discover', …]` so a save toggle patches
   every cached card (`applySaved`). `lib/install-id.ts` sends `X-Install-Id` (rate-limit key for guests).
+
+### 5.2 Chat, offers, deals and push (F6 + F7)
+
+- **One socket:** `components/SocketProvider.tsx` (mounted in `root-navigator.tsx` when signed in) opens the `/user`
+  socket once; screens use `useSocketEmit()` / `useOnReconnect()`, never their own socket. Events go by prefix
+  (`lib/socket-route.ts`) to `lib/socket-chat.ts` (`message:` / `offer:` / `thread:`), `lib/socket-deals.ts` (`deal:`)
+  and `lib/socket-notifications.ts` (`notification:`). Payloads carry ids (and the reader's own masked text): handlers
+  patch or invalidate React Query entries, they don't trust a payload as the whole record.
+- **Query keys** for these modules live in `lib/query-keys.ts` (`qk.threads`, `qk.thread`, `qk.messages`, `qk.deals`,
+  `qk.deal`, `qk.reviewState`, `qk.notifications`, `qk.badges`…): use them from screens and socket handlers alike.
+- **Server calls:** `lib/chat-api.ts`, `offers-api.ts`, `deals-api.ts`, `reviews-api.ts`, `notifications-api.ts`;
+  hooks in `hooks/use-chat.ts`, `use-offers.ts`, `use-deals.ts`, `use-notifications.ts`, `use-badges.ts`. Offer and
+  deal writes send an `Idempotency-Key` (one per user action, reused on retry). Pure logic (offer form bounds and
+  totals, deal actions and deadlines, review form, chat formatting, push dedupe, notification links) is in `lib/` with
+  co-located tests.
+- **Phone numbers** come from the API already masked per reader; never unmask or format a number the API didn't send.
+  Chat text, numbers and photos never go to analytics or crash reports.
+- **Push** (`lib/push.ts`, `hooks/use-push.ts`): Android only, opt-in after the explainer; `expo-notifications` loads only
+  when its native module is in the build, and without `google-services.json` the token call fails quietly. It is a
+  native module: **a new dev-client build** is needed after F6 (and to pick up a `google-services.json`).
 
 ---
 

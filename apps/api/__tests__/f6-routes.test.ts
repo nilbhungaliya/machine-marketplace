@@ -7,8 +7,8 @@ import { createTestAdmin, deleteTestAdmins } from './_helpers/test-admins.js';
 import { createTestBusinessUser, deleteTestBusinesses, type TestBusinessUser } from './_helpers/test-businesses.js';
 import { addTestMember } from './_helpers/test-deals.js';
 
-// F6 + F7 route contracts (plan C0-4b): every new route is registered with its final guards. Handlers are stubs
-// (`501 NOT_IMPLEMENTED`) until their lane lands, so "allowed" here means "neither 401 nor 403".
+// F6 + F7 route contracts (plan C0-4b): every new route is registered with its final guards. The calls use a random
+// id and empty bodies, so "allowed" here means "neither 401 nor 403" (the handler then answers 400 / 404 / 409).
 
 type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 const id = randomUUID();

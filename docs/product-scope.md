@@ -438,12 +438,12 @@ thread tied to that listing (M10). P2: **enquiry basket**, one enquiry to severa
 that the seller confirms).
 
 **State machine** (built as `OFFER_STATUSES`): pending → countered → accepted / rejected / expired / withdrawn.
-- Receiver can accept, reject (optional reason) or counter. Counters bounded between the last offer and the asking price (how bounds work after the first counter: F6 + F7 spec).
+- Receiver can accept, reject (optional reason) or counter. Counters bounded between the last offer and the asking price; after the first counter, every counter lies between the two sides' latest prices (F6 + F7 spec §7.4).
 - Maximum 5 counter rounds (`MAX_COUNTER_ROUNDS`); one open offer per buyer per listing.
-- Accept → deal created (M13); quantity reserved (how reserved quantity works: F6 + F7 spec); other open offers on that quantity are told "quantity no longer available"
+- Accept → deal created (M13); quantity reserved as a stock hold (the listing stays live with the rest available, and is reserved only when all of it is held; F6 + F7 spec §8); other open offers on that quantity are told "quantity no longer available"
   and kept as backups if stock remains.
 - Expiry job closes offers at validity end; both sides notified.
-- Unverified buyers: up to 3 open offers at a time (whether and how unverified buyers can chat: F6 + F7 spec).
+- Unverified buyers: up to 3 open offers at a time; they chat like anyone else, within 10 new enquiries a day (40 when GST-verified; F6 + F7 spec §7.8, §12.1).
 
 **P2.** Seller auto-accept / auto-decline thresholds (EB); "send offer to people who saved this" (EB offers to watchers);
 quotation PDF from the thread (IM Lead Manager).
@@ -458,7 +458,7 @@ quotation PDF from the thread (IM Lead Manager).
 - Messages: text, photos, video, PDF (spec sheets, invoices), voice notes; structured cards for enquiry, offer, counter, deal,
   booking, requirement reply; system lines ("Kamal Earthmovers accepted ₹36,500 /pc").
 - "Ask for more photos / video" quick replies for sellers; saved replies (IM Lead Manager).
-- **Phone numbers hidden** until a deal is agreed or either side chooses to share; masked calls (P2, Exotel) ring the seller's
+- **Phone numbers hidden** until there is a deal and both sides tick "Share my number" (F6 + F7 spec §6.6, R6); masked calls (P2, Exotel) ring the seller's
   registered numbers (IM PNS); call outcome lines in the thread.
 - Share a listing to WhatsApp; "Continue on WhatsApp" after a deal if both agree (MA WhatsApp contact).
 - Report or block from the thread.
@@ -552,8 +552,8 @@ platforms records anything after first contact.
   date, notes.
 - Statuses (built as `DEAL_STATUSES`): agreed → completed / cancelled / disputed. Steps inside agreed: payment recorded
   (optional), handed over / delivered, confirmed by buyer.
-- Timers (TI): after "handed over", the buyer has 2 business days to report a problem; with no report, the deal completes
-  automatically after 3 business days.
+- Timers (TI, in calendar days): after "handed over", the buyer has 2 days to report a problem; with no report, the deal
+  completes automatically after 3 days (F6 + F7 spec §9.3).
 - Completing a deal reduces listing quantity; at zero the listing becomes sold (or rented for rentals).
 - Cancel with a reason (either side before handover; both must agree after); stock returns to the listing.
 - Problem report opens a support ticket (AD5); deal goes to disputed until resolved.
@@ -605,7 +605,7 @@ type). Avoid inconsistent terms on one page (BigRentz, TransRentals): one set of
 - Only the two parties of a **completed** deal or rental can review, within 14 days.
 - Buyer reviews seller: part matched the listing, communication, handover on time (1–5 each) + text. Seller reviews buyer:
   communication, payment as agreed, pickup on time. Rental: machine condition, operator, timeliness; owner rates renter's care.
-- Double-blind: published when both have reviewed or after 7 days (exact blind rules: F6 + F7 spec). Scores show after 3 reviews; seller can reply once.
+- Double-blind: published when both have reviewed or after 7 days (each review stays with its author until both are in, or until 7 days after it or 14 days after completion, whichever comes first; F6 + F7 spec §10.3). Scores show after 3 reviews; seller can reply once.
 - Report a review; moderators can hide abusive text.
 
 **Inspiration.** IM (rating facets), YC (two-way), TSM M14 (built pattern). Avoid MA / SR / MT, which show no buyer reviews.
@@ -747,7 +747,7 @@ No pay-per-lead and no paid trust badges.
 4. **D4 First listing review.** Every listing from an unverified seller and the first 3 of a verified seller are reviewed by
    the team; after that, a verified seller's listings go live at once unless flagged (as built in F2).
 5. **D5 Requirement reach.** Each requirement goes to up to 15 matching sellers. Raise or lower?
-6. **D6 Phone numbers.** Hidden until a deal or consent, or shown after the first reply?
+6. **D6 Phone numbers.** Settled in F6 + F7 (R6): hidden until there is a deal and both sides tick "Share my number".
 7. **D7 Payments and rental money.** Off-app at launch (recorded only). When should advances, deposits and payments move in?
 8. **D8 Launch region.** Screens use Rajkot and Saurashtra examples. Confirm first cities and industrial areas.
 9. **D9 Categories at launch.** Which machine categories first (tractors, earthmoving, CNC, textile, trucks, pumps)? Who supplies
