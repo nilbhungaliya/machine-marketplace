@@ -1,9 +1,10 @@
 import { readFileSync } from 'fs';
 import path from 'path';
 import { describe, expect, it } from 'vitest';
-import { NOT_PORTED, TOKEN_SOURCE, darkColors, lightColors, shadowValues, type ThemeColors } from './palette';
+import { NOT_PORTED, TOKEN_SOURCE, lightColors, shadowValues, type ThemeColors } from './palette';
 
-// Palette parity (spec §11.1): every app token equals the approved mockup's CSS variable, in both themes.
+// Palette parity (spec §11.1): every app token equals the approved mockup's light CSS variable. The app is light only
+// (owner's call, 2026-11-19), so the mockup's dark block is read only to keep "every variable mapped" honest.
 
 const MOCKUP = path.resolve(__dirname, '../../../docs/mockups/src/build-periwinkle-v2.mjs');
 
@@ -45,13 +46,11 @@ function contrast(a: string, b: string): number {
 const mockup = readMockupTokens();
 const themes: [string, ThemeColors, Record<string, string>][] = [
   ['light', lightColors, mockup.light],
-  ['dark', darkColors, mockup.dark],
 ];
 
 describe('palette parity with the Periwinkle v2 mockup', () => {
   it('reads the mockup tokens', () => {
     expect(mockup.light.canvas).toBe('#F5F4FA');
-    expect(mockup.dark.field).toBe('#232038');
   });
 
   for (const [theme, colors, vars] of themes) {
@@ -72,10 +71,6 @@ describe('palette parity with the Periwinkle v2 mockup', () => {
   it('maps every token except the derived onDanger', () => {
     const unmapped = (Object.keys(lightColors) as (keyof ThemeColors)[]).filter((k) => !(k in TOKEN_SOURCE));
     expect(unmapped).toEqual(['onDanger']);
-  });
-
-  it('light and dark have the same tokens', () => {
-    expect(Object.keys(lightColors).sort()).toEqual(Object.keys(darkColors).sort());
   });
 });
 
@@ -114,20 +109,18 @@ describe('palette contrast (WCAG)', () => {
 });
 
 describe('shadowValues', () => {
-  for (const [theme, isDark, vars] of [['light', false, mockup.light], ['dark', true, mockup.dark]] as const) {
-    it(`raised and float use the mockup's --shadow (${theme})`, () => {
-      expect(vars.shadow, `--shadow missing in the ${theme} mockup`).toBeDefined();
-      // Offsets and blur from the mockup's `.iconbtn` (raised) and `.footbar` / `.buybar` (float).
-      expect(norm(shadowValues(isDark).raised)).toBe(norm(`0 2px 8px ${vars.shadow}`));
-      expect(norm(shadowValues(isDark).float)).toBe(norm(`0 8px 22px ${vars.shadow}`));
-    });
-  }
+  it("raised and float use the mockup's light --shadow", () => {
+    const vars = mockup.light;
+    expect(vars.shadow, '--shadow missing in the light mockup').toBeDefined();
+    // Offsets and blur from the mockup's `.iconbtn` (raised) and `.footbar` / `.buybar` (float).
+    expect(norm(shadowValues().raised)).toBe(norm(`0 2px 8px ${vars.shadow}`));
+    expect(norm(shadowValues().float)).toBe(norm(`0 8px 22px ${vars.shadow}`));
+  });
 
-  it("segment matches the mockup's selected segment (light); dark is derived (spec §4.3)", () => {
+  it("segment matches the mockup's selected segment (light)", () => {
     const source = readFileSync(MOCKUP, 'utf8');
     const rules = [...source.matchAll(/\.segmented span\.on\{[^}]*box-shadow:([^;}]+)/g)];
     expect(rules.length).toBeGreaterThan(0);
-    expect(norm(shadowValues(false).segment)).toBe(norm(rules[rules.length - 1][1]));
-    expect(shadowValues(true).segment).toBe('0 1px 3px rgba(0,0,0,0.5)');
+    expect(norm(shadowValues().segment)).toBe(norm(rules[rules.length - 1][1]));
   });
 });

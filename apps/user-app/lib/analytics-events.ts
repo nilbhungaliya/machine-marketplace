@@ -69,7 +69,6 @@ export const LISTING_EVENTS = {
 
 export const SETTINGS_EVENTS = {
   languageChanged: 'settings_language_changed',
-  themeChanged: 'settings_theme_changed',
 } as const;
 
 /**

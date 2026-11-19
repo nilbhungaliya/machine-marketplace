@@ -7,7 +7,6 @@ import Header from '@/components/Header';
 import Button from '@/components/Button';
 import Card from '@/components/Card';
 import ListRow from '@/components/ListRow';
-import SegmentedControl from '@/components/SegmentedControl';
 import Skeleton from '@/components/Skeleton';
 import StatusChip from '@/components/StatusChip';
 import { useConfirm } from '@/components/ConfirmSheet';
@@ -20,19 +19,16 @@ import { SETTINGS_EVENTS } from '@/lib/analytics-events';
 import { completionSegments, gstChip, profileRowTarget, type ProfileRow } from '@/lib/gst-flow';
 import { setLanguage, useLanguage } from '@/lib/i18n/language';
 import { LANGUAGE_OPTIONS } from '@/lib/i18n/language-names';
-import { Building2, ChevronRight, ClipboardList, Globe, MapPin, ShieldCheck, Sun, User, type LucideIcon } from '@/lib/icons';
+import { Building2, ChevronRight, ClipboardList, Globe, MapPin, ShieldCheck, User, type LucideIcon } from '@/lib/icons';
 import { queryClient } from '@/lib/queryClient';
-import { fonts, radius, spacing, useTheme, type ThemeMode } from '@/lib/theme';
+import { fonts, radius, spacing, useTheme } from '@/lib/theme';
 import { openTarget } from '@/navigation/go';
 import type { RootStackScreenProps } from '@/navigation/types';
-
-const THEME_MODES: ThemeMode[] = ['light', 'dark', 'system'];
-const THEME_KEY = { light: 'profile.themeLight', dark: 'profile.themeDark', system: 'profile.themeSystem' } as const;
 
 /** Profile (Periwinkle v2 `.sp-head` + `.menu`, spec §8, Ruling R11). */
 export default function ProfileScreen({ navigation }: RootStackScreenProps<'Profile'>) {
   const { t } = useTranslation();
-  const { colors, mode, setMode } = useTheme();
+  const { colors } = useTheme();
   const type = useType();
   const language = useLanguage();
   const { logout, name } = useAuth();
@@ -55,10 +51,6 @@ export default function ProfileScreen({ navigation }: RootStackScreenProps<'Prof
     if (ok) void logout();
   };
 
-  const chooseTheme = (m: ThemeMode) => {
-    setMode(m);
-    track(SETTINGS_EVENTS.themeChanged, { mode: m });
-  };
 
   /** Business and Location open the onboarding screens in edit mode; GST opens the screen its state picks. */
   const openRow = async (row: ProfileRow) => {
@@ -223,20 +215,6 @@ export default function ProfileScreen({ navigation }: RootStackScreenProps<'Prof
               />
             ))}
           </Card>
-        </View>
-
-        <View>
-          <View style={s.sectionTitle}>
-            <Sun size={20} color={colors.primaryInk} />
-            <Text style={s.sectionText}>{t('profile.theme')}</Text>
-          </View>
-          {/* Three short options, one choice (Ruling R11); each segment keeps its `Theme-*` testID. */}
-          <SegmentedControl
-            options={THEME_MODES.map((m) => ({ value: m, label: t(THEME_KEY[m]), testID: `Theme-${m}` }))}
-            value={mode}
-            onChange={chooseTheme}
-            accessibilityLabel={t('profile.theme')}
-          />
         </View>
 
         <Button title={t('profile.logout')} phLabel="Log-out" variant="outline" onPress={() => void confirmLogout()} />

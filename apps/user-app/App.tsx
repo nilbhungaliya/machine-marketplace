@@ -11,7 +11,7 @@ import {
 import { JetBrainsMono_400Regular, JetBrainsMono_500Medium } from '@expo-google-fonts/jetbrains-mono';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Sentry from '@sentry/react-native';
-import { DarkTheme, DefaultTheme, NavigationContainer } from '@react-navigation/native';
+import { DefaultTheme, NavigationContainer } from '@react-navigation/native';
 import { Provider } from 'react-redux';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
@@ -41,8 +41,8 @@ function handleNavigationStateChange() {
 }
 
 function AppContent() {
-  const { colors, isDark } = useTheme();
-  const base = isDark ? DarkTheme : DefaultTheme;
+  const { colors } = useTheme();
+  const base = DefaultTheme;
   const navTheme = {
     ...base,
     colors: {
@@ -58,7 +58,7 @@ function AppContent() {
 
   return (
     <>
-      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
+      <StatusBar barStyle="dark-content" />
       <Provider store={store}>
         <QueryClientProvider client={queryClient}>
           <ConfirmSheetProvider>

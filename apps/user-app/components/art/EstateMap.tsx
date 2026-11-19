@@ -67,7 +67,7 @@ interface EstateMapProps {
 }
 
 export default function EstateMap({ label, style }: EstateMapProps) {
-  const { colors, isDark } = useTheme();
+  const { colors } = useTheme();
   const t = useLoop(LOOP_MS, REST);
   const [width, setWidth] = useState(0);
 
@@ -78,7 +78,7 @@ export default function EstateMap({ label, style }: EstateMapProps) {
     },
   }), [colors]);
 
-  const grid = withAlpha(colors.primary, isDark ? 0.09 : 0.07);
+  const grid = withAlpha(colors.primary, 0.07);
   const plotLine = withAlpha(colors.primary, 0.22);
   const fit = useMemo(() => (label ? fitMonoText(label, LABEL) : null), [label]);
 

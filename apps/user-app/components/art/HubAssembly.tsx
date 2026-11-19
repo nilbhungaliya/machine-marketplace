@@ -103,7 +103,7 @@ export default function HubAssembly({ clock, width }: HubAssemblyProps) {
 }
 
 function Parts({ clock }: { clock: SharedValue<number> }) {
-  const { colors, isDark } = useTheme();
+  const { colors } = useTheme();
   const { k } = useStage();
 
   const guide = useAnimatedStyle(() => ({ opacity: track(clock.value * 100, GUIDE_O) }));
@@ -153,7 +153,7 @@ function Parts({ clock }: { clock: SharedValue<number> }) {
       {/* Blueprint grid and floor shadow: still. */}
       <Layer>
         <Materials use={['grid', 'shadow']} gridColor={colors.primary} />
-        <Rect x={0} y={0} width={260} height={182} rx={20} fill="url(#p-grid)" opacity={isDark ? 0.09 : 0.07} />
+        <Rect x={0} y={0} width={260} height={182} rx={20} fill="url(#p-grid)" opacity={0.07} />
         <Ellipse cx={130} cy={158} rx={62} ry={7} fill="url(#g-sh)" />
       </Layer>
 

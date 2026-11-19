@@ -83,36 +83,6 @@ export const lightColors: ThemeColors = {
   scrim: 'rgba(28,20,70,0.45)',
 };
 
-export const darkColors: ThemeColors = {
-  background: '#110F1F',
-  surface: '#1B1830',
-  photo: '#26223F',
-  field: '#232038',
-  text: '#F1EFFA',
-  textSecondary: '#B8B4CC',
-  textMuted: '#8A86A0',
-  border: '#2C2846',
-  divider: '#221F3A',
-  hairline: '#2A2643',
-  primary: '#8B78FF',
-  primaryInk: '#B3A6FF',
-  onPrimary: '#0E0B22',
-  primarySoft: '#2D2660',
-  primaryWash: '#221D45',
-  sun: '#FFD84A',
-  onSun: '#1C1A27',
-  ok: '#4CCB93',
-  okSoft: '#123326',
-  warn: '#F0B44C',
-  warnSoft: '#3A2B10',
-  danger: '#FF7A80',
-  dangerSoft: '#3D1A1E',
-  onDanger: '#1C0B0D',
-  star: '#FFC44D',
-  heroGlow: '#2B2463',
-  scrim: 'rgba(0,0,0,0.6)',
-};
-
 /** Token → mockup CSS variable (without `--`). Every token except the derived `onDanger`. */
 export const TOKEN_SOURCE: Partial<Record<keyof ThemeColors, string>> = {
   background: 'canvas',
@@ -150,9 +120,9 @@ export const TOKEN_SOURCE: Partial<Record<keyof ThemeColors, string>> = {
 export const NOT_PORTED = ['page', 'tile-b', 'tile-c', 'tile-ink', 'bezel', 'frame', 'part-line', 'f', 'mono', 'shadow'];
 
 /** `boxShadow` strings for the things that float (spec §4.3); cards use hairline borders instead. */
-export function shadowValues(isDark: boolean): { raised: string; float: string; segment: string } {
-  const shadow = isDark ? 'rgba(0,0,0,0.45)' : 'rgba(52,36,140,0.13)';
-  const segmentShadow = isDark ? 'rgba(0,0,0,0.5)' : 'rgba(28,20,70,0.14)';
+export function shadowValues(): { raised: string; float: string; segment: string } {
+  const shadow = 'rgba(52,36,140,0.13)';
+  const segmentShadow = 'rgba(28,20,70,0.14)';
   return {
     raised: `0 2px 8px ${shadow}`,
     float: `0 8px 22px ${shadow}`,

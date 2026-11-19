@@ -1,6 +1,6 @@
 // Re-export the theme system
-export { useTheme, darkColors, lightColors } from './ThemeContext';
-export type { ThemeColors, ThemeMode, ThemeShadows } from './ThemeContext';
+export { useTheme, lightColors } from './ThemeContext';
+export type { ThemeColors, ThemeShadows } from './ThemeContext';
 
 // ─── Fonts (static) — Manrope + JetBrains Mono (lib/fonts.ts; type scale in lib/typography.ts) ───
 export { fonts } from './fonts';

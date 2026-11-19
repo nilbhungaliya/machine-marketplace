@@ -1,6 +1,6 @@
 # user-app — Design System & Build Rules
 
-Scope: `apps/user-app/` (React Native 0.81 + Expo SDK 54, Manrope + JetBrains Mono, Periwinkle v2 light/dark theming, en/hi/gu).
+Scope: `apps/user-app/` (React Native 0.81 + Expo SDK 54, Manrope + JetBrains Mono, Periwinkle v2, **light only**, en/hi/gu).
 Use this for any new UI in this app, including when porting Figma designs via the Figma MCP.
 
 ---
@@ -8,8 +8,8 @@ Use this for any new UI in this app, including when porting Figma designs via th
 ## 1. Tokens
 
 ### 1.1 Where tokens live
-- `lib/palette.ts` — `lightColors` / `darkColors` (Periwinkle v2), `shadowValues`. **The only file with colour values**; `palette.test.ts` checks it against the mockup's CSS variables.
-- `lib/ThemeContext.tsx` — `ThemeProvider`, `useTheme()` → `{ colors, isDark, mode, setMode, shadows }`.
+- `lib/palette.ts` — `lightColors` (Periwinkle v2), `shadowValues()`. **The only file with colour values**; `palette.test.ts` checks it against the mockup's light CSS variables. **The app is light only** (owner's call, 2026-11-19): no dark palette, no theme setting, `userInterfaceStyle: "light"`. Don't add `isDark` branches or a dark palette back.
+- `lib/ThemeContext.tsx` — `ThemeProvider`, `useTheme()` → `{ colors, shadows }` (always the light palette).
 - `lib/fonts.ts` — `fonts`; `lib/typography.ts` — the type scale (`TYPE_SCALE`, `typeStyle`), read through `useType()` (`hooks/use-type.ts`).
 - `lib/theme.ts` — re-exports + static tokens (`fonts`, `spacing`, `radius`).
 - Plain TS constants — no Style Dictionary, no NativeWind, no tokens.json.
@@ -27,7 +27,7 @@ badge price otp phone mono` (sizes in `lib/typography.ts`, spec §5.4). `typeSty
 (taller line height, no negative tracking, 800 → 700). **Never `fontWeight`**: the family name picks the weight.
 
 ### 1.3 Colors
-Both palettes share token names. **Never put a colour literal in a component** (hex, `rgb()`, or a named colour such as
+**Never put a colour literal in a component** (hex, `rgb()`, or a named colour such as
 `'white'`) — read `useTheme().colors`. `lib/style-audit.test.ts` fails on one (allowlist: `lib/style-audit-allowlist.json`).
 Tokens: `background surface photo field text textSecondary textMuted border divider hairline primary primaryInk onPrimary
 primarySoft primaryWash sun onSun ok okSoft warn warnSoft danger dangerSoft onDanger star heroGlow scrim` (uses in spec §4.1).
@@ -68,7 +68,7 @@ a screen never hand-rolls a copy of a kit piece (a status pill, a callout, a sel
 | `StatusChip.tsx` | Status pill. `tone`: `ok` · `warn` · `danger` · `info` · `neutral` · `new` · `sun` (the yellow badge); optional icon. |
 | `Notice.tsx` | Callout (`tone` info / success / warning / danger, icon, optional title, children). |
 | `EmptyState.tsx` | Icon well + title + subtitle + optional CTA (`Button size="md"`). |
-| `Skeleton.tsx` | Pulsing `field` placeholder for loading states (themed in dark). |
+| `Skeleton.tsx` | Pulsing `field` placeholder for loading states. |
 | `Steps.tsx` | Onboarding progress bar (`current`, `total`) over the step text (`label`). |
 | `AppToast.tsx` | Themed toast renderer, mounted once in `App.tsx`. Show toasts with `Toast.show({ type: 'success' \| 'error' \| 'info', text1 })`. Inside a Modal, render `<AppToast inModal />`. |
 | `ActionSheet.tsx` | Bottom sheet with a list of rows (the manage sheet, report reasons): labels from the caller, backdrop and Back close it, radio rows for a single choice. |
@@ -170,7 +170,7 @@ A feature folder owns its sub-screens, helpers and local types; promote to `comp
 ## 6. Styling
 - `StyleSheet.create` only — no NativeWind / styled-components; inline objects only for one-off layout.
 - Base design width 375; layout with flex and percentages, absolute values for type and padding.
-- **Test every screen in light and dark** (Profile → Appearance, or the OS toggle). Never hardcode black/white backgrounds.
+- The app is light only: it ignores the phone's dark mode. Never hardcode black/white backgrounds; use the tokens.
 - Large tap targets (≥44pt) — many users are traders with low digital comfort (scope NFRs). The mockup's sizes are
   scaled × 1.15 for the app (spec R1); take sizes from the type scale and the kit, not from the mockup's pixels.
 - **Never `fontWeight`** (Android ignores it for a custom family; the family name picks the weight) and never a
@@ -234,5 +234,5 @@ Both are off until their env vars are set (`EXPO_PUBLIC_POSTHOG_PROJECT_TOKEN`, 
   is broken; `lib/style-audit.test.ts` fails on hard-coded colours, `fontWeight` and literal font families (§6);
   `lib/typography.test.ts` covers the script rules.
 - Session safety: `lib/fresh-install.ts` wipes the keychain JWT on a reinstall (iOS keeps keychain items across uninstalls). Any new SecureStore key that must not outlive an install goes in its `SECURE_KEYS`.
-- Visual work isn't done until it's run on a device/emulator in both themes.
+- Visual work isn't done until it's run on a device/emulator.
 - `CI=1 npx expo export --platform android` is a quick check that Metro can bundle the app.

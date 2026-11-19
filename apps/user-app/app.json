@@ -6,7 +6,7 @@
     "icon": "./assets/icon.png",
     "orientation": "portrait",
     "scheme": "machineparts",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": false,
@@ -37,11 +37,7 @@
         {
           "image": "./assets/splash-icon.png",
           "backgroundColor": "#F5F4FA",
-          "imageWidth": 200,
-          "dark": {
-            "image": "./assets/splash-icon.png",
-            "backgroundColor": "#110F1F"
-          }
+          "imageWidth": 200
         }
       ],
       [
