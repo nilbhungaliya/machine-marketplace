@@ -16,7 +16,11 @@ import {
   ArrowLeftRight, Ban, Check, CircleX, Eye, Package, Pause, Pencil, Play, RefreshCw, RotateCcw, Tag, Trash, type LucideIcon,
 } from '@/lib/icons';
 import { deleteDraft, fetchOwnerListing } from '@/lib/listing-api';
+import { errorCode } from '@/lib/api-error';
+import { F6_ERROR_CODES, f6ErrorMessage } from '@/lib/f6-errors';
 import { listingErrorMessage, needsGstVerification } from '@/lib/listing-errors';
+import { quantityText } from '@/lib/listing-format';
+import { holdsManageItems, holdsOf, openDealIds, pauseNeedsWarning } from '@/lib/my-listings-holds';
 import {
   actionToastKey, editEntry, gateStep, isStaleListingError, manageItems, needsConfirm, nodeHasSides, wizardStartStep,
   type ManageAction, type ManageItem,
@@ -28,7 +32,14 @@ import QuantitySheet from './quantity-sheet';
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 /** What the manage sheet needs of a listing: a My listings card and the owner view both have it. */
-export type ManageTarget = Pick<ListingCard, 'id' | 'status' | 'kind' | 'side' | 'title' | 'quantity' | 'unit' | 'businessId'>;
+export type ManageTarget = Pick<
+  ListingCard, 'id' | 'status' | 'kind' | 'side' | 'title' | 'quantity' | 'availableQuantity' | 'unit' | 'businessId'
+>;
+
+/** F6 + F7 codes read their own copy (`errors.trade.*`); F2's keep `listingErrorMessage` (it names caps). */
+function actionErrorMessage(err: unknown): string {
+  return (F6_ERROR_CODES as readonly string[]).includes(errorCode(err)) ? f6ErrorMessage(err) : listingErrorMessage(err);
+}
 
 const ICONS: Record<ManageItem, LucideIcon> = {
   edit: Pencil,
@@ -79,6 +90,9 @@ export async function openEdit(navigation: Nav, qc: QueryClient, listing: Pick<L
  * (`LISTING_INCOMPLETE`) opens the step that fixes it in edit mode; `UNVERIFIED_LISTING_CAP` offers Verify GST; a
  * stale copy (`LISTING_TRANSITION_NOT_ALLOWED`, `LISTING_NOT_EDITABLE`, `404`) refreshes the lists. Resolves true on
  * success.
+ *
+ * F6 + F7 (§8.3): Pause on a live or reserved listing confirms first (open offers and backups close for good);
+ * `409 LISTING_HAS_OPEN_DEALS` (stock on hold, a stale card) says "Cancel the open deals first" and opens them.
  */
 export function useRunListingAction() {
   const { t } = useTranslation();
@@ -89,6 +103,14 @@ export function useRunListingAction() {
   const removeDraft = useMutation({ mutationFn: (id: string) => deleteDraft(id) });
 
   const run = useCallback(async (listing: ManageTarget, a: ManageAction): Promise<boolean> => {
+    if (a === 'pause' && pauseNeedsWarning(listing.status)) {
+      const ok = await confirm({
+        title: t('holds.pauseTitle'),
+        message: t('holds.pauseMessage'),
+        confirmLabel: t('listing.manage.action.pause'),
+      });
+      if (!ok) return false;
+    }
     if (needsConfirm(a)) {
       const ok = await confirm({
         title: t(`listing.manage.confirm.${a}Title`),
@@ -112,12 +134,19 @@ export function useRunListingAction() {
       return true;
     } catch (err) {
       const step = gateStep(err, listing.kind);
-      if (isStaleListingError(err)) invalidateListingLists(qc, listing.id, listing.businessId);
-      if (step) {
-        Toast.show({ type: 'info', text1: listingErrorMessage(err) });
+      const dealIds = openDealIds(err);
+      if (isStaleListingError(err) || dealIds) invalidateListingLists(qc, listing.id, listing.businessId);
+      if (dealIds) {
+        const open = await confirm({ title: t('holds.openDealsTitle'), message: t('holds.openDealsBody'), confirmLabel: t('holds.goToDeals') });
+        if (open) {
+          if (dealIds.length === 1) navigation.navigate('DealRecord', { dealId: dealIds[0]! });
+          else navigation.navigate('Main', { screen: 'Deals' });
+        }
+      } else if (step) {
+        Toast.show({ type: 'info', text1: actionErrorMessage(err) });
         navigation.navigate('Sell', { listingId: listing.id, step, mode: 'edit' });
       } else if (needsGstVerification(err)) {
-        const verify = await confirm({ title: listingErrorMessage(err), confirmLabel: t('listing.manage.verifyGst') });
+        const verify = await confirm({ title: actionErrorMessage(err), confirmLabel: t('listing.manage.verifyGst') });
         if (verify) {
           try {
             openTarget(navigation, gstScreen(await qc.fetchQuery(gstStateQuery)));
@@ -126,7 +155,7 @@ export function useRunListingAction() {
           }
         }
       } else {
-        Toast.show({ type: 'error', text1: listingErrorMessage(err) });
+        Toast.show({ type: 'error', text1: actionErrorMessage(err) });
       }
       return false;
     }
@@ -148,7 +177,8 @@ interface ManageSheetProps {
 /**
  * The manage sheet (F2 spec §10, mockup "Manage a listing"): Edit, Update quantity, the actions `sellerActions` allows,
  * Find the other side (left / right parts), View listing, Remove; a draft gets Edit and Delete draft. Destructive
- * actions confirm (`useRunListingAction`).
+ * actions confirm (`useRunListingAction`). With stock on hold in deals (F6 + F7 §8.3) Mark sold and Remove are left
+ * out and the sheet says why; a `reserved` listing keeps Edit.
  */
 export default function ManageSheet({ listing, showView = false, onActionDone, onClose }: ManageSheetProps) {
   const { t } = useTranslation();
@@ -168,8 +198,9 @@ export default function ManageSheet({ listing, showView = false, onActionDone, o
     onClose();
   };
 
+  const holds = listing ? holdsOf(listing) : null;
   const items: ActionSheetItem[] = listing
-    ? manageItems(listing, { view: showView }).map((item) => ({
+    ? holdsManageItems(manageItems(listing, { view: showView }), holds).map((item) => ({
       key: item,
       label: isAction(item) ? t(`listing.manage.action.${item}`) : t(`listing.manage.${item}`),
       icon: ICONS[item],
@@ -207,6 +238,7 @@ export default function ManageSheet({ listing, showView = false, onActionDone, o
       <ActionSheet
         visible={open === 'menu'}
         title={listing?.title}
+        subtitle={holds?.hasHolds ? t('holds.manageNote', { held: quantityText(holds.held, listing?.unit) }) : undefined}
         items={items}
         onSelect={select}
         onClose={close}

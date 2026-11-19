@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import Button from '@/components/Button';
@@ -6,6 +6,7 @@ import ScreenWrapper from '@/components/ScreenWrapper';
 import { useOwnerListing } from '@/hooks/use-listing';
 import { useType } from '@/hooks/use-type';
 import { ArrowLeftRight, Check, Clock } from '@/lib/icons';
+import { askPushOnce } from '@/lib/push-ask';
 import { radius, spacing, useTheme } from '@/lib/theme';
 import type { RootStackScreenProps } from '@/navigation/types';
 
@@ -23,6 +24,11 @@ export default function SellPublishedScreen({ navigation, route }: RootStackScre
   const { colors } = useTheme();
   const type = useType();
   const live = outcome === 'live';
+
+  // F6 + F7 §11.6: a published listing is a moment to offer notifications (once per install, explainer first).
+  useEffect(() => {
+    void askPushOnce('publish');
+  }, []);
 
   const s = useMemo(() => StyleSheet.create({
     body: { flex: 1, justifyContent: 'center', paddingHorizontal: spacing.xl, gap: spacing.lg },

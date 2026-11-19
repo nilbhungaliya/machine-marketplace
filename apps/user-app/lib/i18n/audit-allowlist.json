@@ -2,5 +2,7 @@
   { "file": "lib/ThemeContext.tsx", "text": "useTheme must be used within ThemeProvider", "reason": "uncaught developer invariant; only a dev crash, never shown in a toast" },
   { "file": "components/ConfirmSheet.tsx", "text": "useConfirm must be used within a ConfirmSheetProvider", "reason": "uncaught developer invariant; only a dev crash, never shown in a toast" },
   { "file": "components/ConfirmSheet.tsx", "text": "useChoice must be used within a ConfirmSheetProvider", "reason": "uncaught developer invariant; only a dev crash, never shown in a toast" },
-  { "file": "lib/api.ts", "text": "Bearer ", "reason": "HTTP Authorization header scheme, not display text" }
+  { "file": "lib/api.ts", "text": "Bearer ", "reason": "HTTP Authorization header scheme, not display text" },
+  { "file": "lib/push.ts", "text": "Bearer ", "reason": "HTTP Authorization header scheme on the sign-out device delete, not display text" },
+  { "file": "lib/notification-links.ts", "text": "Thread", "reason": "React Navigation route name, not display text" }
 ]

@@ -1,3 +1,15 @@
 {
-  "title": "On hold in deals"
+  "title": "On hold in deals",
+  "line": "{{available}} available · {{held}} on hold in deals",
+  "openDeals": "Open deals",
+  "openDealsTitle": "Cancel the open deals first",
+  "openDealsBody": "Part of this stock is on hold in open deals. Cancel them, or let them complete, before you mark it sold or remove it.",
+  "dealRow": "Open deal {{n}}",
+  "goToDeals": "Go to Deals",
+  "manageNote": "{{held}} on hold in deals. Mark sold and Remove come back once those deals are done.",
+  "quantityHint": "At least {{held}}: that much is on hold in deals.",
+  "quantityBelowHeld": "Can't go below {{held}}: that much is on hold in deals.",
+  "pauseTitle": "Pause this listing?",
+  "pauseMessage": "Paused listings take no offers. Any open offers and backups on it will close for good.",
+  "editNote": "{{held}} on hold in deals. The quantity can't go below it, and the unit can't change while deals or offers are open."
 }

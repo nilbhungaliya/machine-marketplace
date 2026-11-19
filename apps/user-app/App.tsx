@@ -28,6 +28,7 @@ import { ConfirmSheetProvider } from '@/components/ConfirmSheet';
 import { SignInSheetProvider } from '@/components/SignInSheet';
 import RootNavigator from '@/navigation/root-navigator';
 import { navigationRef } from '@/navigation/navigationRef';
+import { PushBridge } from '@/hooks/use-push';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -64,6 +65,8 @@ function AppContent() {
         <QueryClientProvider client={queryClient}>
           <ConfirmSheetProvider>
             <SignInSheetProvider>
+              {/* Push listeners, device registration and the server's language (F6 + F7 §11.5, §11.6). */}
+              <PushBridge />
               <NavigationContainer
                 ref={navigationRef}
                 theme={navTheme}

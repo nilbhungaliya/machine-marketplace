@@ -1,3 +1,44 @@
 {
-  "title": "Notifications"
+  "title": "Notifications",
+  "channel": "Messages, offers and deals",
+  "markAllRead": "Mark all as read",
+  "unread": "Unread",
+  "emptyTitle": "No notifications yet",
+  "emptyBody": "Offers, messages and deal updates will show up here.",
+  "loadError": "Couldn't load your notifications.",
+  "loadMore": "Load more",
+  "bell": "Notifications",
+  "bellUnread_one": "Notifications, {{count}} unread",
+  "bellUnread_other": "Notifications, {{count}} unread",
+  "tabBadge_one": "{{label}}, {{count}} new",
+  "tabBadge_other": "{{label}}, {{count}} new",
+  "settings": {
+    "title": "Notification settings",
+    "push": "Push notifications",
+    "pushHint": "Messages, offers, deals and reviews on this phone. Everything still shows in Notifications.",
+    "blocked": "Notifications are off for this app in your phone's settings.",
+    "openSettings": "Open phone settings",
+    "allow": "Turn on in this phone",
+    "unsupported": "This version of the app can't show push notifications yet. You'll still see everything in Notifications.",
+    "loadError": "Couldn't load your settings.",
+    "saved": "Saved"
+  },
+  "explainer": {
+    "title": "Know when they reply",
+    "body": {
+      "enquiry": "Your enquiry is sent. Get a notification when the seller replies, so you don't miss a good part.",
+      "offer": "Your offer is sent. Get a notification when the seller accepts, counters or replies.",
+      "publish": "Your listing is up. Get a notification when a buyer enquires or makes an offer.",
+      "chats": "Get a notification for new messages, offers and deal updates, even when the app is closed."
+    },
+    "point": {
+      "chat": "Replies",
+      "offers": "Offers",
+      "deals": "Deal updates"
+    },
+    "note": "Turn them off any time in Profile.",
+    "allow": "Turn on notifications",
+    "later": "Not now",
+    "denied": "Notifications stay off. You can turn them on in your phone's settings."
+  }
 }
