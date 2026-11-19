@@ -10,7 +10,13 @@
     "gst": "GST વેરિફિકેશન",
     "listings": "મારાં લિસ્ટિંગ",
     "listingsLive_one": "{{count}} લાઇવ",
-    "listingsLive_other": "{{count}} લાઇવ"
+    "listingsLive_other": "{{count}} લાઇવ",
+    "reviews": "રિવ્યૂ",
+    "reviewsScore_one": "{{stars}}, {{count}} રિવ્યૂ",
+    "reviewsScore_other": "{{stars}}, {{count}} રિવ્યૂ",
+    "contactNumber": "સંપર્ક નંબર",
+    "blocked": "બ્લૉક કરેલા બિઝનેસ",
+    "notifications": "સૂચના સેટિંગ"
   },
   "completion": {
     "title": "પ્રોફાઇલ {{total}}માંથી {{done}} પૂર્ણ",

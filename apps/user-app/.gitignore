@@ -40,3 +40,6 @@ npm-debug.*
 # Signing credentials — never commit
 credentials.json
 *.keystore
+
+# Firebase config for push (F6 + F7): per environment, never committed (app.config.ts reads it when present)
+google-services.json

@@ -10,7 +10,13 @@
     "gst": "GST verification",
     "listings": "My listings",
     "listingsLive_one": "{{count}} live",
-    "listingsLive_other": "{{count}} live"
+    "listingsLive_other": "{{count}} live",
+    "reviews": "Reviews",
+    "reviewsScore_one": "{{stars}}, {{count}} review",
+    "reviewsScore_other": "{{stars}}, {{count}} reviews",
+    "contactNumber": "Contact number",
+    "blocked": "Blocked businesses",
+    "notifications": "Notification settings"
   },
   "completion": {
     "title": "Profile {{done}} of {{total}} complete",

@@ -11,6 +11,7 @@ import LocationChip from '@/components/LocationChip';
 import LocationSheet from '@/components/LocationSheet';
 import MiniCard from '@/components/MiniCard';
 import Skeleton from '@/components/Skeleton';
+import { useBadges, useMember } from '@/hooks/use-badges';
 import { useCards, useHome } from '@/hooks/use-discover';
 import { useDiscoveryOrigin } from '@/hooks/use-discovery-origin';
 import { useTabBarInset } from '@/hooks/use-tab-bar-inset';
@@ -18,7 +19,8 @@ import { useType } from '@/hooks/use-type';
 import { track } from '@/lib/analytics';
 import { HOME_EVENTS } from '@/lib/analytics-events';
 import { homeEmpty, homeTiles, searchBarTarget, seeAllTarget, tileTarget, type HomeTarget, type HomeTile } from '@/lib/home-view';
-import { CalendarClock, CATEGORY_ICON_COMPONENTS, Factory, Package, Search, TriangleAlert, User, type LucideIcon } from '@/lib/icons';
+import { BellRing, CalendarClock, CATEGORY_ICON_COMPONENTS, Factory, Package, Search, TriangleAlert, User, type LucideIcon } from '@/lib/icons';
+import { badgeText } from '@/lib/notification-links';
 import { loadRecentlyViewed } from '@/lib/recently-viewed';
 import { radius, spacing, useTheme } from '@/lib/theme';
 import type { TabScreenProps } from '@/navigation/types';
@@ -39,7 +41,8 @@ function tileIcon(tile: HomeTile): LucideIcon {
  * Home (F4 + F5 spec §8.3; mockup "Home"): location chip (opens the location sheet) · search bar (the Search tab,
  * focused) · tiles (Spare parts, Machinery, For rent, then the root categories, R15) · Top items near you (grid, See all)
  * · Machines for rent nearby · Recently viewed (hidden when empty). The first focus asks for the location permission
- * (`refreshOnFocus`, §8.2). No bell and no side-match strip until F9 / F8.
+ * (`refreshOnFocus`, §8.2). The bell with the unread count (F6 + F7 §11.6, signed in only; live through
+ * `notification:new`) opens Notifications. No side-match strip until F8.
  */
 export default function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
   const { t } = useTranslation();
@@ -51,6 +54,9 @@ export default function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [recentIds, setRecentIds] = useState<string[]>([]);
 
+  const member = useMember();
+  const badges = useBadges();
+  const unreadText = badgeText(badges?.notificationsUnread);
   const home = useHome(origin.origin, origin.radiusKm, origin.ready);
   const recent = useCards(recentIds, origin.origin, origin.ready);
 
@@ -81,6 +87,12 @@ export default function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
     content: { flexGrow: 1, gap: spacing.lg },
     header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.lg, paddingTop: spacing.sm, gap: spacing.md },
     location: { flex: 1 },
+    bell: { position: 'relative' },
+    badge: {
+      position: 'absolute', top: -2, right: -2, minWidth: 20, height: 20, paddingHorizontal: spacing.xs, borderRadius: radius.full,
+      backgroundColor: colors.sun, alignItems: 'center', justifyContent: 'center',
+    },
+    badgeText: { ...type('badge'), color: colors.onSun },
     // A searchbar is a card on the page: hairline, no shadow (spec §6).
     search: {
       flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginHorizontal: spacing.lg,
@@ -240,6 +252,21 @@ export default function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
             onPress={() => setSheetOpen(true)}
             style={s.location}
           />
+          {member ? (
+            <View style={s.bell}>
+              <IconButton
+                icon={BellRing}
+                onPress={() => navigation.navigate('Notifications')}
+                accessibilityLabel={unreadText
+                  ? t('notifications.bellUnread', { count: badges?.notificationsUnread ?? 0 })
+                  : t('notifications.bell')}
+                testID="Open-notifications"
+              />
+              {unreadText ? (
+                <View style={s.badge} pointerEvents="none"><Text style={s.badgeText}>{unreadText}</Text></View>
+              ) : null}
+            </View>
+          ) : null}
           <IconButton
             icon={User}
             onPress={() => navigation.navigate('Profile')}

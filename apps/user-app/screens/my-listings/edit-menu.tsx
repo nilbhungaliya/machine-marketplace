@@ -15,6 +15,8 @@ import {
   ArrowLeftRight, CalendarClock, Camera, ClipboardList, Factory, MapPin, Package, Tag, TriangleAlert, Wrench, type LucideIcon,
 } from '@/lib/icons';
 import { listingErrorMessage } from '@/lib/listing-errors';
+import { quantityText } from '@/lib/listing-format';
+import { holdsOf } from '@/lib/my-listings-holds';
 import { editEntry, editSections, nodeHasSides, wizardStartStep } from '@/lib/my-listings';
 import type { EditStep } from '@/lib/sell-wizard';
 import { radius, spacing, useTheme } from '@/lib/theme';
@@ -38,6 +40,8 @@ const STEP_ICONS: Record<EditStep, LucideIcon> = {
  * (`Sell { mode: 'edit' }`, with Save) rather than the linear wizard. No Category on a published listing (R43); a
  * rejected listing (or a draft) re-runs the wizard instead. Sections a `needsAttention` nudge points at are marked;
  * while a report is open (`reviewOnEdit`) side and fit changes are flagged as checked by the team.
+ * F6 + F7 (§8.3): with stock on hold in deals a note says the quantity can't go below it and the unit is locked
+ * (`UNIT_LOCKED`, `QUANTITY_BELOW_HELD` from the API read their own copy on the step).
  */
 export default function EditMenuScreen({ navigation, route }: RootStackScreenProps<'ListingEditMenu'>) {
   const { listingId } = route.params;
@@ -80,6 +84,7 @@ export default function EditMenuScreen({ navigation, route }: RootStackScreenPro
     content = <Notice tone="warning" icon={TriangleAlert} text={t('listing.errors.notEditable')} />;
   } else {
     const sections = editSections(listing, nodeHasSides(tree.data, listing.categoryId));
+    const holds = holdsOf(listing);
     content = (
       <>
         <View style={{ gap: spacing.xs }}>
@@ -87,6 +92,9 @@ export default function EditMenuScreen({ navigation, route }: RootStackScreenPro
           <Text style={s.hint}>{t('listing.editMenu.hint')}</Text>
         </View>
         {listing.reviewOnEdit ? <Notice tone="info" text={t('listing.editMenu.reportWarning')} /> : null}
+        {holds?.hasHolds ? (
+          <Notice tone="info" icon={Package} text={t('holds.editNote', { held: quantityText(holds.held, listing.unit) })} />
+        ) : null}
         <Card flush>
           {sections.map((sec, i) => (
             <ListRow

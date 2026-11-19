@@ -1,3 +1,74 @@
 {
-  "title": "Reviews"
+  "title": "Reviews",
+  "reviewSeller": "Review the seller",
+  "reviewBuyer": "Review the buyer",
+  "facet": {
+    "matched_listing": "Part matched the listing",
+    "communication": "Communication",
+    "on_time": "Handed over on time",
+    "payment": "Paid as agreed",
+    "pickup": "Pickup on time"
+  },
+  "starA11y": "{{facet}}: {{n}} of 5",
+  "textLabel": "Anything else?",
+  "textHint": "Optional, shown publicly",
+  "textTooLong": "Keep it under {{max}} characters",
+  "ratingsMissing": "Rate all three",
+  "buyerPrivate": "Your ratings of the buyer are kept on record. They aren't shown to anyone yet.",
+  "blindNote": "Reviews are published when both of you have reviewed, or 7 days after the first.",
+  "windowEnds": "You can review until {{date}}.",
+  "theirsIn": "They have reviewed you. Yours publishes both.",
+  "submit": "Submit review",
+  "submitted": "Review sent",
+  "mine": {
+    "title": "Your review",
+    "waiting": "Published when they review, or on {{date}}",
+    "waitingNoDate": "Published when they review, or after 7 days",
+    "published": "Published",
+    "hidden": "Hidden by our team"
+  },
+  "closed": {
+    "window_closed": "The time to review this deal has ended.",
+    "other_published": "Their review was published after the wait, so this deal can't be reviewed any more.",
+    "not_completed": "You can review once the deal is completed.",
+    "viewer": "Only the owner and staff can review deals.",
+    "submitted": "You have reviewed this deal."
+  },
+  "loadError": "Couldn't load this review.",
+  "newSeller": "New seller",
+  "newSellerHint": "A score shows after 3 reviews.",
+  "count_one": "{{count}} review",
+  "count_other": "{{count}} reviews",
+  "scoreA11y": "{{stars}} out of 5",
+  "sellerTitle": "Seller reviews",
+  "emptyTitle": "No reviews yet",
+  "emptyBody": "Reviews from completed deals show up here.",
+  "about": "For {{title}}",
+  "reply": "Reply",
+  "replyFrom": "Seller's reply",
+  "replySheet": {
+    "title": "Reply to this review",
+    "label": "Your reply",
+    "hint": "Shown publicly under the review. You can reply once.",
+    "send": "Send reply",
+    "sent": "Reply posted",
+    "empty": "Write your reply",
+    "tooLong": "Keep it under {{max}} characters"
+  },
+  "report": "Report",
+  "reportSheet": {
+    "title": "Report this review",
+    "details": "Details (optional)",
+    "send": "Send report",
+    "sent": "Thanks. Our team will look at it.",
+    "reasonRequired": "Pick a reason"
+  },
+  "reportReason": {
+    "abusive": "Abusive or rude",
+    "false": "Not true",
+    "personal_information": "Shares personal details",
+    "other": "Something else"
+  },
+  "myScore": "Your seller score",
+  "loadMore": "Load more"
 }

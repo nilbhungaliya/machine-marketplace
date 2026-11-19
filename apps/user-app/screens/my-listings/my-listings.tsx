@@ -18,6 +18,8 @@ import {
   MY_LISTINGS_SEGMENTS, myCardChip, myCardNudge, myCardSubtitle, showRenew,
 } from '@/lib/my-listings';
 import { videoUploadEnabled } from '@/lib/media-prepare';
+import { quantityText } from '@/lib/listing-format';
+import { holdsOf, showHoldsLine } from '@/lib/my-listings-holds';
 import { radius, spacing, useTheme } from '@/lib/theme';
 import type { RootStackScreenProps } from '@/navigation/types';
 import ListingCardItem from '@/screens/listing/listing-card-item';
@@ -31,7 +33,10 @@ const isSegment = (g: MyListingsGroup | undefined): g is Segment =>
 /**
  * My listings (F2 spec §10, mockup "My listings"): Drafts and "Removed by our team" rows, the four groups with counts
  * (Live · In review · Paused · Sold), and the seller's cards with status, expiry, the moderator's message, nudges and
- * the "Still available?" Renew. A card opens the manage sheet. Refetched on focus (no push until F9).
+ * the "Still available?" Renew. A card opens the manage sheet. Refetched on focus.
+ *
+ * F6 + F7 (§8.4, §15.2): a listing with stock on hold shows "2 available · 1 on hold in deals" and an Open deals link
+ * to the Deals tab; a `reserved` listing (everything on hold) reads "On hold in deals".
  */
 export default function MyListingsScreen({ navigation, route }: RootStackScreenProps<'MyListings'>) {
   const { t } = useTranslation();
@@ -62,6 +67,11 @@ export default function MyListingsScreen({ navigation, route }: RootStackScreenP
     },
     bannerText: { ...type('label'), color: colors.text, flexShrink: 1 },
     continueText: { ...type('label'), color: colors.primaryInk },
+    holds: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm,
+      backgroundColor: colors.primaryWash, borderRadius: radius.md, paddingLeft: spacing.md, paddingVertical: spacing.xs,
+    },
+    holdsText: { ...type('label'), color: colors.text, flexShrink: 1 },
   }), [colors, type]);
 
   const first = pages.data?.pages[0];
@@ -108,9 +118,24 @@ export default function MyListingsScreen({ navigation, route }: RootStackScreenP
   );
 
   const renderItem = ({ item }: { item: MyListingCard }) => {
-    const chip = myCardChip(item);
+    const holds = holdsOf(item);
+    const chip = item.status === 'reserved' ? { key: 'holds.title', tone: 'info' as const } : myCardChip(item);
     const nudge = myCardNudge(item, { videoEnabled: videoUploadEnabled() });
     const renew = showRenew(item);
+    const holdsLine = holds && showHoldsLine(item.status, holds) ? (
+      <View style={s.holds}>
+        <Text style={s.holdsText}>
+          {t('holds.line', { available: quantityText(holds.available, item.unit), held: quantityText(holds.held, item.unit) })}
+        </Text>
+        <Button
+          title={t('holds.openDeals')}
+          onPress={() => navigation.navigate('Main', { screen: 'Deals' })}
+          variant="ghost"
+          size="sm"
+          phLabel={`My-listing-deals-${item.ref}`}
+        />
+      </View>
+    ) : null;
     return (
       <ListingCardItem
         card={item}
@@ -121,6 +146,7 @@ export default function MyListingsScreen({ navigation, route }: RootStackScreenP
         onPress={() => setManage(item)}
         testID={`My-listing-${item.ref}`}
       >
+        {holdsLine}
         {renew ? (
           <View style={s.banner}>
             <Text style={s.bannerText}>{t('listing.mine.stillAvailable')}</Text>

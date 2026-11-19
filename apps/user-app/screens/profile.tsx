@@ -2,6 +2,8 @@ import React, { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import Toast from 'react-native-toast-message';
+import * as SecureStore from 'expo-secure-store';
+import { useQuery } from '@tanstack/react-query';
 import ScreenWrapper from '@/components/ScreenWrapper';
 import Header from '@/components/Header';
 import Button from '@/components/Button';
@@ -20,7 +22,14 @@ import { SETTINGS_EVENTS } from '@/lib/analytics-events';
 import { completionSegments, gstChip, profileRowTarget, type ProfileRow } from '@/lib/gst-flow';
 import { setLanguage, useLanguage } from '@/lib/i18n/language';
 import { LANGUAGE_OPTIONS } from '@/lib/i18n/language-names';
-import { Building2, ChevronRight, ClipboardList, Globe, Heart, MapPin, ShieldCheck, User, type LucideIcon } from '@/lib/icons';
+import { TOKEN_KEY } from '@/lib/api';
+import {
+  Ban, BellRing, Building2, ChevronRight, ClipboardList, Globe, Heart, MapPin, ShieldCheck, Star, User, type LucideIcon,
+} from '@/lib/icons';
+import { unregisterPush } from '@/lib/push';
+import { qk } from '@/lib/query-keys';
+import { scoreDisplay } from '@/lib/review-form';
+import { fetchMyReviews } from '@/lib/reviews-api';
 import { useSavedListings } from '@/hooks/use-saved';
 import { savedCount } from '@/lib/saved-view';
 import { queryClient } from '@/lib/queryClient';
@@ -28,7 +37,11 @@ import { fonts, radius, spacing, useTheme } from '@/lib/theme';
 import { openTarget } from '@/navigation/go';
 import type { RootStackScreenProps } from '@/navigation/types';
 
-/** Profile (Periwinkle v2 `.sp-head` + `.menu`, spec §8, Ruling R11). */
+/**
+ * Profile (Periwinkle v2 `.sp-head` + `.menu`, spec §8, Ruling R11). F6 + F7 (§15.2): Reviews (my seller score),
+ * Contact number, Blocked businesses and Notification settings rows. A language change also reaches the server
+ * (`PUT /users/me/language`, so the notification list and pushes follow it): `usePushNotifications` sends it.
+ */
 export default function ProfileScreen({ navigation }: RootStackScreenProps<'Profile'>) {
   const { t } = useTranslation();
   const { colors } = useTheme();
@@ -55,6 +68,14 @@ export default function ProfileScreen({ navigation }: RootStackScreenProps<'Prof
     if (requireSignIn({ reason: 'save' })) navigation.navigate('Saved');
   };
   const [opening, setOpening] = useState<ProfileRow | null>(null);
+  // Profile › Reviews' hint: my seller score (§10.4), or nothing while "New seller".
+  const myScore = useQuery({
+    queryKey: [...qk.myReviews(), 'score'],
+    queryFn: async () => (await fetchMyReviews()).score,
+    enabled: !!profile,
+    staleTime: 5 * 60 * 1000,
+  });
+  const score = scoreDisplay(myScore.data);
 
   const confirmLogout = async () => {
     const ok = await confirm({
@@ -63,7 +84,11 @@ export default function ProfileScreen({ navigation }: RootStackScreenProps<'Prof
       confirmLabel: t('profile.logout'),
       destructive: true,
     });
-    if (ok) void logout();
+    if (!ok) return;
+    // Read before the session is cleared: it authorises deleting this phone's push device (§11.6), in the background.
+    const token = await SecureStore.getItemAsync(TOKEN_KEY).catch(() => null);
+    await logout();
+    void unregisterPush(token);
   };
 
 
@@ -217,6 +242,15 @@ export default function ProfileScreen({ navigation }: RootStackScreenProps<'Prof
                 testID="Profile-row-saved"
                 accessibilityRole="button"
               />
+              <ListRow
+                icon={Star}
+                label={t('profile.rows.reviews')}
+                hint={score.kind === 'score' ? t('profile.rows.reviewsScore', { stars: score.stars, count: score.count }) : undefined}
+                chevron
+                onPress={() => navigation.navigate('MyReviews')}
+                testID="Profile-row-reviews"
+                accessibilityRole="button"
+              />
               {rows.map((r, i) => (
                 <ListRow
                   key={r.row}
@@ -232,6 +266,34 @@ export default function ProfileScreen({ navigation }: RootStackScreenProps<'Prof
                   accessibilityRole="button"
                 />
               ))}
+            </Card>
+
+            <Card flush>
+              <ListRow
+                icon={Building2}
+                label={t('profile.rows.contactNumber')}
+                chevron
+                onPress={() => navigation.navigate('ContactNumber')}
+                testID="Profile-row-contact-number"
+                accessibilityRole="button"
+              />
+              <ListRow
+                icon={Ban}
+                label={t('profile.rows.blocked')}
+                chevron
+                onPress={() => navigation.navigate('BlockedBusinesses')}
+                testID="Profile-row-blocked"
+                accessibilityRole="button"
+              />
+              <ListRow
+                icon={BellRing}
+                label={t('profile.rows.notifications')}
+                chevron
+                last
+                onPress={() => navigation.navigate('NotificationSettings')}
+                testID="Profile-row-notifications"
+                accessibilityRole="button"
+              />
             </Card>
           </>
         ) : null}
