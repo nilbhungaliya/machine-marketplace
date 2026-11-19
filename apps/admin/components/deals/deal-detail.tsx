@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useAuth } from '@/lib/auth-context';
 import type { AdminDealDetail, AdminDisputeRow } from '@mpm/shared-types';
 import StatusBadge from '@/components/status-badge';
 import { Panel } from '@/components/ui/panel';
@@ -12,7 +13,7 @@ import { DISPUTE_CATEGORY_LABELS, DISPUTE_OUTCOME_SHORT, DISPUTE_STATUS_LABELS, 
 import { GST_MODE_LABELS, formatPaise, formatRef } from '@/lib/listings-api';
 import { formatDate, formatDateTime } from '@/lib/utils';
 import { DealTimeline } from './deal-timeline';
-import { Facts } from './facts';
+import { Facts, PartyName } from './facts';
 
 const when = (iso: string | null) => (iso ? <span className="tnum">{formatDateTime(iso)}</span> : '—');
 
@@ -46,6 +47,8 @@ export function DisputeList({ disputes, canOpen }: { disputes: AdminDisputeRow[]
  */
 export function DealDetail({ deal, canOpenDisputes }: { deal: AdminDealDetail; canOpenDisputes: boolean }) {
   const n = deal.notes;
+  // The roles of Users & businesses in the nav: operations can't open a business page.
+  const canOpenBusinesses = useAuth().hasRole('support', 'verification_officer', 'moderator');
   const lifecycle: Array<[string, React.ReactNode]> = [
     ['Agreed', when(deal.acceptedAt)],
     ['Handed over', when(deal.handedOverAt)],
@@ -93,8 +96,8 @@ export function DealDetail({ deal, canOpenDisputes }: { deal: AdminDealDetail; c
             rows={[
               ['Status', <StatusBadge key="s" status={deal.status} label={DEAL_STATUS_LABELS[deal.status]} tone={DEAL_STATUS_TONES[deal.status]} />],
               ['Listing', <span key="l">{deal.listing.title} <span className="font-mono text-[13px] text-gray-500">{formatRef(deal.listing.ref)}</span></span>],
-              ['Buyer', <Link key="b" href={`/businesses/${deal.buyer.businessId}/`} className="text-brand-700 hover:underline">{deal.buyer.name}</Link>],
-              ['Seller', <Link key="s2" href={`/businesses/${deal.seller.businessId}/`} className="text-brand-700 hover:underline">{deal.seller.name}</Link>],
+              ['Buyer', <PartyName key="b" party={deal.buyer} canOpen={canOpenBusinesses} />],
+              ['Seller', <PartyName key="s2" party={deal.seller} canOpen={canOpenBusinesses} />],
               ['Price per unit', <span key="p" className="tnum">{formatPaise(deal.pricePerUnitPaise)}{deal.gstMode && <span className="font-normal text-gray-600"> · {GST_MODE_LABELS[deal.gstMode]}</span>}</span>],
               ['Quantity', <span key="q" className="tnum">{deal.quantity} {deal.unitLabel}</span>],
               ['Total', <span key="t" className="tnum">{formatPaiseString(deal.totalPaise)}</span>],

@@ -1,8 +1,9 @@
 'use client';
 
 import Link from 'next/link';
+import { useAuth } from '@/lib/auth-context';
 import type { AdminEnquiryDetail, AdminOfferChainEntry } from '@mpm/shared-types';
-import { Facts } from '@/components/deals/facts';
+import { Facts, PartyName } from '@/components/deals/facts';
 import StatusBadge from '@/components/status-badge';
 import { Panel } from '@/components/ui/panel';
 import { DEAL_STATUS_LABELS, DEAL_STATUS_TONES, PARTY_SIDE_LABELS, formatDealRef, formatPaiseString } from '@/lib/deals-api';
@@ -29,6 +30,8 @@ function negotiations(chain: AdminOfferChainEntry[]): AdminOfferChainEntry[][] {
  */
 export function OfferChain({ detail, canOpenDeals }: { detail: AdminEnquiryDetail; canOpenDeals: boolean }) {
   const { row, chain, deals } = detail;
+  // The roles of Users & businesses in the nav: operations can't open a business page.
+  const canOpenBusinesses = useAuth().hasRole('support', 'verification_officer', 'moderator');
   const groups = negotiations(chain);
 
   return (
@@ -39,8 +42,8 @@ export function OfferChain({ detail, canOpenDeals }: { detail: AdminEnquiryDetai
             rows={[
               ['Listing', <span key="l">{row.listing.title} <span className="font-mono text-[13px] text-gray-500">{formatRef(row.listing.ref)}</span></span>],
               ['Kind', KIND_LABELS[row.listing.kind]],
-              ['Buyer', <Link key="b" href={`/businesses/${row.buyer.businessId}/`} className="text-brand-700 hover:underline">{row.buyer.name}</Link>],
-              ['Seller', <Link key="s" href={`/businesses/${row.seller.businessId}/`} className="text-brand-700 hover:underline">{row.seller.name}</Link>],
+              ['Buyer', <PartyName key="b" party={row.buyer} canOpen={canOpenBusinesses} />],
+              ['Seller', <PartyName key="s" party={row.seller} canOpen={canOpenBusinesses} />],
               ['Enquiry', <StatusBadge key="e" status={row.enquiryStatus} label={ENQUIRY_STATUS_LABELS[row.enquiryStatus]} />],
               ['Started', <span key="c" className="tnum">{formatDateTime(row.createdAt)}</span>],
               ['Last activity', <span key="a" className="tnum">{formatDateTime(row.lastActivityAt)}</span>],

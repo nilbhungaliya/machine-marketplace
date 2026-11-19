@@ -1,4 +1,6 @@
+import Link from 'next/link';
 import type { ReactNode } from 'react';
+import type { AdminPartyRef } from '@mpm/shared-types';
 
 /** Label / value rows on a record page (as the business page's), shared by the F6 + F7 admin records. */
 export function Facts({ rows }: { rows: Array<[string, ReactNode]> }) {
@@ -12,4 +14,10 @@ export function Facts({ rows }: { rows: Array<[string, ReactNode]> }) {
       ))}
     </dl>
   );
+}
+
+/** A party's name, linked to its business page only for the roles that can open one (the nav's Users & businesses). */
+export function PartyName({ party, canOpen }: { party: AdminPartyRef; canOpen: boolean }) {
+  if (!canOpen) return <span>{party.name}</span>;
+  return <Link href={`/businesses/${party.businessId}/`} className="text-brand-700 hover:underline">{party.name}</Link>;
 }

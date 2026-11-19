@@ -3,12 +3,12 @@ import { ACTOR_SIDE_LABELS, CANCEL_REASON_LABELS, DEAL_EVENT_LABELS } from '@/li
 import { DISPUTE_OUTCOME_SHORT } from '@/lib/disputes-api';
 import { formatDateTime } from '@/lib/utils';
 
+/** The names `editNotes` writes in `notes_changed.fields` (API `deal.service.ts` NOTE_FIELDS). */
 const NOTE_FIELD_LABELS: Record<string, string> = {
-  paymentMethod: 'payment method',
-  advancePaise: 'advance',
+  payment_method: 'payment method',
+  advance: 'advance',
   fulfilment: 'pickup or delivery',
-  expectedOn: 'expected date',
-  notesText: 'note',
+  expected_on: 'expected date',
   text: 'note',
 };
 
@@ -20,8 +20,10 @@ export function timelineDetail(entry: DealTimelineEntry): string | null {
   if (typeof v.outcome === 'string' && v.outcome in DISPUTE_OUTCOME_SHORT) parts.push(`Outcome: ${DISPUTE_OUTCOME_SHORT[v.outcome as DisputeOutcome].toLowerCase()}`);
   if (typeof v.stockReturned === 'boolean') parts.push(v.stockReturned ? 'Goods went back to the seller' : 'Goods stayed with the buyer');
   if (v.photo === true) parts.push('With a photo');
-  if (Array.isArray(v.fields) && v.fields.length > 0) {
-    parts.push(`Changed: ${v.fields.map((f) => NOTE_FIELD_LABELS[String(f)] ?? String(f)).join(', ')}`);
+  // Stored comma-joined ("payment_method,advance"); an array is accepted too.
+  const fields: unknown[] = typeof v.fields === 'string' ? v.fields.split(',').filter(Boolean) : Array.isArray(v.fields) ? v.fields : [];
+  if (fields.length > 0) {
+    parts.push(`Changed: ${fields.map((f) => NOTE_FIELD_LABELS[String(f)] ?? String(f)).join(', ')}`);
   }
   return parts.length ? parts.join(' · ') : null;
 }
