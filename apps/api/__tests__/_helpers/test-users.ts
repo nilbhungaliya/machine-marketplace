@@ -9,6 +9,7 @@ import {
   listingStatusHistory,
   listings,
   reports,
+  savedListings,
   users,
 } from '../../src/db/schema.js';
 
@@ -42,15 +43,19 @@ export async function deleteListingsOf(conn: Db | Tx, opts: { businessIds: strin
     ...(userIds.length ? [inArray(reports.reporterUserId, userIds)] : []),
   ];
   if (reportWhere.length) await conn.delete(reports).where(or(...reportWhere));
+  // F4 + F5: saved rows of these users (on any listing); the listings' own saved rows go in deleteTestListings. Both
+  // would also go by ON DELETE CASCADE.
+  if (userIds.length) await conn.delete(savedListings).where(inArray(savedListings.userId, userIds));
   // History rows a user wrote on another business's listing (none today) would block deleting the user.
   if (userIds.length) await conn.delete(listingStatusHistory).where(inArray(listingStatusHistory.userId, userIds));
   await deleteTestListings(conn, ids);
 }
 
-/** Deletes the given listings and their children (reports on them, history, media, fitments, rental, machine). */
+/** Deletes the given listings and their children (reports on them, saved rows, history, media, fitments, rental, machine). */
 export async function deleteTestListings(conn: Db | Tx, ids: string[]): Promise<void> {
   if (ids.length === 0) return;
   await conn.delete(reports).where(and(eq(reports.targetType, 'listing'), inArray(reports.targetId, ids)));
+  await conn.delete(savedListings).where(inArray(savedListings.listingId, ids));
   await conn.delete(listingStatusHistory).where(inArray(listingStatusHistory.listingId, ids));
   await conn.delete(listingMedia).where(inArray(listingMedia.listingId, ids));
   await conn.delete(listingFitments).where(inArray(listingFitments.listingId, ids));

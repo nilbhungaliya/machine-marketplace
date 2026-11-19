@@ -31,6 +31,8 @@ export function detailFixture(over: Partial<DetailListing> = {}, rest: Partial<O
     distanceKm: null,
     refreshedAt: '2026-11-18T05:00:00.000Z',
     businessId: 'b1',
+    saved: null,
+    tags: [],
     description: 'Two rollers off a running loom, light wear.',
     categoryId: 'pg1',
     categoryPath: ['Textile machinery', 'Rapier looms', 'Temples'],

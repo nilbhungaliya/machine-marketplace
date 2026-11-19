@@ -1,6 +1,6 @@
 import {
   pgTable, uuid, text, timestamp, pgEnum, boolean, jsonb, customType, index, uniqueIndex, unique, integer, smallint,
-  numeric, date, bigint, bigserial, type AnyPgColumn,
+  numeric, date, bigint, bigserial, primaryKey, type AnyPgColumn,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import {
@@ -8,7 +8,8 @@ import {
   FITMENT_SOURCES, GST_CHECK_RESULTS, GST_PRICE_MODES, GST_PROOF_STATUSES, GST_STATUSES, LANGUAGES, LISTING_ACTORS,
   LISTING_KINDS, LISTING_LOCATION_SOURCES, LISTING_STATUSES, MEDIA_TYPES, MEMBER_ROLES, MODERATION_OUTCOMES, PART_SIDES,
   PRICE_MODELS, RENTAL_FUEL_OPTIONS, RENTAL_OPERATOR_OPTIONS, RENTAL_PERIODS, RENTAL_TRANSPORT_OPTIONS, REPORT_STATUSES,
-  REPORT_TARGETS, VERIFICATION_LEVELS, VERIFICATION_STATUSES, type BusinessActivity, type DeliveryOption,
+  REPORT_TARGETS, SEARCH_REFRESH_SCOPES, SEARCH_SCRIPTS, SYNONYM_TARGETS, VERIFICATION_LEVELS, VERIFICATION_STATUSES,
+  type BusinessActivity, type DeliveryOption,
   type GstDetails, type GstDocumentType, type GstEnteredDetails, type ListingFlag, type ReviewReason, type Specs,
 } from '@mpm/shared-types';
 
@@ -250,6 +251,11 @@ export const brands = pgTable('brands', {
   makesMachines: boolean('makes_machines').notNull().default(true),
   makesParts: boolean('makes_parts').notNull().default(false),
   needsReview: boolean('needs_review').notNull().default(false),
+  /**
+   * F4 + F5 §4.1: the query reader makes this brand a chip only when a model of the brand or a machine type is also read
+   * (brand names that are ordinary words: Bull, ACE).
+   */
+  chipNeedsContext: boolean('chip_needs_context').notNull().default(false),
   sortOrder: integer('sort_order').notNull().default(0),
   isActive: boolean('is_active').notNull().default(true),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -502,11 +508,25 @@ export const listings = pgTable(
     firstLiveAt: timestamp('first_live_at', { withTimezone: true }),
     refreshedAt: timestamp('refreshed_at', { withTimezone: true }),
     statusChangedAt: timestamp('status_changed_at', { withTimezone: true }),
+    // F4 + F5 search columns (spec 2026-11-19-f4-f5 §4.1): written only by `services/discovery/search-text.ts`.
+    /** Normalised title, part number (spaced and compact forms), part brand and category path names. */
+    searchTitleText: text('search_title_text').notNull().default(''),
+    /** `search_title_text` + fitment / machine brand and model names, spec values, condition label. No side words. */
+    searchText: text('search_text').notNull().default(''),
+    /** `point`, else the centroid of the pincode's offices (R5). */
+    searchPoint: geography('search_point'),
+    searchRefreshedAt: timestamp('search_refreshed_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({
     pointIdx: index('listings_point_idx').using('gist', t.point),
+    searchTextTrgmIdx: index('listings_search_text_trgm_idx').using('gin', t.searchText.op('gin_trgm_ops')),
+    searchTitleTextTrgmIdx: index('listings_search_title_text_trgm_idx').using('gin', t.searchTitleText.op('gin_trgm_ops')),
+    searchPointIdx: index('listings_search_point_idx').using('gist', t.searchPoint),
+    publicRefreshedIdx: index('listings_public_refreshed_idx')
+      .on(t.kind, t.refreshedAt.desc())
+      .where(sql`${t.status} IN ('live', 'reserved', 'rented')`),
     statusKindCategoryIdx: index('listings_status_kind_category_idx').on(t.status, t.kind, t.categoryId),
     businessStatusUpdatedIdx: index('listings_business_status_updated_idx').on(t.businessId, t.status, t.updatedAt),
     categoryIdx: index('listings_category_id_idx').on(t.categoryId),
@@ -663,3 +683,93 @@ export const appSettings = pgTable('app_settings', {
   updatedByAdminId: uuid('updated_by_admin_id').references(() => adminUsers.id),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+// ─── F4 + F5: discovery (spec 2026-11-19-f4-f5-discovery-design §4) ───
+// The CHECK on `search_synonyms`, its unique index (plain columns `term_norm, target_kind, target_id, target_side,
+// target_word` with NULLS NOT DISTINCT: an enum-to-text cast can't be indexed, and the CHECK leaves exactly one target
+// column set), the query length CHECK and the SQL normaliser `mpm_normalize_search` are in the custom migration that
+// follows the generated one.
+
+export const searchScript = pgEnum('search_script', SEARCH_SCRIPTS);
+export const synonymTarget = pgEnum('synonym_target', SYNONYM_TARGETS);
+export const searchRefreshScope = pgEnum('search_refresh_scope', SEARCH_REFRESH_SCOPES);
+
+/**
+ * Admin-managed search synonyms (§4.2). Exactly the target field of `target_kind` is set (CHECK
+ * `search_synonyms_target_shape`); `target_id` has no foreign key (category, brand or model: checked in the service).
+ * Seeded rows have no `created_by`.
+ */
+export const searchSynonyms = pgTable('search_synonyms', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  term: text('term').notNull(),
+  termNorm: text('term_norm').notNull(),
+  script: searchScript('script').notNull(),
+  targetKind: synonymTarget('target_kind').notNull(),
+  targetId: uuid('target_id'),
+  targetSide: partSide('target_side'),
+  targetWord: text('target_word'),
+  isActive: boolean('is_active').notNull().default(true),
+  createdBy: uuid('created_by').references(() => adminUsers.id),
+  updatedBy: uuid('updated_by').references(() => adminUsers.id),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** The anonymous search log (§4.3, R14): no user, device, IP or location. `day` is the IST date. */
+export const searchQueries = pgTable(
+  'search_queries',
+  {
+    id: bigserial('id', { mode: 'number' }).primaryKey(),
+    normalized: text('normalized').notNull(),
+    words: smallint('words').notNull(),
+    resultTotal: integer('result_total').notNull(),
+    kind: listingKind('kind'),
+    day: date('day').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({ dayNormalizedIdx: index('search_queries_day_normalized_idx').on(t.day, t.normalized) }),
+);
+
+/** Queries the category manager hid from trending (§4.3). */
+export const searchTrendingHidden = pgTable('search_trending_hidden', {
+  normalized: text('normalized').primaryKey(),
+  createdBy: uuid('created_by')
+    .notNull()
+    .references(() => adminUsers.id),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** A user's saved listings (§4.4), at most `DISCOVERY_LIMITS.savedCap`. Deleted with the user or the listing. */
+export const savedListings = pgTable(
+  'saved_listings',
+  {
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    listingId: uuid('listing_id')
+      .notNull()
+      .references(() => listings.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    pk: primaryKey({ name: 'saved_listings_pk', columns: [t.userId, t.listingId] }),
+    userCreatedIdx: index('saved_listings_user_created_idx').on(t.userId, t.createdAt.desc(), t.listingId),
+  }),
+);
+
+/** Background rebuilds of search text after a catalogue change (§4.5, §5.2); pending while `done_at` is null. */
+export const searchRefreshJobs = pgTable(
+  'search_refresh_jobs',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    scopeKind: searchRefreshScope('scope_kind').notNull(),
+    scopeId: uuid('scope_id').notNull(),
+    createdBy: uuid('created_by').references(() => adminUsers.id),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    startedAt: timestamp('started_at', { withTimezone: true }),
+    doneAt: timestamp('done_at', { withTimezone: true }),
+    attempts: smallint('attempts').notNull().default(0),
+    lastError: text('last_error'),
+  },
+  (t) => ({ pendingIdx: index('search_refresh_jobs_pending_idx').on(t.doneAt, t.createdAt) }),
+);

@@ -1,9 +1,11 @@
 import './instrument.js'; // must stay first — see the file
+import { assertApiEnv } from './env.js';
 import { buildApp } from './app.js';
 import { allJobs } from './jobs/index.js';
 import { startJobs } from './jobs/runner.js';
 import { setupSocketIO } from './socket/setup.js';
 
+assertApiEnv();
 const app = await buildApp();
 setupSocketIO(app);
 const port = Number(process.env.PORT ?? process.env.API_PORT ?? 3000);

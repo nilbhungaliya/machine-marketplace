@@ -41,8 +41,11 @@ export { deleteTestListings } from './test-users.js';
 type Conn = Db | Tx;
 type Point = { lat: number; lng: number };
 
-/** Pincodes reserved for test `pincode_offices` rows (no real pincode starts with 99; 990001–990009 belong to the F1 suites). */
-const TEST_PINCODE = /^99001[1-9]$/;
+/**
+ * Pincodes reserved for test `pincode_offices` rows (no real pincode starts with 99; 990001–990009 belong to the F1
+ * suites, 990011–990019 to F2, 990021–990029 to F4 + F5 discovery).
+ */
+const TEST_PINCODE = /^9900[12][1-9]$/;
 const DEFAULT_PINCODE = '990011';
 
 let seq = 0;
@@ -59,7 +62,7 @@ export interface TestSeller extends TestBusinessUser {
  * industrial area (`industrialAreaId`, else the "Other" text "Test Estate") and the pincode (default `990011`).
  * - `point`: the business's pin (none by default).
  * - `pincodeOffices`: inserts its own `pincode_offices` rows for the pincode with these points, so the pincode has a
- *   centroid; only for the test range `990011`–`990019`.
+ *   centroid; only for the test ranges `990011`–`990019` and `990021`–`990029`.
  * - `gst`: GST-verified through `grantTestGst`.
  * Remove with `deleteTestBusinesses([businessId])`, then `deleteTestSellerExtras([seller])`.
  */
@@ -108,7 +111,7 @@ export async function createTestSeller(
     .where(eq(businesses.id, user.businessId));
 
   if (opts.pincodeOffices?.length) {
-    if (!TEST_PINCODE.test(pincode)) throw new Error(`createTestSeller: pincode offices only for 990011-990019 (got ${pincode})`);
+    if (!TEST_PINCODE.test(pincode)) throw new Error(`createTestSeller: pincode offices only for 990011-990029 (got ${pincode})`);
     const rows = await db
       .insert(pincodeOffices)
       .values(
@@ -202,6 +205,8 @@ export interface TestListingOptions {
   industrialAreaOther?: string | null;
   addressLine?: string | null;
   point?: Point | null;
+  /** F4 + F5 search point (R5), written directly (B1's refresh normally fills it). Default none. */
+  searchPoint?: Point | null;
   flags?: ListingFlag[];
   acceptedFlags?: ListingFlag[];
   reviewReasons?: ReviewReason[];
@@ -276,6 +281,7 @@ export async function insertTestListing(
       industrialAreaOther: o.industrialAreaOther !== undefined ? o.industrialAreaOther : o.industrialAreaId ? null : 'Test Estate',
       addressLine: o.addressLine ?? null,
       point: point ? sql`ST_SetSRID(ST_MakePoint(${point.lng}, ${point.lat}), 4326)::geography` : null,
+      searchPoint: o.searchPoint ? sql`ST_SetSRID(ST_MakePoint(${o.searchPoint.lng}, ${o.searchPoint.lat}), 4326)::geography` : null,
       flags: o.flags ?? [],
       acceptedFlags: o.acceptedFlags ?? [],
       reviewReasons: o.reviewReasons ?? [],

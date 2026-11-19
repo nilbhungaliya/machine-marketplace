@@ -187,7 +187,7 @@ key function) and **wire the limits on every `/discover/*` stub now** (search 12
   `pincode`, the nearest pincode office's area and city; **for `business`, the business's industrial area (or its
   "Other" text) and city**.
 - `distance.ts`: `snappedKmSql(pointCol, origin)` (floor, min 1), `withinRadiusSql(pointCol, origin, r)` (`ST_DWithin`
-  with r + 2 km **and** snapped km ≤ r) (§6.2).
+  with r + 3 km **and** snapped km ≤ r) (§6.2).
 - `ranking.ts`: `relevanceSql({ asOf, origin, radiusKm })` (§6.1, × 0.6 reserved); `tierSql({ side })` (§5.5).
 - `cursor.ts`: `sealCursor(payload, aad)`, `openCursor(token, aad)` (AES-256-GCM, key from `DISCOVERY_CURSOR_SECRET`,
   `CURSOR_INVALID`); `requestHash(req)` = sha256 of canonical JSON of the request without `cursor` (origin included).

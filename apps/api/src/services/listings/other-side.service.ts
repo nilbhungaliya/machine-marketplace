@@ -11,7 +11,8 @@ import {
 import type { Db, Tx } from '../../db/index.js';
 import { listings } from '../../db/schema.js';
 import type { Viewer } from './listing-read.service.js';
-import { businessPointSql, loadCards } from './listing-view.service.js';
+import { businessPointSql } from '../discovery/distance.js';
+import { loadCards } from './listing-view.service.js';
 import { listingNotFound, type ListingRow } from './locks.js';
 import { publicListingWhere } from './public-where.service.js';
 
@@ -130,7 +131,7 @@ export async function findOtherSide(conn: Conn, listingId: string, viewer: Viewe
   const listingRows: ListingRow[] = await conn.select().from(listings).where(inArray(listings.id, rows.map((r) => r.id)));
   const byId = new Map(listingRows.map((l) => [l.id, l]));
   const ordered = rows.filter((r) => byId.has(r.id));
-  const cards = await loadCards(conn, ordered.map((r) => byId.get(r.id)!), { viewerBusinessId: viewer?.businessId });
+  const cards = await loadCards(conn, ordered.map((r) => byId.get(r.id)!), { viewerBusinessId: viewer?.businessId, viewerUserId: viewer?.userId });
 
   ordered.forEach((r, i) => {
     const card: OtherSideCard = { ...cards[i]!, tier: Number(r.tier) as 1 | 2 | 3, possible: Number(r.tier) === 3 };

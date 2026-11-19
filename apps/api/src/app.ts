@@ -29,6 +29,9 @@ import adminSettingsRoutes from './routes/admin/settings.js';
 import adminModerationRoutes from './routes/admin/moderation.js';
 import adminListingRoutes from './routes/admin/listings.js';
 import adminListingMediaRoutes from './routes/admin/listing-media.js';
+import discoverRoutes from './routes/discover.js';
+import savedListingRoutes from './routes/saved-listings.js';
+import adminSearchRoutes from './routes/admin/search.js';
 
 export interface BuildAppOptions {
   /** false in unit tests that must not touch Postgres/Redis. */
@@ -81,6 +84,8 @@ export async function buildApp({ infra = true, logger = true }: BuildAppOptions 
     await app.register(locationRoutes);
     await app.register(listingRoutes);
     await app.register(listingMediaRoutes);
+    await app.register(discoverRoutes);
+    await app.register(savedListingRoutes);
     await app.register(adminAuthRoutes);
     await app.register(adminCatalogCategoryRoutes);
     await app.register(adminCatalogFieldRoutes);
@@ -95,6 +100,7 @@ export async function buildApp({ infra = true, logger = true }: BuildAppOptions 
     await app.register(adminModerationRoutes);
     await app.register(adminListingRoutes);
     await app.register(adminListingMediaRoutes);
+    await app.register(adminSearchRoutes);
   }
 
   return app;

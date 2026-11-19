@@ -5,6 +5,7 @@ import {
   type EffectiveTemplate,
   type Fitment,
   type ListingCard,
+  type ListingCardTag,
   type ListingDetail,
   type ListingMediaItem,
   type ListingOwnerView,
@@ -12,6 +13,7 @@ import {
   type MachineDetails,
   type RentalPeriod,
   type RentalTerms,
+  type SearchSide,
 } from '@mpm/shared-types';
 import type { Db, Tx } from '../../db/index.js';
 import {
@@ -26,6 +28,7 @@ import {
   listings,
   machineModels,
   reports,
+  savedListings,
   units,
 } from '../../db/schema.js';
 import { NotFoundError } from '../../lib/errors.js';
@@ -33,7 +36,8 @@ import { publicUrl } from '../../lib/media-url.js';
 import { checkSpecs, isRequiredField } from '../../lib/spec-check.js';
 import { businessDisplayName } from '../business/profile.service.js';
 import { loadTemplate } from '../catalog/read.service.js';
-import { centroidSql, loadNode, type ListingNode } from './listing-validate.service.js';
+import { distancesKm, snappedDistancesKm, type LatLng } from '../discovery/distance.js';
+import { loadNode, type ListingNode } from './listing-validate.service.js';
 import type { ListingRow } from './locks.js';
 import { publicListingWhere } from './public-where.service.js';
 
@@ -87,6 +91,8 @@ interface CardParts {
   thumbKey: string | null;
   areaName: string | null;
   distanceKm: number | null;
+  saved?: boolean | null;
+  tags?: ListingCardTag[];
 }
 
 /** A listing card (§13.4 `ListingCard`): never a pincode, address line or point. */
@@ -111,34 +117,47 @@ function cardFrom(row: ListingRow, p: CardParts): ListingCard {
     distanceKm: p.distanceKm,
     refreshedAt: iso(row.refreshedAt),
     businessId: row.businessId,
+    saved: p.saved ?? null,
+    tags: p.tags ?? cardTags(row, null),
   };
 }
 
-/**
- * The viewer business's point (§4.1, §9.1): its pin, else the centroid of its pincode's offices (as a business-sourced
- * listing's point, I8), else NULL.
- */
-export function businessPointSql(businessId: string): SQL {
-  return sql`(SELECT COALESCE(b.location, ${centroidSql(sql`b.pincode`)}) FROM businesses b WHERE b.id = ${businessId})`;
+export interface LoadCardsOptions {
+  /** The signed-in viewer: `saved` is true / false for them, null without one (F4 + F5 §7). */
+  viewerUserId?: string | null;
+  /** F2: the distance from the viewer business (rounded km) when no `origin` is given. */
+  viewerBusinessId?: string | null;
+  /** Discovery: the resolved origin; the distance is the snapped whole km of §6.2 from the listing's search point. */
+  origin?: LatLng | null;
+  /** The search's side filter: a Pair under Left / Right gets "Pair: contains a left / right" (R6). */
+  side?: SearchSide | null;
 }
 
-/** Whole km between each listing's point and the viewer business's point; absent when either is unknown. */
-export async function distancesKm(conn: Conn, listingIds: string[], viewerBusinessId: string | null | undefined): Promise<Map<string, number>> {
-  const out = new Map<string, number>();
-  if (!viewerBusinessId || listingIds.length === 0) return out;
+/** A card's tags (§4.7): Reserved, On rent (a rented rental), and a Pair shown under a Left / Right side filter. */
+export function cardTags(row: Pick<ListingRow, 'status' | 'kind' | 'side'>, side: SearchSide | null | undefined): ListingCardTag[] {
+  const tags: ListingCardTag[] = [];
+  if (row.status === 'reserved') tags.push('reserved');
+  if (row.status === 'rented' && row.kind === 'machine_rental') tags.push('on_rent');
+  if (row.side === 'pair' && side === 'left') tags.push('pair_contains_left');
+  if (row.side === 'pair' && side === 'right') tags.push('pair_contains_right');
+  return tags;
+}
+
+/** Which of the listings the user saved. */
+async function savedIds(conn: Conn, userId: string, listingIds: string[]): Promise<Set<string>> {
   const rows = await conn
-    .select({ id: listings.id, km: sql<number | null>`round(ST_Distance(${listings.point}, ${businessPointSql(viewerBusinessId)}) / 1000)::int` })
-    .from(listings)
-    .where(inArray(listings.id, listingIds));
-  for (const r of rows) if (r.km != null) out.set(r.id, Number(r.km));
-  return out;
+    .select({ id: savedListings.listingId })
+    .from(savedListings)
+    .where(and(eq(savedListings.userId, userId), inArray(savedListings.listingId, listingIds)));
+  return new Set(rows.map((r) => r.id));
 }
 
 /**
- * Cards for many listings in a fixed number of queries (seller listings, Other side): conditions, units, industrial
- * areas, the first photo's thumbnail, rental rates and, with a viewer business, the distance. Order as given.
+ * Cards for many listings in a fixed number of queries (seller listings, Other side, discovery): conditions, units,
+ * industrial areas, the first photo's thumbnail, rental rates, the distance (from `origin`, else from the viewer
+ * business), `saved` for a signed-in viewer and the tags. Order as given.
  */
-export async function loadCards(conn: Conn, rows: ListingRow[], opts: { viewerBusinessId?: string | null } = {}): Promise<ListingCard[]> {
+export async function loadCards(conn: Conn, rows: ListingRow[], opts: LoadCardsOptions = {}): Promise<ListingCard[]> {
   if (rows.length === 0) return [];
   const ids = rows.map((r) => r.id);
   const uniq = (xs: Array<string | null>) => [...new Set(xs.filter((x): x is string => x !== null))];
@@ -162,7 +181,8 @@ export async function loadCards(conn: Conn, rows: ListingRow[], opts: { viewerBu
     .orderBy(asc(listingMedia.sortOrder), asc(listingMedia.createdAt));
   const rentalIds = rows.filter((r) => r.kind === 'machine_rental').map((r) => r.id);
   const rentalRows = rentalIds.length ? await conn.select().from(listingRentals).where(inArray(listingRentals.listingId, rentalIds)) : [];
-  const distances = await distancesKm(conn, ids, opts.viewerBusinessId);
+  const distances = opts.origin ? await snappedDistancesKm(conn, ids, opts.origin) : await distancesKm(conn, ids, opts.viewerBusinessId);
+  const saved = opts.viewerUserId ? await savedIds(conn, opts.viewerUserId, ids) : null;
 
   const thumbs = new Map<string, string | null>();
   for (const p of photoRows) if (!thumbs.has(p.listingId)) thumbs.set(p.listingId, p.thumbKey);
@@ -182,6 +202,8 @@ export async function loadCards(conn: Conn, rows: ListingRow[], opts: { viewerBu
       thumbKey: thumbs.get(row.id) ?? null,
       areaName: row.industrialAreaId ? (areas.get(row.industrialAreaId)?.name ?? null) : null,
       distanceKm: distances.get(row.id) ?? null,
+      saved: saved ? saved.has(row.id) : null,
+      tags: cardTags(row, opts.side),
     });
   });
 }

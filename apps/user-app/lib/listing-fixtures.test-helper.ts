@@ -23,6 +23,8 @@ export function cardFixture(over: Partial<ListingCard> = {}): ListingCard {
     distanceKm: null,
     refreshedAt: '2026-11-15T10:00:00.000Z',
     businessId: 'b1',
+    saved: null,
+    tags: [],
     ...over,
   };
 }

@@ -376,8 +376,8 @@ fields filled. Then `× 0.6` for `reserved`. (Rented rentals are ordered by the 
 
 `services/discovery/distance.ts`, shared with F2's other side (moved there). Both points are snapped with
 `ST_SnapToGrid(p::geometry, 0.01)::geography`; `km` = whole km (`floor`) of the snapped distance, minimum 1; the app
-shows "Under 2 km" for 1. The radius filter uses the **same** number: `ST_DWithin(search_point, origin, (r + 2) · 1000)`
-(raw points, uses the GiST index, 2 km margin covers snapping) **and** `km ≤ r`, so a listing never shows "51 km" under a
+shows "Under 2 km" for 1. The radius filter uses the **same** number: `ST_DWithin(search_point, origin, (r + 3) · 1000)`
+(raw points, uses the GiST index, 3 km margin covers snapping: each snapped point can move about 0.78 km, so up to about 1.6 km together) **and** `km ≤ r`, so a listing never shows "51 km" under a
 50 km filter. A listing with no `search_point` has `distanceKm: null` and sorts last under `nearest`.
 
 ### 6.3 Origin (`DiscoveryOrigin`, R2)

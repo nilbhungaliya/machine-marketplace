@@ -19,9 +19,9 @@ import { listingFitments, listingMachines, listingMedia, listingRentals, listing
 import type { UserTokenPayload } from '../../plugins/auth.js';
 import { getSettings } from '../settings.service.js';
 import { loadNode, type ListingNode } from './listing-validate.service.js';
+import { distancesKm } from '../discovery/distance.js';
 import {
   attentionProblems,
-  distancesKm,
   expiryOf,
   loadCards,
   loadListing,
@@ -250,5 +250,5 @@ export async function listSellerListings(
     .where(and(eq(listings.businessId, businessId), publicListingWhere(), opts.exclude ? ne(listings.id, opts.exclude) : undefined))
     .orderBy(sql`${listings.publishedAt} DESC NULLS LAST`, desc(listings.createdAt))
     .limit(Math.min(opts.limit, SELLER_LISTINGS_MAX));
-  return loadCards(conn, rows, { viewerBusinessId: opts.viewer?.businessId });
+  return loadCards(conn, rows, { viewerBusinessId: opts.viewer?.businessId, viewerUserId: opts.viewer?.userId });
 }

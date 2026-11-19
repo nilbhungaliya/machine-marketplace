@@ -1249,6 +1249,10 @@ export interface ListingCard {
   distanceKm: number | null;
   refreshedAt: string | null;
   businessId: string;
+  /** Whether the signed-in viewer saved it (F4 + F5 §4.7); null for guests and where not computed. */
+  saved: boolean | null;
+  /** Reserved, On rent, "Pair: contains a left / right" (F4 + F5 §4.7, R6, R7). */
+  tags: ListingCardTag[];
 }
 
 /** The public listing page (§8.1). */
@@ -1729,4 +1733,444 @@ export interface AdminListingBulkResult {
 export interface SettingsExpiryImpact {
   days: number;
   count: number;
+}
+
+// ─── Discovery: search, filters, browse, home, saved (F4 + F5; spec 2026-11-19-f4-f5-discovery-design §4.7) ───
+
+/** Radius choices in km (R4); `null` in a request means All India. */
+export const DISCOVERY_RADII_KM = [10, 25, 50, 100, 200] as const;
+export type DiscoveryRadiusKm = (typeof DISCOVERY_RADII_KM)[number];
+export const DEFAULT_RADIUS_KM: DiscoveryRadiusKm = 50;
+
+/** Sorts (§5.8). R10: best match by default with words, nearest without words when a location is known, else newest. */
+export const SEARCH_SORTS = ['best_match', 'nearest', 'newest', 'price_asc', 'price_desc', 'year_desc', 'hours_asc'] as const;
+export type SearchSort = (typeof SEARCH_SORTS)[number];
+
+/** Quantity filter steps (`quantity ≥ n`, §5.7). */
+export const MIN_QTY_STEPS = [2, 10, 50] as const;
+export type MinQtyStep = (typeof MIN_QTY_STEPS)[number];
+
+/** What a search synonym points at (§4.2). */
+export const SYNONYM_TARGETS = ['category', 'brand', 'model', 'side', 'word'] as const;
+export type SynonymTarget = (typeof SYNONYM_TARGETS)[number];
+
+/** A synonym term's script, derived from the term (§4.2). */
+export const SEARCH_SCRIPTS = ['latin', 'devanagari', 'gujarati'] as const;
+export type SearchScript = (typeof SEARCH_SCRIPTS)[number];
+
+/** Catalogue changes that rebuild listings' search text in the background (§4.5, §5.2). */
+export const SEARCH_REFRESH_SCOPES = ['category', 'brand', 'model', 'field', 'condition'] as const;
+export type SearchRefreshScope = (typeof SEARCH_REFRESH_SCOPES)[number];
+
+/** Chips the query reader makes that the buyer can remove (§5.3). A removed side chip drops its words (R8). */
+export const REMOVABLE_CHIPS = ['side', 'brand', 'model', 'category', 'partNumber'] as const;
+export type RemovableChip = (typeof REMOVABLE_CHIPS)[number];
+
+/** Card tags (§4.7): Reserved, On rent, and a Pair shown under a Left / Right side filter. */
+export const LISTING_CARD_TAGS = ['reserved', 'on_rent', 'pair_contains_left', 'pair_contains_right'] as const;
+export type ListingCardTag = (typeof LISTING_CARD_TAGS)[number];
+
+/** Where a request's origin came from (§6.3); `out_of_range` = a GPS point outside India, so the fallback (or none) was used. */
+export const ORIGIN_SOURCES = ['gps', 'pincode', 'business', 'out_of_range'] as const;
+export type OriginSource = (typeof ORIGIN_SOURCES)[number];
+
+/** Error codes discovery adds (§10). F2's `LISTING_NOT_FOUND` is reused for a non-public listing. */
+export const DISCOVERY_ERROR_CODES = [
+  'LOCATION_REQUIRED',
+  'SORT_NEEDS_MACHINES',
+  'FILTER_NOT_AVAILABLE',
+  'CURSOR_INVALID',
+  'PINCODE_UNKNOWN',
+  'CANNOT_SAVE_OWN_LISTING',
+  'SAVED_LIMIT',
+  'SYNONYM_EXISTS',
+  'SYNONYM_TARGET_INVALID',
+] as const;
+export type DiscoveryErrorCode = (typeof DISCOVERY_ERROR_CODES)[number];
+
+/** The exact numbers of the spec that the app and the API both use (plan "Global constraints"). */
+export const DISCOVERY_LIMITS = {
+  /** Results per page (R11). */
+  pageSize: 20,
+  /** Suggestions: at least 2 characters after normalising, at most 8, typed with a 250 ms debounce (§5.12). */
+  suggestMinChars: 2,
+  suggestMax: 8,
+  suggestDebounceMs: 250,
+  /** The Filters screen's live count (§5.11). */
+  countDebounceMs: 300,
+  /** On the phone only (R13). */
+  recentSearches: 10,
+  recentlyViewed: 20,
+  /** Saved listings per user (`409 SAVED_LIMIT`, §4.4). */
+  savedCap: 500,
+  /** `POST /discover/cards` ids per call. */
+  cardsMaxIds: 20,
+  /** Query reader (§5.3): remaining words, part numbers, words in a synonym phrase. */
+  maxWords: 10,
+  maxPartNumbers: 3,
+  maxSynonymPhraseWords: 4,
+  /** Reader dictionary checks the Redis version key at most this often (§5.3). */
+  readerVersionCheckMs: 5_000,
+  /** Suggest's in-process count map is refreshed at most this often (§5.12). */
+  suggestCountCacheMs: 90_000,
+  /** Trending (§5.12): 7 days, ≥ 3 distinct days, ≥ 5 searches, top 10 (admin: top 20). */
+  trendingWindowDays: 7,
+  trendingMinDays: 3,
+  trendingMinSearches: 5,
+  trendingTop: 10,
+  adminTrendingTop: 20,
+  /** Zero-result report (§5.13): top 50 of 30 days. */
+  zeroResultsWindowDays: 30,
+  zeroResultsTop: 50,
+  /** Search log retention and stored query length (§4.3, R14). */
+  logRetentionDays: 90,
+  logQueryMaxLength: 200,
+  /** Search text refresh job (§5.2). */
+  refreshJobIntervalMs: 30_000,
+  refreshBatchSize: 200,
+  refreshMaxAttempts: 5,
+  /** `pg_trgm.word_similarity_threshold` set in each search / suggest transaction (§5.4). */
+  trigramThreshold: 0.6,
+  suggestTrigramThreshold: 0.5,
+  /** Requests per minute per user / install id (R17, §7), and the outer per-IP cap across `/discover/*`. */
+  rateLimitSearch: 120,
+  rateLimitCount: 240,
+  rateLimitSuggest: 240,
+  rateLimitOther: 120,
+  rateLimitIpOuter: 1_200,
+  /** GPS fix cached on the phone for 10 minutes, rounded to 3 decimals; the server snaps to 0.01° (R3, §8.2). */
+  gpsCacheMs: 600_000,
+  gpsDecimals: 3,
+  snapDegrees: 0.01,
+  /** Home sections (§7): 8 cards each; the business-category restriction needs at least 4 items. */
+  homeSectionSize: 8,
+  homeRestrictMinItems: 4,
+  /** Browse "Popular brands here" (§7). */
+  popularBrands: 6,
+} as const;
+
+/**
+ * Where distances are measured from (§6.3), in every POST body. `point` is the phone's GPS (rounded to 3 decimals; the
+ * server snaps to 0.01°) with an optional `fallback` used when the point is outside India; `pincode` a guest's typed
+ * pincode; `business` the signed-in user's business location (`401` for a guest). `null` = no origin (All India).
+ */
+export type DiscoveryOrigin =
+  | { point: { lat: number; lng: number }; fallback?: { business: true } | { pincode: string } }
+  | { pincode: string }
+  | { business: true }
+  | null;
+
+/** What the server used as the origin (never coordinates): the nearest office's area and city, or the business's area and city. */
+export interface OriginEcho {
+  label: string | null;
+  source: OriginSource | null;
+}
+
+export type SearchSide = Extract<PartSide, 'left' | 'right' | 'pair'>;
+
+/** Range filter on a number spec field. */
+export interface SpecRange {
+  min?: number;
+  max?: number;
+}
+
+/** Search filters (§5.7). Absent = not filtered; run through `cleanFilters()` before sending or sealing. */
+export interface SearchFilters {
+  /** Empty or absent = all kinds. */
+  kinds?: ListingKind[];
+  /** That node and its descendants. */
+  categoryId?: string;
+  side?: SearchSide;
+  fit?: { brandId: string; modelId?: string; year?: number };
+  conditionIds?: string[];
+  /** Absent = `DEFAULT_RADIUS_KM`; `null` = All India. Ignored with no origin. */
+  radiusKm?: DiscoveryRadiusKm | null;
+  states?: string[];
+  cities?: string[];
+  industrialAreaIds?: string[];
+  /** Per unit for parts and machines; the headline day rate for rentals. */
+  priceMinPaise?: number;
+  priceMaxPaise?: number;
+  hidePriceOnRequest?: boolean;
+  minQty?: MinQtyStep;
+  gstVerifiedOnly?: boolean;
+  delivers?: boolean;
+  /** Hidden in the app while `LISTING_VIDEO_UPLOAD_ENABLED` is false (R16); the API accepts it. */
+  hasVideo?: boolean;
+  /** Filterable select (option keys) or number (range) fields of the category in play (`400 FILTER_NOT_AVAILABLE` otherwise). */
+  specs?: Record<string, string[] | SpecRange>;
+}
+
+/** `POST /discover/search` body (§7). Chips the reader found apply as filters unless listed in `removedChips`. */
+export interface SearchRequest {
+  q?: string;
+  filters?: SearchFilters;
+  removedChips?: RemovableChip[];
+  sort?: SearchSort;
+  origin?: DiscoveryOrigin;
+  cursor?: string | null;
+}
+
+/** `POST /discover/search/count` body: the same request without a cursor (§5.11). */
+export type SearchCountRequest = Omit<SearchRequest, 'cursor'>;
+
+/** What the query reader made of the text (§5.3): chips (removable) and the remaining words. */
+export interface QueryReading {
+  /** `#123456` typed with a hash: the listing ref (the route redirects when it is public). */
+  ref: number | null;
+  brand: { id: string; name: string } | null;
+  model: { id: string; name: string; brandId: string } | null;
+  category: { id: string; name: string; level: CatalogLevel } | null;
+  /** Normalised part numbers (max 3). */
+  partNumbers: string[];
+  side: SearchSide | null;
+  /** Remaining normalised words, stop words dropped (max 10). */
+  words: string[];
+}
+
+/** One option of a select spec facet. */
+export interface SpecFacetOption {
+  key: string;
+  label: string;
+  count: number;
+}
+
+/** A filterable spec field's facet (§5.9): counts per option, or the min / max of a number field. */
+export type SpecFacet =
+  | { key: string; label: string; type: 'select'; options: SpecFacetOption[] }
+  | { key: string; label: string; type: 'number'; unit: string | null; min: number | null; max: number | null };
+
+/** Disjunctive facets, first page only (§5.9): each group counted with every filter except its own. */
+export interface SearchFacets {
+  kinds: Record<ListingKind, number>;
+  /** What each side choice returns: Left = Left + Pair, Right = Right + Pair, Pair = Pair. */
+  side: Record<SearchSide, number>;
+  conditions: Array<{ id: string; label: string; count: number }>;
+  gstVerified: number;
+  delivers: number;
+  /** Top 10. */
+  states: Array<{ state: string; count: number }>;
+  /** Only with a category in play. */
+  specs: SpecFacet[];
+}
+
+/** The next larger radius with full matches (§5.6); `radiusKm` null = All India. */
+export interface SearchWiden {
+  radiusKm: DiscoveryRadiusKm | null;
+  count: number;
+}
+
+/** `POST /discover/search` reply (§7). `total` and `facets` on the first page only. */
+export interface SearchPage {
+  items: ListingCard[];
+  nextCursor: string | null;
+  total: number | null;
+  /** The sort applied (R10 default when the request had none). */
+  sort: SearchSort;
+  reading: QueryReading;
+  /** True when no full match within the radius and these are partial matches (§5.6). */
+  partial: boolean;
+  widen: SearchWiden | null;
+  /** A bare number equal to a public listing's ref: shown as a "Listing #…" row above the results. */
+  refSuggestion: { listingId: string; ref: number } | null;
+  facets: SearchFacets | null;
+  origin: OriginEcho;
+}
+
+/** `POST /discover/search` reply for `#ref` of a public listing. */
+export interface SearchRedirect {
+  redirect: { listingId: string };
+}
+
+export type SearchResponse = SearchPage | SearchRedirect;
+
+/** `POST /discover/search/count` reply (§5.11). `partialTotal` only when `total` is 0 and there are ≥ 2 words. */
+export interface CountOnlyResult {
+  total: number;
+  partialTotal: number | null;
+}
+
+/** `POST /discover/home` body. */
+export interface HomeRequest {
+  origin?: DiscoveryOrigin;
+  radiusKm?: DiscoveryRadiusKm | null;
+}
+
+/** `POST /discover/home` reply (§7, R15). */
+export interface HomeView {
+  origin: OriginEcho;
+  radiusKm: DiscoveryRadiusKm | null;
+  /** Spare parts, Machinery, For rent: public counts within the radius. */
+  kindTiles: Array<{ kind: ListingKind; count: number }>;
+  rootCategories: Array<{ id: string; name: string; icon: CategoryIcon | null }>;
+  topNearYou: ListingCard[];
+  rentNearby: ListingCard[];
+}
+
+/** `POST /discover/browse` body. */
+export interface BrowseRequest {
+  parentId?: string | null;
+  kinds?: ListingKind[];
+  origin?: DiscoveryOrigin;
+  radiusKm?: DiscoveryRadiusKm | null;
+}
+
+/** `POST /discover/browse` reply (§7). Children with no listings are hidden. */
+export interface BrowseView {
+  node: { id: string; name: string; level: CatalogLevel } | null;
+  crumbs: Array<{ id: string; name: string }>;
+  children: Array<{ id: string; name: string; level: CatalogLevel; icon: CategoryIcon | null; liveCount: number }>;
+  popularBrands: Array<{ id: string; name: string; liveCount: number }>;
+  origin: OriginEcho;
+  radiusKm: DiscoveryRadiusKm | null;
+}
+
+/** `POST /discover/browse/brand` body. */
+export interface BrandBrowseRequest {
+  brandId: string;
+  kinds?: ListingKind[];
+  origin?: DiscoveryOrigin;
+  radiusKm?: DiscoveryRadiusKm | null;
+}
+
+/** `POST /discover/browse/brand` reply (§7): `otherCount` = listings of the brand with no catalogue model. */
+export interface BrandBrowseView {
+  brand: { id: string; name: string };
+  models: Array<{ id: string; name: string; liveCount: number }>;
+  otherCount: number;
+}
+
+/** `POST /discover/cards` body: recently viewed ids (≤ 20); the reply keeps the given order and drops non-public ones. */
+export interface CardsRequest {
+  ids: string[];
+  origin?: DiscoveryOrigin;
+}
+
+/** `GET /discover/suggest?q=` item (§5.12). `listing`: `id` is the listing id, `ref` its ref. */
+export interface Suggestion {
+  type: 'category' | 'brand' | 'model' | 'listing';
+  id: string;
+  name: string;
+  path: string[];
+  liveCount: number;
+  ref?: number;
+}
+
+/** A saved listing (§7): its card while public, else "No longer available". */
+export type SavedListingItem =
+  | { listingId: string; savedAt: string; card: ListingCard }
+  | { listingId: string; savedAt: string; unavailable: true };
+
+/** `GET /users/me/saved-listings?cursor=` reply. */
+export interface SavedListingsPage {
+  items: SavedListingItem[];
+  nextCursor: string | null;
+}
+
+/** `PUT` / `DELETE /users/me/saved-listings/:listingId` reply. */
+export interface SaveListingResult {
+  saved: boolean;
+}
+
+/** A search synonym (§4.2) with its target's name for the admin table. */
+export interface SearchSynonym {
+  id: string;
+  term: string;
+  termNorm: string;
+  script: SearchScript;
+  targetKind: SynonymTarget;
+  targetId: string | null;
+  targetSide: SearchSide | null;
+  targetWord: string | null;
+  /** Category / brand / model name (category with its path), else null. */
+  targetName: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** `POST /admin/search/synonyms` body; `PATCH` takes any subset. Exactly the target field of the kind is set. */
+export interface SearchSynonymInput {
+  term: string;
+  targetKind: SynonymTarget;
+  targetId?: string | null;
+  targetSide?: SearchSide | null;
+  targetWord?: string | null;
+  isActive?: boolean;
+}
+
+/** `GET /admin/search/trending` row (§7.1). */
+export interface TrendingRow {
+  normalized: string;
+  searches: number;
+  days: number;
+  hidden: boolean;
+}
+
+/** `GET /admin/search/zero-results` row (§7.1). `lastDay` is `YYYY-MM-DD` (IST). */
+export interface ZeroResultRow {
+  normalized: string;
+  searches: number;
+  lastDay: string;
+}
+
+const isEmptyValue = (v: unknown): boolean =>
+  v === undefined || v === null || v === false || v === '' || (Array.isArray(v) && v.length === 0);
+
+const sortedSet = (xs: readonly string[]): string[] => [...new Set(xs.filter((x) => x !== ''))].sort();
+
+function cleanSpecs(specs: SearchFilters['specs']): SearchFilters['specs'] | undefined {
+  if (!specs) return undefined;
+  const out: Record<string, string[] | SpecRange> = {};
+  for (const key of Object.keys(specs).sort()) {
+    const value = specs[key];
+    if (Array.isArray(value)) {
+      const options = sortedSet(value);
+      if (options.length) out[key] = options;
+    } else if (value && typeof value === 'object') {
+      const range: SpecRange = {};
+      if (typeof value.max === 'number') range.max = value.max;
+      if (typeof value.min === 'number') range.min = value.min;
+      if (range.max !== undefined || range.min !== undefined) out[key] = range;
+    }
+  }
+  return Object.keys(out).length ? out : undefined;
+}
+
+/**
+ * Filters in one canonical form (§5.7), so the cursor seal and the request hash are stable: drops empty arrays, nulls,
+ * empty strings, false toggles, empty spec entries and a fit without a brand; keeps `radiusKm: null` (All India); sorts
+ * and de-duplicates the set-like arrays; keys in alphabetical order at every level. Pure: the input is not changed.
+ */
+export function cleanFilters(filters: SearchFilters | null | undefined): SearchFilters {
+  if (!filters) return {};
+  const draft: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(filters)) {
+    if (key === 'radiusKm') {
+      if (value === null || typeof value === 'number') draft[key] = value;
+      continue;
+    }
+    if (key === 'specs') {
+      const specs = cleanSpecs(value as SearchFilters['specs']);
+      if (specs) draft[key] = specs;
+      continue;
+    }
+    if (key === 'fit') {
+      const fit = value as SearchFilters['fit'] | null;
+      if (!fit || !fit.brandId) continue;
+      const out: Record<string, unknown> = { brandId: fit.brandId };
+      if (fit.modelId) out.modelId = fit.modelId;
+      if (typeof fit.year === 'number') out.year = fit.year;
+      draft[key] = Object.fromEntries(Object.keys(out).sort().map((k) => [k, out[k]]));
+      continue;
+    }
+    if (isEmptyValue(value)) continue;
+    if (Array.isArray(value)) {
+      const set = sortedSet(value as string[]);
+      if (set.length) draft[key] = set;
+      continue;
+    }
+    draft[key] = value;
+  }
+  return Object.fromEntries(Object.keys(draft).sort().map((k) => [k, draft[k]])) as SearchFilters;
 }

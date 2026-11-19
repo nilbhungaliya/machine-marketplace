@@ -12,7 +12,8 @@ This kit follows the layout the ORA project runs in production.
 ## First deploy
 1. Point the API domain's DNS A record at the app server's Elastic IP; put that domain in `Caddyfile`.
 2. On the server: install Docker, clone the repo, then `cp .env.example infra/deploy/.env` and fill it
-   (`DATABASE_URL` → the DB box, strong `JWT_*` secrets, `NODE_ENV=production`, provider keys).
+   (`DATABASE_URL` → the DB box, strong `JWT_*` secrets, `DISCOVERY_CURSOR_SECRET` (at least 32 characters; required,
+   the API refuses to start without it), `NODE_ENV=production`, provider keys).
 3. `cd infra/deploy && docker compose up -d --build`. The api container applies pending
    migrations (`infra/migrations`) before it starts; a failed migration keeps it down.
 4. Seed the first admin once: `docker compose exec api node dist/db/seed.js`.

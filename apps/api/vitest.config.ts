@@ -22,9 +22,14 @@ if (!testDbName.endsWith('_test')) {
   throw new Error(`TEST_DATABASE_URL's database must be named *_test (got "${testDbName}"): tests delete and rewrite data.`);
 }
 
+// F4 + F5: discovery Redis keys (reader version key, rate-limit buckets) carry a prefix of this run; the setup file adds
+// the worker, so tests never touch the unprefixed (dev) keys and suites can delete their own.
+const runId = `${Date.now().toString(36)}${process.pid.toString(36)}`;
+
 export default defineConfig({
   test: {
     include: ['__tests__/**/*.test.ts', 'src/**/*.test.ts'],
+    setupFiles: ['./__tests__/_helpers/setup-env.ts'],
     env: {
       DATABASE_URL: testDatabaseUrl,
       REDIS_URL: testRedisUrl,
@@ -42,6 +47,13 @@ export default defineConfig({
       AWS_S3_PUBLIC_BUCKET: '',
       CLOUDFLARE_ZONE_ID: '',
       CLOUDFLARE_API_TOKEN: '',
+      // F4 + F5 (§4.8): a fixed test secret, whatever the developer's .env says; never used outside tests.
+      DISCOVERY_CURSOR_SECRET: 'test-only-discovery-cursor-secret-0123456789abcdef',
+      DISCOVERY_REDIS_PREFIX_RUN: runId,
+      // Discovery's per-user / install-id limits and its per-IP cap (R17): raised like RATE_LIMIT_MAX; the core suite
+      // lowers them for its own app.
+      DISCOVERY_RATE_LIMIT_MAX: '1000000',
+      DISCOVERY_IP_RATE_MAX: '1000000',
     },
     // Integration tests share ONE Postgres + Redis; parallel files trample each
     // other's fixtures. Every suite must delete what it inserts in afterAll.
