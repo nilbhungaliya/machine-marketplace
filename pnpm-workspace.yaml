@@ -13,6 +13,8 @@ overrides:
 # Packages allowed to run install scripts (pnpm 10+ blocks them by default).
 # Add more with `pnpm approve-builds <pkg>`.
 allowBuilds:
+  '@firebase/util': false
   '@sentry/cli': true
   esbuild: true
+  protobufjs: false
   unrs-resolver: true
