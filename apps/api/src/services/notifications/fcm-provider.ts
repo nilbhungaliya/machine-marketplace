@@ -1,5 +1,5 @@
 import type { App } from 'firebase-admin/app';
-import type { PushMessage, PushProvider, PushResult } from './push-provider.js';
+import type { FirebaseServiceAccount, PushMessage, PushProvider, PushResult } from './push-provider.js';
 
 /**
  * Firebase Cloud Messaging (HTTP v1) through `firebase-admin` (F6 + F7 spec §11.5; ported from textile
@@ -27,14 +27,15 @@ export function classifyFcmError(err: unknown): PushResult {
   return { kind: 'retry', error: label };
 }
 
-export function createFcmProvider(serviceAccountJson: string): PushProvider {
+/** `account` is already validated by `parseServiceAccount` (push-provider.ts). */
+export function createFcmProvider(account: FirebaseServiceAccount): PushProvider {
   let app: App | null = null;
   const appFor = async (): Promise<App> => {
     const { cert, getApp, initializeApp } = await import('firebase-admin/app');
     try {
       return getApp(APP_NAME);
     } catch {
-      return initializeApp({ credential: cert(JSON.parse(serviceAccountJson)) }, APP_NAME);
+      return initializeApp({ credential: cert(account as Parameters<typeof cert>[0]) }, APP_NAME);
     }
   };
   return {

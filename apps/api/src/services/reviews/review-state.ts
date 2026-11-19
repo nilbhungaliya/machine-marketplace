@@ -110,7 +110,8 @@ export async function reviewStateFor(
   let reason: ReviewState['reason'] = null;
   if (mine) reason = 'submitted';
   else if (deal.status !== 'completed' || windowEnds === null) reason = 'not_completed';
-  else if (theirs?.publishedAt) reason = 'other_published';
+  // Published, or due by the database clock even before the `review-publish` job runs (§10.3).
+  else if (theirs && (theirs.publishedAt || now.getTime() >= theirs.publishDueAt.getTime())) reason = 'other_published';
   else if (now.getTime() >= windowEnds.getTime()) reason = 'window_closed';
   else if (memberRole === 'viewer') reason = 'viewer';
 

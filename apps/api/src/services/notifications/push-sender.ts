@@ -25,6 +25,8 @@ const LEASE = sql`interval '2 minutes'`;
 /** Gaps after the 1st–4th failed attempt; the 5th failure is `failed`. */
 export const PUSH_BACKOFF_SECONDS = [15, 60, 300, 1800] as const;
 export const PUSH_MAX_ATTEMPTS = PUSH_BACKOFF_SECONDS.length + 1;
+/** One provider call longer than this counts as a transient error. */
+export const PUSH_SEND_TIMEOUT_MS = 10_000;
 
 export type PushApp = TxApp & { redis?: Redis };
 
@@ -103,8 +105,11 @@ export function pushMessageFor(
   return { token, title, body, tag, data };
 }
 
-/** One run of the `notification-push` job. `opts.provider` replaces the env's provider (tests). */
-export async function sendDuePushes(app: PushApp, opts: { provider?: PushProvider } = {}): Promise<PushRunResult> {
+/** One run of the `notification-push` job. `opts.provider` / `sendTimeoutMs` replace the defaults (tests). */
+export async function sendDuePushes(
+  app: PushApp,
+  opts: { provider?: PushProvider; sendTimeoutMs?: number } = {},
+): Promise<PushRunResult> {
   const result: PushRunResult = { sent: 0, skipped: 0, failed: 0, retried: 0 };
   const claimed = await claim(app);
   if (claimed.length === 0) return result;
@@ -141,11 +146,18 @@ export async function sendDuePushes(app: PushApp, opts: { provider?: PushProvide
       }
 
       let outcome: PushResult;
+      let timer: NodeJS.Timeout | undefined;
       try {
-        outcome = await provider.send(pushMessageFor(n, delivery, row.token, row.language));
+        // A hung provider call must not hold the batch: past the timeout it is retried (same delivery key).
+        const timeout = new Promise<PushResult>((resolve) => {
+          timer = setTimeout(() => resolve({ kind: 'retry', error: 'timeout' }), opts.sendTimeoutMs ?? PUSH_SEND_TIMEOUT_MS);
+        });
+        outcome = await Promise.race([provider.send(pushMessageFor(n, delivery, row.token, row.language)), timeout]);
       } catch {
         // Unknown: the provider may have accepted it. Retried with the same delivery key, which the app drops.
         outcome = { kind: 'retry', error: 'send_threw' };
+      } finally {
+        clearTimeout(timer);
       }
 
       switch (outcome.kind) {

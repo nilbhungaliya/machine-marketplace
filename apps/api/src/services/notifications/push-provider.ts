@@ -48,17 +48,55 @@ export const devPushStub: PushProvider = { name: 'dev', send: async () => ({ kin
 export const offPushProvider: PushProvider = { name: 'off', send: async () => ({ kind: 'skipped' }) };
 
 type Env = Record<string, string | undefined>;
+type Warn = (message: string) => void;
 
-/** FCM when `FIREBASE_SERVICE_ACCOUNT_B64` is set, else the dev stub outside production, else `off`. */
-export function pushProviderFromEnv(env: Env = process.env): PushProvider {
-  const b64 = env.FIREBASE_SERVICE_ACCOUNT_B64?.trim();
-  if (b64) return createFcmProvider(Buffer.from(b64, 'base64').toString('utf8'));
-  return env.NODE_ENV === 'production' ? offPushProvider : devPushStub;
+export interface FirebaseServiceAccount {
+  project_id: string;
+  client_email: string;
+  private_key: string;
+  [key: string]: unknown;
 }
 
-/** True when production runs without push credentials: `index.ts` logs one warning at boot. */
+/**
+ * The service account from `FIREBASE_SERVICE_ACCOUNT_B64`: base64 of a JSON object with non-empty `project_id`,
+ * `client_email` and `private_key`. Null when unset or malformed (the value itself is never logged).
+ */
+export function parseServiceAccount(env: Env = process.env): FirebaseServiceAccount | null {
+  const b64 = env.FIREBASE_SERVICE_ACCOUNT_B64?.trim();
+  if (!b64) return null;
+  try {
+    const parsed = JSON.parse(Buffer.from(b64, 'base64').toString('utf8')) as Record<string, unknown>;
+    const ok = (k: string) => typeof parsed?.[k] === 'string' && (parsed[k] as string).trim() !== '';
+    return ok('project_id') && ok('client_email') && ok('private_key') ? (parsed as FirebaseServiceAccount) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Set but unusable: `index.ts` and the provider warn once, and push behaves as without keys. */
+export function serviceAccountMalformed(env: Env = process.env): boolean {
+  return Boolean(env.FIREBASE_SERVICE_ACCOUNT_B64?.trim()) && parseServiceAccount(env) === null;
+}
+
+const noKeys = (env: Env): PushProvider => (env.NODE_ENV === 'production' ? offPushProvider : devPushStub);
+
+/**
+ * FCM when `FIREBASE_SERVICE_ACCOUNT_B64` holds a valid service account; else the dev stub outside production, else
+ * `off`. A malformed value warns once (`warn`, never the value) and falls back to that no-keys behaviour, so a bad key
+ * doesn't fail and retry every push.
+ */
+export function pushProviderFromEnv(env: Env = process.env, warn: Warn = (m) => console.warn(m)): PushProvider {
+  const account = parseServiceAccount(env);
+  if (account) return createFcmProvider(account);
+  if (serviceAccountMalformed(env)) {
+    warn('FIREBASE_SERVICE_ACCOUNT_B64 is not a valid base64 service-account JSON (project_id, client_email, private_key): push treated as unconfigured');
+  }
+  return noKeys(env);
+}
+
+/** True when production can't push (no or malformed credentials): `index.ts` logs one warning at boot. */
 export function pushOffInProduction(env: Env = process.env): boolean {
-  return env.NODE_ENV === 'production' && !env.FIREBASE_SERVICE_ACCOUNT_B64?.trim();
+  return env.NODE_ENV === 'production' && parseServiceAccount(env) === null;
 }
 
 let provider: PushProvider | null = null;

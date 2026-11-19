@@ -24,7 +24,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 /**
  * `POST /reviews/:id/report`. Published, not hidden reviews only (`404 REVIEW_NOT_FOUND`; unpublished
  * `409 REVIEW_NOT_PUBLISHED`); one open report per business and review (`409 REPORT_EXISTS`, the F2 partial unique
- * index); 10 reports per user per 24 h across targets (`429 REPORT_LIMIT`, as F2). Queues `report:new` to moderators.
+ * index); 10 reports per user per 24 h across targets (`429 REPORT_LIMIT`, as F2). Queues `report:new` to moderators and support.
  */
 export async function reportReview(
   tx: Tx,
@@ -76,7 +76,8 @@ export async function reportReview(
     if (isUniqueViolation(err, 'reports_one_open_uq')) throw exists();
     throw err;
   }
-  queueAdminEmit(tx, 'moderator', 'report:new', { reportId, target: 'review', targetId: reviewId });
+  // §16.2: report queues are read by moderators and support.
+  for (const role of ['moderator', 'support'] as const) queueAdminEmit(tx, role, 'report:new', { reportId, target: 'review', targetId: reviewId });
   return { reported: true };
 }
 

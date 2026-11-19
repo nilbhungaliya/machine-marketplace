@@ -133,8 +133,10 @@ export async function submitReview(
   const existing = await tx.select().from(dealReviews).where(eq(dealReviews.dealId, deal.id)).for('update');
   if (existing.some((r) => r.reviewerSide === side)) throw new ConflictError('This deal already has your review', 'REVIEW_EXISTS');
   const theirs = existing.find((r) => r.reviewerSide !== side);
-  if (theirs?.publishedAt) {
-    throw new ConflictError('The time to review this deal has ended', 'REVIEW_WINDOW_CLOSED', { windowEndsAt: theirs.publishedAt.toISOString() });
+  // The other side's single review is public (or due, even before the job runs): this side can no longer review.
+  if (theirs && (theirs.publishedAt || now.getTime() >= theirs.publishDueAt.getTime())) {
+    const closedAt = theirs.publishedAt ?? theirs.publishDueAt;
+    throw new ConflictError('The time to review this deal has ended', 'REVIEW_WINDOW_CLOSED', { windowEndsAt: closedAt.toISOString() });
   }
 
   const answers = validateReviewInput(side, input);

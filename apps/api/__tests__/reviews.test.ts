@@ -136,6 +136,16 @@ describe('blind publishing (§10.3)', () => {
     await expect(submit(seller, dealId, { ratings: SELLER_RATINGS })).rejects.toMatchObject({ statusCode: 409, code: 'REVIEW_WINDOW_CLOSED' });
   });
 
+  it('closes the other side once the single review is due, even before the job publishes it', async () => {
+    const dealId = await completedDeal();
+    await submit(buyer, dealId, { ratings: BUYER_RATINGS });
+    await db.update(dealReviews).set({ publishDueAt: sql`now() - interval '1 minute'` }).where(eq(dealReviews.dealId, dealId));
+    expect((await getReviewState(db, asUser(seller), dealId)).reason).toBe('other_published');
+    await expect(submit(seller, dealId, { ratings: SELLER_RATINGS })).rejects.toMatchObject({ statusCode: 409, code: 'REVIEW_WINDOW_CLOSED' });
+    expect((await reviewsOf(dealId)).every((r) => r.publishedAt === null)).toBe(true);
+    await publishDueReviews(txApp);
+  });
+
   it('dues a first review on day 10 at completion + 14 days, not submission + 7', async () => {
     const dealId = await completedDeal();
     await db.update(deals).set({ completedAt: sql`now() - interval '10 days'` }).where(eq(deals.id, dealId));

@@ -86,6 +86,13 @@ describe('providers (opt-in, §11.5)', () => {
   it('records sent_dev without keys outside production, and skipped in production', async () => {
     expect(pushProviderFromEnv({ NODE_ENV: 'test' }).name).toBe('dev');
     expect(pushProviderFromEnv({ NODE_ENV: 'production' }).name).toBe('off');
+    // A malformed key warns once without its value and behaves as no keys.
+    const warnings: string[] = [];
+    const bad = Buffer.from(JSON.stringify({ project_id: 'p', client_email: 'e' })).toString('base64');
+    expect(pushProviderFromEnv({ NODE_ENV: 'production', FIREBASE_SERVICE_ACCOUNT_B64: bad }, (m) => warnings.push(m)).name).toBe('off');
+    expect(pushProviderFromEnv({ NODE_ENV: 'test', FIREBASE_SERVICE_ACCOUNT_B64: 'not base64 json' }, (m) => warnings.push(m)).name).toBe('dev');
+    expect(warnings).toHaveLength(2);
+    expect(warnings.join(' ')).not.toContain(bad);
 
     const dev = await queued(buyer.businessId);
     await sendDuePushes(pushApp, { provider: pushProviderFromEnv({ NODE_ENV: 'development' }) });
@@ -150,6 +157,15 @@ describe('sendDuePushes', () => {
     }
     const [last] = await deliveriesOf(ids);
     expect(last).toMatchObject({ state: 'failed', attempts: 5, lastError: 'messaging/internal-error' });
+  });
+
+  it('retries a provider call that hangs past the timeout', async () => {
+    const ids = await queued(buyer.businessId);
+    const hung: PushProvider = { name: 'fcm', send: () => new Promise<PushResult>(() => undefined) };
+    await sendDuePushes(pushApp, { provider: hung, sendTimeoutMs: 50 });
+    const [d] = await deliveriesOf(ids);
+    expect(d).toMatchObject({ state: 'queued', attempts: 1, lastError: 'timeout' });
+    await db.update(notificationDeliveries).set({ state: 'failed' }).where(inArray(notificationDeliveries.notificationId, ids));
   });
 
   it('deletes the device of an invalid token', async () => {

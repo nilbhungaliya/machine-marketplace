@@ -1,11 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { FastifyInstance } from 'fastify';
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import { LANGUAGES, NOTIFICATION_TYPES } from '@mpm/shared-types';
 import { buildApp } from '../src/app.js';
 import { db } from '../src/db/index.js';
-import { notificationDeliveries, notifications, userDevices, users } from '../src/db/schema.js';
+import { chatThreads, notificationDeliveries, notifications, userDevices, users } from '../src/db/schema.js';
 import { runTx, type TxApp } from '../src/lib/tx-effects.js';
 import { markChatNotificationRead, upsertChatNotification } from '../src/services/notifications/chat-rows.js';
 import { notify } from '../src/services/notifications/notify.js';
@@ -89,10 +89,18 @@ describe('grouped chat rows (§11.2)', () => {
     const t = await thread();
     const install = randomUUID();
     await db.insert(userDevices).values({ userId: seller.userId, installId: `i-${install}`, fcmToken: `tok-${install}`, platform: 'android' });
-    await Promise.all([
-      runTx(txApp, (tx) => upsertChatNotification(tx, { thread: t, recipientBusinessId: seller.businessId, senderBusinessName: NAME, seq: 1 })),
-      runTx(txApp, (tx) => upsertChatNotification(tx, { thread: t, recipientBusinessId: seller.businessId, senderBusinessName: NAME, seq: 2 })),
-    ]);
+    // As in production (L1): each message allocates its seq under the thread row lock in the transaction that upserts
+    // the row, so seqs commit in order whichever call starts first.
+    const send = () =>
+      runTx(txApp, async (tx) => {
+        const [{ seq }] = await tx
+          .update(chatThreads)
+          .set({ lastMessageSeq: sql`${chatThreads.lastMessageSeq} + 1` })
+          .where(eq(chatThreads.id, t.id))
+          .returning({ seq: chatThreads.lastMessageSeq }) as [{ seq: number }];
+        await upsertChatNotification(tx, { thread: t, recipientBusinessId: seller.businessId, senderBusinessName: NAME, seq });
+      });
+    await Promise.all([send(), send()]);
     let rows = await openChatRows(seller.userId, t.id);
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({ unreadCount: 2, version: 2, lastSeq: 2, readAt: null });
