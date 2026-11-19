@@ -16,7 +16,7 @@ interface ReviewsListProps {
   fetchPage: (cursor: string | null) => Promise<SellerReviewsPage>;
   /** The reviewed seller is the reader's business: Reply on reviews without one (once, §10.5). */
   canReply: boolean;
-  /** Report a review (§10.6): false hides the action; returns false when the reader must sign in first. */
+  /** Report a review (§10.6), the reviewed seller too; returns false when the reader must sign in first. */
   onReportPress?: () => boolean;
   scoreTitle?: string;
 }
@@ -77,7 +77,7 @@ export default function ReviewsList({ queryKey, fetchPage, canReply, onReportPre
           <ReviewItem
             review={item}
             onReply={canReply && !item.reply && !item.hidden ? () => setReplying(item) : undefined}
-            onReport={onReportPress && !canReply ? () => { if (onReportPress()) setReporting(item.id); } : undefined}
+            onReport={onReportPress ? () => { if (onReportPress()) setReporting(item.id); } : undefined}
           />
         )}
         ListFooterComponent={pages.hasNextPage ? (

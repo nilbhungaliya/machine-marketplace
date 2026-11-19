@@ -183,6 +183,9 @@ export async function markPushAsked(): Promise<void> {
 }
 
 /** Opens the explainer over the current screen. */
-export function openPushExplainer(trigger: PushAskTrigger): void {
-  if (navigationRef.isReady()) navigationRef.navigate('PermissionExplainer', { trigger });
+/** Opens the explainer; false when navigation isn't ready (nothing shown, so the one ask isn't spent). */
+export function openPushExplainer(trigger: PushAskTrigger): boolean {
+  if (!navigationRef.isReady()) return false;
+  navigationRef.navigate('PermissionExplainer', { trigger });
+  return true;
 }

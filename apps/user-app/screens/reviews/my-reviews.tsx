@@ -16,7 +16,13 @@ export default function MyReviewsScreen(_props: RootStackScreenProps<'MyReviews'
   return (
     <ScreenWrapper>
       <Header title={t('reviews.title')} />
-      <ReviewsList queryKey={qk.myReviews()} fetchPage={fetchMyReviews} canReply scoreTitle={t('reviews.myScore')} />
+      <ReviewsList
+        queryKey={qk.myReviews()}
+        fetchPage={fetchMyReviews}
+        canReply
+        onReportPress={() => true}
+        scoreTitle={t('reviews.myScore')}
+      />
     </ScreenWrapper>
   );
 }

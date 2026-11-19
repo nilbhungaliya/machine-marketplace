@@ -34,8 +34,8 @@ export async function askPushOnce(trigger: PushAskTrigger): Promise<void> {
     if (decision === 'register') {
       void registerForPush();
     } else if (decision === 'explain') {
-      await markPushAsked();
-      openPushExplainer(trigger);
+      // Spend the one ask only when the explainer actually opened.
+      if (openPushExplainer(trigger)) await markPushAsked();
     }
   } catch {
     // No explainer this time; nothing else lost.

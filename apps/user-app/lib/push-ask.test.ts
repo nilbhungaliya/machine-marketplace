@@ -7,7 +7,8 @@ vi.mock('./push', () => ({
   registerForPush: vi.fn(),
 }));
 
-import { PUSH_ASK_TRIGGERS, shouldAskPush } from './push-ask';
+import { markPushAsked, openPushExplainer, readPushAskState } from './push';
+import { askPushOnce, PUSH_ASK_TRIGGERS, shouldAskPush } from './push-ask';
 
 const fresh = { asked: false, granted: false, canAskAgain: true };
 
@@ -29,5 +30,18 @@ describe('shouldAskPush (§11.6)', () => {
 
   it("doesn't explain after a firm no (Android can't ask again)", () => {
     expect(shouldAskPush({ trigger: 'offer', ...fresh, canAskAgain: false })).toBe('none');
+  });
+});
+
+describe('askPushOnce', () => {
+  it('spends the one ask only when the explainer opened', async () => {
+    vi.mocked(readPushAskState).mockResolvedValue(fresh);
+    vi.mocked(openPushExplainer).mockReturnValueOnce(false);
+    await askPushOnce('publish');
+    expect(markPushAsked).not.toHaveBeenCalled();
+
+    vi.mocked(openPushExplainer).mockReturnValueOnce(true);
+    await askPushOnce('publish');
+    expect(markPushAsked).toHaveBeenCalledTimes(1);
   });
 });

@@ -38,7 +38,13 @@ export function useMarkNotificationRead() {
         old ? { ...old, pages: old.pages.map((p) => ({ ...p, items: p.items.map((n) => (n.id === id ? { ...n, read: true } : n)) })) } : old,
       );
     },
-    onSuccess: ({ unreadCount }) => setUnreadCount(qc, unreadCount),
+    onSuccess: ({ unreadCount }) => {
+      setUnreadCount(qc, unreadCount);
+      // The list's own count drives "Mark all as read": hide it once nothing is unread.
+      qc.setQueryData<{ pages: NotificationsPage[]; pageParams: unknown[] }>(qk.notifications(), (old) =>
+        old ? { ...old, pages: old.pages.map((p, i) => (i === 0 ? { ...p, unreadCount } : p)) } : old,
+      );
+    },
     onSettled: () => void qc.invalidateQueries({ queryKey: qk.badges() }),
   });
 }
