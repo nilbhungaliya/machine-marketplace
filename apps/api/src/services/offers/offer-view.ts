@@ -34,27 +34,37 @@ export interface ChainContext {
   buyerLatestPaise: number | null;
   /** S: the seller's latest price — the asking snapshot until the seller counters, or the quote. */
   sellerLatestPaise: number | null;
+  /** Quantity of the buyer's / seller's own latest row; null when that side has no row yet. */
+  buyerLatestQuantity: string | null;
+  sellerLatestQuantity: string | null;
   unit: { key: string; label: string; decimals: number } | null;
 }
 
 /** Reads the negotiation's rows and its unit (one query each). */
 export async function chainContext(conn: Conn, row: Pick<OfferRow, 'negotiationId' | 'unitId'>): Promise<ChainContext> {
   const rows = await conn
-    .select({ round: offers.round, kind: offers.kind, senderSide: offers.senderSide, price: offers.pricePerUnitPaise, asking: offers.askingPricePaise })
+    .select({ round: offers.round, kind: offers.kind, senderSide: offers.senderSide, price: offers.pricePerUnitPaise, quantity: offers.quantity, asking: offers.askingPricePaise })
     .from(offers)
     .where(eq(offers.negotiationId, row.negotiationId))
     .orderBy(asc(offers.round), asc(offers.createdAt));
   const opening = rows[0];
   let buyer: number | null = null;
   let seller: number | null = opening?.asking ?? null;
+  let buyerQty: string | null = null;
+  let sellerQty: string | null = null;
   for (const r of rows) {
-    if (r.senderSide === 'buyer') buyer = r.price;
-    else seller = r.price;
+    if (r.senderSide === 'buyer') {
+      buyer = r.price;
+      buyerQty = r.quantity;
+    } else {
+      seller = r.price;
+      sellerQty = r.quantity;
+    }
   }
   const unit = row.unitId
     ? ((await conn.select({ key: units.key, label: units.label, decimals: units.decimals }).from(units).where(eq(units.id, row.unitId)))[0] ?? null)
     : null;
-  return { openingKind: opening?.kind ?? 'offer', buyerLatestPaise: buyer, sellerLatestPaise: seller, unit };
+  return { openingKind: opening?.kind ?? 'offer', buyerLatestPaise: buyer, sellerLatestPaise: seller, buyerLatestQuantity: buyerQty, sellerLatestQuantity: sellerQty, unit };
 }
 
 /** The inclusive counter range for `side`, or null when no counter is possible (§7.4: buy-now, rounds used, empty). */

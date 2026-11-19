@@ -59,6 +59,11 @@ async function moveToBackup(tx: Tx, offer: OfferRow, actorSide: 'buyer' | 'selle
 
 export async function acceptOffer(tx: Tx, user: UserTokenPayload, offerId: string): Promise<AcceptResult> {
   const { listing, offer, reader, thread } = await lockOfferForAction(tx, user, offerId);
+  // Lost the race for the last units (the other accept moved this row to backup first): the same answer as a move.
+  if (offer.status === 'backup') {
+    const body = quantityNotAvailableBody(milliToQuantity(availableMilli(listing)));
+    throw new ConflictError(body.error, body.code, body.details);
+  }
   await assertOfferOpen(tx, offer);
   // Before the turn: a revived seller row is the seller's turn, and the buyer is told why it can't take it yet.
   if (offer.needsReconfirm) throw new ConflictError('The seller must reconfirm this offer first', 'OFFER_NEEDS_RECONFIRM');

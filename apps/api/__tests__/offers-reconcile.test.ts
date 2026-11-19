@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { and, count, eq, inArray } from 'drizzle-orm';
+import { and, count, eq, inArray, sql } from 'drizzle-orm';
 import { db } from '../src/db/index.js';
 import { chatMessages, listings, offers } from '../src/db/schema.js';
 import { runTx, type TxApp } from '../src/lib/tx-effects.js';
@@ -26,7 +26,7 @@ const linesIn = async (threadIds: string[]) =>
 
 beforeAll(async () => {
   w = await createOfferWorld(3);
-  restore = await setTestSettings({ offer_open_limit_unverified: 50, enquiry_new_per_day_unverified: 100 });
+  restore = await setTestSettings({ offer_open_limit_unverified: 50, enquiry_new_per_day_unverified: 100, offer_backup_max_days: 14 });
 });
 
 afterAll(async () => {
@@ -64,6 +64,21 @@ describe('backups and revive', () => {
     await reconcile(listingId);
     expect(await linesIn(threads)).toBe(lines);
     expect(await db.select().from(offers).where(inArray(offers.id, [b, c]))).toEqual(snapshot);
+  });
+
+  it('leaves lapsed rows for the expiry job: a past-due pending row is not moved to backup, an old backup is not revived', async () => {
+    const listingId = await offerListing(w, { quantity: '5' });
+    const a = await sendOffer(w.buyers[0]!.token, listingId, '3');
+    const lapsed = await sendOffer(w.buyers[1]!.token, listingId, '4');
+    await db.update(offers).set({ expiresAt: sql`now() - interval '1 minute'` }).where(eq(offers.id, lapsed));
+    const t = await insertTestThread({ listingId, buyerBusinessId: w.buyers[2]!.businessId, buyerUserId: w.buyers[2]!.userId });
+    const oldBackup = await insertTestOffer({ threadId: t.id, status: 'backup', pricePerUnitPaise: 90_000, quantity: '1' });
+    await db.update(offers).set({ backupSince: sql`now() - interval '15 days'` }).where(eq(offers.id, oldBackup.id));
+
+    expect((await post(w.seller.token, `/offers/${a}/accept`)).statusCode).toBe(200);
+    expect((await offerRow(lapsed)).status).toBe('pending');
+    // 2 left would fit the 1-unit backup, but it is past offer_backup_max_days (14).
+    expect((await offerRow(oldBackup.id)).status).toBe('backup');
   });
 
   it('a revived seller row needs reconfirming before the buyer can accept', async () => {

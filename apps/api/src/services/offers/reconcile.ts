@@ -1,9 +1,10 @@
-import { and, asc, eq, inArray, or, sql, type SQL } from 'drizzle-orm';
+import { and, asc, eq, gt, inArray, or, sql, type SQL } from 'drizzle-orm';
 import { quantityToMilli, type OfferCloseReason, type OfferKind } from '@mpm/shared-types';
 import type { Tx } from '../../db/index.js';
 import { listings, offers } from '../../db/schema.js';
 import { insertSystemLine, recomputeTurns } from '../chat/thread-lines.js';
 import { lockListingsInOrder } from '../deals/locks.js';
+import { getSettings } from '../settings.service.js';
 import { availableMilli, listingTakesOffers, loadThread, notifyOffer } from './offer.service.js';
 import { KIND_PRICE_MODEL } from './offer-rules.js';
 import { emitOfferUpdated, type OfferRow } from './offer-view.js';
@@ -78,6 +79,8 @@ export async function reconcileOffersForListing(tx: Tx, listingId: string): Prom
   await closeRows(tx, unfit, 'listing_changed');
 
   const available = availableMilli(listing);
+  // Past-due rows (a lapsed pending offer, a backup past its limit) are left for `offer-expiry`, never moved here.
+  const { offer_backup_max_days: backupDays } = await getSettings(tx);
   const changedThreads = new Map<string, OfferRow[]>();
   for (const row of open) {
     if (unfit.includes(row)) continue;
@@ -86,7 +89,7 @@ export async function reconcileOffersForListing(tx: Tx, listingId: string): Prom
       const [backup] = await tx
         .update(offers)
         .set({ status: 'backup', backupSince: sql`now()`, expiresAt: null, updatedAt: sql`now()` })
-        .where(and(eq(offers.id, row.id), eq(offers.status, 'pending')))
+        .where(and(eq(offers.id, row.id), eq(offers.status, 'pending'), gt(offers.expiresAt, sql`now()`)))
         .returning();
       if (!backup) continue;
       await insertSystemLine(tx, row.threadId, 'offer_backup', { offerId: row.id });
@@ -102,7 +105,13 @@ export async function reconcileOffersForListing(tx: Tx, listingId: string): Prom
           expiresAt: sql`now() + make_interval(hours => ${row.validityHours}::int)`,
           updatedAt: sql`now()`,
         })
-        .where(and(eq(offers.id, row.id), eq(offers.status, 'backup')))
+        .where(
+          and(
+            eq(offers.id, row.id),
+            eq(offers.status, 'backup'),
+            gt(offers.backupSince, sql`now() - make_interval(days => ${backupDays}::int)`),
+          ),
+        )
         .returning();
       if (!revived) continue;
       await insertSystemLine(tx, row.threadId, 'offer_revived', { offerId: row.id });

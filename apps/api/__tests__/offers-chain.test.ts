@@ -69,6 +69,12 @@ describe('counter', () => {
     // Buyer: B ≤ c < S.
     const tooHigh = await counter(buyerToken(), newQty.json().data.id, 100_000, '2');
     expect(tooHigh.json()).toMatchObject({ code: 'COUNTER_OUT_OF_BOUNDS', details: { min: 50_000, max: 99_999 } });
+    // Unchanged compares with the actor's own latest row (100 000 × 2), not the row it answers (60 000 × 3).
+    const buyerBack = await counter(buyerToken(), newQty.json().data.id, 60_000, '3');
+    expect(buyerBack.statusCode).toBe(200);
+    const repeat = await counter(sellerToken(), buyerBack.json().data.id, 100_000, '2');
+    expect([repeat.statusCode, repeat.json().code]).toEqual([400, 'COUNTER_UNCHANGED']);
+    expect((await counter(sellerToken(), buyerBack.json().data.id, 100_000, '3')).statusCode).toBe(200);
   });
 
   it('lets the buyer answer a quote anywhere from 1 paisa to just under it', async () => {

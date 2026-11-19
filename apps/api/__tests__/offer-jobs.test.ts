@@ -81,8 +81,9 @@ describe('offer-expiring-soon', () => {
   it('notifies the turn side once per expires_at, and again for a new expires_at (a revived offer)', async () => {
     const id = await sendOffer(await offerListing(w));
     await db.update(offers).set({ expiresAt: sql`now() + interval '2 hours'` }).where(eq(offers.id, id));
-    await notifyExpiringOffers(jobApp);
-    await notifyExpiringOffers(jobApp);
+    expect((await notifyExpiringOffers(jobApp)).notified).toBe(1);
+    // Already told for this expires_at: excluded from the scan.
+    expect((await notifyExpiringOffers(jobApp)).notified).toBe(0);
     expect(await expiringNotices(id)).toBe(1);
     const [row] = await db.select().from(notifications).where(and(eq(notifications.offerId, id), eq(notifications.type, 'offer_expiring')));
     expect(row!.businessId).toBe(w.seller.businessId);

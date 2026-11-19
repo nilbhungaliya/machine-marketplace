@@ -64,6 +64,8 @@ describe('accept', () => {
     const b = await sendOffer(w.buyers[1]!.token, listingId, '3');
     const results = await Promise.all([accept(a), accept(b)]);
     expect(results.map((r) => r.statusCode).sort()).toEqual([200, 409]);
+    const lost = results.find((r) => r.statusCode === 409)!;
+    expect(lost.json()).toMatchObject({ code: 'QUANTITY_NOT_AVAILABLE', details: { available: '0' } });
     expect(await dealsOf(listingId)).toHaveLength(1);
     const loser = results[0]!.statusCode === 409 ? a : b;
     expect((await offerRow(loser)).status).toBe('backup');

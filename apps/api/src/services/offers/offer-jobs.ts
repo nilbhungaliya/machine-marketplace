@@ -1,5 +1,5 @@
 import { and, asc, eq, gt, lte, or, sql } from 'drizzle-orm';
-import { offers } from '../../db/schema.js';
+import { notifications, offers } from '../../db/schema.js';
 import { Sentry } from '../../lib/sentry.js';
 import { runJobTx, type TxApp } from '../../lib/tx-effects.js';
 import { insertSystemLine, recomputeTurns } from '../chat/thread-lines.js';
@@ -68,30 +68,45 @@ export async function expireOffers(app: TxApp): Promise<{ expired: number }> {
 /**
  * `offer-expiring-soon` (5 min): one `offer_expiring` notification to the turn side of each `pending` row expiring
  * within `offer_expiring_notice_hours`. Dedupe key `offer_expiring:<offerId>:<expires_at>`, so a repeat run is a no-op
- * and a revived (or reconfirmed) offer with a new `expires_at` gets its own. No row locks: the dedupe key makes it once.
+ * and a revived (or reconfirmed) offer with a new `expires_at` gets its own. Rows already told are excluded in the scan;
+ * each row is re-read in its own transaction (still pending, same `expires_at`) before the notice. No row locks: the
+ * dedupe key makes it once.
  */
 export async function notifyExpiringOffers(app: TxApp): Promise<{ notified: number }> {
   const { offer_expiring_notice_hours: hours } = await getSettings(app.db);
+  // The dedupe key as SQL (`toISOString()` of the millisecond-truncated `expires_at`), so rows already told are skipped
+  // in the query and a large backlog can't starve the rest.
+  const dedupeKeySql = sql`'offer_expiring:' || ${offers.id}::text || ':' || to_char(${offers.expiresAt} AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')`;
   const rows = await app.db
-    .select()
+    .select({ id: offers.id, expiresAtText: sql<string>`${offers.expiresAt}::text` })
     .from(offers)
     .where(
       and(
         eq(offers.status, 'pending'),
         gt(offers.expiresAt, sql`now()`),
         lte(offers.expiresAt, sql`now() + make_interval(hours => ${hours}::int)`),
+        sql`NOT EXISTS (SELECT 1 FROM ${notifications} n WHERE n.offer_id = ${offers.id} AND n.type = 'offer_expiring' AND n.dedupe_key = ${dedupeKeySql})`,
       ),
     )
     .orderBy(asc(offers.expiresAt))
     .limit(1000);
   let notified = 0;
-  for (const row of rows) {
+  for (const c of rows) {
     try {
-      await runJobTx(app, (tx) => notifyOffer(tx, 'offer_expiring', row, row.turn, `offer_expiring:${row.id}:${row.expiresAt!.toISOString()}`));
-      notified++;
+      const sent = await runJobTx(app, async (tx) => {
+        // Re-read: still pending with the same `expires_at` (an answer, a revive or a reconfirm since the scan → skip).
+        const [row] = await tx
+          .select()
+          .from(offers)
+          .where(and(eq(offers.id, c.id), eq(offers.status, 'pending'), sql`${offers.expiresAt} = ${c.expiresAtText}::timestamptz`));
+        if (!row) return false;
+        await notifyOffer(tx, 'offer_expiring', row, row.turn, `offer_expiring:${row.id}:${row.expiresAt!.toISOString()}`);
+        return true;
+      });
+      if (sent) notified++;
     } catch (err) {
-      app.log.error({ err, offerId: row.id, job: 'offer-expiring-soon' }, 'expiring-soon notice failed on an offer');
-      Sentry.captureException(err, { tags: { job: 'offer-expiring-soon' }, extra: { offerId: row.id } });
+      app.log.error({ err, offerId: c.id, job: 'offer-expiring-soon' }, 'expiring-soon notice failed on an offer');
+      Sentry.captureException(err, { tags: { job: 'offer-expiring-soon' }, extra: { offerId: c.id } });
     }
   }
   return { notified };

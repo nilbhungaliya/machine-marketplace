@@ -384,7 +384,7 @@ export async function sendQuote(tx: Tx, user: UserTokenPayload, threadId: string
 /**
  * The turn side counters (§7.4): rounds left (`409 COUNTER_LIMIT` after 5), not on a buy-now chain
  * (`409 COUNTER_NOT_ALLOWED`), the price within `counterBounds` (`400 COUNTER_OUT_OF_BOUNDS { min, max }`), a change
- * (`400 COUNTER_UNCHANGED`: own latest price at the same quantity), the quantity within minimum and available. The old
+ * (`400 COUNTER_UNCHANGED`: the actor's own latest price and quantity), the quantity within minimum and available. The old
  * row → `countered`, a new `pending` row round + 1 with the turn swapped and a fresh validity.
  */
 export async function counterOffer(tx: Tx, user: UserTokenPayload, offerId: string, input: OfferTermsBody): Promise<OfferView> {
@@ -401,8 +401,11 @@ export async function counterOffer(tx: Tx, user: UserTokenPayload, offerId: stri
     throw new ValidationError('This price is outside the counter range', { min: bounds.minPaise, max: bounds.maxPaise }, 'COUNTER_OUT_OF_BOUNDS');
   }
   const quantity = checkQuantity(await listingForOffer(tx, listing), input.quantity, availableMilli(listing));
+  // Unchanged = the actor's own latest row's price and quantity; a side with no row yet (the seller against the asking
+  // snapshot) compares with the row it answers.
   const ownLatest = reader.side === 'buyer' ? ctx.buyerLatestPaise : ctx.sellerLatestPaise;
-  if (price === ownLatest && quantityToMilli(quantity) === quantityToMilli(offer.quantity)) {
+  const ownQuantity = (reader.side === 'buyer' ? ctx.buyerLatestQuantity : ctx.sellerLatestQuantity) ?? offer.quantity;
+  if (price === ownLatest && quantityToMilli(quantity) === quantityToMilli(ownQuantity)) {
     throw new ValidationError('Change the price or the quantity to counter', undefined, 'COUNTER_UNCHANGED');
   }
   const settings = await getSettings(tx);
