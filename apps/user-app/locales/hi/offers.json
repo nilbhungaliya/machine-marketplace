@@ -1,3 +1,138 @@
 {
-  "title": "ऑफ़र"
+  "title": "ऑफ़र",
+  "sheet": {
+    "title": {
+      "offer": "ऑफ़र दें",
+      "buy": "इस कीमत पर खरीदें",
+      "counter": "काउंटर ऑफ़र",
+      "quote": "कोटेशन भेजें"
+    },
+    "submit": {
+      "offer": "ऑफ़र भेजें",
+      "buy": "विक्रेता को भेजें",
+      "counter": "काउंटर भेजें",
+      "quote": "कोटेशन भेजें"
+    },
+    "sent": {
+      "offer": "ऑफ़र भेज दिया गया",
+      "buy": "विक्रेता को भेज दिया गया",
+      "counter": "काउंटर भेज दिया गया",
+      "quote": "कोटेशन भेज दिया गया"
+    },
+    "asks": "माँगी गई कीमत",
+    "theirOffer": "उनका ऑफ़र",
+    "theirPrice": "उनकी कीमत",
+    "yourPrice": "आपकी प्रति यूनिट कीमत",
+    "quotePrice": "आपकी प्रति यूनिट कीमत",
+    "buyLocked": "आप माँगी गई कीमत पर खरीदेंगे।",
+    "bounds": "{{min}} और {{max}} के बीच",
+    "quantity": "मात्रा",
+    "quantityIn": "मात्रा ({{unit}})",
+    "available": "{{qty}} उपलब्ध",
+    "minOrder": "न्यूनतम ऑर्डर {{qty}}",
+    "validity": "कितने समय तक मान्य",
+    "note": "नोट (वैकल्पिक)",
+    "noteHint": "छोटा नोट लिखें",
+    "total": "कुल",
+    "percentBelow": "माँगी गई कीमत से {{percent}}% कम",
+    "optionsError": "ऑफ़र कितने समय तक खुला रह सकता है, यह लोड नहीं हो सका।"
+  },
+  "validity": {
+    "hours_one": "{{count}} घंटा",
+    "hours_other": "{{count}} घंटे",
+    "days_one": "{{count}} दिन",
+    "days_other": "{{count}} दिन"
+  },
+  "error": {
+    "priceRequired": "कीमत लिखें",
+    "priceInvalid": "सही कीमत लिखें",
+    "priceAboveAsking": "आपका ऑफ़र माँगी गई कीमत {{price}} से ज़्यादा नहीं हो सकता",
+    "counterOutOfBounds": "आपका काउंटर {{min}} और {{max}} के बीच होना चाहिए",
+    "counterUnchanged": "काउंटर के लिए कीमत या मात्रा बदलें",
+    "quantityRequired": "मात्रा लिखें",
+    "quantityInvalid": "सही मात्रा लिखें",
+    "quantityDecimals_one": "अधिकतम {{count}} दशमलव अंक लिखें",
+    "quantityDecimals_other": "अधिकतम {{count}} दशमलव अंक लिखें",
+    "quantityBelowMinimum": "न्यूनतम ऑर्डर {{qty}} है",
+    "quantityNotAvailable": "सिर्फ़ {{qty}} उपलब्ध है",
+    "noteTooLong": "नोट बहुत लंबा है",
+    "rejectNoteTooLong": "कारण {{max}} अक्षरों से कम रखें"
+  },
+  "gst": {
+    "extra": "+ GST",
+    "included": "GST सहित"
+  },
+  "card": {
+    "title": {
+      "mine": {
+        "offer": "आपका ऑफ़र",
+        "counter": "आपका काउंटर",
+        "quote": "आपका कोटेशन",
+        "buy": "आपकी खरीद की माँग"
+      },
+      "theirs": {
+        "offer": "ऑफ़र",
+        "counter": "काउंटर ऑफ़र",
+        "quote": "कोटेशन",
+        "buy": "खरीद की माँग"
+      }
+    },
+    "status": {
+      "reconfirmSeller": "फिर से पुष्टि करें",
+      "reconfirmBuyer": "विक्रेता का इंतज़ार",
+      "respondIn": "{{hours}} घंटे में जवाब दें",
+      "yourTurn": "आपकी बारी",
+      "waiting": "इंतज़ार",
+      "backup": "बैकअप",
+      "accepted": "स्वीकार",
+      "countered": "काउंटर हुआ",
+      "rejected": "अस्वीकार",
+      "withdrawn": "वापस लिया",
+      "expired": "समय खत्म",
+      "closed": "बंद"
+    },
+    "reconfirmSeller": "इस ऑफ़र के बाद लिस्टिंग बदली है। पुष्टि करें कि आप अब भी ये शर्तें मानते हैं।",
+    "reconfirmBuyer": "लिस्टिंग बदली है। विक्रेता को यह ऑफ़र फिर से पक्का करना होगा।",
+    "limit": "यह आखिरी राउंड है: स्वीकार या अस्वीकार करें।",
+    "backupBuyer": "स्टॉक दूसरी डील में होल्ड पर है। आपका ऑफ़र बैकअप के रूप में रहेगा और स्टॉक खाली होने पर स्वीकार हो सकता है।",
+    "backupSeller": "बैकअप के रूप में रखा है: स्टॉक खाली होने पर आप इसे स्वीकार कर सकते हैं।",
+    "closedReason": {
+      "listing_unavailable": "लिस्टिंग अब उपलब्ध नहीं है, इसलिए बंद किया गया।",
+      "listing_changed": "लिस्टिंग बदल गई, इसलिए बंद किया गया।",
+      "blocked": "चैट ब्लॉक हुई, इसलिए बंद किया गया।",
+      "account_inactive": "एक खाता अब सक्रिय नहीं है, इसलिए बंद किया गया।"
+    },
+    "price": "कीमत",
+    "quantity": "मात्रा",
+    "total": "कुल",
+    "percentBelowYours": "आपकी कीमत से {{percent}}% कम",
+    "percentBelowAsking": "माँगी गई कीमत से {{percent}}% कम",
+    "quoted": "“{{note}}”",
+    "scam": "सावधान रहें: बिना जाँचे किसी को एडवांस न दें और कभी OTP न बताएँ।",
+    "rejectNote": "कारण: {{note}}",
+    "round": "राउंड {{round}} / {{max}}",
+    "validFor": "{{validity}} तक मान्य",
+    "accept": "स्वीकार करें",
+    "counter": "काउंटर करें",
+    "reject": "अस्वीकार करें",
+    "withdraw": "वापस लें",
+    "reconfirm": "फिर से पुष्टि करें"
+  },
+  "actions": {
+    "acceptTitle": "यह ऑफ़र स्वीकार करें?",
+    "acceptBody": "{{qty}}, {{price}} पर, कुल {{total}}। यह डील बन जाएगी और मात्रा होल्ड पर चली जाएगी।",
+    "accepted": "ऑफ़र स्वीकार: डील बन गई",
+    "withdrawTitle": "अपना ऑफ़र वापस लें?",
+    "withdrawBody": "दूसरा पक्ष इसे फिर स्वीकार नहीं कर पाएगा।",
+    "withdrawBackupBody": "आपका बैकअप ऑफ़र हटा दिया जाएगा।",
+    "withdrawn": "ऑफ़र वापस लिया गया",
+    "reconfirmTitle": "यह ऑफ़र फिर से पक्का करें?",
+    "reconfirmBody": "ऑफ़र भेजने के बाद लिस्टिंग बदली है। पुष्टि करें कि आप अब भी ये शर्तें मानते हैं।",
+    "reconfirmed": "ऑफ़र पक्का किया गया",
+    "rejectTitle": "यह ऑफ़र अस्वीकार करें?",
+    "rejectNote": "कारण (वैकल्पिक)",
+    "rejectConfirm": "ऑफ़र अस्वीकार करें",
+    "rejected": "ऑफ़र अस्वीकार किया गया",
+    "notAvailable": "अभी सिर्फ़ {{qty}} खाली है। ऑफ़र बैकअप के रूप में रखा गया है।"
+  }
 }

@@ -1,5 +1,252 @@
 {
   "title": "मेरी डील",
   "emptyTitle": "अभी कोई डील नहीं",
-  "emptySubtitle": "तय हुआ ऑफ़र एक डील बन जाता है, जिसे आप पूरा होने तक ट्रैक कर सकते हैं।"
+  "emptySubtitle": "तय हुआ ऑफ़र एक डील बन जाता है, जिसे आप पूरा होने तक ट्रैक कर सकते हैं।",
+  "tabs": {
+    "active": "चालू",
+    "completed": "पूरी",
+    "cancelled": "रद्द",
+    "activeCount_one": "चालू {{count}}",
+    "activeCount_other": "चालू {{count}}",
+    "completedCount_one": "पूरी {{count}}",
+    "completedCount_other": "पूरी {{count}}",
+    "cancelledCount_one": "रद्द {{count}}",
+    "cancelledCount_other": "रद्द {{count}}"
+  },
+  "sides": {
+    "all": "सभी",
+    "buying": "खरीद",
+    "selling": "बिक्री"
+  },
+  "list": {
+    "errorTitle": "डील लोड नहीं हो सकीं",
+    "errorBody": "अपना इंटरनेट देखें और फिर से कोशिश करें।",
+    "empty": {
+      "active": "कोई चालू डील नहीं",
+      "completed": "अभी कोई पूरी डील नहीं",
+      "cancelled": "कोई रद्द डील नहीं"
+    }
+  },
+  "row": {
+    "buying": "खरीद · {{total}}",
+    "selling": "बिक्री · {{total}}",
+    "yourTurn": "आपकी बारी"
+  },
+  "status": {
+    "agreed": "तय",
+    "handed_over": "सौंप दिया",
+    "completed": "पूरी",
+    "disputed": "समस्या बताई गई",
+    "cancelled": "रद्द"
+  },
+  "actions": {
+    "hand_over": "सौंप दिया दर्ज करें",
+    "confirm_received": "मिल गया, पुष्टि करें",
+    "cancel": "डील रद्द करें",
+    "report_problem": "समस्या बताएँ",
+    "request_cancel": "रद्द करने का अनुरोध करें"
+  },
+  "actor": {
+    "buyer": "खरीदार",
+    "seller": "विक्रेता",
+    "system": "अपने आप",
+    "support": "सपोर्ट"
+  },
+  "cancelledBy": {
+    "buyer": "खरीदार ने रद्द की",
+    "seller": "विक्रेता ने रद्द की",
+    "both": "दोनों पक्षों ने रद्द की",
+    "system": "अपने आप रद्द हुई"
+  },
+  "cancelReason": {
+    "no_longer_needed": "अब ज़रूरत नहीं",
+    "found_elsewhere": "कहीं और मिल गया",
+    "seller_not_responding": "विक्रेता जवाब नहीं दे रहे",
+    "buyer_not_responding": "खरीदार जवाब नहीं दे रहे",
+    "payment_not_received": "पेमेंट नहीं मिला",
+    "stock_problem": "स्टॉक में समस्या",
+    "other": "अन्य",
+    "listing_removed": "लिस्टिंग हटा दी गई",
+    "support_closed": "सपोर्ट ने बंद की"
+  },
+  "category": {
+    "not_as_described": "बताए अनुसार नहीं",
+    "damaged": "टूटा-फूटा",
+    "short_quantity": "मात्रा कम",
+    "not_received": "नहीं मिला",
+    "payment_not_received": "पेमेंट नहीं मिला",
+    "other": "अन्य"
+  },
+  "outcome": {
+    "completed": "डील पूरी हुई",
+    "cancelled": "डील रद्द हुई",
+    "resumed": "डील जारी है"
+  },
+  "payment": {
+    "bank": "बैंक ट्रांसफ़र",
+    "upi": "UPI",
+    "cash": "नकद",
+    "credit": "उधार"
+  },
+  "fulfilment": {
+    "pickup": "खुद ले जाना",
+    "delivery": "डिलीवरी"
+  },
+  "completedHow": {
+    "buyer_confirmed": "खरीदार ने मिलने की पुष्टि की।",
+    "auto": "सौंपने के बाद अपने आप पूरी हुई।",
+    "support": "सपोर्ट ने पूरी की।"
+  },
+  "timeline": {
+    "title": "टाइमलाइन",
+    "agreed": "डील तय हुई",
+    "notes_changed": "नोट बदले गए · {{actor}}",
+    "handed_over": "सौंप दिया",
+    "received": "मिलने की पुष्टि हुई",
+    "auto_completed": "अपने आप पूरी हुई",
+    "cancel_requested": "रद्द करने का अनुरोध · {{actor}}",
+    "cancel_request_withdrawn": "रद्द करने का अनुरोध हटाया · {{actor}}",
+    "cancelled": "रद्द · {{reason}}",
+    "problem_reported": "समस्या बताई गई · {{category}}",
+    "dispute_resolved": "समस्या सुलझी: {{outcome}}",
+    "contact_shared": "नंबर शेयर किया · {{actor}}",
+    "next": {
+      "handOver": "सौंपना · इंतज़ार",
+      "complete": "पूरी होगी",
+      "reviews": "रिव्यू"
+    }
+  },
+  "card": {
+    "title": "डील #{{ref}}",
+    "terms": "{{qty}}, {{price}} पर · कुल {{total}}",
+    "total": "कुल {{total}}"
+  },
+  "record": {
+    "title": "डील",
+    "goneTitle": "डील नहीं मिली",
+    "gstVerified": "GST सत्यापित",
+    "withSeller": "विक्रेता: {{name}}",
+    "withBuyer": "खरीदार: {{name}}",
+    "terms": "तय शर्तें",
+    "price": "कीमत",
+    "each": "{{price}} प्रति यूनिट",
+    "quantity": "मात्रा",
+    "total": "कुल",
+    "payment": "पेमेंट",
+    "outsideApp": "पेमेंट ऐप के बाहर होता है",
+    "openChat": "चैट खोलें"
+  },
+  "handover": {
+    "title": "सौंप दिया दर्ज करें",
+    "body": "{{name}} को बताएँ कि सामान सौंप दिया गया है। फ़ोटो हो तो जोड़ें।",
+    "note": "नोट (वैकल्पिक)",
+    "noteError": "नोट {{max}} अक्षरों से कम रखें",
+    "done": "सौंप दिया दर्ज हो गया",
+    "calloutTitle": "{{name}} ने सामान सौंप दिया है",
+    "calloutBuyer": "सामान जाँचें। {{until}} तक आप समस्या बता सकते हैं; वरना डील {{on}} को पूरी हो जाएगी।",
+    "calloutBuyerLate": "आप पहले पुष्टि न करें तो डील {{on}} को पूरी हो जाएगी।",
+    "calloutSeller": "खरीदार सामान जाँचकर समस्या बता सकते हैं। वरना डील {{on}} को पूरी हो जाएगी।",
+    "detailTitle": "सौंपना",
+    "noDetail": "कोई फ़ोटो या नोट नहीं।"
+  },
+  "received": {
+    "title": "मिलने की पुष्टि करें?",
+    "body": "{{name}} से आया सामान जाँचने के बाद ही पुष्टि करें। इसके बाद डील पूरी हो जाएगी।",
+    "done": "डील पूरी हुई"
+  },
+  "cancel": {
+    "title": "यह डील रद्द करें?",
+    "body": "कारण चुनें। मात्रा वापस लिस्टिंग में चली जाएगी।",
+    "requestTitle": "रद्द करने का अनुरोध करें?",
+    "requestBody": "सामान सौंपा जा चुका है, इसलिए दूसरे पक्ष की सहमति चाहिए।",
+    "note": "नोट (वैकल्पिक)",
+    "noteError": "नोट {{max}} अक्षरों से कम रखें",
+    "reasonRequired": "कारण चुनें",
+    "confirm": "डील रद्द करें",
+    "requestConfirm": "अनुरोध भेजें",
+    "done": "डील रद्द हुई",
+    "requested": "रद्द करने का अनुरोध भेजा गया"
+  },
+  "cancelRequest": {
+    "title": "रद्द करने का अनुरोध",
+    "mine": "आपने रद्द करने को कहा है। दूसरे पक्ष का इंतज़ार है।",
+    "theirs": "दूसरे पक्ष ने यह डील रद्द करने को कहा है।",
+    "theirsWithReason": "दूसरे पक्ष ने रद्द करने को कहा है: {{reason}}।",
+    "accept": "रद्द करने पर सहमत",
+    "decline": "मना करें",
+    "withdraw": "अनुरोध वापस लें",
+    "acceptTitle": "यह डील रद्द करें?",
+    "acceptBody": "डील दोनों पक्षों के लिए रद्द हो जाएगी।",
+    "declineTitle": "रद्द करने का अनुरोध मना करें?",
+    "withdrawTitle": "अपना रद्द करने का अनुरोध वापस लें?",
+    "cleared": "रद्द करने का अनुरोध हटाया गया"
+  },
+  "dispute": {
+    "title": "समस्या बताई गई",
+    "by": "{{side}} · {{category}}",
+    "open": "हमारी सपोर्ट टीम इसे देख रही है।",
+    "resolved": "सुलझा: {{outcome}}"
+  },
+  "notes": {
+    "title": "डील नोट",
+    "edit": "बदलें",
+    "editTitle": "डील नोट",
+    "empty": "अभी कुछ नहीं जोड़ा।",
+    "payment": "पेमेंट का तरीका",
+    "advance": "दिया गया एडवांस",
+    "balance": "बाकी",
+    "fulfilment": "खुद ले जाना या डिलीवरी",
+    "expectedOn": "अनुमानित तारीख",
+    "text": "नोट",
+    "textHint": "जो बात दोनों पक्षों को याद रखनी है",
+    "textError": "नोट {{max}} अक्षरों से कम रखें",
+    "advanceError": "{{total}} तक की रकम लिखें",
+    "balanceHint": "बाकी: {{balance}}",
+    "dateError": "तारीख DD-MM-YYYY में लिखें",
+    "datePlaceholder": "DD-MM-YYYY",
+    "save": "नोट सेव करें",
+    "saved": "नोट सेव हो गए"
+  },
+  "contact": {
+    "title": "संपर्क",
+    "hidden": "जब तक दोनों नंबर शेयर न करें, नंबर छिपे रहेंगे।",
+    "waitingForThem": "आपने अपना नंबर शेयर किया। {{name}} का इंतज़ार है।",
+    "theyShared": "{{name}} ने अपना नंबर शेयर किया है। देखने के लिए अपना नंबर शेयर करें।",
+    "youShared": "आपने अपना नंबर शेयर किया",
+    "share": "मेरा नंबर शेयर करें",
+    "ownerOnly": "सिर्फ़ आपके बिज़नेस के मालिक नंबर शेयर कर सकते हैं।",
+    "call": "कॉल करें"
+  },
+  "review": {
+    "title": "रिव्यू",
+    "rate": "इस डील को रेट करें",
+    "body": {
+      "rate": "यह डील कैसी रही? आपका रिव्यू दूसरे खरीदारों और विक्रेताओं की मदद करता है।",
+      "waiting": "धन्यवाद। दूसरा पक्ष रिव्यू दे या समय खत्म हो, तब आपका रिव्यू दिखेगा।",
+      "published": "आपका रिव्यू दिख रहा है।",
+      "closed": "इस डील का रिव्यू देने का समय खत्म हो गया है।"
+    }
+  },
+  "photos": {
+    "camera": "फ़ोटो लें",
+    "library": "फ़ोटो चुनें",
+    "remove": "फ़ोटो हटाएँ",
+    "cameraDenied": "फ़ोटो लेने के लिए सेटिंग्स में कैमरा की अनुमति दें।",
+    "pickFailed": "फ़ोटो नहीं खुली। फिर से कोशिश करें।"
+  },
+  "problem": {
+    "title": "समस्या बताएँ",
+    "intro": "हमारी सपोर्ट टीम डील देखेगी। समस्या सुलझने तक डील रुकी रहेगी।",
+    "category": "क्या गड़बड़ हुई?",
+    "categoryRequired": "चुनें कि क्या गड़बड़ हुई",
+    "description": "समस्या बताएँ",
+    "descriptionHint": "क्या हुआ और आपको क्या उम्मीद थी",
+    "tooShort": "कम से कम {{min}} अक्षर लिखें",
+    "tooLong": "{{max}} अक्षरों से कम रखें",
+    "photos": "फ़ोटो (वैकल्पिक)",
+    "photosHint": "अधिकतम {{max}} फ़ोटो",
+    "addPhotos": "फ़ोटो जोड़ें",
+    "send": "रिपोर्ट भेजें",
+    "sent": "समस्या बता दी गई। सपोर्ट आपसे संपर्क करेगा।"
+  }
 }

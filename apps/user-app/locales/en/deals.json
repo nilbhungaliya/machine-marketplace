@@ -1,5 +1,252 @@
 {
   "title": "My deals",
   "emptyTitle": "No deals yet",
-  "emptySubtitle": "An agreed offer becomes a deal you can track until it is completed."
+  "emptySubtitle": "An agreed offer becomes a deal you can track until it is completed.",
+  "tabs": {
+    "active": "Active",
+    "completed": "Completed",
+    "cancelled": "Cancelled",
+    "activeCount_one": "Active {{count}}",
+    "activeCount_other": "Active {{count}}",
+    "completedCount_one": "Completed {{count}}",
+    "completedCount_other": "Completed {{count}}",
+    "cancelledCount_one": "Cancelled {{count}}",
+    "cancelledCount_other": "Cancelled {{count}}"
+  },
+  "sides": {
+    "all": "All",
+    "buying": "Buying",
+    "selling": "Selling"
+  },
+  "list": {
+    "errorTitle": "Couldn't load deals",
+    "errorBody": "Check your connection and try again.",
+    "empty": {
+      "active": "No active deals",
+      "completed": "No completed deals yet",
+      "cancelled": "No cancelled deals"
+    }
+  },
+  "row": {
+    "buying": "Buying · {{total}}",
+    "selling": "Selling · {{total}}",
+    "yourTurn": "Your turn"
+  },
+  "status": {
+    "agreed": "Agreed",
+    "handed_over": "Handed over",
+    "completed": "Completed",
+    "disputed": "Problem reported",
+    "cancelled": "Cancelled"
+  },
+  "actions": {
+    "hand_over": "Mark handed over",
+    "confirm_received": "Confirm received",
+    "cancel": "Cancel deal",
+    "report_problem": "Report a problem",
+    "request_cancel": "Ask to cancel"
+  },
+  "actor": {
+    "buyer": "Buyer",
+    "seller": "Seller",
+    "system": "Automatic",
+    "support": "Support"
+  },
+  "cancelledBy": {
+    "buyer": "Cancelled by the buyer",
+    "seller": "Cancelled by the seller",
+    "both": "Cancelled by both sides",
+    "system": "Cancelled automatically"
+  },
+  "cancelReason": {
+    "no_longer_needed": "No longer needed",
+    "found_elsewhere": "Found it elsewhere",
+    "seller_not_responding": "Seller not responding",
+    "buyer_not_responding": "Buyer not responding",
+    "payment_not_received": "Payment not received",
+    "stock_problem": "Problem with the stock",
+    "other": "Other",
+    "listing_removed": "The listing was removed",
+    "support_closed": "Closed by support"
+  },
+  "category": {
+    "not_as_described": "Not as described",
+    "damaged": "Damaged",
+    "short_quantity": "Short quantity",
+    "not_received": "Not received",
+    "payment_not_received": "Payment not received",
+    "other": "Other"
+  },
+  "outcome": {
+    "completed": "the deal is completed",
+    "cancelled": "the deal is cancelled",
+    "resumed": "the deal continues"
+  },
+  "payment": {
+    "bank": "Bank transfer",
+    "upi": "UPI",
+    "cash": "Cash",
+    "credit": "Credit"
+  },
+  "fulfilment": {
+    "pickup": "Pickup",
+    "delivery": "Delivery"
+  },
+  "completedHow": {
+    "buyer_confirmed": "The buyer confirmed receipt.",
+    "auto": "Completed automatically after handover.",
+    "support": "Completed by support."
+  },
+  "timeline": {
+    "title": "Timeline",
+    "agreed": "Deal agreed",
+    "notes_changed": "Notes updated · {{actor}}",
+    "handed_over": "Handed over",
+    "received": "Receipt confirmed",
+    "auto_completed": "Completed automatically",
+    "cancel_requested": "Cancel requested · {{actor}}",
+    "cancel_request_withdrawn": "Cancel request cleared · {{actor}}",
+    "cancelled": "Cancelled · {{reason}}",
+    "problem_reported": "Problem reported · {{category}}",
+    "dispute_resolved": "Problem resolved: {{outcome}}",
+    "contact_shared": "Number shared · {{actor}}",
+    "next": {
+      "handOver": "Handed over · waiting",
+      "complete": "Completes",
+      "reviews": "Reviews"
+    }
+  },
+  "card": {
+    "title": "Deal #{{ref}}",
+    "terms": "{{qty}} at {{price}} · total {{total}}",
+    "total": "Total {{total}}"
+  },
+  "record": {
+    "title": "Deal",
+    "goneTitle": "Deal not found",
+    "gstVerified": "GST verified",
+    "withSeller": "Seller: {{name}}",
+    "withBuyer": "Buyer: {{name}}",
+    "terms": "Agreed terms",
+    "price": "Price",
+    "each": "{{price}} each",
+    "quantity": "Quantity",
+    "total": "Total",
+    "payment": "Payment",
+    "outsideApp": "Payment happens outside the app",
+    "openChat": "Open chat"
+  },
+  "handover": {
+    "title": "Mark handed over",
+    "body": "Let {{name}} know the goods are handed over. Add a photo if you have one.",
+    "note": "Note (optional)",
+    "noteError": "Keep the note under {{max}} characters",
+    "done": "Marked as handed over",
+    "calloutTitle": "{{name}} has handed over the goods",
+    "calloutBuyer": "Check them. You can report a problem until {{until}}; otherwise the deal completes on {{on}}.",
+    "calloutBuyerLate": "The deal completes on {{on}} unless you confirm sooner.",
+    "calloutSeller": "The buyer can check the goods and report a problem. Otherwise the deal completes on {{on}}.",
+    "detailTitle": "Handover",
+    "noDetail": "No photo or note."
+  },
+  "received": {
+    "title": "Confirm you received it?",
+    "body": "Confirm only after checking the goods from {{name}}. The deal is then completed.",
+    "done": "Deal completed"
+  },
+  "cancel": {
+    "title": "Cancel this deal?",
+    "body": "Pick a reason. The quantity goes back to the listing.",
+    "requestTitle": "Ask to cancel?",
+    "requestBody": "The goods are handed over, so the other side has to agree.",
+    "note": "Note (optional)",
+    "noteError": "Keep the note under {{max}} characters",
+    "reasonRequired": "Pick a reason",
+    "confirm": "Cancel deal",
+    "requestConfirm": "Send request",
+    "done": "Deal cancelled",
+    "requested": "Cancel request sent"
+  },
+  "cancelRequest": {
+    "title": "Cancel requested",
+    "mine": "You asked to cancel. Waiting for the other side.",
+    "theirs": "The other side asked to cancel this deal.",
+    "theirsWithReason": "The other side asked to cancel: {{reason}}.",
+    "accept": "Agree to cancel",
+    "decline": "Decline",
+    "withdraw": "Withdraw request",
+    "acceptTitle": "Cancel this deal?",
+    "acceptBody": "The deal is cancelled for both sides.",
+    "declineTitle": "Decline the cancel request?",
+    "withdrawTitle": "Withdraw your cancel request?",
+    "cleared": "Cancel request cleared"
+  },
+  "dispute": {
+    "title": "Problem reported",
+    "by": "{{side}} · {{category}}",
+    "open": "Our support team is looking into it.",
+    "resolved": "Resolved: {{outcome}}"
+  },
+  "notes": {
+    "title": "Deal notes",
+    "edit": "Edit",
+    "editTitle": "Deal notes",
+    "empty": "Nothing added yet.",
+    "payment": "Payment method",
+    "advance": "Advance paid",
+    "balance": "Balance",
+    "fulfilment": "Pickup or delivery",
+    "expectedOn": "Expected date",
+    "text": "Note",
+    "textHint": "Anything both sides should remember",
+    "textError": "Keep the note under {{max}} characters",
+    "advanceError": "Enter an amount up to {{total}}",
+    "balanceHint": "Balance: {{balance}}",
+    "dateError": "Enter the date as DD-MM-YYYY",
+    "datePlaceholder": "DD-MM-YYYY",
+    "save": "Save notes",
+    "saved": "Notes saved"
+  },
+  "contact": {
+    "title": "Contact",
+    "hidden": "Numbers stay hidden until you both share them.",
+    "waitingForThem": "You shared your number. Waiting for {{name}}.",
+    "theyShared": "{{name}} shared their number. Share yours to see it.",
+    "youShared": "You shared your number",
+    "share": "Share my number",
+    "ownerOnly": "Only your business's owner can share the number.",
+    "call": "Call"
+  },
+  "review": {
+    "title": "Review",
+    "rate": "Rate this deal",
+    "body": {
+      "rate": "How did this deal go? Your review helps other buyers and sellers.",
+      "waiting": "Thanks. Your review is published when the other side reviews or the review time ends.",
+      "published": "Your review is published.",
+      "closed": "The time to review this deal has ended."
+    }
+  },
+  "photos": {
+    "camera": "Take photo",
+    "library": "Choose photo",
+    "remove": "Remove photo",
+    "cameraDenied": "Allow camera access in Settings to take a photo.",
+    "pickFailed": "Couldn't open the photo. Try again."
+  },
+  "problem": {
+    "title": "Report a problem",
+    "intro": "Our support team looks at the deal. It stays on hold until the problem is resolved.",
+    "category": "What went wrong?",
+    "categoryRequired": "Pick what went wrong",
+    "description": "Describe the problem",
+    "descriptionHint": "What happened and what you expected",
+    "tooShort": "Write at least {{min}} characters",
+    "tooLong": "Keep it under {{max}} characters",
+    "photos": "Photos (optional)",
+    "photosHint": "Up to {{max}} photos",
+    "addPhotos": "Add photos",
+    "send": "Send report",
+    "sent": "Problem reported. Support will contact you."
+  }
 }

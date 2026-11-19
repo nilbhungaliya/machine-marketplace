@@ -1,20 +1,132 @@
-import type {
-  ListingKind, ListingReportReason, ListingReportRequest, OtherSideCard, OtherSideResult, PartSide, PriceModel,
+import {
+  quantityToMilli,
+  type ListingKind, type ListingReportReason, type ListingReportRequest, type OtherSideCard, type OtherSideResult,
+  type PartSide, type PriceModel,
 } from '@mpm/shared-types';
+import type { ListingSheet } from '@/navigation/types';
+import type { PendingContactAction } from './pending-action';
 import { errorCode } from './api-error';
 import { toAsciiDigits } from './digits';
 
-// The listing page's decisions (F2 spec §8, §9; plan Task 26): which contact buttons a buyer sees, the Other side
-// block, the report form's checks and the remembered "Check my machine" choice. Pure.
+// The listing page's decisions (F2 spec §8, §9; plan Task 26; F6 + F7 §7.1, §8.4, §15.2): which contact buttons a
+// buyer sees, the Other side block, the report form's checks and the remembered "Check my machine" choice. Pure.
 
-export type ContactAction = 'enquire' | 'make_offer' | 'ask_price';
+export type ContactAction = 'enquire' | 'make_offer' | 'buy' | 'ask_price';
 
-/** §8.2: fixed → Enquire; negotiable → Enquire + Make offer; on request → Ask price; rentals → Enquire. */
+/**
+ * F6 + F7 §7.1: rentals → Enquire (no offers, R2); negotiable → Enquire + Make offer; fixed → Enquire + Buy at this
+ * price; on request → Ask price; a listing without a price model → Enquire.
+ */
 export function contactActions(l: { kind: ListingKind; priceModel: PriceModel | null }): ContactAction[] {
   if (l.kind === 'machine_rental') return ['enquire'];
   if (l.priceModel === 'negotiable') return ['enquire', 'make_offer'];
+  if (l.priceModel === 'fixed') return ['enquire', 'buy'];
   if (l.priceModel === 'on_request') return ['ask_price'];
   return ['enquire'];
+}
+
+/**
+ * Which contact sheets the listing page mounts (F6 + F7 §7.1, §15.2): never on the owner's own listing; the enquiry
+ * sheet (Enquire / Ask price) for every buyer, the offer sheet (Make offer / Buy) only where the price model has one.
+ * Mounted beside the page's other sheets, outside the footer, so a guest's pending action can open them on arrival.
+ */
+export function contactSheets(l: { isOwner: boolean; kind: ListingKind; priceModel: PriceModel | null }):
+  { enquire: boolean; offer: boolean } {
+  if (l.isOwner) return { enquire: false, offer: false };
+  const actions = contactActions(l);
+  return {
+    enquire: actions.includes('enquire') || actions.includes('ask_price'),
+    offer: actions.includes('make_offer') || actions.includes('buy'),
+  };
+}
+
+/** A footer button of the listing page: the action, or `open_chat` when the buyer already has a thread here. */
+export type ContactButtonAction = ContactAction | 'open_chat';
+
+export interface ContactButton {
+  action: ContactButtonAction;
+  /** Make offer / Buy with nothing available (all on hold in deals, §7.1). */
+  disabled: boolean;
+}
+
+export interface ContactButtons {
+  buttons: ContactButton[];
+  /** "All on hold in deals": available is 0 (the listing is `reserved`). */
+  allOnHold: boolean;
+}
+
+/** Whether a decimal-string quantity is zero ("0", "0.000"). */
+const isZero = (q: string | null): boolean => q != null && /^0+(\.0+)?$/.test(q.trim());
+
+/**
+ * The listing page's contact buttons (§7.1, §15.2): none on the viewer's own listing; Enquire / Ask price become
+ * "Open chat" when the buyer already has a thread on it (`myThreadId`), and an open negotiation keeps Make offer / Buy
+ * out (it is answered in the chat); Make offer / Buy are disabled while nothing is available. Guests get the same
+ * buttons (no thread yet); tapping asks them to sign in.
+ */
+export function contactButtons(l: {
+  kind: ListingKind;
+  priceModel: PriceModel | null;
+  availableQuantity: string | null;
+  isOwner: boolean;
+  myThreadId: string | null;
+  openNegotiation: unknown | null;
+}): ContactButtons {
+  if (l.isOwner) return { buttons: [], allOnHold: false };
+  const allOnHold = isZero(l.availableQuantity);
+  const base = contactActions(l);
+  const buttons: ContactButton[] = [];
+  for (const action of base) {
+    if (action === 'enquire' || action === 'ask_price') {
+      buttons.push({ action: l.myThreadId ? 'open_chat' : action, disabled: false });
+      continue;
+    }
+    if (l.openNegotiation) {
+      if (!buttons.some((b) => b.action === 'open_chat') && l.myThreadId) buttons.push({ action: 'open_chat', disabled: false });
+      continue;
+    }
+    buttons.push({ action, disabled: allOnHold });
+  }
+  return { buttons, allOnHold };
+}
+
+/** The sheet a contact action opens (and the guest's pending action type, §15.2). */
+export function sheetOf(action: ContactAction): ListingSheet {
+  return action === 'make_offer' ? 'offer' : action;
+}
+
+/** Why a guest is asked to sign in for it (`auth.signInSheet.*.<reason>`): Enquire / Ask price → `enquire`, offers → `offer`. */
+export function signInReasonOf(action: ContactAction): 'enquire' | 'offer' {
+  return action === 'make_offer' || action === 'buy' ? 'offer' : 'enquire';
+}
+
+/** The guest's pending action for a contact tap: reopens the listing with this sheet after sign-in (never sends). */
+export function pendingContactOf(action: ContactAction, listingId: string): PendingContactAction {
+  return { type: sheetOf(action), listingId };
+}
+
+/**
+ * What a listing page does with `route.params.openSheet` once the listing has loaded (§15.2): open that sheet when its
+ * button is there and enabled; go to the chat when the buyer already has a thread for an Enquire / Ask price; else
+ * nothing (own listing, all on hold, an offer already open).
+ */
+export function arrivalAction(sheet: ListingSheet | undefined, c: ContactButtons): { type: 'sheet'; sheet: ListingSheet } | { type: 'thread' } | null {
+  if (!sheet) return null;
+  const match = c.buttons.find((b) => b.action !== 'open_chat' && sheetOf(b.action) === sheet);
+  if (match) return match.disabled ? null : { type: 'sheet', sheet };
+  if ((sheet === 'enquire' || sheet === 'ask_price') && c.buttons.some((b) => b.action === 'open_chat')) return { type: 'thread' };
+  return null;
+}
+
+/** "2 of 3 pcs available" when some is on hold; null when everything is available or the listing has no quantity. */
+export function availabilityLine(l: { quantity: string | null; availableQuantity: string | null }):
+  { kind: 'partial'; available: string; quantity: string } | { kind: 'none' } | null {
+  if (l.quantity == null || l.availableQuantity == null) return null;
+  if (isZero(l.availableQuantity)) return { kind: 'none' };
+  if (quantityToMilli(l.availableQuantity) < quantityToMilli(l.quantity)) {
+    return { kind: 'partial', available: l.availableQuantity, quantity: l.quantity };
+  }
+  return null;
 }
 
 /** A left or right part: it has an Other side (§9.1). Pairs and parts without a side don't. */

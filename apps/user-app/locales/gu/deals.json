@@ -1,5 +1,252 @@
 {
   "title": "મારી ડીલ",
   "emptyTitle": "હજુ કોઈ ડીલ નથી",
-  "emptySubtitle": "નક્કી થયેલી ઑફર ડીલ બને છે, જેને તમે પૂર્ણ થાય ત્યાં સુધી ટ્રૅક કરી શકો છો."
+  "emptySubtitle": "નક્કી થયેલી ઑફર ડીલ બને છે, જેને તમે પૂર્ણ થાય ત્યાં સુધી ટ્રૅક કરી શકો છો.",
+  "tabs": {
+    "active": "ચાલુ",
+    "completed": "પૂર્ણ",
+    "cancelled": "રદ",
+    "activeCount_one": "ચાલુ {{count}}",
+    "activeCount_other": "ચાલુ {{count}}",
+    "completedCount_one": "પૂર્ણ {{count}}",
+    "completedCount_other": "પૂર્ણ {{count}}",
+    "cancelledCount_one": "રદ {{count}}",
+    "cancelledCount_other": "રદ {{count}}"
+  },
+  "sides": {
+    "all": "બધી",
+    "buying": "ખરીદી",
+    "selling": "વેચાણ"
+  },
+  "list": {
+    "errorTitle": "ડીલ લોડ ન થઈ",
+    "errorBody": "તમારું ઇન્ટરનેટ તપાસો અને ફરી પ્રયત્ન કરો.",
+    "empty": {
+      "active": "કોઈ ચાલુ ડીલ નથી",
+      "completed": "હજુ કોઈ પૂર્ણ ડીલ નથી",
+      "cancelled": "કોઈ રદ ડીલ નથી"
+    }
+  },
+  "row": {
+    "buying": "ખરીદી · {{total}}",
+    "selling": "વેચાણ · {{total}}",
+    "yourTurn": "તમારો વારો"
+  },
+  "status": {
+    "agreed": "નક્કી",
+    "handed_over": "સોંપી દીધું",
+    "completed": "પૂર્ણ",
+    "disputed": "સમસ્યા જણાવી",
+    "cancelled": "રદ"
+  },
+  "actions": {
+    "hand_over": "સોંપી દીધું નોંધો",
+    "confirm_received": "મળી ગયું, પુષ્ટિ કરો",
+    "cancel": "ડીલ રદ કરો",
+    "report_problem": "સમસ્યા જણાવો",
+    "request_cancel": "રદ કરવાની વિનંતી કરો"
+  },
+  "actor": {
+    "buyer": "ખરીદનાર",
+    "seller": "વેચનાર",
+    "system": "આપમેળે",
+    "support": "સપોર્ટ"
+  },
+  "cancelledBy": {
+    "buyer": "ખરીદનારે રદ કરી",
+    "seller": "વેચનારે રદ કરી",
+    "both": "બંને પક્ષે રદ કરી",
+    "system": "આપમેળે રદ થઈ"
+  },
+  "cancelReason": {
+    "no_longer_needed": "હવે જરૂર નથી",
+    "found_elsewhere": "બીજે મળી ગયું",
+    "seller_not_responding": "વેચનાર જવાબ નથી આપતા",
+    "buyer_not_responding": "ખરીદનાર જવાબ નથી આપતા",
+    "payment_not_received": "પેમેન્ટ મળ્યું નથી",
+    "stock_problem": "સ્ટોકમાં સમસ્યા",
+    "other": "અન્ય",
+    "listing_removed": "લિસ્ટિંગ દૂર કરાયું",
+    "support_closed": "સપોર્ટે બંધ કરી"
+  },
+  "category": {
+    "not_as_described": "જણાવ્યા મુજબ નથી",
+    "damaged": "નુકસાનવાળું",
+    "short_quantity": "જથ્થો ઓછો",
+    "not_received": "મળ્યું નથી",
+    "payment_not_received": "પેમેન્ટ મળ્યું નથી",
+    "other": "અન્ય"
+  },
+  "outcome": {
+    "completed": "ડીલ પૂર્ણ થઈ",
+    "cancelled": "ડીલ રદ થઈ",
+    "resumed": "ડીલ ચાલુ છે"
+  },
+  "payment": {
+    "bank": "બેંક ટ્રાન્સફર",
+    "upi": "UPI",
+    "cash": "રોકડ",
+    "credit": "ઉધાર"
+  },
+  "fulfilment": {
+    "pickup": "જાતે લઈ જવું",
+    "delivery": "ડિલિવરી"
+  },
+  "completedHow": {
+    "buyer_confirmed": "ખરીદનારે મળ્યાની પુષ્ટિ કરી.",
+    "auto": "સોંપ્યા પછી આપમેળે પૂર્ણ થઈ.",
+    "support": "સપોર્ટે પૂર્ણ કરી."
+  },
+  "timeline": {
+    "title": "ટાઇમલાઇન",
+    "agreed": "ડીલ નક્કી થઈ",
+    "notes_changed": "નોંધ બદલાઈ · {{actor}}",
+    "handed_over": "સોંપી દીધું",
+    "received": "મળ્યાની પુષ્ટિ થઈ",
+    "auto_completed": "આપમેળે પૂર્ણ થઈ",
+    "cancel_requested": "રદ કરવાની વિનંતી · {{actor}}",
+    "cancel_request_withdrawn": "રદ કરવાની વિનંતી હટાવી · {{actor}}",
+    "cancelled": "રદ · {{reason}}",
+    "problem_reported": "સમસ્યા જણાવી · {{category}}",
+    "dispute_resolved": "સમસ્યા ઉકેલાઈ: {{outcome}}",
+    "contact_shared": "નંબર શેર કર્યો · {{actor}}",
+    "next": {
+      "handOver": "સોંપણી · રાહ",
+      "complete": "પૂર્ણ થશે",
+      "reviews": "રિવ્યૂ"
+    }
+  },
+  "card": {
+    "title": "ડીલ #{{ref}}",
+    "terms": "{{qty}}, {{price}} ભાવે · કુલ {{total}}",
+    "total": "કુલ {{total}}"
+  },
+  "record": {
+    "title": "ડીલ",
+    "goneTitle": "ડીલ મળી નહીં",
+    "gstVerified": "GST ચકાસાયેલ",
+    "withSeller": "વેચનાર: {{name}}",
+    "withBuyer": "ખરીદનાર: {{name}}",
+    "terms": "નક્કી થયેલી શરતો",
+    "price": "ભાવ",
+    "each": "{{price}} પ્રતિ યુનિટ",
+    "quantity": "જથ્થો",
+    "total": "કુલ",
+    "payment": "પેમેન્ટ",
+    "outsideApp": "પેમેન્ટ એપની બહાર થાય છે",
+    "openChat": "ચેટ ખોલો"
+  },
+  "handover": {
+    "title": "સોંપી દીધું નોંધો",
+    "body": "{{name}}ને જણાવો કે માલ સોંપી દીધો છે. ફોટો હોય તો ઉમેરો.",
+    "note": "નોંધ (વૈકલ્પિક)",
+    "noteError": "નોંધ {{max}} અક્ષરથી ઓછી રાખો",
+    "done": "સોંપી દીધું નોંધાયું",
+    "calloutTitle": "{{name}}એ માલ સોંપી દીધો છે",
+    "calloutBuyer": "માલ તપાસો. {{until}} સુધી તમે સમસ્યા જણાવી શકો છો; નહીં તો ડીલ {{on}}એ પૂર્ણ થશે.",
+    "calloutBuyerLate": "તમે વહેલી પુષ્ટિ ન કરો તો ડીલ {{on}}એ પૂર્ણ થશે.",
+    "calloutSeller": "ખરીદનાર માલ તપાસીને સમસ્યા જણાવી શકે છે. નહીં તો ડીલ {{on}}એ પૂર્ણ થશે.",
+    "detailTitle": "સોંપણી",
+    "noDetail": "કોઈ ફોટો કે નોંધ નથી."
+  },
+  "received": {
+    "title": "મળ્યાની પુષ્ટિ કરશો?",
+    "body": "{{name}} પાસેથી આવેલો માલ તપાસ્યા પછી જ પુષ્ટિ કરો. પછી ડીલ પૂર્ણ થશે.",
+    "done": "ડીલ પૂર્ણ થઈ"
+  },
+  "cancel": {
+    "title": "આ ડીલ રદ કરશો?",
+    "body": "કારણ પસંદ કરો. જથ્થો પાછો લિસ્ટિંગમાં જશે.",
+    "requestTitle": "રદ કરવાની વિનંતી કરશો?",
+    "requestBody": "માલ સોંપાઈ ગયો છે, તેથી બીજા પક્ષની સંમતિ જોઈએ.",
+    "note": "નોંધ (વૈકલ્પિક)",
+    "noteError": "નોંધ {{max}} અક્ષરથી ઓછી રાખો",
+    "reasonRequired": "કારણ પસંદ કરો",
+    "confirm": "ડીલ રદ કરો",
+    "requestConfirm": "વિનંતી મોકલો",
+    "done": "ડીલ રદ થઈ",
+    "requested": "રદ કરવાની વિનંતી મોકલાઈ"
+  },
+  "cancelRequest": {
+    "title": "રદ કરવાની વિનંતી",
+    "mine": "તમે રદ કરવાનું કહ્યું છે. બીજા પક્ષની રાહ છે.",
+    "theirs": "બીજા પક્ષે આ ડીલ રદ કરવાનું કહ્યું છે.",
+    "theirsWithReason": "બીજા પક્ષે રદ કરવાનું કહ્યું છે: {{reason}}.",
+    "accept": "રદ કરવા સંમત",
+    "decline": "ના પાડો",
+    "withdraw": "વિનંતી પાછી ખેંચો",
+    "acceptTitle": "આ ડીલ રદ કરશો?",
+    "acceptBody": "ડીલ બંને પક્ષ માટે રદ થશે.",
+    "declineTitle": "રદ કરવાની વિનંતીની ના પાડશો?",
+    "withdrawTitle": "તમારી રદ કરવાની વિનંતી પાછી ખેંચશો?",
+    "cleared": "રદ કરવાની વિનંતી હટાવાઈ"
+  },
+  "dispute": {
+    "title": "સમસ્યા જણાવી",
+    "by": "{{side}} · {{category}}",
+    "open": "અમારી સપોર્ટ ટીમ તે જોઈ રહી છે.",
+    "resolved": "ઉકેલાયું: {{outcome}}"
+  },
+  "notes": {
+    "title": "ડીલ નોંધ",
+    "edit": "બદલો",
+    "editTitle": "ડીલ નોંધ",
+    "empty": "હજુ કંઈ ઉમેર્યું નથી.",
+    "payment": "પેમેન્ટની રીત",
+    "advance": "ચૂકવેલો એડવાન્સ",
+    "balance": "બાકી",
+    "fulfilment": "જાતે લઈ જવું કે ડિલિવરી",
+    "expectedOn": "અંદાજિત તારીખ",
+    "text": "નોંધ",
+    "textHint": "જે વાત બંને પક્ષે યાદ રાખવી છે",
+    "textError": "નોંધ {{max}} અક્ષરથી ઓછી રાખો",
+    "advanceError": "{{total}} સુધીની રકમ લખો",
+    "balanceHint": "બાકી: {{balance}}",
+    "dateError": "તારીખ DD-MM-YYYY રીતે લખો",
+    "datePlaceholder": "DD-MM-YYYY",
+    "save": "નોંધ સેવ કરો",
+    "saved": "નોંધ સેવ થઈ"
+  },
+  "contact": {
+    "title": "સંપર્ક",
+    "hidden": "બંને નંબર શેર ન કરે ત્યાં સુધી નંબર છુપા રહેશે.",
+    "waitingForThem": "તમે તમારો નંબર શેર કર્યો. {{name}}ની રાહ છે.",
+    "theyShared": "{{name}}એ પોતાનો નંબર શેર કર્યો છે. જોવા માટે તમારો નંબર શેર કરો.",
+    "youShared": "તમે તમારો નંબર શેર કર્યો",
+    "share": "મારો નંબર શેર કરો",
+    "ownerOnly": "ફક્ત તમારા બિઝનેસના માલિક નંબર શેર કરી શકે છે.",
+    "call": "કૉલ કરો"
+  },
+  "review": {
+    "title": "રિવ્યૂ",
+    "rate": "આ ડીલને રેટ કરો",
+    "body": {
+      "rate": "આ ડીલ કેવી રહી? તમારો રિવ્યૂ બીજા ખરીદનારો અને વેચનારોને મદદ કરે છે.",
+      "waiting": "આભાર. બીજો પક્ષ રિવ્યૂ આપે અથવા સમય પૂરો થાય ત્યારે તમારો રિવ્યૂ દેખાશે.",
+      "published": "તમારો રિવ્યૂ દેખાય છે.",
+      "closed": "આ ડીલનો રિવ્યૂ આપવાનો સમય પૂરો થયો છે."
+    }
+  },
+  "photos": {
+    "camera": "ફોટો લો",
+    "library": "ફોટો પસંદ કરો",
+    "remove": "ફોટો દૂર કરો",
+    "cameraDenied": "ફોટો લેવા માટે સેટિંગ્સમાં કેમેરાની મંજૂરી આપો.",
+    "pickFailed": "ફોટો ખૂલ્યો નહીં. ફરી પ્રયત્ન કરો."
+  },
+  "problem": {
+    "title": "સમસ્યા જણાવો",
+    "intro": "અમારી સપોર્ટ ટીમ ડીલ જોશે. સમસ્યા ઉકેલાય ત્યાં સુધી ડીલ અટકેલી રહેશે.",
+    "category": "શું ખોટું થયું?",
+    "categoryRequired": "શું ખોટું થયું તે પસંદ કરો",
+    "description": "સમસ્યા વર્ણવો",
+    "descriptionHint": "શું થયું અને તમે શું ધાર્યું હતું",
+    "tooShort": "ઓછામાં ઓછા {{min}} અક્ષર લખો",
+    "tooLong": "{{max}} અક્ષરથી ઓછું રાખો",
+    "photos": "ફોટો (વૈકલ્પિક)",
+    "photosHint": "વધુમાં વધુ {{max}} ફોટો",
+    "addPhotos": "ફોટો ઉમેરો",
+    "send": "રિપોર્ટ મોકલો",
+    "sent": "સમસ્યા જણાવી દીધી. સપોર્ટ તમારો સંપર્ક કરશે."
+  }
 }

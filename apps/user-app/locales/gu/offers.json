@@ -1,3 +1,138 @@
 {
-  "title": "ઑફર"
+  "title": "ઑફર",
+  "sheet": {
+    "title": {
+      "offer": "ઓફર આપો",
+      "buy": "આ ભાવે ખરીદો",
+      "counter": "કાઉન્ટર ઓફર",
+      "quote": "ક્વોટ મોકલો"
+    },
+    "submit": {
+      "offer": "ઓફર મોકલો",
+      "buy": "વેચનારને મોકલો",
+      "counter": "કાઉન્ટર મોકલો",
+      "quote": "ક્વોટ મોકલો"
+    },
+    "sent": {
+      "offer": "ઓફર મોકલાઈ ગઈ",
+      "buy": "વેચનારને મોકલી દીધું",
+      "counter": "કાઉન્ટર મોકલાઈ ગઈ",
+      "quote": "ક્વોટ મોકલાઈ ગયો"
+    },
+    "asks": "માગેલો ભાવ",
+    "theirOffer": "તેમની ઓફર",
+    "theirPrice": "તેમનો ભાવ",
+    "yourPrice": "તમારો પ્રતિ યુનિટ ભાવ",
+    "quotePrice": "તમારો પ્રતિ યુનિટ ભાવ",
+    "buyLocked": "તમે માગેલા ભાવે ખરીદશો.",
+    "bounds": "{{min}} અને {{max}} વચ્ચે",
+    "quantity": "જથ્થો",
+    "quantityIn": "જથ્થો ({{unit}})",
+    "available": "{{qty}} ઉપલબ્ધ",
+    "minOrder": "ઓછામાં ઓછો ઓર્ડર {{qty}}",
+    "validity": "કેટલો સમય માન્ય",
+    "note": "નોંધ (વૈકલ્પિક)",
+    "noteHint": "ટૂંકી નોંધ લખો",
+    "total": "કુલ",
+    "percentBelow": "માગેલા ભાવથી {{percent}}% ઓછું",
+    "optionsError": "ઓફર કેટલો સમય ખુલ્લી રહી શકે, તે લોડ ન થયું."
+  },
+  "validity": {
+    "hours_one": "{{count}} કલાક",
+    "hours_other": "{{count}} કલાક",
+    "days_one": "{{count}} દિવસ",
+    "days_other": "{{count}} દિવસ"
+  },
+  "error": {
+    "priceRequired": "ભાવ લખો",
+    "priceInvalid": "સાચો ભાવ લખો",
+    "priceAboveAsking": "તમારી ઓફર માગેલા ભાવ {{price}} કરતાં વધુ ન હોઈ શકે",
+    "counterOutOfBounds": "તમારું કાઉન્ટર {{min}} અને {{max}} વચ્ચે હોવું જોઈએ",
+    "counterUnchanged": "કાઉન્ટર માટે ભાવ અથવા જથ્થો બદલો",
+    "quantityRequired": "જથ્થો લખો",
+    "quantityInvalid": "સાચો જથ્થો લખો",
+    "quantityDecimals_one": "વધુમાં વધુ {{count}} દશાંશ અંક લખો",
+    "quantityDecimals_other": "વધુમાં વધુ {{count}} દશાંશ અંક લખો",
+    "quantityBelowMinimum": "ઓછામાં ઓછો ઓર્ડર {{qty}} છે",
+    "quantityNotAvailable": "ફક્ત {{qty}} ઉપલબ્ધ છે",
+    "noteTooLong": "નોંધ બહુ લાંબી છે",
+    "rejectNoteTooLong": "કારણ {{max}} અક્ષરથી ઓછું રાખો"
+  },
+  "gst": {
+    "extra": "+ GST",
+    "included": "GST સાથે"
+  },
+  "card": {
+    "title": {
+      "mine": {
+        "offer": "તમારી ઓફર",
+        "counter": "તમારું કાઉન્ટર",
+        "quote": "તમારો ક્વોટ",
+        "buy": "તમારી ખરીદીની વિનંતી"
+      },
+      "theirs": {
+        "offer": "ઓફર",
+        "counter": "કાઉન્ટર ઓફર",
+        "quote": "ક્વોટ",
+        "buy": "ખરીદીની વિનંતી"
+      }
+    },
+    "status": {
+      "reconfirmSeller": "ફરી પુષ્ટિ કરો",
+      "reconfirmBuyer": "વેચનારની રાહ",
+      "respondIn": "{{hours}} કલાકમાં જવાબ આપો",
+      "yourTurn": "તમારો વારો",
+      "waiting": "રાહ",
+      "backup": "બેકઅપ",
+      "accepted": "સ્વીકાર્યું",
+      "countered": "કાઉન્ટર થયું",
+      "rejected": "અસ્વીકાર્યું",
+      "withdrawn": "પાછું ખેંચ્યું",
+      "expired": "સમય પૂરો",
+      "closed": "બંધ"
+    },
+    "reconfirmSeller": "આ ઓફર પછી લિસ્ટિંગ બદલાયું છે. પુષ્ટિ કરો કે તમે હજુ પણ આ શરતો સ્વીકારો છો.",
+    "reconfirmBuyer": "લિસ્ટિંગ બદલાયું છે. વેચનારે આ ઓફર ફરી પાકી કરવી પડશે.",
+    "limit": "આ છેલ્લો રાઉન્ડ છે: સ્વીકારો અથવા અસ્વીકારો.",
+    "backupBuyer": "સ્ટોક બીજી ડીલમાં હોલ્ડ પર છે. તમારી ઓફર બેકઅપ તરીકે રહેશે અને સ્ટોક છૂટો થાય તો સ્વીકારી શકાશે.",
+    "backupSeller": "બેકઅપ તરીકે રાખ્યું છે: સ્ટોક છૂટો થાય તો તમે તેને સ્વીકારી શકો છો.",
+    "closedReason": {
+      "listing_unavailable": "લિસ્ટિંગ હવે ઉપલબ્ધ નથી, તેથી બંધ કર્યું.",
+      "listing_changed": "લિસ્ટિંગ બદલાયું, તેથી બંધ કર્યું.",
+      "blocked": "ચેટ બ્લોક થઈ, તેથી બંધ કર્યું.",
+      "account_inactive": "એક ખાતું હવે સક્રિય નથી, તેથી બંધ કર્યું."
+    },
+    "price": "ભાવ",
+    "quantity": "જથ્થો",
+    "total": "કુલ",
+    "percentBelowYours": "તમારા ભાવથી {{percent}}% ઓછું",
+    "percentBelowAsking": "માગેલા ભાવથી {{percent}}% ઓછું",
+    "quoted": "“{{note}}”",
+    "scam": "સાવધાન રહો: ચકાસ્યા વગર કોઈને એડવાન્સ ન આપો અને ક્યારેય OTP ન જણાવો.",
+    "rejectNote": "કારણ: {{note}}",
+    "round": "રાઉન્ડ {{round}} / {{max}}",
+    "validFor": "{{validity}} સુધી માન્ય",
+    "accept": "સ્વીકારો",
+    "counter": "કાઉન્ટર કરો",
+    "reject": "અસ્વીકારો",
+    "withdraw": "પાછું ખેંચો",
+    "reconfirm": "ફરી પુષ્ટિ કરો"
+  },
+  "actions": {
+    "acceptTitle": "આ ઓફર સ્વીકારશો?",
+    "acceptBody": "{{qty}}, {{price}} ભાવે, કુલ {{total}}. આ ડીલ બનશે અને જથ્થો હોલ્ડ પર જશે.",
+    "accepted": "ઓફર સ્વીકારી: ડીલ થઈ ગઈ",
+    "withdrawTitle": "તમારી ઓફર પાછી ખેંચશો?",
+    "withdrawBody": "બીજો પક્ષ તેને હવે સ્વીકારી નહીં શકે.",
+    "withdrawBackupBody": "તમારી બેકઅપ ઓફર દૂર કરાશે.",
+    "withdrawn": "ઓફર પાછી ખેંચાઈ",
+    "reconfirmTitle": "આ ઓફર ફરી પાકી કરશો?",
+    "reconfirmBody": "ઓફર મોકલ્યા પછી લિસ્ટિંગ બદલાયું છે. પુષ્ટિ કરો કે તમે હજુ પણ આ શરતો સ્વીકારો છો.",
+    "reconfirmed": "ઓફર પાકી કરી",
+    "rejectTitle": "આ ઓફર અસ્વીકારશો?",
+    "rejectNote": "કારણ (વૈકલ્પિક)",
+    "rejectConfirm": "ઓફર અસ્વીકારો",
+    "rejected": "ઓફર અસ્વીકારી",
+    "notAvailable": "હમણાં ફક્ત {{qty}} છૂટો છે. ઓફર બેકઅપ તરીકે રાખી છે."
+  }
 }

@@ -1,3 +1,138 @@
 {
-  "title": "Offers"
+  "title": "Offers",
+  "sheet": {
+    "title": {
+      "offer": "Make an offer",
+      "buy": "Buy at this price",
+      "counter": "Counteroffer",
+      "quote": "Send a quote"
+    },
+    "submit": {
+      "offer": "Send offer",
+      "buy": "Send to seller",
+      "counter": "Send counter",
+      "quote": "Send quote"
+    },
+    "sent": {
+      "offer": "Offer sent",
+      "buy": "Sent to the seller",
+      "counter": "Counter sent",
+      "quote": "Quote sent"
+    },
+    "asks": "Asking price",
+    "theirOffer": "Their offer",
+    "theirPrice": "Their price",
+    "yourPrice": "Your price per unit",
+    "quotePrice": "Your price per unit",
+    "buyLocked": "You buy at the asking price.",
+    "bounds": "Between {{min}} and {{max}}",
+    "quantity": "Quantity",
+    "quantityIn": "Quantity ({{unit}})",
+    "available": "{{qty}} available",
+    "minOrder": "Minimum order {{qty}}",
+    "validity": "Valid for",
+    "note": "Note (optional)",
+    "noteHint": "Add a short note",
+    "total": "Total",
+    "percentBelow": "{{percent}}% below asking",
+    "optionsError": "Couldn't load how long an offer can stay open."
+  },
+  "validity": {
+    "hours_one": "{{count}} hour",
+    "hours_other": "{{count}} hours",
+    "days_one": "{{count}} day",
+    "days_other": "{{count}} days"
+  },
+  "error": {
+    "priceRequired": "Enter a price",
+    "priceInvalid": "Enter a valid price",
+    "priceAboveAsking": "Your offer can't be above the asking price of {{price}}",
+    "counterOutOfBounds": "Your counter must be between {{min}} and {{max}}",
+    "counterUnchanged": "Change the price or the quantity to counter",
+    "quantityRequired": "Enter a quantity",
+    "quantityInvalid": "Enter a valid quantity",
+    "quantityDecimals_one": "Use at most {{count}} decimal place",
+    "quantityDecimals_other": "Use at most {{count}} decimal places",
+    "quantityBelowMinimum": "The minimum order is {{qty}}",
+    "quantityNotAvailable": "Only {{qty}} is available",
+    "noteTooLong": "The note is too long",
+    "rejectNoteTooLong": "Keep the reason under {{max}} characters"
+  },
+  "gst": {
+    "extra": "+ GST",
+    "included": "incl. GST"
+  },
+  "card": {
+    "title": {
+      "mine": {
+        "offer": "Your offer",
+        "counter": "Your counter",
+        "quote": "Your quote",
+        "buy": "Your buy request"
+      },
+      "theirs": {
+        "offer": "Offer",
+        "counter": "Counteroffer",
+        "quote": "Quote",
+        "buy": "Buy request"
+      }
+    },
+    "status": {
+      "reconfirmSeller": "Confirm again",
+      "reconfirmBuyer": "Waiting for seller",
+      "respondIn": "Respond in {{hours}} h",
+      "yourTurn": "Your turn",
+      "waiting": "Waiting",
+      "backup": "Backup",
+      "accepted": "Accepted",
+      "countered": "Countered",
+      "rejected": "Rejected",
+      "withdrawn": "Withdrawn",
+      "expired": "Expired",
+      "closed": "Closed"
+    },
+    "reconfirmSeller": "The listing changed after this offer. Confirm you still accept these terms.",
+    "reconfirmBuyer": "The listing changed. The seller has to confirm this offer again.",
+    "limit": "This is the last round: accept or reject.",
+    "backupBuyer": "The stock is on hold in another deal. Your offer waits as a backup and can be accepted if it frees up.",
+    "backupSeller": "Kept as a backup: you can accept it if the stock frees up.",
+    "closedReason": {
+      "listing_unavailable": "Closed because the listing is no longer available.",
+      "listing_changed": "Closed because the listing changed.",
+      "blocked": "Closed because the chat was blocked.",
+      "account_inactive": "Closed because an account is no longer active."
+    },
+    "price": "Price",
+    "quantity": "Quantity",
+    "total": "Total",
+    "percentBelowYours": "{{percent}}% below your price",
+    "percentBelowAsking": "{{percent}}% below asking",
+    "quoted": "“{{note}}”",
+    "scam": "Be careful: never pay an advance to someone you haven't checked, and never share an OTP.",
+    "rejectNote": "Reason: {{note}}",
+    "round": "Round {{round}} of {{max}}",
+    "validFor": "Valid for {{validity}}",
+    "accept": "Accept",
+    "counter": "Counter",
+    "reject": "Reject",
+    "withdraw": "Withdraw",
+    "reconfirm": "Confirm again"
+  },
+  "actions": {
+    "acceptTitle": "Accept this offer?",
+    "acceptBody": "{{qty}} at {{price}}, total {{total}}. It becomes a deal and the quantity goes on hold.",
+    "accepted": "Offer accepted: the deal is made",
+    "withdrawTitle": "Withdraw your offer?",
+    "withdrawBody": "The other side won't be able to accept it any more.",
+    "withdrawBackupBody": "Your backup offer will be removed.",
+    "withdrawn": "Offer withdrawn",
+    "reconfirmTitle": "Confirm this offer again?",
+    "reconfirmBody": "The listing changed after the offer was sent. Confirm you still accept these terms.",
+    "reconfirmed": "Offer confirmed",
+    "rejectTitle": "Reject this offer?",
+    "rejectNote": "Reason (optional)",
+    "rejectConfirm": "Reject offer",
+    "rejected": "Offer rejected",
+    "notAvailable": "Only {{qty}} is free now. The offer is kept as a backup."
+  }
 }

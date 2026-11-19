@@ -233,7 +233,10 @@
     "liveListings_one": "{{count}} live listing",
     "liveListings_other": "{{count}} live listings",
     "viewAll": "View all listings",
-    "report": "Report listing"
+    "report": "Report listing",
+    "sellerScore_one": "{{stars}} · {{count}} review",
+    "sellerScore_other": "{{stars}} · {{count}} reviews",
+    "reviews": "Reviews"
   },
   "errors": {
     "kindImmutable": "The kind of a listing can't be changed.",
@@ -290,11 +293,15 @@
   "contact": {
     "enquire": "Enquire",
     "make_offer": "Make offer",
-    "ask_price": "Ask price"
+    "ask_price": "Ask price",
+    "buy": "Buy at this price",
+    "open_chat": "Open chat",
+    "allOnHold": "All on hold in deals"
   },
   "owner": {
     "manage": "Manage",
-    "edit": "Edit"
+    "edit": "Edit",
+    "onHold": "On hold in deals: {{qty}}"
   },
   "otherSide": {
     "title": "Other side",
@@ -462,5 +469,9 @@
       "zero": "Sold out? Use Mark sold instead.",
       "tooLarge": "That's more than a listing can hold."
     }
+  },
+  "available": {
+    "partial": "{{available}} of {{quantity}} available",
+    "allOnHold": "All on hold in deals"
   }
 }
