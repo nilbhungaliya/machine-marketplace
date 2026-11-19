@@ -2,12 +2,17 @@ import './instrument.js'; // must stay first — see the file
 import { assertApiEnv } from './env.js';
 import { buildApp } from './app.js';
 import { allJobs } from './jobs/index.js';
+import { getPushProvider, pushOffInProduction } from './services/notifications/push-provider.js';
 import { startJobs } from './jobs/runner.js';
 import { setupSocketIO } from './socket/setup.js';
 
 assertApiEnv();
 const app = await buildApp();
 setupSocketIO(app);
+// F6 + F7 §11.5: push is opt-in (as Sentry). Production without keys starts, warns once and records pushes `skipped`.
+if (pushOffInProduction()) app.log.warn('push notifications are off: FIREBASE_SERVICE_ACCOUNT_B64 is not set or not a valid service account');
+// Builds the provider now, so a malformed key warns once at boot (never its value), not on the first push.
+getPushProvider();
 const port = Number(process.env.PORT ?? process.env.API_PORT ?? 3000);
 
 // A deploy sends SIGTERM. Jobs first, while the database is open, then the server. The last timer is for a socket that
