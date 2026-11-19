@@ -3,7 +3,7 @@ import type { AdminRole } from '@mpm/shared-types';
 import {
   LayoutDashboard, ShieldCheck, ClipboardCheck, Building2, Package, Handshake, MessagesSquare, FolderTree,
   ListChecks, Megaphone, Flag, Bell, UserCog, ScrollText, BarChart3, BellRing, MessageSquareQuote, CalendarClock,
-  Factory, SlidersHorizontal, MapPin,
+  Factory, SlidersHorizontal, MapPin, Replace, TrendingUp,
 } from 'lucide-react';
 import type { NavBadgeKey } from './nav-badges';
 
@@ -49,6 +49,9 @@ export const NAV_GROUPS: NavGroup[] = [
     { href: '/listing-fields', label: 'Specifications & fields', icon: SlidersHorizontal, roles: ['category_manager'] },
     { href: '/master-data', label: 'Units, conditions & sides', icon: ListChecks, roles: ['category_manager'] },
     { href: '/industrial-areas', label: 'Industrial areas', icon: MapPin, roles: ['category_manager'] },
+    // F4 + F5 §9: the API's `requireAdminRole('category_manager')` (super_admin passes).
+    { href: '/search-synonyms', label: 'Search synonyms', icon: Replace, roles: ['category_manager'] },
+    { href: '/search-insights', label: 'Search insights', icon: TrendingUp, roles: ['category_manager'] },
   ] },
   { id: 'growth', label: 'Insights & growth', items: [
     { href: '/analytics', label: 'Activity & KPIs', icon: BarChart3, roles: ['operations'] },

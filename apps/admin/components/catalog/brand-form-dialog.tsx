@@ -23,6 +23,7 @@ const schemaFor = (mode: 'create' | 'edit') =>
       makesMachines: z.boolean(),
       makesParts: z.boolean(),
       needsReview: z.boolean(),
+      chipNeedsContext: z.boolean(),
     })
     .superRefine((v, ctx) => {
       if (mode === 'create' && !CATALOG_KEY_REGEX.test(v.key)) ctx.addIssue({ code: 'custom', path: ['key'], message: KEY_MESSAGE });
@@ -53,6 +54,7 @@ export function BrandFormDialog({ mode, brand, onClose, onSaved }: BrandFormDial
       makesMachines: brand?.makesMachines ?? true,
       makesParts: brand?.makesParts ?? false,
       needsReview: brand?.needsReview ?? false,
+      chipNeedsContext: brand?.chipNeedsContext ?? false,
     },
   });
 
@@ -66,11 +68,13 @@ export function BrandFormDialog({ mode, brand, onClose, onSaved }: BrandFormDial
           ...(v.slug ? { slug: v.slug } : {}),
           makesMachines: v.makesMachines,
           makesParts: v.makesParts,
+          chipNeedsContext: v.chipNeedsContext,
         });
         toast.success('Brand added');
       } else {
         const next: Required<Omit<UpdateBrandPatch, 'isActive'>> = {
           name: v.name, slug: v.slug, makesMachines: v.makesMachines, makesParts: v.makesParts, needsReview: v.needsReview,
+          chipNeedsContext: v.chipNeedsContext,
         };
         const patch: UpdateBrandPatch = {};
         for (const k of Object.keys(next) as Array<keyof typeof next>) {
@@ -165,6 +169,22 @@ export function BrandFormDialog({ mode, brand, onClose, onSaved }: BrandFormDial
           </p>
           {errors.makesParts && <p id="brand-flags-error" className={errorCls}>{errors.makesParts.message}</p>}
         </fieldset>
+
+        <label className="flex items-start gap-2 text-sm text-gray-900">
+          <input
+            type="checkbox"
+            className={`${checkCls} mt-0.5`}
+            aria-describedby="brand-chip-context-help"
+            {...register('chipNeedsContext')}
+          />
+          <span>
+            Read as a brand chip only with one of its models or a machine type
+            <span id="brand-chip-context-help" className="block text-[12.5px] text-gray-500">
+              For a name that is also an ordinary word, e.g. Bull, ACE: search reads it as the brand only next to one of its
+              models or a machine type (&ldquo;bull backhoe loader&rdquo;), so &ldquo;bull gear&rdquo; stays a word search.
+            </span>
+          </span>
+        </label>
 
         {mode === 'edit' && (
           <label className="flex items-start gap-2 text-sm text-gray-900">

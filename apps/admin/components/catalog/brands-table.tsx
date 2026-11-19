@@ -115,6 +115,9 @@ export function BrandsTable({ brands, machineTypes, selectedId, onSelect, onChan
           <span className={cn('font-bold text-gray-900', !b.isActive && 'text-gray-500 line-through decoration-gray-300')}>{b.name}</span>
           <code className="font-mono text-xs text-gray-500">{b.key}</code>
           {b.needsReview && <Tag tone="amber">Needs review</Tag>}
+          {b.chipNeedsContext && (
+            <Tag title="Search reads this name as the brand only next to one of its models or a machine type">Ordinary word</Tag>
+          )}
         </span>
       ),
     },

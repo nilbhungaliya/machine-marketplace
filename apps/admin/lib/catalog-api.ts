@@ -104,6 +104,8 @@ export interface CreateBrandInput {
   slug?: string;
   makesMachines: boolean;
   makesParts: boolean;
+  /** F4 + F5 §4.1: the name is also an ordinary word; search reads it as a brand chip only next to one of its models or a machine type. */
+  chipNeedsContext?: boolean;
 }
 
 export interface UpdateBrandPatch {
@@ -113,6 +115,7 @@ export interface UpdateBrandPatch {
   makesParts?: boolean;
   needsReview?: boolean;
   isActive?: boolean;
+  chipNeedsContext?: boolean;
 }
 
 /** Goes last. KEY_TAKEN / SLUG_TAKEN on a clash; FIELD_INVALID when it makes neither machines nor parts. */

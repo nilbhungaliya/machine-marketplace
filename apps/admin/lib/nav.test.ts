@@ -67,3 +67,21 @@ describe('F1 + A2 menu entries', () => {
     expect(item('/verification').badgeKey).toBe('verificationWaiting');
   });
 });
+
+describe('F4 + F5 search menu entries', () => {
+  const item = (href: string) => NAV_GROUPS.flatMap((g) => g.items).find((i) => i.href === href);
+
+  it('Search synonyms and Search insights sit with the catalogue, for category managers and super admins only', () => {
+    const group = NAV_GROUPS.find((g) => g.id === 'configuration')!;
+    expect(group.items.map((i) => i.href)).toEqual(expect.arrayContaining(['/search-synonyms', '/search-insights']));
+    for (const href of ['/search-synonyms', '/search-insights']) {
+      const entry = item(href)!;
+      expect(entry.roles).toEqual(['category_manager']);
+      expect(canSee(entry, 'category_manager')).toBe(true);
+      expect(canSee(entry, 'super_admin')).toBe(true);
+      for (const role of ['moderator', 'verification_officer', 'operations', 'support'] as const) {
+        expect(canSee(entry, role), `${href} ${role}`).toBe(false);
+      }
+    }
+  });
+});
