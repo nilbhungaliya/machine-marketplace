@@ -855,9 +855,12 @@ export interface AdminBusinessDetail {
 /** Served to anyone (spec §7.1, R20); every other status is owner and admins only. */
 export const PUBLIC_LISTING_STATUSES = ['live', 'reserved', 'rented'] as const satisfies readonly ListingStatus[];
 
-/** A seller may PATCH a listing in these (§7.3); not `hidden`, `removed`, `reserved` (`409 LISTING_NOT_EDITABLE`). */
+/**
+ * A seller may PATCH a listing in these (§7.3); not `hidden`, `removed` (`409 LISTING_NOT_EDITABLE`). `reserved` joined
+ * with F6 + F7 (§8.3): price, photos, description and specs stay editable; a quantity edit stays ≥ `held_quantity`.
+ */
 export const EDITABLE_LISTING_STATUSES = [
-  'draft', 'pending_review', 'rejected', 'live', 'paused', 'expired', 'unavailable', 'sold', 'rented',
+  'draft', 'pending_review', 'rejected', 'live', 'paused', 'reserved', 'expired', 'unavailable', 'sold', 'rented',
 ] as const satisfies readonly ListingStatus[];
 
 /** Counted for the unverified open-listing cap: every status except `draft`, `sold`, `removed` (R36). */
@@ -948,8 +951,11 @@ export type SellerListingAction = (typeof SELLER_LISTING_ACTIONS)[number];
 export const ADMIN_LISTING_ACTIONS = ['approve', 'ask_for_changes', 'reject', 'hide', 'unhide', 'remove'] as const;
 export type AdminListingAction = (typeof ADMIN_LISTING_ACTIONS)[number];
 
-/** Transitions the system makes (§7.2): the expiry job, edits back to review, admin's last-photo delete, F7 reservations. */
-export const SYSTEM_LISTING_ACTIONS = ['expire', 'back_to_review', 'photos_removed', 'reserve', 'unreserve'] as const;
+/**
+ * Transitions the system makes (§7.2): the expiry job, edits back to review, admin's last-photo delete, and F6 + F7's
+ * stock moves (`reserve`, `unreserve`, `sell_out`; `syncReservation` in `services/deals/holds.ts`, §8.2).
+ */
+export const SYSTEM_LISTING_ACTIONS = ['expire', 'back_to_review', 'photos_removed', 'reserve', 'unreserve', 'sell_out'] as const;
 export type SystemListingAction = (typeof SYSTEM_LISTING_ACTIONS)[number];
 
 export type ListingAction = 'publish' | SellerListingAction | AdminListingAction | SystemListingAction;
@@ -971,7 +977,7 @@ export interface ListingTransition {
 }
 
 const ALL_BUT_DRAFT_REMOVED: readonly ListingStatus[] = LISTING_STATUSES.filter((s) => s !== 'draft' && s !== 'removed');
-const HIDEABLE: readonly ListingStatus[] = ['live', 'paused', 'expired', 'unavailable', 'sold', 'rented'];
+const HIDEABLE: readonly ListingStatus[] = ['live', 'paused', 'reserved', 'expired', 'unavailable', 'sold', 'rented'];
 
 /** The only ways a status changes (§7.2). `listing-lifecycle.service.ts` is the only writer of `status`. */
 export const LISTING_TRANSITIONS: readonly ListingTransition[] = [
@@ -980,23 +986,26 @@ export const LISTING_TRANSITIONS: readonly ListingTransition[] = [
   { action: 'approve', actor: 'admin', from: ['pending_review'], to: 'return_status' },
   { action: 'ask_for_changes', actor: 'admin', from: ['pending_review'], to: 'rejected' },
   { action: 'reject', actor: 'admin', from: ['pending_review'], to: 'rejected' },
-  { action: 'pause', actor: 'seller', from: ['live'], to: 'paused' },
+  { action: 'pause', actor: 'seller', from: ['live', 'reserved'], to: 'paused' },
   { action: 'resume', actor: 'seller', from: ['paused'], to: 'gate' },
   { action: 'renew', actor: 'seller', from: ['live', 'expired'], to: 'gate' },
   { action: 'mark_sold', actor: 'seller', from: ['live', 'paused', 'expired', 'unavailable'], to: 'sold' },
-  { action: 'mark_unavailable', actor: 'seller', from: ['live', 'paused', 'expired'], to: 'unavailable' },
+  { action: 'mark_unavailable', actor: 'seller', from: ['live', 'paused', 'expired', 'reserved'], to: 'unavailable' },
   { action: 'relist', actor: 'seller', from: ['sold', 'unavailable'], to: 'gate' },
   { action: 'mark_rented', actor: 'seller', from: ['live'], to: 'rented', kinds: ['machine_rental'] },
   { action: 'end_rental', actor: 'seller', from: ['rented'], to: 'gate', kinds: ['machine_rental'] },
   { action: 'remove', actor: 'seller', from: ALL_BUT_DRAFT_REMOVED, to: 'removed' },
   { action: 'expire', actor: 'system', from: ['live', 'rented'], to: 'expired' },
-  { action: 'back_to_review', actor: 'system', from: ['live', 'rented'], to: 'pending_review' },
+  { action: 'back_to_review', actor: 'system', from: ['live', 'rented', 'reserved'], to: 'pending_review' },
   { action: 'hide', actor: 'admin', from: HIDEABLE, to: 'hidden' },
   { action: 'unhide', actor: 'admin', from: ['hidden'], to: 'return_status' },
   { action: 'remove', actor: 'admin', from: ALL_BUT_DRAFT_REMOVED, to: 'removed' },
   { action: 'photos_removed', actor: 'system', from: HIDEABLE, to: 'rejected' },
   { action: 'reserve', actor: 'system', from: ['live'], to: 'reserved' },
   { action: 'unreserve', actor: 'system', from: ['reserved'], to: 'live' },
+  // F6 + F7 §8.3: the quantity reached 0 (a deal completed). On `hidden` / `pending_review` / `rejected` only
+  // `return_status = 'sold'` is set (§8.2), so this row doesn't list them.
+  { action: 'sell_out', actor: 'system', from: ['live', 'reserved', 'paused', 'unavailable', 'expired'], to: 'sold' },
 ];
 
 /**

@@ -207,7 +207,7 @@ describe('status lists (§7.1, §7.3, R36)', () => {
   it('defines public, editable and open statuses', () => {
     expect([...PUBLIC_LISTING_STATUSES]).toEqual(['live', 'reserved', 'rented']);
     expect([...EDITABLE_LISTING_STATUSES].sort()).toEqual(
-      ['draft', 'pending_review', 'rejected', 'live', 'paused', 'expired', 'unavailable', 'sold', 'rented'].sort(),
+      ['draft', 'pending_review', 'rejected', 'live', 'paused', 'reserved', 'expired', 'unavailable', 'sold', 'rented'].sort(),
     );
     expect([...OPEN_LISTING_STATUSES].sort()).toEqual(
       LISTING_STATUSES.filter((s) => !['draft', 'sold', 'removed'].includes(s)).sort(),
@@ -259,6 +259,17 @@ describe('LISTING_TRANSITIONS (§7.2)', () => {
     ['sold', 'photos_removed', 'part', 'rejected'],
     ['live', 'reserve', 'part', 'reserved'],
     ['reserved', 'unreserve', 'part', 'live'],
+    // F6 + F7 §8.3: what `reserved` gained, and the system sell-out.
+    ['reserved', 'pause', 'part', 'paused'],
+    ['reserved', 'mark_unavailable', 'part', 'unavailable'],
+    ['reserved', 'hide', 'part', 'hidden'],
+    ['reserved', 'photos_removed', 'part', 'rejected'],
+    ['reserved', 'back_to_review', 'part', 'pending_review'],
+    ['live', 'sell_out', 'part', 'sold'],
+    ['reserved', 'sell_out', 'part', 'sold'],
+    ['paused', 'sell_out', 'part', 'sold'],
+    ['unavailable', 'sell_out', 'part', 'sold'],
+    ['expired', 'sell_out', 'machine', 'sold'],
   ];
 
   it.each(cases)('%s --%s (%s)--> %s', (from, action, kind, to) => {
@@ -274,6 +285,13 @@ describe('LISTING_TRANSITIONS (§7.2)', () => {
     expect(listingTransition('removed', 'remove', 'part')).toBeNull();
     expect(listingTransition('draft', 'hide', 'part')).toBeNull();
     expect(listingTransition('paused', 'expire', 'part')).toBeNull();
+    // F6 + F7 §8.2, §8.3: a reserved listing doesn't expire; sell-out on hidden / in review / rejected only sets
+    // return_status; a seller can't mark a reserved listing sold (its stock is held in deals).
+    expect(listingTransition('reserved', 'expire', 'part')).toBeNull();
+    for (const from of ['hidden', 'pending_review', 'rejected', 'removed', 'sold'] as const) {
+      expect(listingTransition(from, 'sell_out', 'part')).toBeNull();
+    }
+    expect(listingTransition('reserved', 'mark_sold', 'part')).toBeNull();
   });
 
   it('tells seller and admin remove apart by actor', () => {

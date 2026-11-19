@@ -125,7 +125,8 @@ export function gateStep(err: unknown, kind: ListingKind): EditStep | null {
 
 /**
  * Where Edit goes (§10, R43): a draft or rejected listing re-runs the wizard (category can change there); another
- * editable status opens the Edit listing menu; hidden, removed and reserved can't be edited.
+ * editable status opens the Edit listing menu (`reserved` too since F6 + F7 §8.3: a quantity edit stays ≥ the stock on
+ * hold, `409 QUANTITY_BELOW_HELD`); hidden and removed can't be edited.
  */
 export function editEntry(status: ListingStatus): 'wizard' | 'menu' | null {
   if ((CATEGORY_EDITABLE_STATUSES as readonly ListingStatus[]).includes(status)) return 'wizard';

@@ -28,6 +28,7 @@ import { AppError, ConflictError, PayloadTooLargeError, ValidationError } from '
 import { publicUrl } from '../../lib/media-url.js';
 import { videoUploadEnabled } from '../../lib/media-switch.js';
 import { Sentry } from '../../lib/sentry.js';
+import { runTx, type TxApp } from '../../lib/tx-effects.js';
 import { MEDIA_SNIFF_BYTES, jpegHeaderStatus, sniffMedia, type SniffedMedia } from '../../lib/sniff-media.js';
 import {
   ObjectMissingError,
@@ -44,6 +45,7 @@ import {
 } from '../../lib/storage.js';
 import type { UserTokenPayload } from '../../plugins/auth.js';
 import { writeAudit } from '../audit.service.js';
+import { afterListingStatusWrite } from '../deals/holds.js';
 import { mediaOptional } from './listing-gate.service.js';
 import { applySystemTransition } from './listing-lifecycle.service.js';
 import { listingNotFound, lockBusinessThenListing, type ListingRow } from './locks.js';
@@ -486,10 +488,11 @@ export async function deleteMedia(
  * `expired`, `unavailable`, `sold`, `rented`) moves it to `rejected` (`photos_removed`, outcome `changes_requested`,
  * the reason as the note, R52); a `hidden` or `pending_review` one keeps its status (approve and unhide refuse it
  * without a photo, amendment 2). One `listing_media.delete` audit row. After commit the objects are deleted and the URLs
- * purged; the response carries the purge result.
+ * purged; the response carries the purge result. F6 + F7 §22: runs through `runTx`, and a `photos_removed` move is
+ * followed by `afterListingStatusWrite` (open offers reconciled).
  */
 export async function adminDeleteMedia(
-  db: Db,
+  app: TxApp,
   adminId: string,
   listingId: string,
   mediaId: string,
@@ -498,7 +501,7 @@ export async function adminDeleteMedia(
 ): Promise<AdminMediaDeleteResult> {
   const reason = adminText(reasonText, 'reason');
   requireMediaStorage();
-  const removed = await db.transaction(async (tx) => {
+  const removed = await runTx(app, async (tx) => {
     const [found] = await tx.select({ businessId: listings.businessId }).from(listings).where(eq(listings.id, listingId));
     if (!found) throw listingNotFound();
     const { listing } = await lockBusinessThenListing(tx, found.businessId, listingId);
@@ -513,6 +516,7 @@ export async function adminDeleteMedia(
     const lastPhoto = item.type === 'photo' && (await countOf(tx, listingId, 'photo')) === 0;
     if (lastPhoto && listingTransition(after.status, 'photos_removed', after.kind, 'system')) {
       after = await applySystemTransition(tx, after, 'photos_removed', { reason, adminId });
+      after = await afterListingStatusWrite(tx, listingId);
     }
     await writeAudit(tx, {
       adminId,

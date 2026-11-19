@@ -1,4 +1,4 @@
-import { and, asc, eq, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, sql } from 'drizzle-orm';
 import {
   CATEGORY_EDITABLE_STATUSES,
   EDITABLE_LISTING_STATUSES,
@@ -23,7 +23,9 @@ import {
   listingRentals,
   listingStatusHistory,
   listings,
+  offers,
   reports,
+  stockHolds,
   units,
   users,
 } from '../../db/schema.js';
@@ -33,6 +35,7 @@ import { onboardingForUser } from '../business/profile.service.js';
 import { loadTemplate } from '../catalog/read.service.js';
 import { validateSpecs } from '../catalog/validate-specs.js';
 import { getSettings } from '../settings.service.js';
+import { afterListingStatusWrite } from '../deals/holds.js';
 import { applySystemTransition, recordCreated, transitionNotAllowed } from './listing-lifecycle.service.js';
 import {
   businessLocation,
@@ -154,7 +157,8 @@ function checkFieldsForKind(kind: ListingKind, patch: ListingPatchInput): void {
 }
 
 const RATE_KEYS = ['rateHourPaise', 'rateDayPaise', 'rateWeekPaise', 'rateMonthPaise'] as const;
-const PUBLIC_EDIT_STATUSES: readonly ListingStatus[] = ['live', 'rented'];
+/** On view (F6 + F7 §8.3: `reserved` too); a flagged edit sends them back to review. */
+const PUBLIC_EDIT_STATUSES: readonly ListingStatus[] = ['live', 'rented', 'reserved'];
 /** Editable statuses off view that come back through the gate (§7.3, amendment 5). */
 const OFF_VIEW_STATUSES: readonly ListingStatus[] = ['paused', 'expired', 'unavailable', 'sold'];
 
@@ -188,6 +192,11 @@ const sameQuantity = (a: string | null, b: string | null): boolean => (a === nul
  * (`edit_flagged`, `edited_after_report`); a `pending_review` one gains the reasons; the others keep the flag for the
  * go-live gate, and a `paused` / `expired` / `unavailable` / `sold` one also stores `edited_after_report` in its review
  * reasons for the gate (amendment 5).
+ *
+ * F6 + F7 (§8.3, §22): `reserved` is editable; a quantity below the stock on hold → `409 QUANTITY_BELOW_HELD`; a unit
+ * change while the listing has an active hold or a `pending` / `backup` offer → `409 UNIT_LOCKED`. After a quantity or
+ * price-model change, or a back-to-review, `afterListingStatusWrite` runs (reserve / unreserve, then reconcile, which
+ * closes chains whose kind no longer fits, `listing_changed`).
  */
 export async function patchListing(tx: Tx, user: UserTokenPayload, id: string, patch: ListingPatchInput): Promise<ListingOwnerView> {
   if (!user.businessId) throw listingNotFound();
@@ -286,6 +295,13 @@ export async function patchListing(tx: Tx, user: UserTokenPayload, id: string, p
   if (unitChanged || quantityChecked || minOrderChecked) {
     if (!unit && unitId) unit = await lockUnit(tx, unitId);
     validateQuantities(kind, unit, quantity, minOrder);
+  }
+  // F6 + F7 §8.3: stock held in deals can't be edited away, and a unit can't change under open deals or offers.
+  if (patch.quantity !== undefined && Number(patch.quantity) < Number(listing.heldQuantity)) {
+    throw new ConflictError('Part of this stock is on hold in open deals', 'QUANTITY_BELOW_HELD', { heldQuantity: listing.heldQuantity });
+  }
+  if (patch.unitId !== undefined && patch.unitId !== listing.unitId && (await unitLocked(tx, listing.id))) {
+    throw new ConflictError("The unit can't change while deals or offers are open on this listing", 'UNIT_LOCKED');
   }
   if (patch.quantity !== undefined) set.quantity = patch.quantity;
   if (patch.minOrderQty !== undefined) set.minOrderQty = patch.minOrderQty;
@@ -439,10 +455,32 @@ export async function patchListing(tx: Tx, user: UserTokenPayload, id: string, p
   await refreshListingSearch(tx, [listing.id]);
 
   let row: ListingRow = updated!;
+  let statusWritten = false;
+  // F6 + F7 §8.3: a reserved listing goes back to review like a live one (`return_status = 'live'`).
   if (PUBLIC_EDIT_STATUSES.includes(listing.status) && reasons.length > 0) {
     row = await applySystemTransition(tx, row, 'back_to_review', { reviewReasons: reasons });
+    statusWritten = true;
   }
+  const quantityChanged = patch.quantity !== undefined && !sameQuantity(patch.quantity, listing.quantity);
+  const priceModelChanged = set.priceModel !== undefined && set.priceModel !== listing.priceModel;
+  if (statusWritten || quantityChanged || priceModelChanged) row = await afterListingStatusWrite(tx, listing.id);
   return toOwnerView(tx, row, await getSettings(tx));
+}
+
+/** Whether the listing has an active stock hold or a `pending` / `backup` offer (§8.3 `UNIT_LOCKED`). */
+async function unitLocked(tx: Tx, listingId: string): Promise<boolean> {
+  const [hold] = await tx
+    .select({ id: stockHolds.id })
+    .from(stockHolds)
+    .where(and(eq(stockHolds.listingId, listingId), eq(stockHolds.status, 'active')))
+    .limit(1);
+  if (hold) return true;
+  const [offer] = await tx
+    .select({ id: offers.id })
+    .from(offers)
+    .where(and(eq(offers.listingId, listingId), inArray(offers.status, ['pending', 'backup'])))
+    .limit(1);
+  return !!offer;
 }
 
 /** Whether `set` changes any column of the stored row (quantities compared as numbers, the point in PostGIS). */

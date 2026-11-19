@@ -18,6 +18,7 @@ import {
 import type { Tx } from '../../db/index.js';
 import { messageBody, reasonBody } from '../../lib/admin-text.js';
 import { isStorableText } from '../../lib/spec-check.js';
+import { runTx } from '../../lib/tx-effects.js';
 import {
   adminListingAction,
   adminListingDetail,
@@ -127,9 +128,9 @@ const adminListingRoutes: FastifyPluginAsync = async (fastify) => {
   const read = { schema: { tags }, preHandler: fastify.requireAdminRole('moderator', 'support') };
   const moderator = { schema: { tags }, preHandler: fastify.requireAdminRole('moderator') };
 
-  /** Runs a write and answers the refreshed detail from the same transaction. */
+  /** Runs a write and answers the refreshed detail from the same transaction (`runTx`: queued emits go out after commit). */
   const writeThenDetail = (id: string, write: (tx: Tx) => Promise<unknown>) =>
-    fastify.db.transaction(async (tx) => {
+    runTx(fastify, async (tx) => {
       await write(tx);
       return adminListingDetail(tx, id);
     });
@@ -191,7 +192,7 @@ const adminListingRoutes: FastifyPluginAsync = async (fastify) => {
   // Bulk hide / remove (`AdminListingBulkRequest` → `AdminListingBulkResult`), one transaction per listing.
   fastify.post('/admin/listings/bulk', moderator, async (request) => {
     const body = bulkBody.parse(request.body);
-    return { data: await bulkListingAction(fastify.db, request.admin!.adminId, body) };
+    return { data: await bulkListingAction(fastify, request.admin!.adminId, body) };
   });
 };
 

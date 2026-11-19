@@ -10,14 +10,15 @@ import {
   type SellerListingAction,
 } from '@mpm/shared-types';
 import type { Tx } from '../../db/index.js';
-import { listingStatusHistory, listings, reports, users } from '../../db/schema.js';
+import { deals, listingStatusHistory, listings, reports, users } from '../../db/schema.js';
 import { adminText } from '../../lib/admin-text.js';
-import { ConflictError, ForbiddenError } from '../../lib/errors.js';
+import { ConflictError, ForbiddenError, ValidationError } from '../../lib/errors.js';
 import type { UserTokenPayload } from '../../plugins/auth.js';
 import { onboardingForUser } from '../business/profile.service.js';
 import { getSettings } from '../settings.service.js';
 import { checkPublishable, goLiveGate, listingIncomplete, photoProblems, type GateAction } from './listing-gate.service.js';
 import { refreshListingSearch } from '../discovery/search-text.js';
+import { afterListingStatusWrite } from '../deals/holds.js';
 import { toOwnerView } from './listing-view.service.js';
 import { listingNotFound, lockBusinessThenListing, lockListingOnly, type BusinessRow, type ListingRow } from './locks.js';
 
@@ -108,7 +109,19 @@ export async function recordCreated(tx: Tx, listingId: string, userId: string): 
   });
 }
 
-export type SystemTransitionAction = 'back_to_review' | 'expire' | 'photos_removed';
+export type SystemTransitionAction = 'back_to_review' | 'expire' | 'photos_removed' | 'reserve' | 'unreserve' | 'sell_out';
+
+/**
+ * System moves that lock only the listing and refuse `lockBusiness: true`: the expiry job (amendment 1) and F6 + F7's
+ * stock moves (`syncReservation`, plan review C1). They run inside transactions that already hold a listing lock, so
+ * asking for the seller's business lock afterwards would invert the business → listing order (§8.5).
+ */
+const LISTING_ONLY_ACTIONS: readonly SystemTransitionAction[] = ['expire', 'reserve', 'unreserve', 'sell_out'];
+
+/** F6 + F7 §8.3: leaving `reserved` always stores `return_status = 'live'`, never `reserved` (`syncReservation` puts it back). */
+export function returnStatusLeaving(from: ListingStatus): ListingStatus {
+  return from === 'reserved' ? 'live' : from;
+}
 
 export interface SystemTransitionOptions {
   /** History reason; for `photos_removed` also the moderation note (R52). */
@@ -117,8 +130,9 @@ export interface SystemTransitionOptions {
   reviewReasons?: ReviewReason[];
   /**
    * `true`: lock the business, then the listing (a no-op when the caller already holds both). `false`: lock only the
-   * listing. Defaults to `true`, except for `expire`, which always locks only the listing (amendment 1: the expiry job
-   * must never wait for a business lock) and refuses `true`.
+   * listing. Defaults to `true`, except for `expire` (amendment 1: the expiry job must never wait for a business lock)
+   * and F6 + F7's `reserve`, `unreserve` and `sell_out` (§8.5: F6 / F7 never lock the seller business), which always
+   * lock only the listing and refuse `true`.
    */
   lockBusiness?: boolean;
   /** `photos_removed`: the admin whose media delete removed the last photo (history and `moderated_by`). */
@@ -126,10 +140,15 @@ export interface SystemTransitionOptions {
 }
 
 /**
- * A system transition (§7.2): `back_to_review` (`live` / `rented` → `pending_review`, `return_status = from`, review
- * reasons merged), `expire` (`live` / `rented` → `expired`), `photos_removed` (→ `rejected`, outcome
- * `changes_requested`, the reason as the note, `return_status` cleared). The move runs from `listing.status` as given:
+ * A system transition (§7.2): `back_to_review` (`live` / `rented` / `reserved` → `pending_review`, `return_status =
+ * from` — `live` when leaving `reserved` —, review reasons merged), `expire` (`live` / `rented` → `expired`),
+ * `photos_removed` (→ `rejected`, outcome `changes_requested`, the reason as the note, `return_status` cleared), and
+ * F6 + F7's stock moves (§8.2, called only by `syncReservation`): `reserve` (`live` → `reserved`), `unreserve`
+ * (`reserved` → `live`), `sell_out` (→ `sold`, `return_status` cleared). The move runs from `listing.status` as given:
  * a listing whose status changed since it was read is refused with `409 LISTING_TRANSITION_NOT_ALLOWED`.
+ *
+ * The caller runs `afterListingStatusWrite` (`services/deals/holds.ts`) afterwards; this function never does, so the
+ * stock moves `syncReservation` makes through it never recurse (plan review C1).
  */
 export async function applySystemTransition(
   tx: Tx,
@@ -137,15 +156,16 @@ export async function applySystemTransition(
   action: SystemTransitionAction,
   opts: SystemTransitionOptions = {},
 ): Promise<ListingRow> {
+  const listingOnly = LISTING_ONLY_ACTIONS.includes(action);
+  if (listingOnly && opts.lockBusiness === true) {
+    throw new Error(`${action} locks only the listing (amendment 1, F6 + F7 §8.5): lockBusiness must not be true`);
+  }
   const transition = listingTransition(listing.status, action, listing.kind, 'system');
   if (!transition) throw transitionNotAllowed(listing.status, action);
-  if (action === 'expire' && opts.lockBusiness === true) {
-    throw new Error('expire locks only the listing (amendment 1): lockBusiness must not be true');
-  }
   // The row as it is now, under the locks. The move still runs from `listing.status` (the caller's view), so a stale
   // object is refused by the conditional write; anything merged comes from `current`.
   const current =
-    (opts.lockBusiness ?? action !== 'expire')
+    (opts.lockBusiness ?? !listingOnly)
       ? (await lockBusinessThenListing(tx, listing.businessId, listing.id)).listing
       : await lockListingOnly(tx, listing.id);
   const to = transition.to as ListingStatus;
@@ -155,11 +175,15 @@ export async function applySystemTransition(
     case 'back_to_review':
       return writeStatus(tx, listing, to, {
         ...base,
-        returnStatus: listing.status,
+        returnStatus: returnStatusLeaving(listing.status),
         reviewReasons: [...new Set([...current.reviewReasons, ...(opts.reviewReasons ?? [])])],
       });
     case 'expire':
+    case 'reserve':
+    case 'unreserve':
       return writeStatus(tx, listing, to, base);
+    case 'sell_out':
+      return writeStatus(tx, listing, to, { ...base, returnStatus: null });
     case 'photos_removed':
       return writeStatus(tx, listing, to, {
         ...base,
@@ -173,6 +197,32 @@ export async function applySystemTransition(
         },
       });
   }
+}
+
+/**
+ * F6 + F7 §8.2: the quantity reached 0 while the listing is `hidden`, `pending_review` or `rejected`. The status stays
+ * (an admin or the seller has it) and `return_status = 'sold'`, where unhide or approval lands. Not a status change: no
+ * history row. Called only by `syncReservation`, under the listing lock.
+ */
+export async function markSoldOnReturn(tx: Tx, listing: ListingRow): Promise<ListingRow> {
+  return setOffViewReturnStatus(tx, listing, 'sold');
+}
+
+/**
+ * F6 + F7 §8.2: a listing in review whose sold-out stock was refilled (quantity > 0 again) returns to `live` on
+ * approval, not `sold`. Called only by `syncReservation`, under the listing lock.
+ */
+export async function unmarkSoldOnReturn(tx: Tx, listing: ListingRow): Promise<ListingRow> {
+  return setOffViewReturnStatus(tx, listing, 'live');
+}
+
+async function setOffViewReturnStatus(tx: Tx, listing: ListingRow, returnStatus: 'sold' | 'live'): Promise<ListingRow> {
+  const [row] = await tx
+    .update(listings)
+    .set({ returnStatus, updatedAt: sql`now()` })
+    .where(and(eq(listings.id, listing.id), inArray(listings.status, ['hidden', 'pending_review', 'rejected'])))
+    .returning();
+  return row ?? listing;
 }
 
 const now = () => sql`now()`;
@@ -239,7 +289,9 @@ export async function publishListing(tx: Tx, user: UserTokenPayload, id: string)
     returnStatus: null,
     set: { publishedAt: listing.publishedAt ?? now() },
   });
-  return { listing: await toOwnerView(tx, row, await getSettings(tx)), outcome: row.status };
+  // F6 + F7 §22: a resubmission from `rejected` may carry a sold-out stock or open offers.
+  const after = await afterListingStatusWrite(tx, row.id);
+  return { listing: await toOwnerView(tx, after, await getSettings(tx)), outcome: row.status };
 }
 
 /** Seller actions that go through the gate (§7.2 `to: 'gate'`). */
@@ -256,6 +308,12 @@ const GATED_ACTIONS: Partial<Record<SellerListingAction, GateAction>> = {
  * `details: { from, action }`). Resume, renew, relist and end of rental run the gate and refresh the listing; a
  * `pending_review` answer stores `return_status = 'live'`. The note goes to the history row; `mark_unavailable` stores
  * it as the status reason, `remove` too (and keeps the stored reason without one); other actions clear it.
+ *
+ * F6 + F7 (§8.3): `mark_sold` and `remove` with stock on hold → `409 LISTING_HAS_OPEN_DEALS` (`details.dealIds`: the
+ * listing's `agreed`, `handed_over` and `disputed` deals); `relist` of a sold-out listing (quantity 0) →
+ * `400 QUANTITY_REQUIRED` (edit the quantity first); `pause` / `mark_unavailable` from `reserved` store
+ * `return_status = 'live'`. Afterwards `afterListingStatusWrite` (reserve / unreserve / sell-out, then reconcile); the
+ * outcome is where the action landed, the view the listing after the hook.
  */
 export async function applySellerAction(
   tx: Tx,
@@ -266,8 +324,20 @@ export async function applySellerAction(
 ): Promise<LifecycleResult> {
   if (!user.businessId) throw listingNotFound();
   const { business, listing } = await lockBusinessThenListing(tx, user.businessId, id);
+  // Before the transition check: `mark_sold` on a reserved listing says why (open deals), not "not allowed" (§8.3).
+  if ((action === 'mark_sold' || action === 'remove') && Number(listing.heldQuantity) > 0) {
+    const open = await tx
+      .select({ id: deals.id })
+      .from(deals)
+      .where(and(eq(deals.listingId, listing.id), inArray(deals.status, ['agreed', 'handed_over', 'disputed'])))
+      .orderBy(deals.createdAt, deals.id);
+    throw new ConflictError('Cancel the open deals on this listing first', 'LISTING_HAS_OPEN_DEALS', { dealIds: open.map((d) => d.id) });
+  }
   const transition = listingTransition(listing.status, action, listing.kind, 'seller');
   if (!transition) throw transitionNotAllowed(listing.status, action);
+  if (action === 'relist' && listing.quantity !== null && Number(listing.quantity) === 0) {
+    throw new ValidationError('Set the quantity you have before relisting', { field: 'quantity' }, 'QUANTITY_REQUIRED');
+  }
 
   let row: ListingRow;
   const gateAction = GATED_ACTIONS[action];
@@ -286,10 +356,12 @@ export async function applySellerAction(
       actor: 'seller',
       userId: user.userId,
       reason: note ?? null,
+      ...(listing.status === 'reserved' ? { returnStatus: returnStatusLeaving(listing.status) } : {}),
       set: { statusReason },
     });
   }
-  return { listing: await toOwnerView(tx, row, await getSettings(tx)), outcome: row.status };
+  const after = await afterListingStatusWrite(tx, row.id);
+  return { listing: await toOwnerView(tx, after, await getSettings(tx)), outcome: row.status };
 }
 
 export interface AdminTransitionOptions {
@@ -319,9 +391,11 @@ async function actionOpenReports(tx: Tx, listingId: string, adminId: string, not
  *   rental, when the business no longer holds GST (`403 RENTAL_NEEDS_GST`).
  * - `ask_for_changes` / `reject`: → `rejected`, outcome `changes_requested` / `rejected` with the message as the note;
  *   `return_status` cleared (amendment 4).
- * - `hide`: → `hidden`, `return_status = from`, the reason as the status reason; open reports actioned (R51).
+ * - `hide`: → `hidden`, `return_status = from` (`live` from `reserved`, F6 + F7 §8.3), the reason as the status
+ *   reason; open reports actioned (R51).
  * - `unhide`: → `return_status`, cleared; refreshed (R14). Refused as approve is.
  * - `remove`: → `removed`, the reason as the status reason; open reports actioned (R51).
+ * The caller runs `afterListingStatusWrite` afterwards (`adminListingAction` does; F6 + F7 §22).
  */
 export async function applyAdminTransition(
   tx: Tx,
@@ -377,7 +451,7 @@ export async function applyAdminTransition(
     case 'reject':
       return writeStatus(tx, listing, 'rejected', { ...base, returnStatus: null, set: moderated('rejected', reason) });
     case 'hide': {
-      const row = await writeStatus(tx, listing, 'hidden', { ...base, returnStatus: listing.status, set: { statusReason: reason } });
+      const row = await writeStatus(tx, listing, 'hidden', { ...base, returnStatus: returnStatusLeaving(listing.status), set: { statusReason: reason } });
       await actionOpenReports(tx, listing.id, adminId, reason);
       return row;
     }

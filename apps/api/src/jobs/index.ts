@@ -23,7 +23,7 @@ export function allJobs(app: FastifyInstance): JobSpec[] {
       everyMs: 3_600_000,
       firstRunMs: 60_000,
       run: async () => {
-        const { expired } = await runListingExpiry(app.db, { log: app.log });
+        const { expired } = await runListingExpiry(app, { log: app.log });
         if (expired > 0) app.log.info({ job: 'listing-expiry', expired }, 'listings expired');
       },
     },

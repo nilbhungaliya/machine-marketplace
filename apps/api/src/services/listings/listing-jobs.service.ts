@@ -1,6 +1,7 @@
 import { and, asc, inArray, lt, notInArray, sql, type SQL } from 'drizzle-orm';
-import type { Db } from '../../db/index.js';
 import { listings } from '../../db/schema.js';
+import { effectsTx, runJobTx, type TxApp } from '../../lib/tx-effects.js';
+import { afterListingStatusWrite } from '../deals/holds.js';
 import { getSettings } from '../settings.service.js';
 import { applySystemTransition } from './listing-lifecycle.service.js';
 
@@ -11,6 +12,9 @@ import { applySystemTransition } from './listing-lifecycle.service.js';
 // another transaction holds is skipped this run; `applySystemTransition` keeps `AND status = $from`, so a renew that
 // commits first wins. Each row runs in its own savepoint: a row that fails is rolled back alone, logged and left out of
 // the rest of the run (it is tried again next hour), and the batch goes on. No reminder job in this build (R11).
+// F6 + F7 (§8.3, §14, §22): batches run through `runJobTx` and each row's savepoint is an `effectsTx`, so a row's queued
+// emits go out only if it expired; after the move `afterListingStatusWrite` reconciles the listing's open offers (it
+// locks only the listing too). A `reserved` listing never expires; a `live` one with holds may, and its deals go on.
 
 /** Rows per batch (one transaction each) and batches per run (§7.4). */
 export const EXPIRY_BATCH_SIZE = 200;
@@ -24,7 +28,7 @@ export interface ListingExpiryOptions {
 }
 
 /** One run of the expiry job: up to 10 batches of 200, oldest `refreshed_at` first. Returns how many expired. */
-export async function runListingExpiry(db: Db, opts: ListingExpiryOptions = {}): Promise<{ expired: number }> {
+export async function runListingExpiry(app: TxApp, opts: ListingExpiryOptions = {}): Promise<{ expired: number }> {
   const scope: SQL | undefined = opts.businessIds ? inArray(listings.businessId, opts.businessIds) : undefined;
   if (opts.businessIds && opts.businessIds.length === 0) return { expired: 0 };
   // Called on the logger (pino's methods need their `this`).
@@ -33,7 +37,7 @@ export async function runListingExpiry(db: Db, opts: ListingExpiryOptions = {}):
   const failed: string[] = [];
   let expired = 0;
   for (let batch = 0; batch < EXPIRY_MAX_BATCHES; batch++) {
-    const { selected, done } = await db.transaction(async (tx) => {
+    const { selected, done } = await runJobTx(app, async (tx) => {
       const { listing_expiry_days: days } = await getSettings(tx);
       const rows = await tx
         .select()
@@ -52,7 +56,10 @@ export async function runListingExpiry(db: Db, opts: ListingExpiryOptions = {}):
       let done = 0;
       for (const row of rows) {
         try {
-          await tx.transaction((sp) => applySystemTransition(sp, row, 'expire', { lockBusiness: false }));
+          await effectsTx(tx, async (sp) => {
+            await applySystemTransition(sp, row, 'expire', { lockBusiness: false });
+            await afterListingStatusWrite(sp, row.id);
+          });
           done++;
         } catch (err) {
           failed.push(row.id);

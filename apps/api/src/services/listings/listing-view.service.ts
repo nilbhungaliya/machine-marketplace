@@ -1,6 +1,8 @@
 import { and, asc, eq, inArray, sql, type SQL } from 'drizzle-orm';
 import {
   listingScore,
+  milliToQuantity,
+  quantityToMilli,
   type AppSettingsValues,
   type EffectiveTemplate,
   type Fitment,
@@ -35,6 +37,7 @@ import { NotFoundError } from '../../lib/errors.js';
 import { publicUrl } from '../../lib/media-url.js';
 import { checkSpecs, isRequiredField } from '../../lib/spec-check.js';
 import { businessDisplayName } from '../business/profile.service.js';
+import { sellerScore } from '../reviews/review-scores.js';
 import { loadTemplate } from '../catalog/read.service.js';
 import { distancesKm, snappedDistancesKm, type LatLng } from '../discovery/distance.js';
 import { loadNode, type ListingNode } from './listing-validate.service.js';
@@ -51,6 +54,16 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 export function trimQuantity(value: string | null): string | null {
   if (value === null) return null;
   return value.includes('.') ? value.replace(/0+$/, '').replace(/\.$/, '') : value;
+}
+
+/**
+ * F6 + F7 §8.4: what buyers can still take, `quantity − held_quantity` (trimmed, never below 0); null without a
+ * quantity. The same as `availableOf` in `services/deals/holds.ts`, kept here so views don't import the hold writer.
+ */
+export function availableQuantityOf(row: Pick<ListingRow, 'quantity' | 'heldQuantity'>): string | null {
+  if (row.quantity === null) return null;
+  const available = quantityToMilli(row.quantity) - quantityToMilli(row.heldQuantity);
+  return milliToQuantity(available < 0n ? 0n : available);
 }
 
 const iso = (d: Date | null): string | null => (d ? d.toISOString() : null);
@@ -106,8 +119,8 @@ function cardFrom(row: ListingRow, p: CardParts): ListingCard {
     side: row.side,
     condition: p.condition,
     quantity: trimQuantity(row.quantity),
-    // F6 + F7 §8.4: quantity − held_quantity from C1-3; the full quantity until then.
-    availableQuantity: trimQuantity(row.quantity),
+    // F6 + F7 §8.4: quantity − held_quantity.
+    availableQuantity: availableQuantityOf(row),
     unit: p.unit,
     priceModel: row.priceModel,
     pricePaise: row.pricePaise,
@@ -362,12 +375,12 @@ export async function loadListing(conn: Conn, row: ListingRow): Promise<LoadedLi
       gstVerified: !!b?.b.verificationLevels.includes('gst'),
       memberSince: b ? b.b.createdAt.toISOString() : '',
       liveListings: live?.n ?? 0,
-      // F6 + F7 §10.4: filled with the seller score in C1-3 / L4.
-      score: null,
+      // F6 + F7 §10.4 (null until L4's score has enough published reviews).
+      score: await sellerScore(conn, row.businessId),
     },
     isOwner: false,
     publishedAt: iso(row.publishedAt),
-    // F6 + F7 §12.2: the signed-in buyer's thread and negotiation, from C1-3.
+    // F6 + F7 §12.2: the signed-in buyer's thread and negotiation, filled by `getListing` (null here).
     myThreadId: null,
     openNegotiation: null,
   };
@@ -477,8 +490,8 @@ export async function toOwnerView(conn: Conn, row: ListingRow, settings: AppSett
     ...d,
     isOwner: true,
     version: row.version,
-    // F6 + F7 §8.4: listings.held_quantity from C1-3.
-    heldQuantity: '0',
+    // F6 + F7 §8.4: on hold in open deals ("On hold in deals: n").
+    heldQuantity: trimQuantity(row.heldQuantity) ?? '0',
     unitId: row.unitId,
     conditionId: row.conditionId,
     partBrandId: row.partBrandId,

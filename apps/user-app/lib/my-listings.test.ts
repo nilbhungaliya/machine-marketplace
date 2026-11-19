@@ -123,7 +123,8 @@ describe('edit entry and sections (§10, R43)', () => {
     expect(editEntry('live')).toBe('menu');
     expect(editEntry('sold')).toBe('menu');
     expect(editEntry('hidden')).toBeNull();
-    expect(editEntry('reserved')).toBeNull();
+    // F6 + F7 §8.3: reserved is editable (quantity ≥ held).
+    expect(editEntry('reserved')).toBe('menu');
   });
   it('no Category on a published listing; side when the node has sides', () => {
     const l = { kind: 'part' as const, status: 'live' as const, side: 'left' as const, needsAttention: [] };

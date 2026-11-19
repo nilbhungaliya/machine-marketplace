@@ -249,7 +249,8 @@ export function filterParts(ctx: FilterContext): FilterParts {
     const priced = range.length ? sql.join(range, sql` AND `) : sql`${priceSql} IS NOT NULL`;
     base.push(f.hidePriceOnRequest ? sql`(${priced})` : sql`(${priceSql} IS NULL OR (${priced}))`);
   }
-  if (f.minQty !== undefined) base.push(sql`${listings.quantity} >= ${f.minQty}`);
+  // F6 + F7 §8.4: what is still available, not the listed quantity (facet counts share this clause).
+  if (f.minQty !== undefined) base.push(sql`(${listings.quantity} - ${listings.heldQuantity}) >= ${f.minQty}`);
   if (f.hasVideo) base.push(sql`EXISTS (SELECT 1 FROM listing_media vm WHERE vm.listing_id = ${listings.id} AND vm.type = 'video')`);
 
   if (ctx.kinds.length) groups.set('kinds', inArray(listings.kind, ctx.kinds));

@@ -15,7 +15,7 @@ import {
   type RentalTerms,
 } from '@mpm/shared-types';
 import type { Db, Tx } from '../../db/index.js';
-import { listingFitments, listingMachines, listingMedia, listingRentals, listings } from '../../db/schema.js';
+import { chatThreads, listingFitments, listingMachines, listingMedia, listingRentals, listings, offers } from '../../db/schema.js';
 import type { UserTokenPayload } from '../../plugins/auth.js';
 import { getSettings } from '../settings.service.js';
 import { loadNode, type ListingNode } from './listing-validate.service.js';
@@ -86,7 +86,8 @@ export async function getOwnerView(conn: Conn, user: UserTokenPayload, id: strin
 /**
  * `GET /listings/:id` (`optionalUser`, §8.1, R20): the owner gets their owner view (any status, as `getOwnerView`);
  * anyone else gets the public detail of a public listing (`publicListingWhere`), with the distance in whole km from
- * their business when both points are known; else `404 LISTING_NOT_FOUND`.
+ * their business when both points are known; else `404 LISTING_NOT_FOUND`. F6 + F7 §12.2: a signed-in buyer whose
+ * business has a thread on the listing gets `myThreadId` and its open negotiation (null for guests and others).
  */
 export async function getListing(conn: Conn, id: string, viewer: Viewer): Promise<ListingDetail | ListingOwnerView> {
   const [owned] = viewer?.businessId
@@ -98,7 +99,36 @@ export async function getListing(conn: Conn, id: string, viewer: Viewer): Promis
   if (!row) throw listingNotFound();
   const loaded = await loadListing(conn, row);
   const distance = (await distancesKm(conn, [row.id], viewer?.businessId)).get(row.id) ?? null;
-  return toPublicDetail(loaded.detail, distance);
+  const detail = toPublicDetail(loaded.detail, distance);
+  return viewer?.businessId ? { ...detail, ...(await buyerThreadOf(conn, row.id, viewer.businessId)) } : detail;
+}
+
+/**
+ * The buyer business's thread on the listing and its open negotiation (F6 + F7 §12.2): the newest `pending` or
+ * `backup` offer (one per thread, R11). Both null without a thread.
+ */
+async function buyerThreadOf(
+  conn: Conn,
+  listingId: string,
+  buyerBusinessId: string,
+): Promise<Pick<ListingDetail, 'myThreadId' | 'openNegotiation'>> {
+  const [thread] = await conn
+    .select({ id: chatThreads.id })
+    .from(chatThreads)
+    .where(and(eq(chatThreads.listingId, listingId), eq(chatThreads.buyerBusinessId, buyerBusinessId)));
+  if (!thread) return { myThreadId: null, openNegotiation: null };
+  const [offer] = await conn
+    .select({ id: offers.id, status: offers.status, turn: offers.turn, pricePerUnitPaise: offers.pricePerUnitPaise })
+    .from(offers)
+    .where(and(eq(offers.threadId, thread.id), inArray(offers.status, ['pending', 'backup'])))
+    .orderBy(desc(offers.createdAt), desc(offers.id))
+    .limit(1);
+  return {
+    myThreadId: thread.id,
+    openNegotiation: offer
+      ? { offerId: offer.id, status: offer.status, turn: offer.turn, pricePerUnitPaise: Number(offer.pricePerUnitPaise) }
+      : null,
+  };
 }
 
 const GROUP_STATUSES: Record<Exclude<MyListingsGroup, 'removed_by_team'>, readonly ListingStatus[]> = {

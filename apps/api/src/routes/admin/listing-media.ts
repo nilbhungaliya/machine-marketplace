@@ -16,7 +16,7 @@ const adminListingMediaRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.delete('/admin/listings/:id/media/:mediaId', moderator, async (request) => {
     const { id, mediaId } = mediaParams.parse(request.params);
     const { reason } = reasonBody.parse(request.body ?? {});
-    return { data: await adminDeleteMedia(fastify.db, request.admin!.adminId, id, mediaId, reason, request.log) };
+    return { data: await adminDeleteMedia(fastify, request.admin!.adminId, id, mediaId, reason, request.log) };
   });
 };
 

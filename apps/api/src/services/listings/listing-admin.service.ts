@@ -35,7 +35,10 @@ import { adminUsers, businesses, listingFitments, listingMachines, listingStatus
 import { adminText } from '../../lib/admin-text.js';
 import { AppError, ConflictError, ValidationError } from '../../lib/errors.js';
 import { publicUrl } from '../../lib/media-url.js';
+import { runTx, type TxApp } from '../../lib/tx-effects.js';
 import { writeAudit } from '../audit.service.js';
+import { cancelAgreedDealsForRemovedListing } from '../deals/deal-cancel.js';
+import { afterListingStatusWrite } from '../deals/holds.js';
 import { validateSpecs } from '../catalog/validate-specs.js';
 import { getSettings } from '../settings.service.js';
 import { applyAdminTransition } from './listing-lifecycle.service.js';
@@ -52,7 +55,7 @@ import {
   type StoredFitment,
 } from './listing-validate.service.js';
 import { headlineRate, toOwnerView } from './listing-view.service.js';
-import { listingNotFound, lockBusinessThenListing, type BusinessRow, type ListingRow } from './locks.js';
+import { listingNotFound, lockBusinessThenListing, lockListingOnly, type BusinessRow, type ListingRow } from './locks.js';
 import { refreshListingSearch } from '../discovery/search-text.js';
 
 // Listing moderation and the admin's listing pages (F2 spec §11, R33, R34, R50–R53; plan Task 16): the moderation queue
@@ -308,6 +311,11 @@ export interface AdminActionOptions {
  * `applyAdminTransition` (version check for approve / ask for changes / reject, required reasons, photo and rental-GST
  * checks, reports actioned on hide and remove) and writes the `listing.<action>` audit row with the changed columns
  * (and, on hide / remove, how many open reports it actioned). A refused action writes nothing.
+ *
+ * F6 + F7 (§8.3, §22): `remove` first cancels the listing's `agreed` deals (`cancelAgreedDealsForRemovedListing`,
+ * holds released; `handed_over` / `disputed` deals continue); after the status write `afterListingStatusWrite` runs
+ * (an unhide or approval of a fully held listing lands `reserved`, a sold-out one `sold`). Returns the listing after
+ * the hook; the audit row records the moderator's own move.
  */
 export async function adminListingAction(
   tx: Tx,
@@ -325,7 +333,14 @@ export async function adminListingAction(
       .where(and(eq(reports.targetType, 'listing'), eq(reports.targetId, id), inArray(reports.status, ['open', 'reviewing'])));
     openReports = Number(r?.n ?? 0);
   }
-  const row = await applyAdminTransition(tx, adminId, listing, action, { version: opts.version, reason: opts.reason });
+  // The cancel releases holds, and its syncReservation may move a reserved listing back to live: the transition runs
+  // from the row as it is after the cancel (the audit's `before` keeps the moderator's view).
+  let from = listing;
+  if (action === 'remove') {
+    await cancelAgreedDealsForRemovedListing(tx, id, adminId);
+    from = await lockListingOnly(tx, id);
+  }
+  const row = await applyAdminTransition(tx, adminId, from, action, { version: opts.version, reason: opts.reason });
   const diff = auditDiff(listing, row);
   await writeAudit(tx, {
     adminId,
@@ -335,7 +350,7 @@ export async function adminListingAction(
     before: diff.before,
     after: { ...diff.after, ...(openReports > 0 ? { reportsActioned: openReports } : {}), ...(opts.bulk ? { bulk: true } : {}) },
   });
-  return row;
+  return afterListingStatusWrite(tx, id);
 }
 
 // ─── Admin edit: category, side, fit (§11.3, R33) ───
@@ -502,11 +517,13 @@ export async function resolveListingReports(
 
 /**
  * `POST /admin/listings/bulk`: hide or remove up to 50 listings with one reason (checked once: `400` for the whole
- * request), **one transaction per listing**, one audit row each. A listing the action can't apply to is skipped with
- * its error code (`LISTING_NOT_FOUND`, `LISTING_TRANSITION_NOT_ALLOWED`, …); the others still apply.
+ * request), **one transaction per listing** (`runTx`, so each listing's queued emits go out when it commits), one
+ * audit row each. A listing the action can't apply to is skipped with its error code (`LISTING_NOT_FOUND`,
+ * `LISTING_TRANSITION_NOT_ALLOWED`, …); the others still apply. One transaction each rather than savepoints of one:
+ * a single transaction would hold every listed business's lock until the end.
  */
 export async function bulkListingAction(
-  db: Db,
+  app: TxApp,
   adminId: string,
   input: { action: AdminListingBulkAction; ids: string[]; reason: string },
 ): Promise<AdminListingBulkResult> {
@@ -514,7 +531,7 @@ export async function bulkListingAction(
   const result: AdminListingBulkResult = { done: [], skipped: [] };
   for (const id of [...new Set(input.ids)]) {
     try {
-      await db.transaction((tx) => adminListingAction(tx, adminId, id, input.action, { reason, bulk: true }));
+      await runTx(app, (tx) => adminListingAction(tx, adminId, id, input.action, { reason, bulk: true }));
       result.done.push(id);
     } catch (err) {
       if (!(err instanceof AppError)) throw err;

@@ -5,6 +5,7 @@ import type { ListingKind, ListingStatus } from '@mpm/shared-types';
 import { db, pool } from '../src/db/index.js';
 import { appSettings, listingStatusHistory, listings } from '../src/db/schema.js';
 import { allJobs } from '../src/jobs/index.js';
+import type { TxApp } from '../src/lib/tx-effects.js';
 import { runListingExpiry } from '../src/services/listings/listing-jobs.service.js';
 import { applySystemTransition } from '../src/services/listings/listing-lifecycle.service.js';
 import { createTestCatalog, deleteTestCatalog, type TestCatalog } from './_helpers/test-catalog.js';
@@ -30,6 +31,8 @@ vi.mock('../src/services/listings/listing-lifecycle.service.js', async (importOr
 const transition = vi.mocked(applySystemTransition);
 
 const DAY = 24 * 60 * 60 * 1000;
+/** The job's app (F6 + F7: it runs through `runJobTx`); no sockets, so the flush is a no-op. */
+const jobApp = { db, log: { warn: () => undefined } } as unknown as TxApp;
 let catalog: TestCatalog;
 let machineUnit: { id: string; key: string };
 const sellers: TestSeller[] = [];
@@ -40,7 +43,7 @@ async function seller(): Promise<TestSeller> {
   return s;
 }
 
-const run = () => runListingExpiry(db, { businessIds: sellers.map((s) => s.businessId) });
+const run = () => runListingExpiry(jobApp, { businessIds: sellers.map((s) => s.businessId) });
 
 async function listing(s: TestSeller, status: ListingStatus, daysAgo: number, kind: ListingKind = 'part'): Promise<string> {
   const { id } = await insertTestListing(db, {
@@ -173,7 +176,7 @@ describe('runListingExpiry: a failing row', () => {
     });
     const errors: Array<{ obj: Record<string, unknown>; msg: string }> = [];
     try {
-      const { expired } = await runListingExpiry(db, {
+      const { expired } = await runListingExpiry(jobApp, {
         businessIds: [s.businessId],
         log: { error: (obj, msg) => errors.push({ obj, msg }) },
       });
@@ -191,7 +194,7 @@ describe('runListingExpiry: a failing row', () => {
     expect(errors[0]!.obj.err).toBeInstanceOf(Error);
 
     // The next run (the failure gone) expires it.
-    expect((await runListingExpiry(db, { businessIds: [s.businessId] })).expired).toBe(1);
+    expect((await runListingExpiry(jobApp, { businessIds: [s.businessId] })).expired).toBe(1);
     expect(await statusOf(bad)).toBe('expired');
   });
 });

@@ -21,6 +21,7 @@ import {
 } from '@mpm/shared-types';
 import { perUser } from '../lib/per-user-limit.js';
 import { isRealDate, isStorableText } from '../lib/spec-check.js';
+import { runTx } from '../lib/tx-effects.js';
 import { applySellerAction, publishListing } from '../services/listings/listing-lifecycle.service.js';
 import { getListing, getOwnerView, listMine } from '../services/listings/listing-read.service.js';
 import { createReport } from '../services/listings/listing-reports.service.js';
@@ -223,7 +224,7 @@ const listingRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.patch('/listings/:id', { ...user, config: perUser(240) }, async (request) => {
     const { id } = idParams.parse(request.params);
     const patch = patchBody.parse(request.body) as ListingPatchInput;
-    return { data: await fastify.db.transaction((tx) => patchListing(tx, request.user!, id, patch)) };
+    return { data: await runTx(fastify, (tx) => patchListing(tx, request.user!, id, patch)) };
   });
 
   // Drafts only. Its media objects are deleted and purged after commit, best-effort (§6.1, plan Task 13).
@@ -236,14 +237,14 @@ const listingRoutes: FastifyPluginAsync = async (fastify) => {
   // Publish (from draft) or resubmit (from rejected) through the go-live gate (§5.5): `{ listing, outcome }`.
   fastify.post('/listings/:id/publish', { ...user, config: perUser(30) }, async (request) => {
     const { id } = idParams.parse(request.params);
-    return { data: await fastify.db.transaction((tx) => publishListing(tx, request.user!, id)) };
+    return { data: await runTx(fastify, (tx) => publishListing(tx, request.user!, id)) };
   });
 
   // Seller actions of §7.2 (pause, resume, renew, mark sold / unavailable / rented, relist, end rental, remove).
   fastify.post('/listings/:id/actions', { ...user, config: perUser(60) }, async (request) => {
     const { id } = idParams.parse(request.params);
     const { action, note } = actionBody.parse(request.body);
-    return { data: await fastify.db.transaction((tx) => applySellerAction(tx, request.user!, id, action, note ?? null)) };
+    return { data: await runTx(fastify, (tx) => applySellerAction(tx, request.user!, id, action, note ?? null)) };
   });
 };
 
