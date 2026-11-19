@@ -20,7 +20,7 @@ interface PhotoGridProps {
 
 /**
  * A chat message's photos (§6.8): up to five square tiles from private signed URLs; a tap opens the photo full screen.
- * URLs live 300 s, so a load error asks the screen to refetch fresh ones.
+ * URLs live 300 s, so a load error asks the screen to refetch fresh ones. Private photos stay in memory, never on disk.
  */
 export default function PhotoGrid({ photos, messageId, onExpired, style }: PhotoGridProps) {
   const { t } = useTranslation();
@@ -56,12 +56,12 @@ export default function PhotoGrid({ photos, messageId, onExpired, style }: Photo
           accessibilityRole="imagebutton"
           accessibilityLabel={t('chats.thread.photo', { n: i + 1, total: photos.length })}
         >
-          <Image source={{ uri: p.url }} style={s.image} contentFit="cover" transition={150} onError={onExpired} accessibilityIgnoresInvertColors />
+          <Image source={{ uri: p.url }} style={s.image} contentFit="cover" cachePolicy="memory" transition={150} onError={onExpired} accessibilityIgnoresInvertColors />
         </Pressable>
       ))}
       <Modal visible={current !== undefined} transparent={false} animationType="fade" onRequestClose={() => setOpen(null)}>
         <View style={s.viewer}>
-          {current ? <Image source={{ uri: current.url }} style={s.full} contentFit="contain" onError={onExpired} accessibilityIgnoresInvertColors /> : null}
+          {current ? <Image source={{ uri: current.url }} style={s.full} contentFit="contain" cachePolicy="memory" onError={onExpired} accessibilityIgnoresInvertColors /> : null}
           <View style={s.bar}>
             <Text style={s.count}>{open !== null ? t('chats.thread.photo', { n: open + 1, total: photos.length }) : ''}</Text>
             <IconButton icon={X} onPress={() => setOpen(null)} accessibilityLabel={t('chats.thread.closePhoto')} testID="Thread-photo-close" />

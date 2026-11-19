@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { AppState } from 'react-native';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient, type InfiniteData } from '@tanstack/react-query';
 import type { ContactPhoneState, ConversationReportReason, InboxFilter, InboxPage, ThreadDetail } from '@mpm/shared-types';
@@ -57,13 +57,28 @@ export function useMessages(threadId: string) {
   });
 }
 
-/** Marks the thread on screen (its inbox row keeps unread 0 while a message arrives). */
-export function useOpenThread(threadId: string, focused: boolean): void {
+/** Whether the app is in the foreground; a return to it re-renders (and re-runs effects that depend on it). */
+export function useAppActive(): boolean {
+  const [active, setActive] = useState(AppState.currentState === 'active');
   useEffect(() => {
-    if (!focused) return undefined;
+    const sub = AppState.addEventListener('change', (state) => setActive(state === 'active'));
+    return () => sub.remove();
+  }, []);
+  return active;
+}
+
+/**
+ * Marks the thread on screen (its inbox row keeps unread 0 while a message arrives). Only while the screen is focused
+ * and the app is in front: a message that lands while the app is in the background stays unread.
+ */
+export function useOpenThread(threadId: string, focused: boolean): void {
+  const active = useAppActive();
+  const open = focused && active;
+  useEffect(() => {
+    if (!open) return undefined;
     setOpenThread(threadId);
     return () => setOpenThread(null);
-  }, [threadId, focused]);
+  }, [threadId, open]);
 }
 
 /**

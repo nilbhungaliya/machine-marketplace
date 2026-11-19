@@ -66,6 +66,20 @@ export function messageBody(clientMessageId: string, text: string, photoKeys: st
   };
 }
 
+/**
+ * Error codes after which a failed send starts afresh: the uploaded photo keys are spent or refused, or the server
+ * already holds a different body under this `clientMessageId` / Idempotency-Key. The composer then drops its id and its
+ * photo keys, so the next tap is a new message that uploads again.
+ */
+const SEND_RESET_CODES: ReadonlySet<string> = new Set([
+  'PHOTO_INVALID', 'PHOTO_KEY_INVALID', 'IDEMPOTENCY_KEY_REUSED', 'CLIENT_MESSAGE_ID_REUSED',
+]);
+
+/** Whether a failed send must forget its `clientMessageId` and photo keys (any other failure retries the same message). */
+export function sendResets(code: string): boolean {
+  return SEND_RESET_CODES.has(code);
+}
+
 // ─── Enquire sheet (§6.3) ───
 
 export interface EnquiryForm {

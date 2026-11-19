@@ -27,7 +27,7 @@ import ThreadMenu, { type ThreadMenuAction } from '@/components/chat/ThreadMenu'
 import ShareNumberSheet from '@/components/contact/ShareNumberSheet';
 import OfferSheet from '@/components/offers/OfferSheet';
 import {
-  useArchiveThread, useBlockThread, useMarkRead, useMessages, useOpenThread, useThread, useThreadViewing,
+  useAppActive, useArchiveThread, useBlockThread, useMarkRead, useMessages, useOpenThread, useThread, useThreadViewing,
 } from '@/hooks/use-chat';
 import { useType } from '@/hooks/use-type';
 import { track } from '@/lib/analytics';
@@ -59,6 +59,7 @@ export default function ThreadScreen({ route, navigation }: RootStackScreenProps
   const type = useType();
   const confirm = useConfirm();
   const focused = useIsFocused();
+  const appActive = useAppActive();
   const thread = useThread(threadId);
   const messages = useMessages(threadId);
   const markRead = useMarkRead(threadId);
@@ -94,9 +95,10 @@ export default function ThreadScreen({ route, navigation }: RootStackScreenProps
     if (now.messagesStale || photosExpired(now.items, Date.now())) void refetchMessages();
   }, [refetchThread, refetchMessages]));
 
-  // Read up to the newest loaded message while the thread is on screen.
+  // Read up to the newest loaded message while the thread is on screen with the app in front; a return to the
+  // foreground re-runs this and reads what arrived meanwhile.
   useEffect(() => {
-    if (!focused || !detail || !newest) return;
+    if (!focused || !appActive || !detail || !newest) return;
     if (lastMarked.current === newest) return;
     if (detail.unread === 0 && BigInt(newest) <= BigInt(detail.lastReadSeq || '0')) {
       lastMarked.current = newest;
@@ -104,7 +106,7 @@ export default function ThreadScreen({ route, navigation }: RootStackScreenProps
     }
     lastMarked.current = newest;
     markRead(newest);
-  }, [focused, detail, newest, markRead]);
+  }, [focused, appActive, detail, newest, markRead]);
 
   const onPhotoExpired = useCallback(() => {
     const now = Date.now();

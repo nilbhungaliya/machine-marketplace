@@ -65,6 +65,11 @@ export default function EnquireSheet({ listing, visible, preset, onClose, onSent
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
+  // A changed form is a new enquiry: a retry keeps the key only for the very same body.
+  useEffect(() => {
+    key.current = nextClientMessageId();
+  }, [form, machine]);
+
   const s = useMemo(() => StyleSheet.create({
     chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
     error: { ...type('caption'), color: colors.danger },

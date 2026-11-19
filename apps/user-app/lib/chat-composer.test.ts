@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  acceptPhotos, composerState, enquiryBody, enquiryDefaults, enquiryProblem, messageProblem, quickOptionsFor,
+  acceptPhotos, composerState, enquiryBody, enquiryDefaults, enquiryProblem, messageProblem, quickOptionsFor, sendResets,
 } from './chat-composer';
 
 describe('composerState', () => {
@@ -26,6 +26,15 @@ describe('photos and text limits', () => {
     expect(messageProblem('', 2)).toBeNull();
     expect(messageProblem(`  ${'a'.repeat(2000)}  `, 0)).toBeNull();
     expect(messageProblem('a'.repeat(2001), 1)).toBe('tooLong');
+  });
+});
+
+describe('sendResets', () => {
+  it('starts a new message after a spent photo or a reused id, and retries the same one otherwise', () => {
+    for (const code of ['PHOTO_INVALID', 'PHOTO_KEY_INVALID', 'IDEMPOTENCY_KEY_REUSED', 'CLIENT_MESSAGE_ID_REUSED']) {
+      expect(sendResets(code)).toBe(true);
+    }
+    for (const code of ['ERR_NETWORK', 'RATE_LIMITED', 'THREAD_BLOCKED', 'UNKNOWN']) expect(sendResets(code)).toBe(false);
   });
 });
 

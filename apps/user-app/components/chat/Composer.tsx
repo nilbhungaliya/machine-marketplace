@@ -10,7 +10,7 @@ import IconButton from '@/components/IconButton';
 import { uploadChatPhoto, useSendMessage } from '@/hooks/use-chat';
 import { useType } from '@/hooks/use-type';
 import { errorCode } from '@/lib/api-error';
-import { acceptPhotos, messageBody, messageProblem, nextClientMessageId, photosLeft } from '@/lib/chat-composer';
+import { acceptPhotos, messageBody, messageProblem, nextClientMessageId, photosLeft, sendResets } from '@/lib/chat-composer';
 import { f6ErrorKey } from '@/lib/f6-errors';
 import { Camera, Images, Send, TAB_ICONS, X } from '@/lib/icons';
 import { radius, spacing, useTheme } from '@/lib/theme';
@@ -28,9 +28,6 @@ interface PickedPhoto {
   /** The uploaded key, once uploaded (kept for a retry of the same send). */
   key: string | null;
 }
-
-/** Codes that mean the uploads are gone: drop them, so the next send uploads afresh. */
-const SPENT_PHOTO_CODES = new Set(['PHOTO_INVALID', 'PHOTO_KEY_INVALID']);
 
 /**
  * The thread's composer (mockup `.composer`, §15.1): + (photos: camera or gallery, up to 5 with the message as a
@@ -149,7 +146,7 @@ export default function Composer({ threadId, style }: ComposerProps) {
       clientId.current = null;
     } catch (err) {
       const code = errorCode(err);
-      if (SPENT_PHOTO_CODES.has(code)) {
+      if (sendResets(code)) {
         setPhotos((prev) => prev.map((p) => ({ ...p, key: null })));
         clientId.current = null;
       }
@@ -192,7 +189,11 @@ export default function Composer({ threadId, style }: ComposerProps) {
         <TextInput
           style={s.input}
           value={text}
-          onChangeText={setText}
+          onChangeText={(v) => {
+            setText(v);
+            // An edited message is a new message: a retry reuses the id only for the very same body.
+            clientId.current = null;
+          }}
           placeholder={t('chats.composer.placeholder')}
           placeholderTextColor={colors.textMuted}
           multiline
