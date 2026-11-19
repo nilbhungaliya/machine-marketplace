@@ -5,7 +5,7 @@ import { businesses, chatMessages, deals } from '../../db/schema.js';
 import { ConflictError, NotFoundError, ValidationError } from '../../lib/errors.js';
 import type { UserTokenPayload } from '../../plugins/auth.js';
 import { upsertChatNotification } from '../notifications/chat-rows.js';
-import { visibleText } from './chat-view.js';
+import { publicText, visibleText } from './chat-view.js';
 import { assertCanWrite, getThreadForParty, type ChatReader, type ThreadRow } from './members.js';
 import { privatePhotoUrl } from './private-photo.js';
 import { looksLikeScam } from './scam-patterns.js';
@@ -98,6 +98,19 @@ export async function findRetriedMessage(conn: Conn, userId: string, clientMessa
 }
 
 /**
+ * The text of a message or a photo caption, trimmed: `MESSAGE_EMPTY` with neither text nor photos, at most
+ * `CHAT_LIMITS.messageMax` characters. Checked before photos are finalized too, so a bad caption consumes no upload.
+ */
+export function checkMessageText(raw: string | null | undefined, photoCount: number): string | null {
+  const text = raw?.trim() || null;
+  if (text === null && photoCount === 0) throw new ValidationError('Write a message', undefined, 'MESSAGE_EMPTY');
+  if (text !== null && text.length > CHAT_LIMITS.messageMax) {
+    throw new ValidationError('This message is too long', { max: CHAT_LIMITS.messageMax }, 'VALIDATION_ERROR');
+  }
+  return text;
+}
+
+/**
  * The checks a photo send passes **before** its photos are finalized (outside the transaction): party (`404`), not a
  * viewer, no block. Returns the stored message when this `clientMessageId` was already sent (a retry finalizes nothing).
  */
@@ -143,11 +156,7 @@ export async function sendMessage(tx: Tx, user: UserTokenPayload, threadId: stri
   if (photoKeys.length > CHAT_LIMITS.photosPerMessage) {
     throw new ValidationError('Too many photos', { max: CHAT_LIMITS.photosPerMessage }, 'TOO_MANY_PHOTOS');
   }
-  const text = input.text?.trim() || null;
-  if (text === null && photoKeys.length === 0) throw new ValidationError('Write a message', undefined, 'MESSAGE_EMPTY');
-  if (text !== null && text.length > CHAT_LIMITS.messageMax) {
-    throw new ValidationError('This message is too long', { max: CHAT_LIMITS.messageMax }, 'VALIDATION_ERROR');
-  }
+  const text = checkMessageText(input.text, photoKeys.length);
 
   const row = await insertMessage(tx, thread, {
     kind: photoKeys.length > 0 ? 'photos' : 'text',
@@ -163,7 +172,7 @@ export async function sendMessage(tx: Tx, user: UserTokenPayload, threadId: stri
   await upsertChatNotification(tx, {
     thread,
     recipientBusinessId: otherBusinessId(thread, reader),
-    senderBusinessName: sender?.name ?? '',
+    senderBusinessName: publicText(sender?.name ?? '') ?? '',
     seq: row.seq,
   });
   // The seller's first message answers an open enquiry (§6.2), which moves the turn.

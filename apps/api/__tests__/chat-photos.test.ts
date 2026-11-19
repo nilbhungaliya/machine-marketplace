@@ -96,6 +96,19 @@ describe('sending photos', () => {
     expect(await messageCount()).toBe(before);
   });
 
+  it('refuses a caption over 2 000 characters before any upload is consumed', async () => {
+    const before = await messageCount();
+    const res = await app.inject({
+      method: 'POST',
+      url: `/threads/${threadId}/messages`,
+      headers: auth(buyer.token),
+      payload: { clientMessageId: randomUUID(), text: 'x'.repeat(2001), photoKeys: [upload(buyer.businessId)] },
+    });
+    expect(res.statusCode).toBe(400);
+    expect(bytesSpy).not.toHaveBeenCalled();
+    expect(await messageCount()).toBe(before);
+  });
+
   it('replays a retried send with the same Idempotency-Key: one message, photos finalized once', async () => {
     const before = await messageCount();
     const keys = [upload(buyer.businessId), upload(buyer.businessId)];

@@ -11,7 +11,9 @@ import { setupSocketIO } from '../src/socket/setup.js';
 import { createTestBusinessUser, deleteTestBusinesses, type TestBusinessUser } from './_helpers/test-businesses.js';
 import { addTestMember, insertTestDeal } from './_helpers/test-deals.js';
 import { createTestSeller, deleteTestSellerExtras, insertTestListing, type TestSeller } from './_helpers/test-listings.js';
-import { uniqueTestPhone } from './_helpers/test-users.js';
+import { deleteTestUsers, uniqueTestPhone } from './_helpers/test-users.js';
+import { signUserToken } from '../src/plugins/auth.js';
+import { signInWithPhone } from '../src/services/user.service.js';
 
 // L1-4: masking end to end, share my number, the reveal, the contact number (F6 + F7 spec §6.5, §6.6, R6, §19).
 
@@ -218,6 +220,24 @@ describe('who may tick', () => {
       const res = await app.inject({ method, url: path, headers: auth(sellerSales.token), ...(payload ? { payload } : {}) });
       expect(res.statusCode).toBe(403);
       expect(res.json().code).toBe('OWNER_ONLY');
+    }
+  });
+
+  it('refuses a user who has not finished onboarding with ONBOARDING_INCOMPLETE', async () => {
+    const signIn = await signInWithPhone(db, uniqueTestPhone());
+    try {
+      const token = signUserToken({ userId: signIn.user.id, businessId: null });
+      for (const [method, path, payload] of [
+        ['POST', '/businesses/me/contact-phone/otp/send', { phone: '9876543210' }],
+        ['POST', '/businesses/me/contact-phone/otp/verify', { code: '123456' }],
+        ['DELETE', '/businesses/me/contact-phone', undefined],
+      ] as const) {
+        const res = await app.inject({ method, url: path, headers: auth(token), ...(payload ? { payload } : {}) });
+        expect(res.statusCode).toBe(409);
+        expect(res.json().code).toBe('ONBOARDING_INCOMPLETE');
+      }
+    } finally {
+      await deleteTestUsers([signIn.user.id]);
     }
   });
 });

@@ -1,15 +1,22 @@
 import { randomUUID } from 'node:crypto';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import { eq } from 'drizzle-orm';
 import { buildApp } from '../src/app.js';
 import { db } from '../src/db/index.js';
-import { appSettings, chatMessages } from '../src/db/schema.js';
+import { appSettings, businesses, chatMessages } from '../src/db/schema.js';
+import { upsertChatNotification } from '../src/services/notifications/chat-rows.js';
 import { createTestBusinessUser, deleteTestBusinesses, type TestBusinessUser } from './_helpers/test-businesses.js';
 import { createTestBrand, deleteTestBrands, type TestBrand } from './_helpers/test-catalog.js';
 import { createTestSeller, deleteTestSellerExtras, insertTestListing, type TestSeller } from './_helpers/test-listings.js';
 
 // L1-1: threads, enquiries, text messages (F6 + F7 spec §6.1–§6.4, §6.7).
+
+// The grouped chat notification is L4's; spied here to check what the sender's name looks like when it gets there.
+vi.mock('../src/services/notifications/chat-rows.js', async (importOriginal) => {
+  const real = await importOriginal<typeof import('../src/services/notifications/chat-rows.js')>();
+  return { ...real, upsertChatNotification: vi.fn(real.upsertChatNotification) };
+});
 
 let app: FastifyInstance;
 let seller: TestSeller;
@@ -144,6 +151,20 @@ describe('thread reads and messages', () => {
     expect(buyerView).toMatchObject({ kind: 'text', scamWarning: true, isMine: false });
     const [sellerView] = (await app.inject({ method: 'GET', url: `/threads/${threadId}/messages`, headers: auth(seller.token) })).json().data;
     expect(sellerView).toMatchObject({ scamWarning: false, isMine: true });
+  });
+
+  it("masks a phone number in the sender's business name before it reaches the chat notification", async () => {
+    const sender = await createTestBusinessUser();
+    businessIds.push(sender.businessId);
+    await db.update(businesses).set({ tradeName: 'Call 9876543210 Traders' }).where(eq(businesses.id, sender.businessId));
+    const { threadId } = (await enquire(sender.token, await listing())).json().data;
+    const spy = vi.mocked(upsertChatNotification);
+    spy.mockClear();
+    expect((await send(sender.token, threadId, 'hello')).statusCode).toBe(200);
+    expect(spy).toHaveBeenCalledTimes(1);
+    const name = spy.mock.calls[0]![1].senderBusinessName;
+    expect(name).not.toContain('9876543210');
+    expect(name).toContain('Traders');
   });
 
   it('refuses an empty message', async () => {

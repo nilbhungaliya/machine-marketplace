@@ -96,7 +96,13 @@ export async function maybeReveal(tx: Tx, threadId: string): Promise<boolean> {
   await insertSystemLine(tx, threadId, 'contact_shared', { dealId });
   // Every member's open thread refetches: old messages now read unmasked (ids only, R10).
   emitToBusinesses(tx, [thread.buyerBusinessId, thread.sellerBusinessId], 'thread:updated', { threadId, reason: 'contact_shared' });
-  emitToBusinesses(tx, [thread.buyerBusinessId, thread.sellerBusinessId], 'deal:updated', { dealId, threadId });
+  const [deal] = await tx.select({ status: deals.status, version: deals.version }).from(deals).where(eq(deals.id, dealId));
+  emitToBusinesses(tx, [thread.buyerBusinessId, thread.sellerBusinessId], 'deal:updated', {
+    dealId,
+    threadId,
+    status: deal!.status,
+    version: deal!.version,
+  });
   return true;
 }
 

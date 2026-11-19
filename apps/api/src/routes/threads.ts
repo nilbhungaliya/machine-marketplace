@@ -4,6 +4,7 @@ import { CHAT_LIMITS, CONVERSATION_REPORT_REASONS, QUICK_ENQUIRIES } from '@mpm/
 import { groupRateLimit } from '../lib/group-limit.js';
 import { refuseViewer } from '../lib/member-guard.js';
 import { perUser } from '../lib/per-user-limit.js';
+import { ValidationError } from '../lib/errors.js';
 import { isStorableText } from '../lib/spec-check.js';
 import { runTx } from '../lib/tx-effects.js';
 import { blockFromThread } from '../services/chat/block.service.js';
@@ -11,7 +12,7 @@ import { reportConversation } from '../services/chat/conversation-report.service
 import { sendEnquiry } from '../services/chat/enquiry.service.js';
 import { listThreads, markRead, setArchived } from '../services/chat/inbox.service.js';
 import { assertCanWrite, getThreadForParty } from '../services/chat/members.js';
-import { listMessages, messagePhotos, precheckSend, sendMessage, toThreadMessages } from '../services/chat/message.service.js';
+import { checkMessageText, listMessages, messagePhotos, precheckSend, sendMessage, toThreadMessages } from '../services/chat/message.service.js';
 import { finalizePrivatePhotos, presignPrivatePhoto } from '../services/chat/private-photo.js';
 import { assertNotBlocked, getThreadDetail } from '../services/chat/thread.service.js';
 import { shareContact } from '../services/consent/contact-consent.service.js';
@@ -55,7 +56,8 @@ const messagesQuery = z.object({ before: z.string().regex(/^\d{1,18}$/).transfor
 const sendBody = z
   .object({
     clientMessageId: z.string().uuid(),
-    text: text(CHAT_LIMITS.messageMax).nullable().optional(),
+    // Length after trim is the service's (`checkMessageText`); this cap only bounds the body (leading / trailing space).
+    text: z.string().max(CHAT_LIMITS.messageMax + 200).refine(isStorableText, 'contains characters that cannot be stored').nullable().optional(),
     photoKeys: z.array(z.string().min(1).max(300)).max(20).optional(),
   })
   .strict();
@@ -123,6 +125,13 @@ const threadRoutes: FastifyPluginAsync = async (fastify) => {
       let photoKeys: string[] = [];
       if (body.photoKeys && body.photoKeys.length > 0) {
         const { thread, reader, retried } = await precheckSend(fastify.db, user(request), id, body.clientMessageId);
+        if (!retried) {
+          if (body.photoKeys.length > CHAT_LIMITS.photosPerMessage) {
+            throw new ValidationError('Too many photos', { max: CHAT_LIMITS.photosPerMessage }, 'TOO_MANY_PHOTOS');
+          }
+          // The caption is checked before any upload is consumed.
+          checkMessageText(body.text, body.photoKeys.length);
+        }
         if (retried) {
           const [message] = await toThreadMessages(fastify.db, [retried], reader, thread);
           return runIdempotent(request, reply, fastify, async () => ({ status: 200, body: { data: message } }));

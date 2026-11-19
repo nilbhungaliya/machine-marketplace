@@ -1,6 +1,7 @@
-import type { FastifyPluginAsync } from 'fastify';
+import type { FastifyPluginAsync, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { OTP_LENGTH } from '@mpm/shared-types';
+import { ConflictError } from '../lib/errors.js';
 import { ownerOnly } from '../lib/member-guard.js';
 import { perUser } from '../lib/per-user-limit.js';
 import { runTx } from '../lib/tx-effects.js';
@@ -13,8 +14,13 @@ const tags = ['Businesses'];
 const sendBody = z.object({ phone: z.string().max(20) }).strict();
 const verifyBody = z.object({ code: z.string().length(OTP_LENGTH) }).strict();
 
+/** A user who hasn't finished onboarding has no business (and no owner role to check yet). */
+async function needsBusiness(request: FastifyRequest): Promise<void> {
+  if (!request.user?.businessId) throw new ConflictError('Finish setting up your business first', 'ONBOARDING_INCOMPLETE');
+}
+
 const contactPhoneRoutes: FastifyPluginAsync = async (fastify) => {
-  const owner = (max: number) => ({ schema: { tags }, preHandler: [fastify.requireUser, ownerOnly], config: perUser(max) });
+  const owner = (max: number) => ({ schema: { tags }, preHandler: [fastify.requireUser, needsBusiness, ownerOnly], config: perUser(max) });
 
   // → `{ resendAfter, devCode? }` (devCode outside production only, as sign-in).
   fastify.post('/businesses/me/contact-phone/otp/send', owner(5), async (request) => {
