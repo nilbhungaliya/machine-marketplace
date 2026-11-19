@@ -1,14 +1,17 @@
-import ModulePlaceholder from '@/components/module-placeholder';
+'use client';
 
-export default function Page() {
+import { EnquiriesTable } from '@/components/enquiries/enquiries-table';
+import { PageHeader } from '@/components/ui/page-header';
+
+/** Enquiries & offers (F6 + F7 spec §16.1): a read-only monitor of every conversation and its negotiation. */
+export default function EnquiriesPage() {
   return (
-    <ModulePlaceholder
-      title="Enquiries & offers"
-      description="Enquiries, offers and counteroffers (scope A5)"
-      scope={[
-        "View enquiries by listing, buyer or seller",
-        "Monitor offers and counteroffers and their status",
-      ]}
-    />
+    <div>
+      <PageHeader
+        title="Enquiries & offers"
+        description="Every conversation with its open negotiation. Read-only: no message or note text is shown here."
+      />
+      <EnquiriesTable />
+    </div>
   );
 }

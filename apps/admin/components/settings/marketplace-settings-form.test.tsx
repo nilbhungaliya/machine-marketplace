@@ -104,4 +104,15 @@ describe('MarketplaceSettingsForm', () => {
     expect(onSaved).toHaveBeenCalledWith(saved);
     expect(toast.success).toHaveBeenCalledWith('Settings saved');
   });
+
+  it('F6 + F7 §17: the negotiation section blocks Save with the API cross-check message', async () => {
+    const user = userEvent.setup();
+    renderForm();
+    expect(screen.getByText('Negotiation, deals and reviews')).not.toBeNull();
+    await user.clear(field('Offer validity, short (hours)'));
+    await user.type(field('Offer validity, short (hours)'), '48');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    expect(await screen.findByText('The short validity must be less than the default one')).not.toBeNull();
+    expect(updateSettings).not.toHaveBeenCalled();
+  });
 });

@@ -4,6 +4,15 @@ import { act, cleanup, renderHook, waitFor } from '@testing-library/react';
 
 vi.mock('./verification-api', () => ({ fetchWaitingCount: vi.fn() }));
 vi.mock('./listings-api', () => ({ fetchModerationWaiting: vi.fn() }));
+vi.mock('./disputes-api', () => ({ fetchOpenDisputeCount: vi.fn() }));
+const socketHandlers = new Map<string, () => void>();
+vi.mock('./socket', () => ({
+  getAdminSocket: () => ({
+    on: (event: string, fn: () => void) => { socketHandlers.set(event, fn); },
+    off: (event: string) => { socketHandlers.delete(event); },
+  }),
+}));
+import { fetchOpenDisputeCount } from './disputes-api';
 import { fetchWaitingCount } from './verification-api';
 import { fetchModerationWaiting } from './listings-api';
 import { NAV_BADGE_POLL_MS, badgeText, refreshNavBadges, useNavBadges } from './nav-badges';
@@ -58,5 +67,24 @@ describe('moderationWaiting (F2 spec §11.1)', () => {
     const { result } = renderHook(() => useNavBadges(['moderationWaiting']));
     await waitFor(() => expect(result.current.moderationWaiting).toBe(5));
     expect(fetchWaitingCount).not.toHaveBeenCalled();
+  });
+});
+
+describe('disputesOpen (F6 + F7 §16.1)', () => {
+  it('is fetched from the dispute count and again on dispute:new', async () => {
+    vi.mocked(fetchOpenDisputeCount).mockResolvedValueOnce(2).mockResolvedValueOnce(3);
+    const { result, unmount } = renderHook(() => useNavBadges(['disputesOpen']));
+    await waitFor(() => expect(result.current.disputesOpen).toBe(2));
+    act(() => socketHandlers.get('dispute:new')!());
+    await waitFor(() => expect(result.current.disputesOpen).toBe(3));
+    expect(fetchWaitingCount).not.toHaveBeenCalled();
+    unmount();
+    expect(socketHandlers.has('dispute:new')).toBe(false);
+  });
+
+  it('subscribes to nothing for counts without a socket event', () => {
+    vi.mocked(fetchWaitingCount).mockResolvedValue(0);
+    renderHook(() => useNavBadges(['verificationWaiting']));
+    expect(socketHandlers.size).toBe(0);
   });
 });

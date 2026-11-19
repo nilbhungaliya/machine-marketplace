@@ -1,16 +1,28 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { fetchOpenDisputeCount } from './disputes-api';
 import { fetchModerationWaiting } from './listings-api';
+import { getAdminSocket } from './socket';
 import { fetchWaitingCount } from './verification-api';
 
 /** Counts a menu item can show beside its label (`NavItem.badgeKey`). */
-export type NavBadgeKey = 'verificationWaiting' | 'moderationWaiting';
+export type NavBadgeKey = 'verificationWaiting' | 'moderationWaiting' | 'disputesOpen';
 
 const FETCHERS: Record<NavBadgeKey, () => Promise<number>> = {
   verificationWaiting: fetchWaitingCount,
   /** Listings waiting for review plus listings with open reports (F2 spec §11.1). */
   moderationWaiting: fetchModerationWaiting,
+  /** Open disputes (F6 + F7 §16.1), support's queue. */
+  disputesOpen: fetchOpenDisputeCount,
+};
+
+/**
+ * Admin socket events (ids only) that change a count: the badge is fetched again when one arrives. `dispute:new` goes
+ * to `adminRoleRoom('support')` (F6 + F7 §16.2); the poll covers everyone else.
+ */
+const SOCKET_EVENTS: Partial<Record<NavBadgeKey, string>> = {
+  disputesOpen: 'dispute:new',
 };
 
 /** How often the counts are fetched again while the tab is visible. */
@@ -43,6 +55,23 @@ export function useNavBadges(keys: readonly NavBadgeKey[]): Partial<Record<NavBa
         .then((n) => setCounts((prev) => (prev[key] === n ? prev : { ...prev, [key]: n })))
         .catch(() => {});
     }
+  }, [sig]);
+
+  // Live nudges for the counts that have a socket event; one fetch of that count per event.
+  useEffect(() => {
+    const keys = (sig ? (sig.split(',') as NavBadgeKey[]) : []).filter((k) => SOCKET_EVENTS[k]);
+    if (keys.length === 0) return;
+    const socket = getAdminSocket();
+    const handlers = keys.map((key) => {
+      const handler = () => {
+        FETCHERS[key]()
+          .then((n) => setCounts((prev) => (prev[key] === n ? prev : { ...prev, [key]: n })))
+          .catch(() => {});
+      };
+      socket.on(SOCKET_EVENTS[key]!, handler);
+      return [SOCKET_EVENTS[key]!, handler] as const;
+    });
+    return () => { for (const [event, handler] of handlers) socket.off(event, handler); };
   }, [sig]);
 
   useEffect(() => {

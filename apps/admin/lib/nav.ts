@@ -3,7 +3,7 @@ import type { AdminRole } from '@mpm/shared-types';
 import {
   LayoutDashboard, ShieldCheck, ClipboardCheck, Building2, Package, Handshake, MessagesSquare, FolderTree,
   ListChecks, Megaphone, Flag, Bell, UserCog, ScrollText, BarChart3, BellRing, MessageSquareQuote, CalendarClock,
-  Factory, SlidersHorizontal, MapPin, Replace, TrendingUp,
+  Factory, SlidersHorizontal, MapPin, Replace, TrendingUp, Scale,
 } from 'lucide-react';
 import type { NavBadgeKey } from './nav-badges';
 
@@ -32,6 +32,8 @@ export const NAV_GROUPS: NavGroup[] = [
   { id: 'queues', label: 'Queues', items: [
     { href: '/moderation', label: 'Listing moderation', icon: ClipboardCheck, roles: ['moderator'], badgeKey: 'moderationWaiting' },
     { href: '/verification', label: 'Business verification', icon: ShieldCheck, roles: ['verification_officer'], badgeKey: 'verificationWaiting' },
+    // F6 + F7 §16.1: the API's `requireAdminRole('support')` (super_admin passes); the badge counts open disputes.
+    { href: '/disputes', label: 'Disputes', icon: Scale, roles: ['support'], badgeKey: 'disputesOpen' },
     { href: '/reports', label: 'Reports & flags', icon: Flag, roles: ['moderator', 'support'] },
   ] },
   { id: 'marketplace', label: 'Marketplace', items: [

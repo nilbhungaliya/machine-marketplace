@@ -85,3 +85,36 @@ describe('F4 + F5 search menu entries', () => {
     }
   });
 });
+
+describe('F6 + F7 menu entries (spec §16.1, the API roles)', () => {
+  const item = (href: string) => NAV_GROUPS.flatMap((g) => g.items).find((i) => i.href === href);
+  const OTHERS = ['moderator', 'verification_officer', 'category_manager', 'operations', 'support'] as const;
+
+  it('Disputes sits in Queues with the open count, for support and super admins only', () => {
+    const queues = NAV_GROUPS.find((g) => g.id === 'queues')!;
+    expect(queues.items.map((i) => i.href)).toContain('/disputes');
+    const disputes = item('/disputes')!;
+    expect(disputes.badgeKey).toBe('disputesOpen');
+    expect(canSee(disputes, 'super_admin')).toBe(true);
+    for (const role of OTHERS) expect(canSee(disputes, role), role).toBe(role === 'support');
+  });
+
+  it('Enquiries & offers and Deals: support and operations', () => {
+    for (const href of ['/enquiries', '/deals']) {
+      expect(canSee(item(href)!, 'super_admin')).toBe(true);
+      for (const role of OTHERS) expect(canSee(item(href)!, role), `${href} ${role}`).toBe(role === 'support' || role === 'operations');
+    }
+  });
+
+  it('Conversations and Reports & flags: moderators and support', () => {
+    for (const href of ['/chats', '/reports']) {
+      for (const role of OTHERS) expect(canSee(item(href)!, role), `${href} ${role}`).toBe(role === 'moderator' || role === 'support');
+    }
+  });
+
+  it('a deal or dispute record lights its own menu entry', () => {
+    expect(findActiveNav('/disputes/abc/')?.item.href).toBe('/disputes');
+    expect(findActiveNav('/deals/abc/')?.item.href).toBe('/deals');
+    expect(findActiveNav('/enquiries/abc/')?.item.href).toBe('/enquiries');
+  });
+});

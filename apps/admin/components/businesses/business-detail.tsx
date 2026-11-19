@@ -3,7 +3,7 @@
 import { useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { ExternalLink, MapPin, Package } from 'lucide-react';
-import type { AdminAuditEntry, AdminBusinessDetail, GstState } from '@mpm/shared-types';
+import { DEAL_STATUSES, type AdminAuditEntry, type AdminBusinessDetail, type GstState } from '@mpm/shared-types';
 import StatusBadge from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
 import { Panel } from '@/components/ui/panel';
@@ -12,6 +12,9 @@ import { useAuth } from '@/lib/auth-context';
 import {
   ACCOUNT_STATUS_LABELS, ACTIVITY_LABELS, MEMBER_ROLE_LABELS, VERIFICATION_LABELS, VERIFICATION_TONE, mapsLink,
 } from '@/lib/businesses-api';
+import { DEAL_STATUS_LABELS, formatDealRef } from '@/lib/deals-api';
+import { DISPUTE_CATEGORY_LABELS, DISPUTE_OUTCOME_SHORT, DISPUTE_STATUS_LABELS, DISPUTE_STATUS_TONES } from '@/lib/disputes-api';
+import { REVIEW_FACET_LABELS } from '@/lib/reviews-admin-api';
 import { constitutionLabel } from '@/lib/verification-api';
 import { formatDate, formatDateTime, formatPhone } from '@/lib/utils';
 import { StatusActionDialog, type StatusAction } from './status-action-dialog';
@@ -75,6 +78,84 @@ function AuditList({ entries }: { entries: AdminAuditEntry[] }) {
         );
       })}
     </ul>
+  );
+}
+
+/**
+ * Deals by status, disputes with outcomes and the seller score (F6 + F7 spec §9.6, §10.4, §16.1). Deal refs open the
+ * deal for support / operations, disputes open for support; others read the history without the links.
+ */
+function DealsPanel({ business, canOpenDeals, canOpenDisputes }: {
+  business: AdminBusinessDetail;
+  canOpenDeals: boolean;
+  canOpenDisputes: boolean;
+}) {
+  const { dealHistory: h, sellerScore: score } = business;
+  const total = DEAL_STATUSES.reduce((n, st) => n + (h.byStatus[st] ?? 0), 0);
+  const name = business.profile.tradeName;
+  return (
+    <Panel
+      title="Deals and reviews"
+      action={canOpenDeals && total > 0 && (
+        <Link href={`/deals/?search=${encodeURIComponent(name)}`} className="text-sm font-bold text-brand-700 hover:underline">
+          Deals ({total})
+        </Link>
+      )}
+    >
+      <div className="space-y-4">
+        <div className="flex flex-wrap gap-2">
+          {DEAL_STATUSES.map((st) => (
+            <span key={st} className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 px-3 py-1.5 text-sm">
+              <span className="text-gray-600">{DEAL_STATUS_LABELS[st]}</span>
+              <span className="font-bold text-gray-900 tnum">{h.byStatus[st] ?? 0}</span>
+            </span>
+          ))}
+        </div>
+
+        <div>
+          <h3 className="mb-1.5 text-[13px] font-bold text-gray-600">Seller score</h3>
+          {score ? (
+            <p className="text-sm text-gray-900">
+              <span className="font-bold tnum">{score.stars.toFixed(1)}</span> / 5 from <span className="tnum">{score.count}</span> reviews
+              <span className="text-gray-600">
+                {' · '}
+                {(Object.entries(score.facetsPercent) as Array<[keyof typeof score.facetsPercent, number]>)
+                  .map(([facet, pct]) => `${REVIEW_FACET_LABELS[facet]} ${pct}%`).join(' · ')}
+              </span>
+            </p>
+          ) : (
+            <p className="text-sm text-gray-500">Not enough published reviews yet (shown as &ldquo;New seller&rdquo;).</p>
+          )}
+        </div>
+
+        <div>
+          <h3 className="mb-1.5 text-[13px] font-bold text-gray-600">Disputes</h3>
+          {h.disputes.length === 0 ? (
+            <p className="text-sm text-gray-500">None.</p>
+          ) : (
+            <ul className="divide-y divide-gray-100 rounded-lg border border-gray-200">
+              {h.disputes.map((d) => (
+                <li key={d.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2 text-sm">
+                  {canOpenDisputes ? (
+                    <Link href={`/disputes/${d.id}/`} className="font-semibold text-brand-700 hover:underline">{DISPUTE_CATEGORY_LABELS[d.category]}</Link>
+                  ) : (
+                    <span className="font-semibold text-gray-900">{DISPUTE_CATEGORY_LABELS[d.category]}</span>
+                  )}
+                  <span className="font-mono text-[13px] text-gray-500">
+                    {canOpenDeals
+                      ? <Link href={`/deals/${d.dealId}/`} className="hover:underline">{formatDealRef(d.dealRef)}</Link>
+                      : formatDealRef(d.dealRef)}
+                  </span>
+                  <StatusBadge status={d.status} label={DISPUTE_STATUS_LABELS[d.status]} tone={DISPUTE_STATUS_TONES[d.status]} />
+                  {d.outcome && <span className="text-gray-700">Outcome: {DISPUTE_OUTCOME_SHORT[d.outcome].toLowerCase()}</span>}
+                  <span className="ml-auto text-xs text-gray-500 tnum">{formatDate(d.createdAt)}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+    </Panel>
   );
 }
 
@@ -243,6 +324,8 @@ export function BusinessDetail({ business, categoryNames, onChanged }: {
           </table>
         </div>
       </Panel>
+
+      <DealsPanel business={business} canOpenDeals={hasRole('support', 'operations')} canOpenDisputes={hasRole('support')} />
 
       <Panel title="GST history">
         <GstHistory history={business.history} />
