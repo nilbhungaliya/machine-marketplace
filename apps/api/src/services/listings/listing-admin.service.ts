@@ -53,6 +53,7 @@ import {
 } from './listing-validate.service.js';
 import { headlineRate, toOwnerView } from './listing-view.service.js';
 import { listingNotFound, lockBusinessThenListing, type BusinessRow, type ListingRow } from './locks.js';
+import { refreshListingSearch } from '../discovery/search-text.js';
 
 // Listing moderation and the admin's listing pages (F2 spec §11, R33, R34, R50–R53; plan Task 16): the moderation queue
 // and its counts, the review screen's detail, the moderator's status actions (through `applyAdminTransition`, which
@@ -461,6 +462,8 @@ export async function adminPatchListing(tx: Tx, adminId: string, id: string, pat
     if (fitments.length > 0) await tx.insert(listingFitments).values(fitments.map((f, i) => ({ listingId: listing.id, ...f, sortOrder: i })));
   }
   if (machine) await tx.update(listingMachines).set(machine).where(eq(listingMachines.listingId, listing.id));
+  // F4 + F5 §5.2: category, fitments or machine model changed.
+  await refreshListingSearch(tx, [listing.id]);
   await writeAudit(tx, { adminId, action: 'listing.edit', entityType: 'listing', entityId: id, before, after });
 }
 

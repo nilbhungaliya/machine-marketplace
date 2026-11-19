@@ -8,6 +8,7 @@ import { resolveSides, type EffectiveSides } from '../catalog/side-settings.js';
 import { areasForPincode } from '../locations/industrial-areas.service.js';
 import { pincodeDistrict } from '../locations/pincode.service.js';
 import type { BusinessRow } from './locks.js';
+import { refreshListingSearch } from '../discovery/search-text.js';
 
 // Validation helpers for listing writes (F2 spec §4, §7.3; plan Tasks 6–7).
 //
@@ -468,6 +469,10 @@ export async function syncBusinessListings(tx: Tx, businessId: string): Promise<
       AND l.business_id = b.id
       AND l.location_source = 'business'
       AND l.status <> 'removed'
+    RETURNING l.id
   `);
+  // F4 + F5 §5.2: the location (and so the search point) changed.
+  const ids = (result.rows as Array<{ id: string }>).map((r) => r.id);
+  await refreshListingSearch(tx, ids);
   return result.rowCount ?? 0;
 }

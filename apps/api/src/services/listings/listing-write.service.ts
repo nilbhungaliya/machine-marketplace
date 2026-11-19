@@ -63,6 +63,7 @@ import {
 import { removePublicMedia } from './listing-media.service.js';
 import { hasOpenReport, toOwnerView } from './listing-view.service.js';
 import { listingNotFound, lockBusinessThenListing, type ListingRow } from './locks.js';
+import { refreshListingSearch } from '../discovery/search-text.js';
 
 // Listing writes (F2 spec §4, §5.1, §5.3, §7.3; plan Task 7): create a draft, PATCH with grandfathering, delete a
 // draft. Status is never written here: a back-to-review goes through `listing-lifecycle.service.ts`.
@@ -128,6 +129,8 @@ export async function createListing(tx: Tx, user: UserTokenPayload, input: { kin
   if (input.kind !== 'part') await tx.insert(listingMachines).values({ listingId: row!.id });
   if (input.kind === 'machine_rental') await tx.insert(listingRentals).values({ listingId: row!.id });
   await recordCreated(tx, row!.id, user.userId);
+  // F4 + F5 §5.2: every listing write that changes a search input rebuilds the search columns in its transaction.
+  await refreshListingSearch(tx, [row!.id]);
   return toOwnerView(tx, row!, await getSettings(tx));
 }
 
@@ -431,6 +434,9 @@ export async function patchListing(tx: Tx, user: UserTokenPayload, id: string, p
       await tx.insert(listingFitments).values(fitments.map((f, i) => ({ listingId: listing.id, ...f, sortOrder: i })));
     }
   }
+
+  // F4 + F5 §5.2: title, part number, brand, category, specs, fitments, machine details, condition or location changed.
+  await refreshListingSearch(tx, [listing.id]);
 
   let row: ListingRow = updated!;
   if (PUBLIC_EDIT_STATUSES.includes(listing.status) && reasons.length > 0) {

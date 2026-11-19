@@ -17,6 +17,7 @@ import type { UserTokenPayload } from '../../plugins/auth.js';
 import { onboardingForUser } from '../business/profile.service.js';
 import { getSettings } from '../settings.service.js';
 import { checkPublishable, goLiveGate, listingIncomplete, photoProblems, type GateAction } from './listing-gate.service.js';
+import { refreshListingSearch } from '../discovery/search-text.js';
 import { toOwnerView } from './listing-view.service.js';
 import { listingNotFound, lockBusinessThenListing, lockListingOnly, type BusinessRow, type ListingRow } from './locks.js';
 
@@ -189,6 +190,9 @@ async function writeGateResult(
   o: { action: ListingAction; userId: string; reason?: string | null; returnStatus: ListingStatus | null; set?: TransitionColumns },
 ): Promise<ListingRow> {
   const gate = await goLiveGate(tx, business, listing, gateAction);
+  // F4 + F5 §5.2: publish, resume, renew, relist and end of rental rebuild the search columns (a listing going on view
+  // always carries current search text).
+  await refreshListingSearch(tx, [listing.id]);
   return writeStatus(tx, listing, gate.to, {
     action: o.action,
     actor: 'seller',
@@ -356,6 +360,7 @@ export async function applyAdminTransition(
   switch (action) {
     case 'approve':
       await requireOnView();
+      await refreshListingSearch(tx, [listing.id]);
       return writeStatus(tx, listing, current.returnStatus ?? 'live', {
         ...base,
         returnStatus: null,
@@ -379,6 +384,7 @@ export async function applyAdminTransition(
     case 'unhide': {
       if (!current.returnStatus) throw transitionNotAllowed(listing.status, action);
       await requireOnView();
+      await refreshListingSearch(tx, [listing.id]);
       return writeStatus(tx, listing, current.returnStatus, { ...base, returnStatus: null, set: { refreshedAt: now(), statusReason: null } });
     }
     case 'remove': {

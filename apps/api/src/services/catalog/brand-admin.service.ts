@@ -1,3 +1,4 @@
+import type { Redis } from 'ioredis';
 import { and, asc, eq, max, ne, sql } from 'drizzle-orm';
 import { CATALOG_KEY_REGEX, type Brand, type MachineModel } from '@mpm/shared-types';
 import type { Db, Tx } from '../../db/index.js';
@@ -9,6 +10,7 @@ import { writeAudit } from '../audit.service.js';
 import { toBrand, toModel } from './brand-read.service.js';
 import { listingsUseBrand, listingsUseModel } from './listing-uses.js';
 import { assertExactSet } from './reorder.js';
+import { afterCatalogCommit, queueSearchRefresh } from '../discovery/refresh-jobs.js';
 
 // Admin writes on brands and machine models (spec §6). Keys never change. A model's name is unique per brand and machine
 // type ignoring case: checked before the write for a clear error, and backed by machine_models_brand_type_name_uq for
@@ -126,13 +128,13 @@ export interface CreateBrandInput {
 }
 
 /** The new brand goes last. */
-export async function createBrand(db: Db, adminId: string, input: CreateBrandInput): Promise<Brand> {
+export async function createBrand(db: Db, adminId: string, input: CreateBrandInput, redis?: Redis | null): Promise<Brand> {
   checkKey(input.key);
   checkFlags(input);
   const slug = input.slug ?? slugify(input.name);
   if (!slug) throw new ValidationError('The name gives an empty slug; pass a slug');
 
-  return mapUniqueViolations(() =>
+  const result = await mapUniqueViolations(() =>
     db.transaction(async (tx) => {
       const [last] = await tx.select({ value: max(brands.sortOrder) }).from(brands);
       const [row] = await tx
@@ -151,6 +153,8 @@ export async function createBrand(db: Db, adminId: string, input: CreateBrandInp
       return brand;
     }),
   );
+  await afterCatalogCommit(redis);
+  return result;
 }
 
 export interface UpdateBrandPatch {
@@ -163,8 +167,8 @@ export interface UpdateBrandPatch {
 }
 
 /** "Makes machines" can't be turned off while the brand has models; at least one flag stays on. */
-export async function updateBrand(db: Db, adminId: string, id: string, patch: UpdateBrandPatch): Promise<Brand> {
-  return mapUniqueViolations(() =>
+export async function updateBrand(db: Db, adminId: string, id: string, patch: UpdateBrandPatch, redis?: Redis | null): Promise<Brand> {
+  const result = await mapUniqueViolations(() =>
     db.transaction(async (tx) => {
       const before = await lockBrand(tx, id, 'update');
       checkFlags({ makesMachines: patch.makesMachines ?? before.makesMachines, makesParts: patch.makesParts ?? before.makesParts });
@@ -185,14 +189,17 @@ export async function updateBrand(db: Db, adminId: string, id: string, patch: Up
         })
         .where(eq(brands.id, id))
         .returning();
+      if (patch.name !== undefined && patch.name !== before.name) await queueSearchRefresh(tx, 'brand', id, adminId);
       await writeAudit(tx, { adminId, action: 'brand.update', entityType: 'brand', entityId: id, before: toBrand(before), after: toBrand(after!) });
       return toBrand(after!);
     }),
   );
+  await afterCatalogCommit(redis);
+  return result;
 }
 
 /** `orderedIds` must be exactly all brands (active and inactive). */
-export async function reorderBrands(db: Db, adminId: string, orderedIds: string[]): Promise<void> {
+export async function reorderBrands(db: Db, adminId: string, orderedIds: string[], redis?: Redis | null): Promise<void> {
   await db.transaction(async (tx) => {
     const current = await tx.select({ id: brands.id }).from(brands).orderBy(asc(brands.sortOrder), asc(brands.name));
     assertExactSet(current, orderedIds, 'brands');
@@ -209,10 +216,11 @@ export async function reorderBrands(db: Db, adminId: string, orderedIds: string[
       after: orderedIds,
     });
   });
+  await afterCatalogCommit(redis);
 }
 
 /** Deletes a brand only when it has no models; otherwise the admin deactivates it instead. */
-export async function deleteBrand(db: Db, adminId: string, id: string): Promise<void> {
+export async function deleteBrand(db: Db, adminId: string, id: string, redis?: Redis | null): Promise<void> {
   await db.transaction(async (tx) => {
     const before = await lockBrand(tx, id, 'update');
     if (await hasModels(tx, id)) throw brandInUse('This brand has machine models; deactivate it instead');
@@ -225,8 +233,10 @@ export async function deleteBrand(db: Db, adminId: string, id: string): Promise<
       if (isForeignKeyViolation(err)) throw brandInUse('This brand is in use; deactivate it instead');
       throw err;
     }
+    await queueSearchRefresh(tx, 'brand', id, adminId);
     await writeAudit(tx, { adminId, action: 'brand.delete', entityType: 'brand', entityId: id, before: toBrand(before), after: null });
   });
+  await afterCatalogCommit(redis);
 }
 
 // ---- Models ----
@@ -239,9 +249,9 @@ export interface CreateModelInput {
 }
 
 /** The new model goes last in its brand. */
-export async function createModel(db: Db, adminId: string, input: CreateModelInput): Promise<MachineModel> {
+export async function createModel(db: Db, adminId: string, input: CreateModelInput, redis?: Redis | null): Promise<MachineModel> {
   checkKey(input.key);
-  return mapUniqueViolations(() =>
+  const result = await mapUniqueViolations(() =>
     db.transaction(async (tx) => {
       const brand = await lockBrand(tx, input.brandId, 'share');
       assertMachineMaker(brand);
@@ -263,6 +273,8 @@ export async function createModel(db: Db, adminId: string, input: CreateModelInp
       return model;
     }),
   );
+  await afterCatalogCommit(redis);
+  return result;
 }
 
 export interface UpdateModelPatch {
@@ -271,8 +283,8 @@ export interface UpdateModelPatch {
   isActive?: boolean;
 }
 
-export async function updateModel(db: Db, adminId: string, id: string, patch: UpdateModelPatch): Promise<MachineModel> {
-  return mapUniqueViolations(() =>
+export async function updateModel(db: Db, adminId: string, id: string, patch: UpdateModelPatch, redis?: Redis | null): Promise<MachineModel> {
+  const result = await mapUniqueViolations(() =>
     db.transaction(async (tx) => {
       const before = await lockModel(tx, id);
       if (patch.name !== undefined) {
@@ -283,10 +295,13 @@ export async function updateModel(db: Db, adminId: string, id: string, patch: Up
         .set({ name: patch.name, needsReview: patch.needsReview, isActive: patch.isActive, updatedAt: new Date() })
         .where(eq(machineModels.id, id))
         .returning();
+      if (patch.name !== undefined && patch.name !== before.name) await queueSearchRefresh(tx, 'model', id, adminId);
       await writeAudit(tx, { adminId, action: 'model.update', entityType: 'model', entityId: id, before: toModel(before), after: toModel(after!) });
       return toModel(after!);
     }),
   );
+  await afterCatalogCommit(redis);
+  return result;
 }
 
 export interface MoveModelInput {
@@ -299,8 +314,8 @@ export interface MoveModelInput {
  * machines, the type is a machine type, key free in the brand, name free in the brand + type). A model that changes
  * brand goes last in its new brand. Moving to where it already is changes nothing.
  */
-export async function moveModel(db: Db, adminId: string, id: string, input: MoveModelInput): Promise<MachineModel> {
-  return mapUniqueViolations(() =>
+export async function moveModel(db: Db, adminId: string, id: string, input: MoveModelInput, redis?: Redis | null): Promise<MachineModel> {
+  const result = await mapUniqueViolations(() =>
     db.transaction(async (tx) => {
       const before = await lockModel(tx, id);
       const brandId = input.brandId ?? before.brandId;
@@ -336,10 +351,12 @@ export async function moveModel(db: Db, adminId: string, id: string, input: Move
       return toModel(after!);
     }),
   );
+  await afterCatalogCommit(redis);
+  return result;
 }
 
 /** `orderedIds` must be exactly the brand's models (active and inactive, every machine type). */
-export async function reorderModels(db: Db, adminId: string, brandId: string, orderedIds: string[]): Promise<void> {
+export async function reorderModels(db: Db, adminId: string, brandId: string, orderedIds: string[], redis?: Redis | null): Promise<void> {
   await db.transaction(async (tx) => {
     const [brand] = await tx.select({ id: brands.id }).from(brands).where(eq(brands.id, brandId));
     if (!brand) throw new NotFoundError('Brand');
@@ -362,9 +379,10 @@ export async function reorderModels(db: Db, adminId: string, brandId: string, or
       after: orderedIds,
     });
   });
+  await afterCatalogCommit(redis);
 }
 
-export async function deleteModel(db: Db, adminId: string, id: string): Promise<void> {
+export async function deleteModel(db: Db, adminId: string, id: string, redis?: Redis | null): Promise<void> {
   await db.transaction(async (tx) => {
     const before = await lockModel(tx, id);
     // M5 (F2 spec §16): a listing's machine model or a fitment row.
@@ -376,6 +394,8 @@ export async function deleteModel(db: Db, adminId: string, id: string): Promise<
       if (isForeignKeyViolation(err)) throw modelInUse('This model is in use; deactivate it instead');
       throw err;
     }
+    await queueSearchRefresh(tx, 'model', id, adminId);
     await writeAudit(tx, { adminId, action: 'model.delete', entityType: 'model', entityId: id, before: toModel(before), after: null });
   });
+  await afterCatalogCommit(redis);
 }

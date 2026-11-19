@@ -1,3 +1,4 @@
+import type { Redis } from 'ioredis';
 import { asc, eq, max } from 'drizzle-orm';
 import { CATALOG_KEY_REGEX, type Condition, type Unit } from '@mpm/shared-types';
 import type { Db, Tx } from '../../db/index.js';
@@ -7,6 +8,7 @@ import { isCheckViolation, isUniqueViolation } from '../../lib/pg-errors.js';
 import { writeAudit } from '../audit.service.js';
 import { listingsUseUnit } from './listing-uses.js';
 import { assertExactSet } from './reorder.js';
+import { afterCatalogCommit, queueSearchRefresh } from '../discovery/refresh-jobs.js';
 
 // Admin writes on master data (spec §7): units and conditions. Keys never change; rows are deactivated, never deleted.
 // Each function runs in one transaction and writes one audit_log row with it.
@@ -71,9 +73,10 @@ export interface CreateUnitInput {
 }
 
 /** The new unit goes last. */
-export async function createUnit(db: Db, adminId: string, input: CreateUnitInput): Promise<Unit> {
+export async function createUnit(db: Db, adminId: string, input: CreateUnitInput, redis?: Redis | null): Promise<Unit> {
   checkKey(input.key);
-  return mapConstraintErrors(UNIT_KEY_CONSTRAINT, () =>
+  // Unit words are in the search reader's dictionary (F4 + F5 §5.3): bump its version after commit.
+  const created = await mapConstraintErrors(UNIT_KEY_CONSTRAINT, () =>
     db.transaction(async (tx) => {
       const [last] = await tx.select({ value: max(units.sortOrder) }).from(units);
       const [row] = await tx
@@ -85,6 +88,8 @@ export async function createUnit(db: Db, adminId: string, input: CreateUnitInput
       return unit;
     }),
   );
+  await afterCatalogCommit(redis);
+  return created;
 }
 
 export interface UpdateUnitPatch {
@@ -95,8 +100,8 @@ export interface UpdateUnitPatch {
   isMachineUnit?: boolean;
 }
 
-export async function updateUnit(db: Db, adminId: string, id: string, patch: UpdateUnitPatch): Promise<Unit> {
-  return mapConstraintErrors(UNIT_KEY_CONSTRAINT, () =>
+export async function updateUnit(db: Db, adminId: string, id: string, patch: UpdateUnitPatch, redis?: Redis | null): Promise<Unit> {
+  const updated = await mapConstraintErrors(UNIT_KEY_CONSTRAINT, () =>
     db.transaction(async (tx) => {
       const before = await lockUnit(tx, id);
       // M5 (F2 spec §16): lowering decimals would leave listed quantities with more decimals than the unit allows;
@@ -119,6 +124,8 @@ export async function updateUnit(db: Db, adminId: string, id: string, patch: Upd
       return toUnit(after!);
     }),
   );
+  await afterCatalogCommit(redis);
+  return updated;
 }
 
 /** `orderedIds` must be exactly all units (active and inactive). */
@@ -167,9 +174,9 @@ export interface CreateConditionInput {
 }
 
 /** The new condition goes last. */
-export async function createCondition(db: Db, adminId: string, input: CreateConditionInput): Promise<Condition> {
+export async function createCondition(db: Db, adminId: string, input: CreateConditionInput, redis?: Redis | null): Promise<Condition> {
   checkKey(input.key);
-  return mapConstraintErrors(CONDITION_KEY_CONSTRAINT, () =>
+  const result = await mapConstraintErrors(CONDITION_KEY_CONSTRAINT, () =>
     db.transaction(async (tx) => {
       const [last] = await tx.select({ value: max(conditions.sortOrder) }).from(conditions);
       const [row] = await tx
@@ -181,6 +188,8 @@ export async function createCondition(db: Db, adminId: string, input: CreateCond
       return condition;
     }),
   );
+  await afterCatalogCommit(redis);
+  return result;
 }
 
 export interface UpdateConditionPatch {
@@ -189,14 +198,15 @@ export interface UpdateConditionPatch {
   isActive?: boolean;
 }
 
-export async function updateCondition(db: Db, adminId: string, id: string, patch: UpdateConditionPatch): Promise<Condition> {
-  return db.transaction(async (tx) => {
+export async function updateCondition(db: Db, adminId: string, id: string, patch: UpdateConditionPatch, redis?: Redis | null): Promise<Condition> {
+  const result = await db.transaction(async (tx) => {
     const before = await lockCondition(tx, id);
     const [after] = await tx
       .update(conditions)
       .set({ label: patch.label, description: patch.description, isActive: patch.isActive, updatedAt: new Date() })
       .where(eq(conditions.id, id))
       .returning();
+    if (patch.label !== undefined && patch.label !== before.label) await queueSearchRefresh(tx, 'condition', id, adminId);
     await writeAudit(tx, {
       adminId,
       action: 'condition.update',
@@ -207,10 +217,12 @@ export async function updateCondition(db: Db, adminId: string, id: string, patch
     });
     return toCondition(after!);
   });
+  await afterCatalogCommit(redis);
+  return result;
 }
 
 /** `orderedIds` must be exactly all conditions (active and inactive). */
-export async function reorderConditions(db: Db, adminId: string, orderedIds: string[]): Promise<void> {
+export async function reorderConditions(db: Db, adminId: string, orderedIds: string[], redis?: Redis | null): Promise<void> {
   await db.transaction(async (tx) => {
     const current = await tx
       .select({ id: conditions.id })
@@ -230,4 +242,5 @@ export async function reorderConditions(db: Db, adminId: string, orderedIds: str
       after: orderedIds,
     });
   });
+  await afterCatalogCommit(redis);
 }

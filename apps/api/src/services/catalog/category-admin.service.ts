@@ -1,3 +1,4 @@
+import type { Redis } from 'ioredis';
 import { eq, isNull, max, sql } from 'drizzle-orm';
 import type { AdminCategoryDetail, CategoryIcon, CategoryNode, CatalogLevel } from '@mpm/shared-types';
 import type { Db, Tx } from '../../db/index.js';
@@ -12,6 +13,7 @@ import { loadFieldsFor, toNode } from './read.service.js';
 import { assertExactSet } from './reorder.js';
 import { resolveSides, type EffectiveSides } from './side-settings.js';
 import { assertNoClash } from './template-clash.js';
+import { afterCatalogCommit, queueSearchRefresh } from '../discovery/refresh-jobs.js';
 
 // Admin writes on the category tree. Each function runs in one transaction and writes one audit_log row with it.
 // Everything that reads paths or templates takes the root lock first (locks.ts), then reads.
@@ -130,8 +132,8 @@ export interface CreateCategoryInput {
 }
 
 /** Level comes from the parent: none, machine category, machine type, part group. */
-export async function createCategory(db: Db, adminId: string, input: CreateCategoryInput): Promise<CategoryNode> {
-  return mapSlugTaken(() =>
+export async function createCategory(db: Db, adminId: string, input: CreateCategoryInput, redis?: Redis | null): Promise<CategoryNode> {
+  const result = await mapSlugTaken(() =>
     db.transaction(async (tx) => {
       // A parent that moves or is renamed while we insert would leave our path stale.
       if (input.parentId !== null) await lockCatalogRoots(tx, [input.parentId]);
@@ -168,6 +170,8 @@ export async function createCategory(db: Db, adminId: string, input: CreateCateg
       return { ...after, children: [] };
     }),
   );
+  await afterCatalogCommit(redis);
+  return result;
 }
 
 export interface UpdateCategoryPatch {
@@ -180,8 +184,8 @@ export interface UpdateCategoryPatch {
 }
 
 /** A slug change rewrites the path of the node and all its descendants. */
-export async function updateCategory(db: Db, adminId: string, id: string, patch: UpdateCategoryPatch): Promise<CategoryNode> {
-  return mapSlugTaken(() =>
+export async function updateCategory(db: Db, adminId: string, id: string, patch: UpdateCategoryPatch, redis?: Redis | null): Promise<CategoryNode> {
+  const result = await mapSlugTaken(() =>
     db.transaction(async (tx) => {
       // A slug change works from this node's and its parent's paths: read them after the lock.
       if (patch.slug !== undefined) await lockCatalogRoots(tx, [id]);
@@ -206,6 +210,8 @@ export async function updateCategory(db: Db, adminId: string, id: string, patch:
         const parent = before.parentId ? await getRow(tx, before.parentId) : undefined;
         await rewritePaths(tx, before.path, parent ? `${parent.path}/${patch.slug}` : patch.slug);
       }
+      // F4 + F5 §5.2: a rename changes the category path names in listings' search text (rebuilt in the background).
+      if (patch.name !== undefined && patch.name !== before.name) await queueSearchRefresh(tx, 'category', id, adminId);
 
       const after = await getRow(tx, id);
       const node = await nodeOf(tx, after);
@@ -220,6 +226,8 @@ export async function updateCategory(db: Db, adminId: string, id: string, patch:
       return node;
     }),
   );
+  await afterCatalogCommit(redis);
+  return result;
 }
 
 function moveNotAllowed(message: string): ValidationError {
@@ -232,8 +240,8 @@ function moveNotAllowed(message: string): ValidationError {
  * fields. Refused with KEY_TAKEN / RANK_TAKEN when a field in the moved subtree clashes with one on the destination's
  * ancestor chain.
  */
-export async function moveCategory(db: Db, adminId: string, id: string, newParentId: string): Promise<CategoryNode> {
-  return mapSlugTaken(() =>
+export async function moveCategory(db: Db, adminId: string, id: string, newParentId: string, redis?: Redis | null): Promise<CategoryNode> {
+  const result = await mapSlugTaken(() =>
     db.transaction(async (tx) => {
       // Before every read below: the clash check and the new paths both depend on them.
       await lockCatalogRoots(tx, [id, newParentId]);
@@ -263,6 +271,7 @@ export async function moveCategory(db: Db, adminId: string, id: string, newParen
         .set({ parentId: target.id, sortOrder: await nextSortOrder(tx, target.id), updatedAt: new Date() })
         .where(eq(categories.id, id));
       await rewritePaths(tx, before.path, `${target.path}/${before.slug}`);
+      await queueSearchRefresh(tx, 'category', id, adminId);
 
       const after = await getRow(tx, id);
       const node = await nodeOf(tx, after);
@@ -277,13 +286,15 @@ export async function moveCategory(db: Db, adminId: string, id: string, newParen
       return node;
     }),
   );
+  await afterCatalogCommit(redis);
+  return result;
 }
 
 /**
  * Sets sortOrder = index. `orderedIds` must be exactly the current children of `parentId`
  * (null = machine categories); anything else means the admin's view is stale.
  */
-export async function reorderSiblings(db: Db, adminId: string, parentId: string | null, orderedIds: string[]): Promise<void> {
+export async function reorderSiblings(db: Db, adminId: string, parentId: string | null, orderedIds: string[], redis?: Redis | null): Promise<void> {
   await db.transaction(async (tx) => {
     if (parentId !== null) await getRow(tx, parentId);
     const siblings = await tx
@@ -307,10 +318,11 @@ export async function reorderSiblings(db: Db, adminId: string, parentId: string 
       after: orderedIds,
     });
   });
+  await afterCatalogCommit(redis);
 }
 
 /** Deletes a node only when nothing references it; otherwise the admin deactivates it instead. */
-export async function deleteCategory(db: Db, adminId: string, id: string): Promise<void> {
+export async function deleteCategory(db: Db, adminId: string, id: string, redis?: Redis | null): Promise<void> {
   await db.transaction(async (tx) => {
     await lockCatalogRoots(tx, [id]);
     const row = await getRow(tx, id);
@@ -340,8 +352,10 @@ export async function deleteCategory(db: Db, adminId: string, id: string): Promi
       if (isForeignKeyViolation(err)) throw new ConflictError('Category is in use; deactivate it instead', 'NODE_IN_USE');
       throw err;
     }
+    await queueSearchRefresh(tx, 'category', id, adminId);
     await writeAudit(tx, { adminId, action: 'category.delete', entityType: 'category', entityId: id, before, after: null });
   });
+  await afterCatalogCommit(redis);
 }
 
 /** A node with its own fields and its ancestors' fields (root first), every status, with options. */

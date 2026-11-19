@@ -62,30 +62,30 @@ const adminCatalogCategoryRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post('/admin/categories', { schema: { tags }, preHandler: write }, async (request, reply) => {
     const body = createBody.parse(request.body);
     reply.code(201);
-    return { data: await createCategory(fastify.db, request.admin!.adminId, body) };
+    return { data: await createCategory(fastify.db, request.admin!.adminId, body, fastify.redis) };
   });
 
   fastify.patch('/admin/categories/:id', { schema: { tags }, preHandler: write }, async (request) => {
     const { id } = idParams.parse(request.params);
     const patch = updateBody.parse(request.body);
-    return { data: await updateCategory(fastify.db, request.admin!.adminId, id, patch) };
+    return { data: await updateCategory(fastify.db, request.admin!.adminId, id, patch, fastify.redis) };
   });
 
   fastify.post('/admin/categories/:id/move', { schema: { tags }, preHandler: write }, async (request) => {
     const { id } = idParams.parse(request.params);
     const { parentId } = moveBody.parse(request.body);
-    return { data: await moveCategory(fastify.db, request.admin!.adminId, id, parentId) };
+    return { data: await moveCategory(fastify.db, request.admin!.adminId, id, parentId, fastify.redis) };
   });
 
   fastify.post('/admin/categories/reorder', { schema: { tags }, preHandler: write }, async (request) => {
     const { parentId, orderedIds } = reorderBody.parse(request.body);
-    await reorderSiblings(fastify.db, request.admin!.adminId, parentId, orderedIds);
+    await reorderSiblings(fastify.db, request.admin!.adminId, parentId, orderedIds, fastify.redis);
     return { data: null };
   });
 
   fastify.delete('/admin/categories/:id', { schema: { tags }, preHandler: write }, async (request) => {
     const { id } = idParams.parse(request.params);
-    await deleteCategory(fastify.db, request.admin!.adminId, id);
+    await deleteCategory(fastify.db, request.admin!.adminId, id, fastify.redis);
     return { data: null };
   });
 };

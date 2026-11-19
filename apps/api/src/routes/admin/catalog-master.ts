@@ -65,13 +65,13 @@ const adminCatalogMasterRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post('/admin/master-data/units', { schema: { tags }, preHandler: write }, async (request, reply) => {
     const body = createUnitBody.parse(request.body);
     reply.code(201);
-    return { data: await createUnit(fastify.db, request.admin!.adminId, body) };
+    return { data: await createUnit(fastify.db, request.admin!.adminId, body, fastify.redis) };
   });
 
   fastify.patch('/admin/master-data/units/:id', { schema: { tags }, preHandler: write }, async (request) => {
     const { id } = idParams.parse(request.params);
     const patch = updateUnitBody.parse(request.body);
-    return { data: await updateUnit(fastify.db, request.admin!.adminId, id, patch) };
+    return { data: await updateUnit(fastify.db, request.admin!.adminId, id, patch, fastify.redis) };
   });
 
   fastify.post('/admin/master-data/units/reorder', { schema: { tags }, preHandler: write }, async (request) => {
@@ -84,18 +84,18 @@ const adminCatalogMasterRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post('/admin/master-data/conditions', { schema: { tags }, preHandler: write }, async (request, reply) => {
     const body = createConditionBody.parse(request.body);
     reply.code(201);
-    return { data: await createCondition(fastify.db, request.admin!.adminId, body) };
+    return { data: await createCondition(fastify.db, request.admin!.adminId, body, fastify.redis) };
   });
 
   fastify.patch('/admin/master-data/conditions/:id', { schema: { tags }, preHandler: write }, async (request) => {
     const { id } = idParams.parse(request.params);
     const patch = updateConditionBody.parse(request.body);
-    return { data: await updateCondition(fastify.db, request.admin!.adminId, id, patch) };
+    return { data: await updateCondition(fastify.db, request.admin!.adminId, id, patch, fastify.redis) };
   });
 
   fastify.post('/admin/master-data/conditions/reorder', { schema: { tags }, preHandler: write }, async (request) => {
     const { orderedIds } = reorderBody.parse(request.body);
-    await reorderConditions(fastify.db, request.admin!.adminId, orderedIds);
+    await reorderConditions(fastify.db, request.admin!.adminId, orderedIds, fastify.redis);
     return { data: null };
   });
 };

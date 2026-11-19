@@ -1,13 +1,20 @@
-import type { FastifyPluginAsync } from 'fastify';
+import type { FastifyPluginAsync, FastifyRequest } from 'fastify';
+import { z } from 'zod';
 import { AppError } from '../lib/errors.js';
+import { searchCountSchema, searchRequestSchema } from '../services/discovery/filters.js';
+import { countSearch, search } from '../services/discovery/search.service.js';
+import { suggest } from '../services/discovery/suggest.service.js';
+import { trending } from '../services/discovery/trending.service.js';
 import { discoveryIpCap, discoveryRateLimits, discoveryRouteLimit, type DiscoveryBucket } from '../services/discovery/rate-key.js';
 
-// Public discovery routes (F4 + F5 spec §7): `optionalUser`, replies `{ data }`. Stubs until their batch (search,
-// count-only, suggest, trending: B1; home, browse, brand view, cards: B2), but the rate limits are live now (R17):
+// Public discovery routes (F4 + F5 spec §7): `optionalUser`, replies `{ data }`. Search, count-only, suggest and trending
+// are built (B1); home, browse, brand view and cards are stubs until B2, but the rate limits are live now (R17):
 // search 120, count-only 240 on its own path, suggest 240, the rest 120 per minute per user / install id, plus the
 // per-IP cap across every route here.
 
 const tags = ['Discovery'];
+
+const suggestQuerySchema = z.object({ q: z.string().max(200).optional() }).strict();
 
 /** What a route stub answers until its batch builds it. */
 export function notImplemented(): AppError {
@@ -24,21 +31,26 @@ const discoverRoutes: FastifyPluginAsync = async (fastify) => {
     config: discoveryRouteLimit(bucket, limits),
   });
 
-  // B1: `SearchRequest` -> `SearchPage` | `SearchRedirect`.
-  fastify.post('/discover/search', route('search'), async () => {
-    throw notImplemented();
+  const viewerOf = (request: FastifyRequest) => (request.user ? { userId: request.user.userId, businessId: request.user.businessId } : null);
+
+  // `SearchRequest` -> `SearchPage` | `SearchRedirect` (§5, §7).
+  fastify.post('/discover/search', route('search'), async (request) => {
+    const body = searchRequestSchema.parse(request.body ?? {});
+    return { data: await search(fastify.db, body, viewerOf(request), { redis: fastify.redis }) };
   });
-  // B1: `SearchCountRequest` -> `CountOnlyResult`. Its own path, so its own bucket (the limiter runs before the body).
-  fastify.post('/discover/search/count', route('count'), async () => {
-    throw notImplemented();
+  // `SearchCountRequest` -> `CountOnlyResult` (§5.11). Its own path, so its own bucket (the limiter runs before the body).
+  fastify.post('/discover/search/count', route('count'), async (request) => {
+    const body = searchCountSchema.parse(request.body ?? {});
+    return { data: await countSearch(fastify.db, body, viewerOf(request), { redis: fastify.redis }) };
   });
-  // B1: `?q=` -> `Suggestion[]`.
-  fastify.get('/discover/suggest', route('suggest'), async () => {
-    throw notImplemented();
+  // `?q=` -> `Suggestion[]` (§5.12).
+  fastify.get('/discover/suggest', route('suggest'), async (request) => {
+    const { q } = suggestQuerySchema.parse(request.query ?? {});
+    return { data: await suggest(fastify.db, q) };
   });
-  // B1: -> `string[]`.
+  // -> `string[]` (§5.12).
   fastify.get('/discover/trending', route('other'), async () => {
-    throw notImplemented();
+    return { data: await trending(fastify.db) };
   });
   // B2: `HomeRequest` -> `HomeView`.
   fastify.post('/discover/home', route('other'), async () => {

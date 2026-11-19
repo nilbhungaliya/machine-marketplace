@@ -397,19 +397,22 @@ describe('rate limits (R17, §7)', () => {
     { method: 'POST', url: '/discover/browse/brand' },
     { method: 'POST', url: '/discover/cards' },
   ];
+  // Built in B1 (200); the rest are stubs (501) until B2.
+  const BUILT = new Set(['/discover/search', '/discover/search/count', '/discover/suggest?q=be', '/discover/trending']);
+  const okStatus = (route: { url: string }) => (BUILT.has(route.url) ? 200 : 501);
   let ipSeq = 0;
   const freshIp = () => `10.77.${Math.floor(ipSeq / 250)}.${(ipSeq++ % 250) + 1}`;
   const hit = (route: { method: 'GET' | 'POST'; url: string }, install: string, remoteAddress: string) =>
     app.inject({ method: route.method, url: route.url, remoteAddress, headers: { 'x-install-id': install }, payload: route.method === 'POST' ? {} : undefined });
 
-  it('answers 429 on every /discover route past its limit (stubs answer 501 until then)', async () => {
+  it('answers 429 on every /discover route past its limit (200 when built, stubs 501 until then)', async () => {
     for (const route of ROUTES) {
       const install = randomUUID();
       const ip = freshIp();
       for (let i = 0; i < 3; i++) {
         const res = await hit(route, install, ip);
-        expect(res.statusCode, `${route.url} #${i + 1}`).toBe(501);
-        expect(res.json().code).toBe('NOT_IMPLEMENTED');
+        expect(res.statusCode, `${route.url} #${i + 1}`).toBe(okStatus(route));
+        if (okStatus(route) === 501) expect(res.json().code).toBe('NOT_IMPLEMENTED');
       }
       const over = await hit(route, install, ip);
       expect(over.statusCode, route.url).toBe(429);
@@ -422,24 +425,25 @@ describe('rate limits (R17, §7)', () => {
     const ip = freshIp();
     const search = ROUTES[0]!;
     const count = ROUTES[1]!;
-    for (let i = 0; i < 3; i++) expect((await hit(search, install, ip)).statusCode).toBe(501);
+    for (let i = 0; i < 3; i++) expect((await hit(search, install, ip)).statusCode).toBe(200);
     expect((await hit(search, install, ip)).statusCode).toBe(429);
-    for (let i = 0; i < 3; i++) expect((await hit(count, install, ip)).statusCode).toBe(501);
+    for (let i = 0; i < 3; i++) expect((await hit(count, install, ip)).statusCode).toBe(200);
     expect((await hit(count, install, ip)).statusCode).toBe(429);
 
     const other = randomUUID();
     const ip2 = freshIp();
-    for (let i = 0; i < 3; i++) expect((await hit(count, other, ip2)).statusCode).toBe(501);
+    for (let i = 0; i < 3; i++) expect((await hit(count, other, ip2)).statusCode).toBe(200);
     expect((await hit(count, other, ip2)).statusCode).toBe(429);
-    expect((await hit(search, other, ip2)).statusCode).toBe(501);
+    expect((await hit(search, other, ip2)).statusCode).toBe(200);
   });
 
   it('caps one IP across every /discover route, whatever the install id', async () => {
     const ip = freshIp();
     let ok = 0;
     for (let i = 0; i < 10; i++) {
-      const res = await hit(ROUTES[i % ROUTES.length]!, randomUUID(), ip);
-      if (res.statusCode === 501) ok++;
+      const route = ROUTES[i % ROUTES.length]!;
+      const res = await hit(route, randomUUID(), ip);
+      if (res.statusCode === okStatus(route)) ok++;
     }
     expect(ok).toBe(10);
     const capped = await hit(ROUTES[3]!, randomUUID(), ip);
@@ -452,7 +456,7 @@ describe('rate limits (R17, §7)', () => {
     expect(retryAt).toBeGreaterThan(Date.now());
     expect(retryAt).toBeLessThanOrEqual(Date.now() + 60_000);
     // Another IP is unaffected.
-    expect((await hit(ROUTES[3]!, randomUUID(), freshIp())).statusCode).toBe(501);
+    expect((await hit(ROUTES[3]!, randomUUID(), freshIp())).statusCode).toBe(200);
   });
 
   it('answers 501 on the saved and admin search stubs behind their auth', async () => {

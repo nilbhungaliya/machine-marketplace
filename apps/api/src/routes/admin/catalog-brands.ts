@@ -63,24 +63,24 @@ const adminCatalogBrandRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post('/admin/brands', { schema: { tags }, preHandler: write }, async (request, reply) => {
     const body = createBrandBody.parse(request.body);
     reply.code(201);
-    return { data: await createBrand(fastify.db, request.admin!.adminId, body) };
+    return { data: await createBrand(fastify.db, request.admin!.adminId, body, fastify.redis) };
   });
 
   fastify.patch('/admin/brands/:id', { schema: { tags }, preHandler: write }, async (request) => {
     const { id } = idParams.parse(request.params);
     const patch = updateBrandBody.parse(request.body);
-    return { data: await updateBrand(fastify.db, request.admin!.adminId, id, patch) };
+    return { data: await updateBrand(fastify.db, request.admin!.adminId, id, patch, fastify.redis) };
   });
 
   fastify.post('/admin/brands/reorder', { schema: { tags }, preHandler: write }, async (request) => {
     const { orderedIds } = reorderBody.parse(request.body);
-    await reorderBrands(fastify.db, request.admin!.adminId, orderedIds);
+    await reorderBrands(fastify.db, request.admin!.adminId, orderedIds, fastify.redis);
     return { data: null };
   });
 
   fastify.delete('/admin/brands/:id', { schema: { tags }, preHandler: write }, async (request) => {
     const { id } = idParams.parse(request.params);
-    await deleteBrand(fastify.db, request.admin!.adminId, id);
+    await deleteBrand(fastify.db, request.admin!.adminId, id, fastify.redis);
     return { data: null };
   });
 
@@ -88,31 +88,31 @@ const adminCatalogBrandRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post('/admin/models', { schema: { tags }, preHandler: write }, async (request, reply) => {
     const body = createModelBody.parse(request.body);
     reply.code(201);
-    return { data: await createModel(fastify.db, request.admin!.adminId, body) };
+    return { data: await createModel(fastify.db, request.admin!.adminId, body, fastify.redis) };
   });
 
   fastify.patch('/admin/models/:id', { schema: { tags }, preHandler: write }, async (request) => {
     const { id } = idParams.parse(request.params);
     const patch = updateModelBody.parse(request.body);
-    return { data: await updateModel(fastify.db, request.admin!.adminId, id, patch) };
+    return { data: await updateModel(fastify.db, request.admin!.adminId, id, patch, fastify.redis) };
   });
 
   fastify.post('/admin/models/:id/move', { schema: { tags }, preHandler: write }, async (request) => {
     const { id } = idParams.parse(request.params);
     const body = moveModelBody.parse(request.body);
-    return { data: await moveModel(fastify.db, request.admin!.adminId, id, body) };
+    return { data: await moveModel(fastify.db, request.admin!.adminId, id, body, fastify.redis) };
   });
 
   fastify.post('/admin/brands/:id/models/reorder', { schema: { tags }, preHandler: write }, async (request) => {
     const { id } = idParams.parse(request.params);
     const { orderedIds } = reorderBody.parse(request.body);
-    await reorderModels(fastify.db, request.admin!.adminId, id, orderedIds);
+    await reorderModels(fastify.db, request.admin!.adminId, id, orderedIds, fastify.redis);
     return { data: null };
   });
 
   fastify.delete('/admin/models/:id', { schema: { tags }, preHandler: write }, async (request) => {
     const { id } = idParams.parse(request.params);
-    await deleteModel(fastify.db, request.admin!.adminId, id);
+    await deleteModel(fastify.db, request.admin!.adminId, id, fastify.redis);
     return { data: null };
   });
 };

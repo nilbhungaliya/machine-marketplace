@@ -97,19 +97,19 @@ const adminCatalogFieldRoutes: FastifyPluginAsync = async (fastify) => {
     const { id } = idParams.parse(request.params);
     const body = createOptionBody.parse(request.body);
     reply.code(201);
-    return { data: await createOption(fastify.db, request.admin!.adminId, id, body) };
+    return { data: await createOption(fastify.db, request.admin!.adminId, id, body, fastify.redis) };
   });
 
   fastify.patch('/admin/options/:id', { schema: { tags }, preHandler: write }, async (request) => {
     const { id } = idParams.parse(request.params);
     const patch = updateOptionBody.parse(request.body);
-    return { data: await updateOption(fastify.db, request.admin!.adminId, id, patch) };
+    return { data: await updateOption(fastify.db, request.admin!.adminId, id, patch, fastify.redis) };
   });
 
   fastify.post('/admin/fields/:id/options/reorder', { schema: { tags }, preHandler: write }, async (request) => {
     const { id } = idParams.parse(request.params);
     const { orderedIds } = reorderBody.parse(request.body);
-    await reorderOptions(fastify.db, request.admin!.adminId, id, orderedIds);
+    await reorderOptions(fastify.db, request.admin!.adminId, id, orderedIds, fastify.redis);
     return { data: null };
   });
 };

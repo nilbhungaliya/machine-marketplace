@@ -1,3 +1,4 @@
+import type { Redis } from 'ioredis';
 import { asc, eq, max } from 'drizzle-orm';
 import {
   CATALOG_KEY_REGEX,
@@ -17,6 +18,7 @@ import { lockCatalogRoots } from './locks.js';
 import { toField, toOption } from './read.service.js';
 import { assertExactSet } from './reorder.js';
 import { assertClaimFree, templateRelatedIds, type FieldClaim } from './template-clash.js';
+import { afterCatalogCommit, queueSearchRefresh } from '../discovery/refresh-jobs.js';
 
 // Admin writes on template fields and their options (spec §5). Fields and options are never deleted, only retired;
 // key, type and appliesTo never change. Each function runs in one transaction and writes one audit_log row with it.
@@ -297,9 +299,9 @@ export interface CreateOptionInput {
 }
 
 /** Only select fields have options; the new option goes last. Option keys are unique per field (retired ones too). */
-export async function createOption(db: Db, adminId: string, fieldId: string, input: CreateOptionInput): Promise<FieldOption> {
+export async function createOption(db: Db, adminId: string, fieldId: string, input: CreateOptionInput, redis?: Redis | null): Promise<FieldOption> {
   checkKey(input.key);
-  return mapKeyTaken('option', () =>
+  const result = await mapKeyTaken('option', () =>
     db.transaction(async (tx) => {
       const field = await getFieldRow(tx, fieldId);
       if (!SELECT_TYPES.includes(field.type)) throw fieldInvalid('Only select fields have options');
@@ -317,6 +319,8 @@ export async function createOption(db: Db, adminId: string, fieldId: string, inp
       return toOption(row!);
     }),
   );
+  await afterCatalogCommit(redis);
+  return result;
 }
 
 export interface UpdateOptionPatch {
@@ -325,14 +329,16 @@ export interface UpdateOptionPatch {
 }
 
 /** Relabel, retire or reactivate an option (audited as `option.update` either way). */
-export async function updateOption(db: Db, adminId: string, optionId: string, patch: UpdateOptionPatch): Promise<FieldOption> {
-  return db.transaction(async (tx) => {
+export async function updateOption(db: Db, adminId: string, optionId: string, patch: UpdateOptionPatch, redis?: Redis | null): Promise<FieldOption> {
+  const result = await db.transaction(async (tx) => {
     const before = await getOptionRow(tx, optionId);
     const [after] = await tx
       .update(templateFieldOptions)
       .set({ label: patch.label, status: patch.status, updatedAt: new Date() })
       .where(eq(templateFieldOptions.id, optionId))
       .returning();
+    // F4 + F5 §5.2: listings' search text holds option labels.
+    if (patch.label !== undefined && patch.label !== before.label) await queueSearchRefresh(tx, 'field', before.fieldId, adminId);
 
     await writeAudit(tx, {
       adminId,
@@ -344,10 +350,12 @@ export async function updateOption(db: Db, adminId: string, optionId: string, pa
     });
     return toOption(after!);
   });
+  await afterCatalogCommit(redis);
+  return result;
 }
 
 /** `orderedIds` must be exactly the field's options (every status). */
-export async function reorderOptions(db: Db, adminId: string, fieldId: string, orderedIds: string[]): Promise<void> {
+export async function reorderOptions(db: Db, adminId: string, fieldId: string, orderedIds: string[], redis?: Redis | null): Promise<void> {
   await db.transaction(async (tx) => {
     await getFieldRow(tx, fieldId);
     const current = await tx
@@ -369,4 +377,5 @@ export async function reorderOptions(db: Db, adminId: string, fieldId: string, o
       after: orderedIds,
     });
   });
+  await afterCatalogCommit(redis);
 }
