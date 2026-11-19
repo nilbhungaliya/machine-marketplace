@@ -7,6 +7,9 @@ import Header from '@/components/Header';
 import Input from '@/components/Input';
 import Button from '@/components/Button';
 import FooterBar from '@/components/FooterBar';
+import ArtSlot from '@/components/art/ArtSlot';
+import DialGauge, { GAUGE_VB } from '@/components/art/DialGauge';
+import { ArtIn, FootIn, SlideIn, WipeTitle } from '@/components/motion/Entrance';
 import { useType } from '@/hooks/use-type';
 import api from '@/lib/api';
 import { AUTH_EVENTS, track } from '@/lib/analytics';
@@ -14,8 +17,12 @@ import { authErrorCode, mapAuthError } from '@/lib/auth-errors';
 import { sanitizePhoneInput } from '@/lib/auth-input';
 import { ShieldCheck } from '@/lib/icons';
 import { isValidMobile, normalizeMobile } from '@/lib/validation/phone';
+import { phoneDialDigits } from '@/lib/phone-dial';
 import { spacing, useTheme } from '@/lib/theme';
 import type { AuthStackScreenProps } from '@/navigation/types';
+
+/** The gauge's width: the mockup's 150 px × 1.15 (spec R1). It shrinks, then goes, when the keyboard needs the room. */
+const GAUGE_WIDTH = 172;
 
 export default function PhoneScreen({ navigation }: AuthStackScreenProps<'Phone'>) {
   const { t } = useTranslation();
@@ -25,8 +32,11 @@ export default function PhoneScreen({ navigation }: AuthStackScreenProps<'Phone'
   const [error, setError] = useState<string>();
   const [loading, setLoading] = useState(false);
 
+  const dial = phoneDialDigits(phone);
+
   const s = useMemo(() => StyleSheet.create({
     body: { flex: 1, paddingHorizontal: spacing.lg, paddingTop: spacing.sm },
+    art: { marginBottom: spacing.md },
     title: { ...type('title'), color: colors.text },
     subtitle: { ...type('lead'), color: colors.textSecondary, marginTop: spacing.sm, marginBottom: spacing.md },
     safe: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.md },
@@ -60,32 +70,43 @@ export default function PhoneScreen({ navigation }: AuthStackScreenProps<'Phone'
     <ScreenWrapper keyboardAware>
       <Header title="" />
       <View style={s.body}>
-        <Text style={s.title}>{t('auth.phone.title')}</Text>
-        <Text style={s.subtitle}>{t('auth.phone.subtitle')}</Text>
+        <ArtSlot vb={GAUGE_VB} maxWidth={GAUGE_WIDTH} style={s.art}>
+          {(width) => <ArtIn><DialGauge digits={dial} width={width} /></ArtIn>}
+        </ArtSlot>
+        <WipeTitle textStyle={s.title} delay={300}>{t('auth.phone.title')}</WipeTitle>
+        <SlideIn delay={700}>
+          <Text style={s.subtitle}>{t('auth.phone.subtitle')}</Text>
+        </SlideIn>
         {/* The +91 is shown only (Ruling R10): sanitizePhoneInput accepts the number with or without it. */}
-        <Input
-          label={t('auth.phone.label')}
-          placeholder={t('auth.phone.placeholder')}
-          size="lg"
-          prefix="+91"
-          keyboardType="phone-pad"
-          autoComplete="tel"
-          textContentType="telephoneNumber"
-          maxLength={14}
-          value={phone}
-          onChangeText={setPhone}
-          error={error}
-          onSubmitEditing={submit}
-          autoFocus
-        />
-        <View style={s.safe}>
-          <ShieldCheck size={16} color={colors.ok} />
-          <Text style={s.safeText}>{t('auth.phone.safe')}</Text>
-        </View>
+        <SlideIn delay={850} rail>
+          <Input
+            label={t('auth.phone.label')}
+            placeholder={t('auth.phone.placeholder')}
+            size="lg"
+            prefix="+91"
+            keyboardType="phone-pad"
+            autoComplete="tel"
+            textContentType="telephoneNumber"
+            maxLength={14}
+            value={phone}
+            onChangeText={setPhone}
+            error={error}
+            onSubmitEditing={submit}
+            autoFocus
+          />
+        </SlideIn>
+        <SlideIn delay={1000}>
+          <View style={s.safe}>
+            <ShieldCheck size={16} color={colors.ok} />
+            <Text style={s.safeText}>{t('auth.phone.safe')}</Text>
+          </View>
+        </SlideIn>
       </View>
-      <FooterBar>
-        <Button title={t('auth.phone.sendOtp')} phLabel="Send-OTP" size="md" loading={loading} onPress={submit} />
-      </FooterBar>
+      <FootIn>
+        <FooterBar>
+          <Button title={t('auth.phone.sendOtp')} phLabel="Send-OTP" size="md" loading={loading} onPress={submit} />
+        </FooterBar>
+      </FootIn>
     </ScreenWrapper>
   );
 }

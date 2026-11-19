@@ -12,6 +12,8 @@ import { FieldHint } from '@/components/Field';
 import FooterBar from '@/components/FooterBar';
 import Notice from '@/components/Notice';
 import Skeleton from '@/components/Skeleton';
+import GstinCaliper from '@/components/art/GstinCaliper';
+import { ArtIn, FootIn, SlideIn } from '@/components/motion/Entrance';
 import { businessKeys, useGstState } from '@/hooks/use-business';
 import { track } from '@/lib/analytics';
 import { GST_EVENTS } from '@/lib/analytics-events';
@@ -107,7 +109,9 @@ export default function GstStartScreen({ navigation }: RootStackScreenProps<'Gst
     <ScreenWrapper keyboardAware scroll>
       <Header title={t('verification.title')} />
       <View style={s.body}>
-        <Notice icon={ShieldCheck} text={t('verification.intro.callout')} />
+        <SlideIn delay={600}>
+          <Notice icon={ShieldCheck} text={t('verification.intro.callout')} />
+        </SlideIn>
         {gst.isLoading ? (
           <Skeleton style={s.skeleton} />
         ) : reviewOnly ? (
@@ -123,7 +127,10 @@ export default function GstStartScreen({ navigation }: RootStackScreenProps<'Gst
           </Notice>
         ) : (
           <>
-            <View>
+            <SlideIn rail delay={750}>
+              <ArtIn>
+                <GstinCaliper text={text} />
+              </ArtIn>
               <Input
                 label={t('verification.start.gstin')}
                 placeholder={t('verification.start.gstinPlaceholder')}
@@ -141,7 +148,7 @@ export default function GstStartScreen({ navigation }: RootStackScreenProps<'Gst
                 testID="Gstin"
               />
               {!error ? <FieldHint>{t('verification.start.gstinHint')}</FieldHint> : null}
-            </View>
+            </SlideIn>
             {notice ? (
               <Notice
                 tone={notice === 'expired' || notice === 'providerUnavailable' ? 'warning' : 'danger'}
@@ -177,9 +184,11 @@ export default function GstStartScreen({ navigation }: RootStackScreenProps<'Gst
         )}
       </View>
       {!reviewOnly && !gst.isLoading ? (
-        <FooterBar>
-          <Button title={t('verification.start.lookUp')} phLabel="Gst-look-up" size="md" loading={busy} onPress={() => void lookup(text)} />
-        </FooterBar>
+        <FootIn>
+          <FooterBar>
+            <Button title={t('verification.start.lookUp')} phLabel="Gst-look-up" size="md" loading={busy} onPress={() => void lookup(text)} />
+          </FooterBar>
+        </FootIn>
       ) : null}
     </ScreenWrapper>
   );

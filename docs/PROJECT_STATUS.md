@@ -222,3 +222,14 @@ The ten client decisions D1–D10 are listed at the end of `docs/product-scope.m
   rental refused without GST, pause / resume / sold, admin hide, expiry job), data deleted afterwards; admin pages
   checked by page loads and API calls only (browser extension not connected). Still the owner's: public bucket, video
   device check, the device pass, the browser click-through (Open items).
+- 2026-11-19 — Onboarding motion ("workshop precision", `docs/mockups/onboarding-motion.html`) built into the app,
+  animations only (owner's call: no copy, flow or control changes; no spec or plan at the owner's request). Foundation:
+  `lib/motion-track.ts` (glide / seat / rail / ratchet easings, keyframe `track()`), `hooks/use-loop.ts` (focus-aware
+  loop, holds the finished frame under reduce motion), `components/art/stage.tsx` (layered Svg parts, transform-only)
+  and `materials.tsx`, `components/motion/Entrance.tsx` (heading wipe, rail slide-in, footer rise). Drawings:
+  Welcome `HubAssembly` + `MatchToken` (replaces GearShot there), Mobile number `DialGauge`, Code `BoltFlange` (the
+  flange turns and the seal goes green for 0.9 s before login), Your business `Nameplate` (engraves the typed name) +
+  `Conveyor`, Where are you? `EstateMap` (onboarding only, hidden when the real map shows), GSTIN entry
+  `GstinCaliper` (reads the typed GSTIN part by part); `Steps` racks its current segment. Verified: typecheck, tests
+  (app 426 after rebasing onto the F2 listings work), `CI=1 npx expo export --platform android` bundles. **Not yet run on a device**: motion, both themes and
+  performance unchecked. Committed and pushed on `develop`.

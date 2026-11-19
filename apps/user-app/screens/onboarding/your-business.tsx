@@ -14,6 +14,9 @@ import FooterBar from '@/components/FooterBar';
 import Skeleton from '@/components/Skeleton';
 import StatusChip from '@/components/StatusChip';
 import Steps from '@/components/Steps';
+import Conveyor from '@/components/art/Conveyor';
+import Nameplate from '@/components/art/Nameplate';
+import { ArtIn, FootIn, SlideIn } from '@/components/motion/Entrance';
 import { useAuth } from '@/hooks/useAuth';
 import { useBusiness, useMachineCategories } from '@/hooks/use-business';
 import { useType } from '@/hooks/use-type';
@@ -95,6 +98,7 @@ export default function YourBusinessScreen({ navigation, route }: RootStackScree
   const s = useMemo(() => StyleSheet.create({
     body: { flex: 1, paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.xl },
     subtitle: { ...type('lead'), color: colors.textSecondary, marginTop: spacing.md },
+    art: { marginTop: spacing.lg },
     // The same top spacing as an Input, so chip groups and text fields keep one rhythm.
     group: { marginTop: spacing.md },
     hint: { ...type('caption'), color: colors.textMuted },
@@ -130,6 +134,21 @@ export default function YourBusinessScreen({ navigation, route }: RootStackScree
 
   const activityError = listError('activities');
   const categoryError = listError('categories');
+  // Onboarding motion (mockup screen 04): each field block slides in along its rail, 90 ms after the one before.
+  const fieldDelay = (i: number) => 550 + i * 90;
+  const activityChips = (
+    <View style={s.chips}>
+      {BUSINESS_ACTIVITIES.map((a: BusinessActivity) => (
+        <Chip
+          key={a}
+          label={t(`onboarding.activities.${a}`)}
+          selected={form.values.activities.includes(a)}
+          onPress={() => void form.setFieldValue('activities', toggle(form.values.activities, a))}
+          testID={`Activity-${a}`}
+        />
+      ))}
+    </View>
+  );
 
   return (
     <ScreenWrapper keyboardAware scroll>
@@ -139,135 +158,148 @@ export default function YourBusinessScreen({ navigation, route }: RootStackScree
           <>
             <Steps current={1} total={2} label={t('onboarding.step', { current: 1, total: 2 })} />
             <Text style={s.subtitle}>{t('onboarding.business.subtitle')}</Text>
+            {/* The nameplate engraves what is typed below: the business name, then the person's name. */}
+            <ArtIn style={s.art}>
+              <Nameplate line1={nameLocked && profile ? profile.displayName : form.values.businessName} line2={form.values.name} />
+            </ArtIn>
           </>
         ) : null}
 
-        <Input
-          label={t('onboarding.business.yourName')}
-          autoComplete="name"
-          value={form.values.name}
-          onChangeText={form.handleChange('name')}
-          onBlur={form.handleBlur('name')}
-          error={fieldError('name')}
-          testID="Your-name"
-        />
-
-        {nameLocked && profile ? (
-          <View style={s.group}>
-            <FieldLabel>{t('onboarding.business.businessName')}</FieldLabel>
-            <View style={s.locked}>
-              <Text style={s.lockedName}>{profile.displayName}</Text>
-              <StatusChip tone="ok" icon={ShieldCheck} label={t('onboarding.business.nameFromGst')} />
-            </View>
-          </View>
-        ) : (
+        <SlideIn rail delay={fieldDelay(0)}>
           <Input
-            label={t('onboarding.business.businessName')}
-            autoComplete="organization"
-            value={form.values.businessName}
-            onChangeText={form.handleChange('businessName')}
-            onBlur={form.handleBlur('businessName')}
-            error={fieldError('businessName')}
-            testID="Business-name"
+            label={t('onboarding.business.yourName')}
+            autoComplete="name"
+            value={form.values.name}
+            onChangeText={form.handleChange('name')}
+            onBlur={form.handleBlur('name')}
+            error={fieldError('name')}
+            testID="Your-name"
           />
-        )}
+        </SlideIn>
 
-        <Field
-          label={t('onboarding.business.activities')}
-          // The hint gives way to the list's error, as before.
-          hint={activityError ? undefined : t('onboarding.business.activitiesHint')}
-          error={activityError}
-          style={s.group}
-        >
-          <View style={s.chips}>
-            {BUSINESS_ACTIVITIES.map((a: BusinessActivity) => (
-              <Chip
-                key={a}
-                label={t(`onboarding.activities.${a}`)}
-                selected={form.values.activities.includes(a)}
-                onPress={() => void form.setFieldValue('activities', toggle(form.values.activities, a))}
-                testID={`Activity-${a}`}
-              />
-            ))}
-          </View>
-        </Field>
-
-        <Field label={t('onboarding.business.categories')} error={categoryError} style={s.group}>
-          {categories.isLoading ? (
-            <View style={s.chips}>
-              {[0, 1, 2, 3].map((i) => <Skeleton key={i} style={s.chipSkeleton} />)}
+        <SlideIn rail delay={fieldDelay(1)}>
+          {nameLocked && profile ? (
+            <View style={s.group}>
+              <FieldLabel>{t('onboarding.business.businessName')}</FieldLabel>
+              <View style={s.locked}>
+                <Text style={s.lockedName}>{profile.displayName}</Text>
+                <StatusChip tone="ok" icon={ShieldCheck} label={t('onboarding.business.nameFromGst')} />
+              </View>
             </View>
-          ) : categories.isError ? (
-            <Pressable onPress={() => void categories.refetch()} testID="Retry-categories" accessibilityRole="button">
-              <Text style={s.hint}>{t('onboarding.business.categoriesError')}</Text>
-              <Text style={s.retry}>{t('common.retry')}</Text>
-            </Pressable>
           ) : (
-            <View style={s.chips}>
-              {(categories.data ?? []).map((c) => (
-                <Chip
-                  key={c.id}
-                  label={c.name}
-                  icon={c.icon ? CATEGORY_ICON_COMPONENTS[c.icon] : undefined}
-                  selected={form.values.categories.includes(c.id)}
-                  onPress={() => void form.setFieldValue('categories', toggle(form.values.categories, c.id))}
-                  testID={`Machine-category-${c.slug}`}
-                />
-              ))}
-            </View>
+            <Input
+              label={t('onboarding.business.businessName')}
+              autoComplete="organization"
+              value={form.values.businessName}
+              onChangeText={form.handleChange('businessName')}
+              onBlur={form.handleBlur('businessName')}
+              error={fieldError('businessName')}
+              testID="Business-name"
+            />
           )}
-        </Field>
+        </SlideIn>
 
-        {mode === 'edit' ? (
-          <>
-            <Text style={s.section}>{t('onboarding.business.more')}</Text>
-            <Input
-              label={t('onboarding.business.email')}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoComplete="email"
-              value={form.values.email}
-              onChangeText={form.handleChange('email')}
-              onBlur={form.handleBlur('email')}
-              error={fieldError('email')}
-              testID="Business-email"
-            />
-            <Input
-              label={t('onboarding.business.year')}
-              keyboardType="number-pad"
-              maxLength={4}
-              value={form.values.yearEstablished}
-              onChangeText={form.handleChange('yearEstablished')}
-              onBlur={form.handleBlur('yearEstablished')}
-              error={fieldError('yearEstablished')}
-              testID="Year-established"
-            />
-            <Field label={t('onboarding.business.employees')} style={s.group}>
+        <SlideIn rail delay={fieldDelay(2)}>
+          <Field
+            label={t('onboarding.business.activities')}
+            // The hint gives way to the list's error, as before.
+            hint={activityError ? undefined : t('onboarding.business.activitiesHint')}
+            error={activityError}
+            style={s.group}
+          >
+            {/* Onboarding: the chips ride in on a conveyor belt. */}
+            {mode === 'onboarding' ? <Conveyor bleed={spacing.lg}>{activityChips}</Conveyor> : activityChips}
+          </Field>
+        </SlideIn>
+
+        <SlideIn rail delay={fieldDelay(3)}>
+          <Field label={t('onboarding.business.categories')} error={categoryError} style={s.group}>
+            {categories.isLoading ? (
               <View style={s.chips}>
-                {EMPLOYEE_RANGES.map((r) => (
+                {[0, 1, 2, 3].map((i) => <Skeleton key={i} style={s.chipSkeleton} />)}
+              </View>
+            ) : categories.isError ? (
+              <Pressable onPress={() => void categories.refetch()} testID="Retry-categories" accessibilityRole="button">
+                <Text style={s.hint}>{t('onboarding.business.categoriesError')}</Text>
+                <Text style={s.retry}>{t('common.retry')}</Text>
+              </Pressable>
+            ) : (
+              <View style={s.chips}>
+                {(categories.data ?? []).map((c) => (
                   <Chip
-                    key={r}
-                    label={r}
-                    role="radio"
-                    selected={form.values.employees === r}
-                    onPress={() => void form.setFieldValue('employees', form.values.employees === r ? null : r)}
-                    testID={`Employees-${r}`}
+                    key={c.id}
+                    label={c.name}
+                    icon={c.icon ? CATEGORY_ICON_COMPONENTS[c.icon] : undefined}
+                    selected={form.values.categories.includes(c.id)}
+                    onPress={() => void form.setFieldValue('categories', toggle(form.values.categories, c.id))}
+                    testID={`Machine-category-${c.slug}`}
                   />
                 ))}
               </View>
-            </Field>
+            )}
+          </Field>
+        </SlideIn>
+
+        {mode === 'edit' ? (
+          <>
+            <SlideIn delay={fieldDelay(4)}>
+              <Text style={s.section}>{t('onboarding.business.more')}</Text>
+            </SlideIn>
+            <SlideIn rail delay={fieldDelay(5)}>
+              <Input
+                label={t('onboarding.business.email')}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoComplete="email"
+                value={form.values.email}
+                onChangeText={form.handleChange('email')}
+                onBlur={form.handleBlur('email')}
+                error={fieldError('email')}
+                testID="Business-email"
+              />
+            </SlideIn>
+            <SlideIn rail delay={fieldDelay(6)}>
+              <Input
+                label={t('onboarding.business.year')}
+                keyboardType="number-pad"
+                maxLength={4}
+                value={form.values.yearEstablished}
+                onChangeText={form.handleChange('yearEstablished')}
+                onBlur={form.handleBlur('yearEstablished')}
+                error={fieldError('yearEstablished')}
+                testID="Year-established"
+              />
+            </SlideIn>
+            <SlideIn rail delay={fieldDelay(7)}>
+              <Field label={t('onboarding.business.employees')} style={s.group}>
+                <View style={s.chips}>
+                  {EMPLOYEE_RANGES.map((r) => (
+                    <Chip
+                      key={r}
+                      label={r}
+                      role="radio"
+                      selected={form.values.employees === r}
+                      onPress={() => void form.setFieldValue('employees', form.values.employees === r ? null : r)}
+                      testID={`Employees-${r}`}
+                    />
+                  ))}
+                </View>
+              </Field>
+            </SlideIn>
           </>
         ) : null}
       </View>
-      <FooterBar>
-        <Button
-          title={mode === 'edit' ? t('onboarding.business.saveChanges') : t('onboarding.business.next')}
-          phLabel={mode === 'edit' ? 'Save-business-profile' : 'Onboarding-business-next'}
-          size="md"
-          loading={form.isSubmitting}
-          onPress={() => form.handleSubmit()}
-        />
-      </FooterBar>
+      <FootIn>
+        <FooterBar>
+          <Button
+            title={mode === 'edit' ? t('onboarding.business.saveChanges') : t('onboarding.business.next')}
+            phLabel={mode === 'edit' ? 'Save-business-profile' : 'Onboarding-business-next'}
+            size="md"
+            loading={form.isSubmitting}
+            onPress={() => form.handleSubmit()}
+          />
+        </FooterBar>
+      </FootIn>
     </ScreenWrapper>
   );
 }

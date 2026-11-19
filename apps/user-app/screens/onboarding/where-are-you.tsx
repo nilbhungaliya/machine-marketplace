@@ -17,6 +17,8 @@ import ListRow from '@/components/ListRow';
 import Notice from '@/components/Notice';
 import Skeleton from '@/components/Skeleton';
 import Steps from '@/components/Steps';
+import EstateMap from '@/components/art/EstateMap';
+import { ArtIn, FootIn, SlideIn } from '@/components/motion/Entrance';
 import { useAuth } from '@/hooks/useAuth';
 import { businessKeys, useBusiness, useIndustrialAreas, usePincodeInfo } from '@/hooks/use-business';
 import { useType } from '@/hooks/use-type';
@@ -25,6 +27,7 @@ import { ONBOARDING_EVENTS } from '@/lib/analytics-events';
 import { errorCode, errorKey } from '@/lib/api-error';
 import { fetchNearestPincode, saveLocation } from '@/lib/business-api';
 import { toAsciiDigits } from '@/lib/digits';
+import { estateLabel } from '@/lib/estate-map';
 import { Info, LocateFixed, MapPin, Search, X } from '@/lib/icons';
 import {
   buildLocationSchema, PINCODE_REGEX, pinAfterPincode, toLocationBody, type FormMode, type LocationFormValues,
@@ -241,6 +244,7 @@ function LocationForm({ mode, title, profile, onDone }: {
   const s = useMemo(() => StyleSheet.create({
     body: { flex: 1, paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.xl },
     subtitle: { ...type('lead'), color: colors.textSecondary, marginTop: spacing.md, marginBottom: spacing.lg },
+    art: { marginBottom: spacing.lg },
     map: { height: 180, borderRadius: radius.lg, overflow: 'hidden', marginBottom: spacing.sm },
     mapHint: { ...type('caption'), color: colors.textMuted, marginBottom: spacing.sm },
     row: { flexDirection: 'row', gap: spacing.md },
@@ -258,6 +262,16 @@ function LocationForm({ mode, title, profile, onDone }: {
     search: { marginBottom: spacing.sm },
   }), [colors, type]);
 
+  // The estate map's plot label: the area picked (or typed under Other) and the pincode, as the user fills them in.
+  const pickedArea = showOther
+    ? form.values.industrialAreaOther
+    : options.find((o) => o.id === form.values.industrialAreaId)?.name ?? null;
+  const mapLabel = estateLabel(pickedArea, validPin);
+  // The real map takes the drawing's place once a pin is set.
+  const showRealMap = LocationMap !== null && pin !== null;
+  // Onboarding motion (mockup screen 05): field blocks slide in along their rails, 90 ms apart.
+  const fieldDelay = (i: number) => 700 + i * 90;
+
   const fieldError = (k: 'pincode' | 'city' | 'state' | 'industrialAreaOther' | 'addressLine') =>
     form.touched[k] || form.submitCount > 0 ? form.errors[k] : undefined;
   const areaError = form.submitCount > 0 || form.touched.industrialAreaId ? form.errors.industrialAreaId : undefined;
@@ -270,6 +284,11 @@ function LocationForm({ mode, title, profile, onDone }: {
           <>
             <Steps current={2} total={2} label={t('onboarding.step', { current: 2, total: 2 })} />
             <Text style={s.subtitle}>{t('onboarding.location.subtitle')}</Text>
+            {!showRealMap ? (
+              <ArtIn style={s.art}>
+                <EstateMap label={mapLabel} />
+              </ArtIn>
+            ) : null}
           </>
         ) : null}
 
@@ -299,140 +318,152 @@ function LocationForm({ mode, title, profile, onDone }: {
         ) : null}
 
         {/* The title switches to "Finding you…" and the button is disabled while locating, as before. */}
-        <Button
-          title={locating ? t('onboarding.location.locating') : t('onboarding.location.useMyLocation')}
-          phLabel="Use-my-location"
-          variant="outline"
-          icon={LocateFixed}
-          disabled={locating}
-          onPress={() => void locate()}
-        />
+        <SlideIn delay={600}>
+          <Button
+            title={locating ? t('onboarding.location.locating') : t('onboarding.location.useMyLocation')}
+            phLabel="Use-my-location"
+            variant="outline"
+            icon={LocateFixed}
+            disabled={locating}
+            onPress={() => void locate()}
+          />
+        </SlideIn>
 
-        <Input
-          label={t('onboarding.location.pincode')}
-          placeholder={t('onboarding.location.pincodePlaceholder')}
-          keyboardType="number-pad"
-          maxLength={6}
-          autoComplete="postal-code"
-          value={form.values.pincode}
-          onChangeText={form.handleChange('pincode')}
-          onBlur={form.handleBlur('pincode')}
-          error={fieldError('pincode')}
-          testID="Pincode"
-        />
-        {validPin && pincodeInfo.data === null ? (
-          <Notice tone="warning" icon={Info} text={t('onboarding.location.unknownPincode')} style={s.notice} />
-        ) : null}
+        <SlideIn rail delay={fieldDelay(0)}>
+          <Input
+            label={t('onboarding.location.pincode')}
+            placeholder={t('onboarding.location.pincodePlaceholder')}
+            keyboardType="number-pad"
+            maxLength={6}
+            autoComplete="postal-code"
+            value={form.values.pincode}
+            onChangeText={form.handleChange('pincode')}
+            onBlur={form.handleBlur('pincode')}
+            error={fieldError('pincode')}
+            testID="Pincode"
+          />
+          {validPin && pincodeInfo.data === null ? (
+            <Notice tone="warning" icon={Info} text={t('onboarding.location.unknownPincode')} style={s.notice} />
+          ) : null}
+        </SlideIn>
 
-        <View style={s.row}>
-          <View style={s.half}>
-            <Input
-              label={t('onboarding.location.city')}
-              value={form.values.city}
-              onChangeText={form.handleChange('city')}
-              onBlur={form.handleBlur('city')}
-              error={fieldError('city')}
-              testID="City"
-            />
+        <SlideIn rail delay={fieldDelay(1)}>
+          <View style={s.row}>
+            <View style={s.half}>
+              <Input
+                label={t('onboarding.location.city')}
+                value={form.values.city}
+                onChangeText={form.handleChange('city')}
+                onBlur={form.handleBlur('city')}
+                error={fieldError('city')}
+                testID="City"
+              />
+            </View>
+            <View style={s.half}>
+              <Input
+                label={t('onboarding.location.state')}
+                value={form.values.state}
+                onChangeText={form.handleChange('state')}
+                onBlur={form.handleBlur('state')}
+                error={fieldError('state')}
+                testID="State"
+              />
+            </View>
           </View>
-          <View style={s.half}>
-            <Input
-              label={t('onboarding.location.state')}
-              value={form.values.state}
-              onChangeText={form.handleChange('state')}
-              onBlur={form.handleBlur('state')}
-              error={fieldError('state')}
-              testID="State"
-            />
-          </View>
-        </View>
+        </SlideIn>
 
-        <Field label={t('onboarding.location.area')} hint={t('onboarding.location.areaHint')} error={areaError} style={s.group}>
-          {!validPin ? (
-            <Text style={s.hint}>{t('onboarding.location.areaEnterPincode')}</Text>
-          ) : areas.isLoading ? (
-            <Skeleton style={s.areaSkeleton} />
-          ) : areas.isError ? (
-            <Pressable onPress={() => void areas.refetch()} testID="Retry-industrial-areas" accessibilityRole="button">
-              <Text style={s.hint}>{t('onboarding.location.areasError')}</Text>
-              <Text style={s.retry}>{t('common.retry')}</Text>
-            </Pressable>
-          ) : (
-            <>
-              {options.length >= SEARCH_FROM ? (
-                <View style={s.search}>
-                  <Input
-                    placeholder={t('onboarding.location.areaSearch')}
-                    value={areaQuery}
-                    onChangeText={setAreaQuery}
-                    autoCorrect={false}
-                    testID="Search-industrial-areas"
-                  />
-                </View>
-              ) : null}
-              <Card flush>
-                {shown.map((o) => {
-                  const selected = form.values.industrialAreaId === o.id;
-                  return (
-                    <ListRow
-                      key={o.id}
-                      label={o.name}
-                      selected={selected}
-                      onPress={() => pickArea(o.id)}
-                      testID="Industrial-area-option"
-                      accessibilityRole="radio"
-                      accessibilityState={{ selected }}
+        <SlideIn rail delay={fieldDelay(2)}>
+          <Field label={t('onboarding.location.area')} hint={t('onboarding.location.areaHint')} error={areaError} style={s.group}>
+            {!validPin ? (
+              <Text style={s.hint}>{t('onboarding.location.areaEnterPincode')}</Text>
+            ) : areas.isLoading ? (
+              <Skeleton style={s.areaSkeleton} />
+            ) : areas.isError ? (
+              <Pressable onPress={() => void areas.refetch()} testID="Retry-industrial-areas" accessibilityRole="button">
+                <Text style={s.hint}>{t('onboarding.location.areasError')}</Text>
+                <Text style={s.retry}>{t('common.retry')}</Text>
+              </Pressable>
+            ) : (
+              <>
+                {options.length >= SEARCH_FROM ? (
+                  <View style={s.search}>
+                    <Input
+                      placeholder={t('onboarding.location.areaSearch')}
+                      value={areaQuery}
+                      onChangeText={setAreaQuery}
+                      autoCorrect={false}
+                      testID="Search-industrial-areas"
                     />
-                  );
-                })}
-                {query && shown.length === 0 ? (
-                  <ListRow icon={Search} label={t('onboarding.location.areaNoMatch')} />
+                  </View>
                 ) : null}
-                <ListRow
-                  label={t('onboarding.location.other')}
-                  selected={showOther}
-                  last
-                  onPress={pickOther}
-                  testID="Industrial-area-other"
-                  accessibilityRole="radio"
-                  accessibilityState={{ selected: showOther }}
-                />
-              </Card>
-              {showOther ? (
-                <Input
-                  placeholder={t('onboarding.location.otherPlaceholder')}
-                  value={form.values.industrialAreaOther}
-                  onChangeText={form.handleChange('industrialAreaOther')}
-                  onBlur={form.handleBlur('industrialAreaOther')}
-                  error={fieldError('industrialAreaOther')}
-                  maxLength={80}
-                  testID="Industrial-area-other-text"
-                />
-              ) : null}
-            </>
-          )}
-        </Field>
+                <Card flush>
+                  {shown.map((o) => {
+                    const selected = form.values.industrialAreaId === o.id;
+                    return (
+                      <ListRow
+                        key={o.id}
+                        label={o.name}
+                        selected={selected}
+                        onPress={() => pickArea(o.id)}
+                        testID="Industrial-area-option"
+                        accessibilityRole="radio"
+                        accessibilityState={{ selected }}
+                      />
+                    );
+                  })}
+                  {query && shown.length === 0 ? (
+                    <ListRow icon={Search} label={t('onboarding.location.areaNoMatch')} />
+                  ) : null}
+                  <ListRow
+                    label={t('onboarding.location.other')}
+                    selected={showOther}
+                    last
+                    onPress={pickOther}
+                    testID="Industrial-area-other"
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: showOther }}
+                  />
+                </Card>
+                {showOther ? (
+                  <Input
+                    placeholder={t('onboarding.location.otherPlaceholder')}
+                    value={form.values.industrialAreaOther}
+                    onChangeText={form.handleChange('industrialAreaOther')}
+                    onBlur={form.handleBlur('industrialAreaOther')}
+                    error={fieldError('industrialAreaOther')}
+                    maxLength={80}
+                    testID="Industrial-area-other-text"
+                  />
+                ) : null}
+              </>
+            )}
+          </Field>
+        </SlideIn>
 
-        <Input
-          label={t('onboarding.location.address')}
-          placeholder={t('onboarding.location.addressPlaceholder')}
-          value={form.values.addressLine}
-          onChangeText={form.handleChange('addressLine')}
-          onBlur={form.handleBlur('addressLine')}
-          error={fieldError('addressLine')}
-          maxLength={200}
-          testID="Address-line"
-        />
+        <SlideIn rail delay={fieldDelay(3)}>
+          <Input
+            label={t('onboarding.location.address')}
+            placeholder={t('onboarding.location.addressPlaceholder')}
+            value={form.values.addressLine}
+            onChangeText={form.handleChange('addressLine')}
+            onBlur={form.handleBlur('addressLine')}
+            error={fieldError('addressLine')}
+            maxLength={200}
+            testID="Address-line"
+          />
+        </SlideIn>
       </View>
-      <FooterBar>
-        <Button
-          title={mode === 'edit' ? t('onboarding.business.saveChanges') : t('onboarding.location.save')}
-          phLabel={mode === 'edit' ? 'Save-location' : 'Onboarding-location-save'}
-          size="md"
-          loading={form.isSubmitting}
-          onPress={() => form.handleSubmit()}
-        />
-      </FooterBar>
+      <FootIn>
+        <FooterBar>
+          <Button
+            title={mode === 'edit' ? t('onboarding.business.saveChanges') : t('onboarding.location.save')}
+            phLabel={mode === 'edit' ? 'Save-location' : 'Onboarding-location-save'}
+            size="md"
+            loading={form.isSubmitting}
+            onPress={() => form.handleSubmit()}
+          />
+        </FooterBar>
+      </FootIn>
     </ScreenWrapper>
   );
 }
