@@ -115,11 +115,14 @@ async function queryRows(conn: Conn, reader: { userId: string; businessId: strin
            (SELECT d.listing_title FROM deals d WHERE d.thread_id = t.id ORDER BY d.accepted_at DESC, d.id DESC LIMIT 1) AS deal_title,
            (SELECT lm.thumb_key FROM listing_media lm WHERE lm.listing_id = l.id AND lm.type = 'photo' ORDER BY lm.sort_order, lm.created_at LIMIT 1) AS thumb_key,
            ${PUBLIC_L} AS listing_public,
-           EXISTS (SELECT 1 FROM offers oo WHERE oo.thread_id = t.id AND oo.status IN ('pending', 'backup')) AS has_open,
+           (EXISTS (SELECT 1 FROM offers oo WHERE oo.thread_id = t.id AND oo.status IN ('pending', 'backup'))
+             OR EXISTS (SELECT 1 FROM rental_bookings ob WHERE ob.thread_id = t.id AND ob.status IN ('requested', 'countered'))) AS has_open,
            EXISTS (SELECT 1 FROM business_blocks bb
                    WHERE (bb.blocker_business_id = t.buyer_business_id AND bb.blocked_business_id = t.seller_business_id)
                       OR (bb.blocker_business_id = t.seller_business_id AND bb.blocked_business_id = t.buyer_business_id)) AS blocked,
-           EXISTS (SELECT 1 FROM deals ad WHERE ad.thread_id = t.id AND ad.status IN ('agreed', 'handed_over', 'disputed')) AS active_deal,
+           (EXISTS (SELECT 1 FROM deals ad WHERE ad.thread_id = t.id AND ad.status IN ('agreed', 'handed_over', 'disputed'))
+             -- M14 §8: an active rental booking reads like an active deal (the "deal" pill).
+             OR EXISTS (SELECT 1 FROM rental_bookings ab WHERE ab.thread_id = t.id AND ab.status IN ('confirmed', 'on_rent', 'returned', 'disputed'))) AS active_deal,
            cp.trade_name AS cp_name, (cp.verification_levels ? 'gst') AS cp_gst
     FROM chat_threads t
     JOIN listings l ON l.id = t.listing_id

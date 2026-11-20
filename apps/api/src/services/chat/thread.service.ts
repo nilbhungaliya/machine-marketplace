@@ -10,7 +10,7 @@ import {
   type ThreadListingStrip,
 } from '@mpm/shared-types';
 import type { Db, Tx } from '../../db/index.js';
-import { businessBlocks, businesses, chatThreadUserState, deals, listings, offers, units } from '../../db/schema.js';
+import { businessBlocks, businesses, chatThreadUserState, deals, listings, offers, rentalBookings, units } from '../../db/schema.js';
 import { ForbiddenError } from '../../lib/errors.js';
 import { publicUrl } from '../../lib/media-url.js';
 import type { UserTokenPayload } from '../../plugins/auth.js';
@@ -112,12 +112,18 @@ export async function threadEnquiryStatus(conn: Conn, thread: ThreadRow): Promis
     .from(offers)
     .where(and(eq(offers.threadId, thread.id), inArray(offers.status, ['pending', 'backup'])))
     .limit(1);
+  // M14 (as `recomputeTurns`): an open booking request is an open negotiation.
+  const [openBooking] = await conn
+    .select({ id: rentalBookings.id })
+    .from(rentalBookings)
+    .where(and(eq(rentalBookings.threadId, thread.id), inArray(rentalBookings.status, ['requested', 'countered'])))
+    .limit(1);
   const [pub] = await conn.select({ id: listings.id }).from(listings).where(and(eq(listings.id, thread.listingId), publicListingWhere()));
   const block = await blockStateBetween(conn, thread.buyerBusinessId, thread.sellerBusinessId);
   return enquiryStatus({
     dealCount: thread.dealCount,
     firstSellerReplyAt: thread.firstSellerReplyAt,
-    hasOpenNegotiation: open !== undefined,
+    hasOpenNegotiation: open !== undefined || openBooking !== undefined,
     listingPublic: pub !== undefined,
     blocked: block !== 'none',
   });
@@ -194,7 +200,13 @@ export async function getThreadDetail(conn: Conn, user: UserTokenPayload, thread
     lastReadSeq: String(lastReadSeq),
     unread: unread?.n ?? 0,
     machineTip: thread.listingKind !== 'part',
-    // M14: A1 lists the thread's rental bookings.
-    bookings: [],
+    // M14 §8: the thread's rental bookings, newest first (the app's contact banner reads `confirmedAt`).
+    bookings: (
+      await conn
+        .select({ id: rentalBookings.id, status: rentalBookings.status, confirmedAt: rentalBookings.confirmedAt })
+        .from(rentalBookings)
+        .where(eq(rentalBookings.threadId, thread.id))
+        .orderBy(desc(rentalBookings.createdAt), desc(rentalBookings.id))
+    ).map((b) => ({ id: b.id, status: b.status, confirmedAt: b.confirmedAt ? b.confirmedAt.toISOString() : null })),
   };
 }
