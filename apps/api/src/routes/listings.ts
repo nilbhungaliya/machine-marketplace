@@ -131,7 +131,8 @@ const rental = z
   .partial()
   .strict();
 
-const createBody = z.object({ kind: z.enum(LISTING_KINDS) }).strict();
+/** F8 §9.3: `partRequestId` makes a draft prefilled from that request, with a pending reply. */
+const createBody = z.object({ kind: z.enum(LISTING_KINDS), partRequestId: z.string().uuid().optional() }).strict();
 
 const patchBody = z
   .object({
@@ -216,8 +217,8 @@ const listingRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   fastify.post('/listings', { ...user, config: perUser(30) }, async (request, reply) => {
-    const { kind } = createBody.parse(request.body);
-    const data = await fastify.db.transaction((tx) => createListing(tx, request.user!, { kind }));
+    const { kind, partRequestId } = createBody.parse(request.body);
+    const data = await fastify.db.transaction((tx) => createListing(tx, request.user!, { kind, partRequestId }));
     return reply.status(201).send({ data });
   });
 

@@ -132,6 +132,7 @@ describe('discovery schema', () => {
       code: '23505',
     });
     await db.execute(sql`DELETE FROM listing_media WHERE listing_id = ${id}`);
+    await db.execute(sql`DELETE FROM part_request_work WHERE subject_id = ${id}`);
     await db.execute(sql`DELETE FROM listings WHERE id = ${id}`);
     const [left] = await rowsOf<{ n: number }>(sql`SELECT count(*)::int AS n FROM saved_listings WHERE listing_id = ${id}`);
     expect(left!.n).toBe(0);

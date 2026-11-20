@@ -8,11 +8,12 @@ import {
   type VerificationLevel,
 } from '@mpm/shared-types';
 import type { Db, Tx } from '../../db/index.js';
-import { businesses, categories, industrialAreas, users } from '../../db/schema.js';
+import { businesses, categories, industrialAreas, listings, users } from '../../db/schema.js';
 import { AppError, ConflictError, NotFoundError, ValidationError } from '../../lib/errors.js';
 import { areasForPincode } from '../locations/industrial-areas.service.js';
 import { pincodeDistrict } from '../locations/pincode.service.js';
 import { syncBusinessListings } from '../listings/listing-validate.service.js';
+import { enqueueListingsChanged } from '../part-requests/work-queue.js';
 
 // The business profile and location (F1 spec §4.1, §4.2, §10). Ruling R1: a new user has no business row until their
 // first PATCH /businesses/me, which creates it; that is the only way a business is created (the old onboarding route
@@ -350,6 +351,19 @@ export async function setMyLocation(db: Db, userId: string, body: LocationInput)
       .where(eq(businesses.id, b.id));
     // F2 R19: business-sourced listings follow, in this transaction and after the business lock (the listing lock order).
     await syncBusinessListings(tx, b.id);
+    // F8 §8.1: the business's live part / machine listings that follow its location are re-matched.
+    const moved = await tx
+      .select({ id: listings.id })
+      .from(listings)
+      .where(
+        and(
+          eq(listings.businessId, b.id),
+          eq(listings.locationSource, 'business'),
+          eq(listings.status, 'live'),
+          inArray(listings.kind, ['part', 'machine']),
+        ),
+      );
+    await enqueueListingsChanged(tx, moved.map((l) => l.id));
   });
 
   return getMyBusiness(db, userId);

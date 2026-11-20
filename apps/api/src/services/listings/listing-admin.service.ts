@@ -57,6 +57,8 @@ import {
 import { headlineRate, toOwnerView } from './listing-view.service.js';
 import { listingNotFound, lockBusinessThenListing, lockListingOnly, type BusinessRow, type ListingRow } from './locks.js';
 import { refreshListingSearch } from '../discovery/search-text.js';
+import { matchRelevantChange } from '../part-requests/listing-hooks.js';
+import { enqueuePartRequestWork } from '../part-requests/work-queue.js';
 
 // Listing moderation and the admin's listing pages (F2 spec §11, R33, R34, R50–R53; plan Task 16): the moderation queue
 // and its counts, the review screen's detail, the moderator's status actions (through `applyAdminTransition`, which
@@ -468,10 +470,11 @@ export async function adminPatchListing(tx: Tx, adminId: string, id: string, pat
 
   if (Object.keys(set).length === 0 && !fitments && !machine) return;
 
-  await tx
+  const [updated] = await tx
     .update(listings)
     .set({ ...set, version: sql`${listings.version} + 1`, updatedAt: sql`now()` })
-    .where(eq(listings.id, listing.id));
+    .where(eq(listings.id, listing.id))
+    .returning();
   if (fitments) {
     await tx.delete(listingFitments).where(eq(listingFitments.listingId, listing.id));
     if (fitments.length > 0) await tx.insert(listingFitments).values(fitments.map((f, i) => ({ listingId: listing.id, ...f, sortOrder: i })));
@@ -479,6 +482,10 @@ export async function adminPatchListing(tx: Tx, adminId: string, id: string, pat
   if (machine) await tx.update(listingMachines).set(machine).where(eq(listingMachines.listingId, listing.id));
   // F4 + F5 §5.2: category, fitments or machine model changed.
   await refreshListingSearch(tx, [listing.id]);
+  // F8 §8.1: a live listing's category, side, fitments or machine model edit is re-matched.
+  if (updated!.status === 'live' && kind !== 'machine_rental' && matchRelevantChange(listing, updated!, fitments !== null || machine !== null)) {
+    await enqueuePartRequestWork(tx, 'listing_changed', listing.id);
+  }
   await writeAudit(tx, { adminId, action: 'listing.edit', entityType: 'listing', entityId: id, before, after });
 }
 

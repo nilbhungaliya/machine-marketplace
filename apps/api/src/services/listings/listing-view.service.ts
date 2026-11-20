@@ -29,11 +29,14 @@ import {
   listingRentals,
   listings,
   machineModels,
+  partRequestReplies,
+  partRequests,
   reports,
   savedListings,
   units,
 } from '../../db/schema.js';
 import { NotFoundError } from '../../lib/errors.js';
+import { maskContact } from '../../lib/mask-contact.js';
 import { publicUrl } from '../../lib/media-url.js';
 import { checkSpecs, isRequiredField } from '../../lib/spec-check.js';
 import { businessDisplayName } from '../business/profile.service.js';
@@ -476,6 +479,20 @@ export function moderationOf(row: ListingRow): ListingOwnerView['moderation'] {
 }
 
 /**
+ * F8 (plan D4): the request a draft made from "List a matching part" answers, through its `pending` reply (delivered
+ * when the listing goes live). Name masked (R9). Null for any other listing.
+ */
+async function pendingRequestReplyOf(conn: Conn, listingId: string): Promise<ListingOwnerView['pendingRequestReply']> {
+  const [r] = await conn
+    .select({ partRequestId: partRequestReplies.partRequestId, name: partRequests.name })
+    .from(partRequestReplies)
+    .innerJoin(partRequests, eq(partRequests.id, partRequestReplies.partRequestId))
+    .where(and(eq(partRequestReplies.listingId, listingId), eq(partRequestReplies.status, 'pending')))
+    .limit(1);
+  return r ? { partRequestId: r.partRequestId, name: maskContact(r.name) } : null;
+}
+
+/**
  * The owner's view of their listing, any status (§7.3–§7.5): the detail with private fields, `needsAttention`,
  * `reviewOnEdit`, `expiresAt` / `expiringSoon` (`live` / `rented` only, from the current settings), moderation,
  * status reason, score, flags and media URLs.
@@ -485,12 +502,13 @@ export async function toOwnerView(conn: Conn, row: ListingRow, settings: AppSett
   const d = loaded.detail;
 
   const { expiresAt, expiringSoon } = expiryOf(row, settings);
+  const pendingReply = await pendingRequestReplyOf(conn, row.id);
 
   return {
     ...d,
     isOwner: true,
-    partRequestId: null,
-    pendingRequestReply: null,
+    partRequestId: pendingReply?.partRequestId ?? null,
+    pendingRequestReply: pendingReply,
     version: row.version,
     // F6 + F7 §8.4: on hold in open deals ("On hold in deals: n").
     heldQuantity: trimQuantity(row.heldQuantity) ?? '0',

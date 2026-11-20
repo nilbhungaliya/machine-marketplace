@@ -5,7 +5,7 @@ import { randomUUID } from 'node:crypto';
 import { DISCOVERY_LIMITS, type SavedListingItem, type SavedListingsPage } from '@mpm/shared-types';
 import { buildApp } from '../src/app.js';
 import { db } from '../src/db/index.js';
-import { listings, savedListings } from '../src/db/schema.js';
+import { listings, partRequestWork, savedListings } from '../src/db/schema.js';
 import { createTestCatalog, deleteTestCatalog, type TestCatalog } from './_helpers/test-catalog.js';
 import { deleteTestBusinesses } from './_helpers/test-businesses.js';
 import { deleteTestDiscovery, deleteTestRedisKeys, testRunId } from './_helpers/test-discovery.js';
@@ -205,6 +205,8 @@ describe('GET /users/me/saved-listings', () => {
   it('drops the row when the listing is deleted', async () => {
     await save(buyer, ids.gone!);
     expect((await rowsOf(buyer.userId)).some((r) => r.listingId === ids.gone)).toBe(true);
+    // F8: a listing's work rows have no FK; they go first (as `deleteF8Rows` does), so the run leaves none behind.
+    await db.delete(partRequestWork).where(eq(partRequestWork.subjectId, ids.gone!));
     await db.delete(listings).where(eq(listings.id, ids.gone!));
     expect((await rowsOf(buyer.userId)).some((r) => r.listingId === ids.gone)).toBe(false);
   });

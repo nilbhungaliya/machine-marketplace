@@ -20,6 +20,7 @@ import { checkPublishable, goLiveGate, listingIncomplete, photoProblems, type Ga
 import { refreshListingSearch } from '../discovery/search-text.js';
 import { afterListingStatusWrite } from '../deals/holds.js';
 import { toOwnerView } from './listing-view.service.js';
+import { enqueuePartRequestWork } from '../part-requests/work-queue.js';
 import { listingNotFound, lockBusinessThenListing, lockListingOnly, type BusinessRow, type ListingRow } from './locks.js';
 
 // The listing state machine (F2 spec §7.2). **This file is the only writer of `listings.status`**: every change goes
@@ -94,6 +95,11 @@ async function writeStatus(tx: Tx, listing: ListingRow, to: ListingStatus, o: Wr
     adminId: o.adminId ?? null,
     reason: o.reason ?? null,
   });
+  // F8 §8.1 (plan C0-4a): a part or machine listing going live, removed or rejected is queued for matching / pending
+  // replies / match re-checks, in this transaction. Nothing else F8 happens in the listing write.
+  if ((to === 'live' || to === 'removed' || to === 'rejected') && row.kind !== 'machine_rental') {
+    await enqueuePartRequestWork(tx, 'listing_changed', row.id);
+  }
   return row;
 }
 

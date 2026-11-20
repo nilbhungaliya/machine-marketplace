@@ -8,6 +8,7 @@ import { emitToBusinesses } from '../chat/chat-emit.js';
 import { insertCardMessage, insertSystemLine, recomputeTurns } from '../chat/thread-lines.js';
 import { maybeReveal } from '../consent/contact-consent.service.js';
 import { createDealFromOffer } from '../deals/deal-create.js';
+import { notifyFulfilPrompts } from '../part-requests/fulfil-prompt.js';
 import {
   assertOfferOpen,
   availableMilli,
@@ -95,6 +96,13 @@ export async function acceptOffer(tx: Tx, user: UserTokenPayload, offerId: strin
   }
 
   const deal = await createDealFromOffer(tx, offer, listing, { userId: user.userId, side: reader.side });
+  // F8 §9.4: the buyer is asked to mark a request this listing answered fulfilled.
+  await notifyFulfilPrompts(tx, {
+    dealId: deal.dealId,
+    listingId: offer.listingId,
+    buyerBusinessId: offer.buyerBusinessId,
+    sellerBusinessId: offer.sellerBusinessId,
+  });
   const [accepted] = await tx
     .update(offers)
     .set({ status: 'accepted', answeredAt: sql`now()`, answeredByUserId: user.userId, updatedAt: sql`now()` })

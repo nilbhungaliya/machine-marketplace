@@ -24,6 +24,7 @@ import {
   listingStatusHistory,
   listings,
   offers,
+  partRequestReplies,
   reports,
   stockHolds,
   units,
@@ -67,6 +68,9 @@ import { removePublicMedia } from './listing-media.service.js';
 import { hasOpenReport, toOwnerView } from './listing-view.service.js';
 import { listingNotFound, lockBusinessThenListing, type ListingRow } from './locks.js';
 import { refreshListingSearch } from '../discovery/search-text.js';
+import { machineFitTouched, matchRelevantChange } from '../part-requests/listing-hooks.js';
+import { applyDraftPrefill, preparePendingReply } from '../part-requests/listing-prefill.js';
+import { enqueuePartRequestWork } from '../part-requests/work-queue.js';
 
 // Listing writes (F2 spec §4, §5.1, §5.3, §7.3; plan Task 7): create a draft, PATCH with grandfathering, delete a
 // draft. Status is never written here: a back-to-review goes through `listing-lifecycle.service.ts`.
@@ -86,7 +90,11 @@ function onboardingIncomplete(): ConflictError {
  * quantity of 1. The location is the business's (source `business`; point = its pin, else its pincode's centroid).
  * The business is locked first, so two creates can't both pass the draft count.
  */
-export async function createListing(tx: Tx, user: UserTokenPayload, input: { kind: ListingKind }): Promise<ListingOwnerView> {
+export async function createListing(
+  tx: Tx,
+  user: UserTokenPayload,
+  input: { kind: ListingKind; partRequestId?: string },
+): Promise<ListingOwnerView> {
   const [u] = await tx.select({ name: users.name, businessId: users.businessId }).from(users).where(eq(users.id, user.userId));
   if (!u?.businessId) throw onboardingIncomplete();
   const [business] = await tx.select().from(businesses).where(eq(businesses.id, u.businessId)).for('no key update');
@@ -95,6 +103,8 @@ export async function createListing(tx: Tx, user: UserTokenPayload, input: { kin
   if (input.kind === 'machine_rental' && !business.verificationLevels.includes('gst')) {
     throw new ForbiddenError('Verify your GST to list machines for rent', 'RENTAL_NEEDS_GST');
   }
+  // F8 §9.3 (plan D4): "List a matching part" from a request; checks 1–2 before the draft limit.
+  const prep = await preparePendingReply(tx, { userId: user.userId, businessId: business.id }, input.partRequestId, input.kind);
 
   const [drafts] = await tx
     .select({ n: sql<number>`count(*)::int` })
@@ -127,12 +137,14 @@ export async function createListing(tx: Tx, user: UserTokenPayload, input: { kin
       unitId,
       quantity: input.kind === 'part' ? null : '1',
       ...businessLocation(business),
+      ...prep?.listingValues,
     })
     .returning();
   if (input.kind !== 'part') await tx.insert(listingMachines).values({ listingId: row!.id });
   if (input.kind === 'machine_rental') await tx.insert(listingRentals).values({ listingId: row!.id });
   await recordCreated(tx, row!.id, user.userId);
-  // F4 + F5 §5.2: every listing write that changes a search input rebuilds the search columns in its transaction.
+  await applyDraftPrefill(tx, prep, row!);
+  // F4 + F5 §5.2 (after the F8 prefill, so the search text sees it): every listing write that changes a search input rebuilds the search columns in its transaction.
   await refreshListingSearch(tx, [row!.id]);
   return toOwnerView(tx, row!, await getSettings(tx));
 }
@@ -464,6 +476,12 @@ export async function patchListing(tx: Tx, user: UserTokenPayload, id: string, p
   const quantityChanged = patch.quantity !== undefined && !sameQuantity(patch.quantity, listing.quantity);
   const priceModelChanged = set.priceModel !== undefined && set.priceModel !== listing.priceModel;
   if (statusWritten || quantityChanged || priceModelChanged) row = await afterListingStatusWrite(tx, listing.id);
+  // F8 §8.1: a live listing's match-relevant edit is queued (a reserved → live move above already queued it via
+  // `writeStatus`; the unclaimed-only unique collapses the two).
+  const fitmentsTouched = (fitments !== null && fitmentsChanged) || machineFitTouched(storedMachine, machine);
+  if (row.status === 'live' && row.kind !== 'machine_rental' && matchRelevantChange(listing, row, fitmentsTouched)) {
+    await enqueuePartRequestWork(tx, 'listing_changed', row.id);
+  }
   return toOwnerView(tx, row, await getSettings(tx));
 }
 
@@ -513,6 +531,8 @@ export async function deleteDraft(tx: Tx, user: UserTokenPayload, id: string): P
   const { listing } = await lockBusinessThenListing(tx, user.businessId, id);
   if (listing.status !== 'draft') throw transitionNotAllowed(listing.status, 'delete');
   const media = await tx.select({ key: listingMedia.key, thumbKey: listingMedia.thumbKey }).from(listingMedia).where(eq(listingMedia.listingId, id));
+  // F8 §9.3: a draft made from a request takes its pending reply with it, silently.
+  await tx.delete(partRequestReplies).where(eq(partRequestReplies.listingId, id));
   await tx.delete(reports).where(and(eq(reports.targetType, 'listing'), eq(reports.targetId, id)));
   await tx.delete(listingStatusHistory).where(eq(listingStatusHistory.listingId, id));
   await tx.delete(listingMedia).where(eq(listingMedia.listingId, id));
