@@ -6,8 +6,10 @@ import { runTx } from '../../lib/tx-effects.js';
 import { getDispute, listDisputes, openDisputeCount } from '../../services/deals/deal-admin.service.js';
 import { resolveDispute } from '../../services/deals/dispute.service.js';
 
-// Admin Disputes (F6 + F7 spec §9.6, §16.1–§16.2). L3 owns this file (L3-3). Role: support. The resolve writes
-// `audit_log` (`deal.dispute_resolve`) in its transaction (`runTx`, so the deal's emits go out after commit).
+// Admin Disputes (F6 + F7 spec §9.6, §16.1–§16.2; M14 R12: deal and rental booking disputes). Role: support. The
+// resolve writes `audit_log` (`deal.dispute_resolve` / `rental_booking.dispute_resolve`) in its transaction (`runTx`,
+// so the emits go out after commit). `stockReturned` is checked by the service: required for a deal dispute closed
+// `cancelled`, refused for a booking's (400).
 
 const tags = ['Admin disputes'];
 
@@ -32,11 +34,7 @@ const resolveBody = z
       .nullable()
       .optional(),
   })
-  .strict()
-  .refine((b) => b.outcome !== 'cancelled' || b.stockReturned !== undefined, {
-    message: 'Say whether the goods went back to the seller',
-    path: ['stockReturned'],
-  });
+  .strict();
 
 const adminDisputeRoutes: FastifyPluginAsync = async (fastify) => {
   const support = { schema: { tags }, preHandler: fastify.requireAdminRole('support') };
@@ -60,7 +58,7 @@ const adminDisputeRoutes: FastifyPluginAsync = async (fastify) => {
     await runTx(fastify, (tx) =>
       resolveDispute(tx, request.admin!.adminId, id, {
         outcome: body.outcome,
-        stockReturned: body.stockReturned ?? null,
+        stockReturned: body.stockReturned,
         internalNote: body.internalNote,
         messageToParties: body.messageToParties ?? null,
       }),

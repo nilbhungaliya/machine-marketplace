@@ -8,7 +8,7 @@ import {
   type DealView,
 } from '@mpm/shared-types';
 import type { Db, Tx } from '../../db/index.js';
-import { dealDisputes, deals } from '../../db/schema.js';
+import { dealDisputes, deals, rentalBookings } from '../../db/schema.js';
 import { ValidationError } from '../../lib/errors.js';
 import type { UserTokenPayload } from '../../plugins/auth.js';
 import { buildDealView, dbNow, dealForParty, readerFor, toDealListRows } from './deal-view.js';
@@ -134,7 +134,10 @@ export async function dealsYourTurnCount(conn: Conn, user: UserTokenPayload): Pr
   return row?.n ?? 0;
 }
 
-/** Admin business detail (§16.1): deals by status (as buyer or seller) and disputes with outcomes. */
+/**
+ * Admin business detail (§16.1): deals by status (as buyer or seller) and disputes with outcomes — the business's deal
+ * disputes and, M14 R12, its rental booking disputes (as renter or owner).
+ */
 export async function businessDealHistory(conn: Conn, businessId: string): Promise<AdminBusinessDealHistory> {
   const byStatus = Object.fromEntries(DEAL_STATUSES.map((s) => [s, 0])) as Record<DealStatus, number>;
   const mine = or(eq(deals.buyerBusinessId, businessId), eq(deals.sellerBusinessId, businessId))!;
@@ -149,6 +152,8 @@ export async function businessDealHistory(conn: Conn, businessId: string): Promi
       id: dealDisputes.id,
       dealId: dealDisputes.dealId,
       dealRef: deals.ref,
+      rentalBookingId: dealDisputes.rentalBookingId,
+      rentalBookingRef: rentalBookings.ref,
       category: dealDisputes.category,
       status: dealDisputes.status,
       outcome: dealDisputes.outcome,
@@ -156,16 +161,24 @@ export async function businessDealHistory(conn: Conn, businessId: string): Promi
       resolvedAt: dealDisputes.resolvedAt,
     })
     .from(dealDisputes)
-    .innerJoin(deals, eq(deals.id, dealDisputes.dealId))
-    .where(mine)
+    .leftJoin(deals, eq(deals.id, dealDisputes.dealId))
+    .leftJoin(rentalBookings, eq(rentalBookings.id, dealDisputes.rentalBookingId))
+    .where(
+      or(
+        mine,
+        eq(rentalBookings.renterBusinessId, businessId),
+        eq(rentalBookings.ownerBusinessId, businessId),
+      ),
+    )
     .orderBy(desc(dealDisputes.createdAt))
     .limit(100);
   return {
     byStatus,
-    disputes: disputes.map((d) => ({
+    disputes: disputes.map(({ rentalBookingId, ...d }) => ({
       ...d,
-      subject: { kind: 'deal' as const, dealId: d.dealId! }, // M14: A3 generalises (booking disputes join the history)
-      rentalBookingRef: null,
+      subject: rentalBookingId
+        ? { kind: 'rental' as const, rentalBookingId }
+        : { kind: 'deal' as const, dealId: d.dealId! },
       createdAt: d.createdAt.toISOString(),
       resolvedAt: d.resolvedAt ? d.resolvedAt.toISOString() : null,
     })),

@@ -1,4 +1,4 @@
-import { and, count, desc, eq, inArray, ne, sql, type SQL } from 'drizzle-orm';
+import { and, count, desc, eq, inArray, ne, or, sql, type SQL } from 'drizzle-orm';
 import {
   normalizeGstin,
   type AccountStatus,
@@ -18,6 +18,7 @@ import {
   gstRepresentativeProofs,
   listings,
   partRequests,
+  rentalBookings,
   users,
 } from '../../db/schema.js';
 import { ConflictError, NotFoundError } from '../../lib/errors.js';
@@ -227,9 +228,21 @@ export async function getBusinessDetail(conn: Db | Tx, id: string): Promise<Admi
     dealHistory: await businessDealHistory(conn, id),
     sellerScore: await sellerScore(conn, id),
     partRequestCount: Number(requestTotal?.n ?? 0),
-    // M14: A3 counts the business's bookings as owner and as renter (`rentalBookingCount`).
-    rentalBookingCount: { asOwner: 0, asRenter: 0 },
+    // M14 §15: every booking of the business, any status, as owner and as renter (the admin list's `businessId` filter).
+    rentalBookingCount: await rentalBookingCount(conn, id),
   };
+}
+
+/** M14 §15: the business's rental bookings, any status, as owner and as renter. */
+async function rentalBookingCount(conn: Db | Tx, businessId: string): Promise<{ asOwner: number; asRenter: number }> {
+  const [c] = await conn
+    .select({
+      asOwner: sql<number>`count(*) FILTER (WHERE ${rentalBookings.ownerBusinessId} = ${businessId})::int`,
+      asRenter: sql<number>`count(*) FILTER (WHERE ${rentalBookings.renterBusinessId} = ${businessId})::int`,
+    })
+    .from(rentalBookings)
+    .where(or(eq(rentalBookings.ownerBusinessId, businessId), eq(rentalBookings.renterBusinessId, businessId)));
+  return { asOwner: Number(c?.asOwner ?? 0), asRenter: Number(c?.asRenter ?? 0) };
 }
 
 /**

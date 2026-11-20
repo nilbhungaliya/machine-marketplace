@@ -165,7 +165,8 @@ async function disputeOf(conn: Conn, deal: DealRow, reader: ChatReader, thread: 
   if (!d) return null;
   return {
     id: d.id,
-    category: d.category as DealDisputeSummary['category'], // M14: A3 generalises (only deal disputes reach a deal)
+    // Only a deal's own disputes reach here (`deal_id` = this deal), so the category is one of F6's.
+    category: d.category as DealDisputeSummary['category'],
     description: visibleText(d.description, reader, thread) ?? '',
     photos: await signedAll(d.photoKeys),
     openedBySide: d.openedBySide,

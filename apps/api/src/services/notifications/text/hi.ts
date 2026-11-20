@@ -27,7 +27,12 @@ const dropReason: Record<TextParams['reason'], string> = {
 };
 const line = (...parts: string[]) => parts.filter(Boolean).join(' · ');
 
-const rental = () => ({ title: 'किराये की बुकिंग अपडेट', body: 'एक किराये की बुकिंग बदली है। विवरण देखने के लिए खोलें।' });
+// M14 किराये की बुकिंग (spec §11, R14): नाम और शीर्षक `render.ts` में मास्क, तारीखें IST में। कभी राशि, पता, नोट या संदेश नहीं।
+const machine = (p: TextParams) => p.listingTitle || 'आपकी किराये की मशीन';
+const dates = (p: TextParams) => (p.dates ? `, ${p.dates}` : '');
+const booking = (p: TextParams) => (p.bookingRef ? `बुकिंग ${p.bookingRef}` : 'आपकी बुकिंग');
+/** समीक्षा का विषय: किराये के लिए "बुकिंग #700001", वरना डील। */
+const subject = (p: TextParams) => (p.bookingRef ? booking(p) : deal(p));
 
 export const hi: NotificationTexts = {
   enquiry_new: (p) => ({ title: 'नई पूछताछ', body: listing(p) }),
@@ -52,27 +57,27 @@ export const hi: NotificationTexts = {
   deal_agreed_reminder: (p) => ({ title: 'डील इंतज़ार में', body: `${deal(p)}${on(p)} अभी भी सौंपे जाने का इंतज़ार कर रही है।` }),
   review_received: (p) => ({ title: 'नई समीक्षा', body: `${who(p)} ने आपकी समीक्षा की${on(p)}।` }),
   review_waiting: (p) => ({
-    title: 'डील की समीक्षा करें',
-    body: `${who(p)} ने ${deal(p)} की समीक्षा की है। ${p.dueOn ? `${p.dueOn} तक ` : ''}अपनी समीक्षा जोड़ें; दोनों साथ में प्रकाशित होंगी।`,
+    title: p.bookingRef ? 'बुकिंग की समीक्षा करें' : 'डील की समीक्षा करें',
+    body: `${who(p)} ने ${subject(p)} की समीक्षा की है। ${p.dueOn ? `${p.dueOn} तक ` : ''}अपनी समीक्षा जोड़ें; दोनों साथ में प्रकाशित होंगी।`,
   }),
-  // M14 rental bookings: placeholder text until A3-3 writes each type's own (spec §10.3).
-  rental_booking_requested: rental,
-  rental_booking_changed: rental,
-  rental_booking_confirmed: rental,
-  rental_booking_declined: rental,
-  rental_booking_withdrawn: rental,
-  rental_booking_expired: rental,
-  rental_booking_cancelled: rental,
-  rental_booking_on_site: rental,
-  rental_booking_returned: rental,
-  rental_booking_completed: rental,
-  rental_booking_starts_tomorrow: rental,
-  rental_booking_due_back: rental,
-  rental_booking_overdue: rental,
-  rental_booking_not_started: rental,
-  rental_booking_clash: rental,
-  rental_booking_problem: rental,
-  rental_booking_dispute_resolved: rental,
+  // M14 rental bookings (spec §11).
+  rental_booking_requested: (p) => ({ title: 'नया बुकिंग अनुरोध', body: `${who(p)} को ${machine(p)} चाहिए${dates(p)}।` }),
+  rental_booking_changed: (p) => ({ title: 'बुकिंग में बदलाव का प्रस्ताव', body: `${who(p)} ने ${machine(p)} के लिए नई शर्तें भेजी हैं।` }),
+  rental_booking_confirmed: (p) => ({ title: 'बुकिंग पक्की', body: `${machine(p)}${dates(p)}।` }),
+  rental_booking_declined: (p) => ({ title: 'बुकिंग अस्वीकार', body: `${machine(p)}${dates(p)}।` }),
+  rental_booking_withdrawn: (p) => ({ title: 'अनुरोध वापस लिया गया', body: `${who(p)} ने ${machine(p)} का अनुरोध वापस ले लिया।` }),
+  rental_booking_expired: (p) => ({ title: 'बुकिंग अनुरोध समाप्त', body: `${machine(p)} के लिए समय पर जवाब नहीं मिला।` }),
+  rental_booking_cancelled: (p) => ({ title: 'बुकिंग रद्द', body: `${machine(p)}${dates(p)}।` }),
+  rental_booking_on_site: (p) => ({ title: 'मशीन साइट पर', body: `${machine(p)} साइट पर पहुँच गई है।` }),
+  rental_booking_returned: (p) => ({ title: 'मशीन वापस आई', body: `${machine(p)} की अंतिम राशि जाँचें।` }),
+  rental_booking_completed: (p) => ({ title: 'किराया पूरा', body: `${p.businessName || 'दूसरे व्यवसाय'} को रेट करें।` }),
+  rental_booking_starts_tomorrow: (p) => ({ title: 'बुकिंग कल से शुरू', body: `${machine(p)}${dates(p)}।` }),
+  rental_booking_due_back: (p) => ({ title: 'आज वापसी', body: machine(p) }),
+  rental_booking_overdue: (p) => ({ title: 'अभी भी किराये पर', body: `${machine(p)} वापस आने पर उसे लौटाया हुआ चिह्नित करें।` }),
+  rental_booking_not_started: (p) => ({ title: 'क्या शुरू हुआ?', body: `${machine(p)} को साइट पर चिह्नित करें, या बुकिंग रद्द करें।` }),
+  rental_booking_clash: (p) => ({ title: 'बुकिंग टकराव', body: `${machine(p)} अभी बाहर है और ${p.bookingRef || 'अगली बुकिंग'} जल्द शुरू होगी।` }),
+  rental_booking_problem: (p) => ({ title: 'समस्या दर्ज', body: `${booking(p)} पर। हमारी टीम इसे देखेगी।` }),
+  rental_booking_dispute_resolved: (p) => ({ title: 'बुकिंग की समस्या सुलझी', body: `${booking(p)} पर।` }),
   listing_status: (p) => ({ title: 'लिस्टिंग अपडेट', body: `${listing(p)} की स्थिति बदली है।` }),
   // F8 part requests (spec §10.3). Needs a native speaker's check.
   part_request_new: (p) => ({

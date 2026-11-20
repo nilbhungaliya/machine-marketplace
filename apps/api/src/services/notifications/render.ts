@@ -21,6 +21,9 @@ import type { NotificationTexts, RenderedText, TextParams } from './text/types.j
  * - F8 (spec §10.3): `requestTitle` (the request name, masked again here), `side` (`left` / `right` / `pair`, localised
  *   by the template), `distanceKm` (the match's stored **snapped** whole km), `city`, `reason` (a drop reason code).
  *   Never the request note, a reply message, the budget, a phone, a pincode or an address.
+ * - M14 (spec §11, stored by `notifyBooking`): `bookingRef` (700001…), `startDate` / `endDate` (IST `YYYY-MM-DD`,
+ *   worded as `dates`), `listingTitle` and the counterpart's `businessName`; rental reviews carry `bookingRef` in place
+ *   of `dealRef`. Never an amount, the site, a note or a message (R14: no amounts in a push).
  * Unknown keys are ignored. Names and titles are masked here (`maskContact`) and the finished title and body masked
  * once more, so a number in a name or title never reaches a push or the list. Message text, notes and review text are
  * never params.
@@ -106,7 +109,7 @@ export function textParams(params: Record<string, unknown>, language: Language, 
     distanceKm: distanceText(params.distanceKm),
     city: safeText(params.city, 60),
     reason: typeof params.reason === 'string' && DROP_REASONS.has(params.reason) ? (params.reason as TextParams['reason']) : '',
-    // M14 (plan C0-3a): `notifyBooking` stores `bookingRef`, `startDate`, `endDate`; A3-3 owns the wording.
+    // M14 (spec §11): `notifyBooking` stores `bookingRef`, `startDate`, `endDate`; the templates word them.
     bookingRef: dealRefText(params.bookingRef),
     dates: datesText(params.startDate, params.endDate, language),
   };

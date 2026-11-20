@@ -31,7 +31,14 @@ const dropReason: Record<TextParams['reason'], string> = {
 };
 const line = (...parts: string[]) => parts.filter(Boolean).join(' · ');
 
-const rental = () => ({ title: 'Rental booking update', body: 'A rental booking changed. Open it to see the details.' });
+// M14 rental bookings (spec §11, R14): business names and titles masked by `render.ts`, dates an IST short range.
+// Never an amount, a site address, a note or a message.
+const machine = (p: TextParams) => p.listingTitle || 'your rental machine';
+const Machine = (p: TextParams) => p.listingTitle || 'Your rental machine';
+const dates = (p: TextParams) => (p.dates ? `, ${p.dates}` : '');
+const booking = (p: TextParams) => (p.bookingRef ? `booking ${p.bookingRef}` : 'your booking');
+/** A review's subject mid-sentence: "booking #700001" for a rental, else the deal. */
+const subject = (p: TextParams) => (p.bookingRef ? booking(p) : deal(p));
 
 export const en: NotificationTexts = {
   enquiry_new: (p) => ({ title: 'New enquiry', body: listing(p) }),
@@ -56,27 +63,27 @@ export const en: NotificationTexts = {
   deal_agreed_reminder: (p) => ({ title: 'Deal waiting', body: `${Deal(p)}${on(p)} is still waiting for the handover.` }),
   review_received: (p) => ({ title: 'New review', body: `${who(p)} reviewed you${on(p)}.` }),
   review_waiting: (p) => ({
-    title: 'Review the deal',
-    body: `${who(p)} reviewed ${deal(p)}. Add yours${p.dueOn ? ` by ${p.dueOn}` : ''}; both publish together.`,
+    title: p.bookingRef ? 'Review the booking' : 'Review the deal',
+    body: `${who(p)} reviewed ${subject(p)}. Add yours${p.dueOn ? ` by ${p.dueOn}` : ''}; both publish together.`,
   }),
-  // M14 rental bookings: placeholder text until A3-3 writes each type's own (spec §10.3).
-  rental_booking_requested: rental,
-  rental_booking_changed: rental,
-  rental_booking_confirmed: rental,
-  rental_booking_declined: rental,
-  rental_booking_withdrawn: rental,
-  rental_booking_expired: rental,
-  rental_booking_cancelled: rental,
-  rental_booking_on_site: rental,
-  rental_booking_returned: rental,
-  rental_booking_completed: rental,
-  rental_booking_starts_tomorrow: rental,
-  rental_booking_due_back: rental,
-  rental_booking_overdue: rental,
-  rental_booking_not_started: rental,
-  rental_booking_clash: rental,
-  rental_booking_problem: rental,
-  rental_booking_dispute_resolved: rental,
+  // M14 rental bookings (spec §11).
+  rental_booking_requested: (p) => ({ title: 'New booking request', body: `${who(p)} wants ${machine(p)}${dates(p)}.` }),
+  rental_booking_changed: (p) => ({ title: 'Booking change proposed', body: `${who(p)} proposed new terms for ${machine(p)}.` }),
+  rental_booking_confirmed: (p) => ({ title: 'Booking confirmed', body: `${Machine(p)}${dates(p)}.` }),
+  rental_booking_declined: (p) => ({ title: 'Booking declined', body: `${Machine(p)}${dates(p)}.` }),
+  rental_booking_withdrawn: (p) => ({ title: 'Request withdrawn', body: `${who(p)} withdrew the request for ${machine(p)}.` }),
+  rental_booking_expired: (p) => ({ title: 'Booking request expired', body: `No answer in time for ${machine(p)}.` }),
+  rental_booking_cancelled: (p) => ({ title: 'Booking cancelled', body: `${Machine(p)}${dates(p)}.` }),
+  rental_booking_on_site: (p) => ({ title: 'Machine on site', body: `${Machine(p)} is on site.` }),
+  rental_booking_returned: (p) => ({ title: 'Machine returned', body: `Check the final amount for ${machine(p)}.` }),
+  rental_booking_completed: (p) => ({ title: 'Rental completed', body: `Rate ${p.businessName || 'the other business'}.` }),
+  rental_booking_starts_tomorrow: (p) => ({ title: 'Booking starts tomorrow', body: `${Machine(p)}${dates(p)}.` }),
+  rental_booking_due_back: (p) => ({ title: 'Due back today', body: Machine(p) }),
+  rental_booking_overdue: (p) => ({ title: 'Still on rent', body: `Mark ${machine(p)} returned when it's back.` }),
+  rental_booking_not_started: (p) => ({ title: 'Did it start?', body: `Mark ${machine(p)} on site, or cancel the booking.` }),
+  rental_booking_clash: (p) => ({ title: 'Booking clash', body: `${Machine(p)} is still out and ${p.bookingRef || 'the next booking'} starts soon.` }),
+  rental_booking_problem: (p) => ({ title: 'Problem reported', body: `On ${booking(p)}. Our team will look into it.` }),
+  rental_booking_dispute_resolved: (p) => ({ title: 'Booking problem resolved', body: `On ${booking(p)}.` }),
   listing_status: (p) => ({ title: 'Listing update', body: p.listingTitle ? `${p.listingTitle} changed status.` : 'Your listing changed status.' }),
   // F8 part requests (spec §10.3).
   part_request_new: (p) => ({

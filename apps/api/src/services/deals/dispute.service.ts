@@ -2,12 +2,14 @@ import { eq, sql } from 'drizzle-orm';
 import type { DealView, DisputeCategory, DisputeOutcome, PartySide } from '@mpm/shared-types';
 import type { Tx } from '../../db/index.js';
 import { dealDisputes, deals } from '../../db/schema.js';
-import { AppError, ConflictError } from '../../lib/errors.js';
+import { AppError, ConflictError, ValidationError } from '../../lib/errors.js';
 import { queueAdminEmit } from '../../lib/tx-effects.js';
 import type { UserTokenPayload } from '../../plugins/auth.js';
 import { lockListingOnly } from '../listings/locks.js';
 import { writeAudit } from '../audit.service.js';
 import { getSettings } from '../settings.service.js';
+import { resolveBookingDispute } from '../rentals/rental-disputes.js';
+import { subjectOf, type ReviewSubjectRef } from '../reviews/subject.js';
 import { problemWindowOpen } from './deal-actions.js';
 import {
   afterDealChange,
@@ -94,8 +96,11 @@ export async function reportProblem(
 
 export interface ResolveInput {
   outcome: DisputeOutcome;
-  /** Required for `cancelled` (the route checks it): did the goods go back to the seller? */
-  stockReturned: boolean | null;
+  /**
+   * Deal disputes: required for `cancelled` (did the goods go back to the seller?), else ignored. Booking disputes:
+   * must be absent (M14 R12: a booking resolve never touches stock), `400` when sent.
+   */
+  stockReturned?: boolean | null;
   internalNote: string;
   messageToParties: string | null;
 }
@@ -112,24 +117,48 @@ function auditState(deal: DealRow, dispute: DisputeRow) {
 }
 
 /**
- * `POST /admin/disputes/:id/resolve` (support, §9.6): `409 DISPUTE_NOT_OPEN` unless open. Locks listing → deal →
- * dispute (§8.5). Outcomes (§9.2):
+ * `POST /admin/disputes/:id/resolve` (support, §9.6): `409 DISPUTE_NOT_OPEN` unless open. A rental booking's dispute
+ * (M14 R12) goes to `resolveBookingDispute` (listing → booking → dispute; `stockReturned` refused). A deal's locks
+ * listing → deal → dispute (§8.5). Deal outcomes (§9.2):
  * - `completed`: the deal completes (`support`), the hold converts;
  * - `cancelled` (`support_closed`): `stockReturned` true releases the hold, false converts it (the stock left);
  * - `resumed`: back to `handed_over` with both timers restarted from now.
  * The dispute row records the outcome; event and the `deal_dispute_resolved` line (with the message to the parties, as
  * written by staff); `deal_dispute_resolved` to both; audit `deal.dispute_resolve` with before / after.
  */
-export async function resolveDispute(tx: Tx, adminId: string, disputeId: string, input: ResolveInput): Promise<{ disputeId: string; dealId: string }> {
-  // §8.5: ids read unlocked first, then listing → deal → dispute.
-  const [unlocked] = await tx
-    .select({ dealId: dealDisputes.dealId, listingId: deals.listingId })
+export async function resolveDispute(
+  tx: Tx,
+  adminId: string,
+  disputeId: string,
+  input: ResolveInput,
+): Promise<{ disputeId: string; subject: ReviewSubjectRef }> {
+  const [seen] = await tx
+    .select({ dealId: dealDisputes.dealId, rentalBookingId: dealDisputes.rentalBookingId })
     .from(dealDisputes)
-    .innerJoin(deals, eq(deals.id, dealDisputes.dealId))
     .where(eq(dealDisputes.id, disputeId));
+  if (!seen) throw disputeNotFound();
+  const subject = subjectOf(seen);
+  if (subject.kind === 'rental') {
+    if (input.stockReturned !== undefined && input.stockReturned !== null) {
+      throw new ValidationError('A rental booking has no stock to return', { field: 'stockReturned' });
+    }
+    await resolveBookingDispute(tx, adminId, disputeId, subject.id, {
+      outcome: input.outcome,
+      internalNote: input.internalNote,
+      messageToParties: input.messageToParties,
+    });
+    return { disputeId, subject };
+  }
+  const stockReturned = input.stockReturned ?? null;
+  if (input.outcome === 'cancelled' && stockReturned === null) {
+    throw new ValidationError('Say whether the goods went back to the seller', { field: 'stockReturned' });
+  }
+
+  // §8.5: ids read unlocked first, then listing → deal → dispute.
+  const [unlocked] = await tx.select({ listingId: deals.listingId }).from(deals).where(eq(deals.id, subject.id));
   if (!unlocked) throw disputeNotFound();
   await lockListingOnly(tx, unlocked.listingId);
-  const deal = await lockDeal(tx, unlocked.dealId!); // M14: A3 generalises (the inner join reaches deal disputes only)
+  const deal = await lockDeal(tx, subject.id);
   const [dispute] = await tx.select().from(dealDisputes).where(eq(dealDisputes.id, disputeId)).for('update');
   if (!dispute || dispute.status !== 'open') throw new ConflictError('This dispute is already resolved', 'DISPUTE_NOT_OPEN');
   if (deal.status !== 'disputed') throw transitionNotAllowed(deal, 'resolve');
@@ -142,7 +171,7 @@ export async function resolveDispute(tx: Tx, adminId: string, disputeId: string,
     after = await applyCancellation(
       tx,
       deal,
-      { by: 'system', actor, reason: 'support_closed', note: null, stock: input.stockReturned ? 'release' : 'convert' },
+      { by: 'system', actor, reason: 'support_closed', note: null, stock: stockReturned ? 'release' : 'convert' },
       ['disputed'],
     );
   } else {
@@ -165,7 +194,7 @@ export async function resolveDispute(tx: Tx, adminId: string, disputeId: string,
     .set({
       status: 'resolved',
       outcome: input.outcome,
-      stockReturned: input.outcome === 'cancelled' ? input.stockReturned : null,
+      stockReturned: input.outcome === 'cancelled' ? stockReturned : null,
       internalNote: input.internalNote,
       messageToParties: input.messageToParties,
       resolvedByAdminId: adminId,
@@ -177,7 +206,7 @@ export async function resolveDispute(tx: Tx, adminId: string, disputeId: string,
   await recordEvent(tx, after, 'dispute_resolved', actor, {
     disputeId,
     outcome: input.outcome,
-    stockReturned: input.outcome === 'cancelled' ? input.stockReturned : null,
+    stockReturned: input.outcome === 'cancelled' ? stockReturned : null,
   });
   await dealLine(tx, after, 'deal_dispute_resolved', {
     outcome: input.outcome,
@@ -194,5 +223,5 @@ export async function resolveDispute(tx: Tx, adminId: string, disputeId: string,
     after: auditState(after, resolved!),
   });
   await afterDealChange(tx, after);
-  return { disputeId, dealId: deal.id };
+  return { disputeId, subject };
 }
