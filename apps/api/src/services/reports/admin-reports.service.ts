@@ -5,17 +5,23 @@ import { reports } from '../../db/schema.js';
 import { adminText } from '../../lib/admin-text.js';
 import { AppError, ConflictError, ValidationError } from '../../lib/errors.js';
 import { writeAudit } from '../audit.service.js';
+import { maskedRequestName } from '../part-requests/reply-views.js';
 
 /**
- * Admin Reports & flags for conversations and reviews (F6 + F7 spec §16.1–§16.2, P9): one list for both targets with
- * a target filter, and the resolve (`actioned` / `dismissed` with a note, audit `report.resolve`). Listing reports keep
- * F2's own queue. Review text is shown as stored (staff); conversation text never appears here (reads go through
- * `POST /admin/threads/:id/read`).
+ * Admin Reports & flags for conversations, reviews and part requests (F6 + F7 spec §16.1–§16.2, P9; F8 spec §14): one
+ * list for the three targets with a target filter, and the resolve (`actioned` / `dismissed` with a note, audit
+ * `report.resolve`). Listing reports keep F2's own queue. Review text is shown as stored (staff); conversation text
+ * never appears here (reads go through `POST /admin/threads/:id/read`); a part request shows its name masked and its id
+ * (the row links to its admin page), never its note.
  */
 
 type Conn = Db | Tx;
 
-export type AdminReportTarget = 'conversation' | 'review';
+export type AdminReportTarget = 'conversation' | 'review' | 'part_request';
+
+/** The targets this queue handles (listing reports keep F2's queue). */
+export const ADMIN_REPORT_TARGETS = ['conversation', 'review', 'part_request'] as const;
+const TARGETS_SQL = sql`r.target_type::text IN ('conversation', 'review', 'part_request')`;
 
 interface Cursor {
   t: string;
@@ -70,6 +76,8 @@ type RawReport = {
   r_reply_text: string | null;
   r_hidden: boolean | null;
   r_reply_hidden: boolean | null;
+  p_id: string | null;
+  p_name: string | null;
 };
 
 const COLUMN_OF: Record<string, keyof RawReport> = {
@@ -123,6 +131,9 @@ function toRow(r: RawReport): AdminReportRow {
             replyHidden: r.r_reply_hidden === true,
           }
         : null,
+    ...(r.target === 'part_request' && r.p_id
+      ? { partRequestId: r.p_id, partRequestName: maskedRequestName(r.p_name ?? '') }
+      : {}),
   };
 }
 
@@ -138,7 +149,8 @@ async function queryReports(conn: Conn, where: SQL, limit: number): Promise<Arra
            v.reviewed_business_id AS r_reviewed_id, vd.trade_name AS r_reviewed_name,
            v.r_matched_listing, v.r_communication, v.r_on_time, v.r_payment, v.r_pickup,
            v.text AS r_text, v.reply_text AS r_reply_text,
-           (v.hidden_at IS NOT NULL) AS r_hidden, (v.reply_hidden_at IS NOT NULL) AS r_reply_hidden
+           (v.hidden_at IS NOT NULL) AS r_hidden, (v.reply_hidden_at IS NOT NULL) AS r_reply_hidden,
+           pr.id AS p_id, pr.name AS p_name
     FROM reports r
     LEFT JOIN businesses rb ON rb.id = r.reporter_business_id
     LEFT JOIN chat_threads t ON r.target_type::text = 'conversation' AND t.id = r.target_id
@@ -147,13 +159,14 @@ async function queryReports(conn: Conn, where: SQL, limit: number): Promise<Arra
     LEFT JOIN deal_reviews v ON r.target_type::text = 'review' AND v.id = r.target_id
     LEFT JOIN businesses vr ON vr.id = v.reviewer_business_id
     LEFT JOIN businesses vd ON vd.id = v.reviewed_business_id
-    WHERE r.target_type::text IN ('conversation', 'review') AND ${where}
+    LEFT JOIN part_requests pr ON r.target_type::text = 'part_request' AND pr.id = r.target_id
+    WHERE ${TARGETS_SQL} AND ${where}
     ORDER BY r.created_at DESC, r.id DESC
     LIMIT ${limit}`);
   return rows;
 }
 
-/** `GET /admin/reports?target=&status=&cursor=`: conversation and review reports, newest first, 30 a page. */
+/** `GET /admin/reports?target=&status=&cursor=`: conversation, review and part-request reports, newest first, 30 a page. */
 export async function listAdminReports(
   conn: Conn,
   opts: { target?: AdminReportTarget; status?: ReportStatus; cursor?: string },
@@ -175,7 +188,7 @@ export async function listAdminReports(
 }
 
 /**
- * `POST /admin/reports/:id/resolve { outcome, note }`: closes one open conversation or review report; `409
+ * `POST /admin/reports/:id/resolve { outcome, note }`: closes one open conversation, review or part-request report; `409
  * REPORT_NOT_OPEN` when it is already closed; audit `report.resolve` with before / after.
  */
 export async function resolveAdminReport(
@@ -188,7 +201,7 @@ export async function resolveAdminReport(
   const [before] = await tx
     .select()
     .from(reports)
-    .where(and(eq(reports.id, id), sql`${reports.targetType}::text IN ('conversation', 'review')`))
+    .where(and(eq(reports.id, id), sql`${reports.targetType}::text IN ('conversation', 'review', 'part_request')`))
     .for('update');
   if (!before) throw new AppError('Report not found', 404, 'REPORT_NOT_FOUND');
   if (before.status !== 'open' && before.status !== 'reviewing') {
@@ -208,4 +221,10 @@ export async function resolveAdminReport(
   });
   const [row] = await queryReports(tx, sql`r.id = ${id}`, 1);
   return toRow(row!);
+}
+
+/** Every report on one target (any status), newest first: the part-request admin detail's Reports block (F8 §14). */
+export async function adminReportsForTarget(conn: Conn, target: AdminReportTarget, targetId: string): Promise<AdminReportRow[]> {
+  const rows = await queryReports(conn, sql`r.target_type::text = ${target} AND r.target_id = ${targetId}`, 100);
+  return rows.map(toRow);
 }

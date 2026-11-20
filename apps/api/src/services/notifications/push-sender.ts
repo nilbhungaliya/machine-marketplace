@@ -88,20 +88,34 @@ async function markReadWhileViewing(app: PushApp, notificationId: string, userId
   });
 }
 
+/** F8 (spec §10.2): the grouped request rows, whose pushed updates replace the one shown. */
+const GROUPED_REQUEST_TYPES = new Set(['part_match', 'part_request_reply']);
+
+/** The push data, plus F8's `partRequestId` (FCM forwards every string value; the app's `parsePushData` reads it). */
+export type PushData = PushMessage['data'] & { partRequestId?: string };
+
+/** Android tag: `thread:<id>` for chat, `part_request:<id>:<type>` for F8's grouped rows, else the notification id. */
+function pushTag(n: typeof notifications.$inferSelect): string {
+  if (n.type === 'message_new' && n.threadId) return `thread:${n.threadId}`;
+  if (GROUPED_REQUEST_TYPES.has(n.type) && n.partRequestId) return `part_request:${n.partRequestId}:${n.type}`;
+  return n.id;
+}
+
 /** The provider message for a row: rendered text (no message text exists in params) and id-only data. */
 export function pushMessageFor(
   n: typeof notifications.$inferSelect,
   delivery: { version: number },
   token: string,
   language: (typeof users.$inferSelect)['language'],
-): PushMessage {
+): PushMessage & { data: PushData } {
   const { title, body } = renderNotification(n.type, n.params, language, n.unreadCount);
-  const tag = n.type === 'message_new' && n.threadId ? `thread:${n.threadId}` : n.id;
-  const data: PushMessage['data'] = { notificationId: n.id, type: n.type, deliveryKey: `${n.id}:${delivery.version}`, tag };
+  const tag = pushTag(n);
+  const data: PushData = { notificationId: n.id, type: n.type, deliveryKey: `${n.id}:${delivery.version}`, tag };
   if (n.threadId) data.threadId = n.threadId;
   if (n.offerId) data.offerId = n.offerId;
   if (n.dealId) data.dealId = n.dealId;
   if (n.reviewId) data.reviewId = n.reviewId;
+  if (n.partRequestId) data.partRequestId = n.partRequestId;
   return { token, title, body, tag, data };
 }
 

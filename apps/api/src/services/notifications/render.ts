@@ -1,4 +1,4 @@
-import type { Language, NotificationType } from '@mpm/shared-types';
+import { PART_REQUEST_DROP_REASONS, type Language, type NotificationType } from '@mpm/shared-types';
 import { maskContact } from '../../lib/mask-contact.js';
 import { en } from './text/en.js';
 import { gu } from './text/gu.js';
@@ -16,7 +16,11 @@ import type { NotificationTexts, RenderedText, TextParams } from './text/types.j
  * - `pricePerUnitPaise` — a safe integer (or digit string);
  * - `quantity` (decimal string) and `unitLabel`;
  * - `dealRef` — the deal's number (500001…);
- * - `dueAt` — an ISO time (`review_waiting`).
+ * - `dueAt` — an ISO time (`review_waiting`; F8: `part_request_expiring` the expiry, `part_request_expired` the last
+ *   renewable moment);
+ * - F8 (spec §10.3): `requestTitle` (the request name, masked again here), `side` (`left` / `right` / `pair`, localised
+ *   by the template), `distanceKm` (the match's stored **snapped** whole km), `city`, `reason` (a drop reason code).
+ *   Never the request note, a reply message, the budget, a phone, a pincode or an address.
  * Unknown keys are ignored. Names and titles are masked here (`maskContact`) and the finished title and body masked
  * once more, so a number in a name or title never reaches a push or the list. Message text, notes and review text are
  * never params.
@@ -65,6 +69,15 @@ function dueOnText(v: unknown, language: Language): string {
   return new Date(v).toLocaleDateString(LOCALE[language], { day: 'numeric', month: 'short', timeZone: 'Asia/Kolkata' });
 }
 
+const SIDES = new Set(['left', 'right', 'pair']);
+const DROP_REASONS = new Set<string>(PART_REQUEST_DROP_REASONS);
+
+/** A stored snapped distance (whole km, F8 §10.3) as digits; '' for anything else. */
+function distanceText(v: unknown): string {
+  if (typeof v === 'number' && Number.isSafeInteger(v) && v >= 0) return String(v);
+  return typeof v === 'string' && /^\d{1,5}$/.test(v) ? String(Number(v)) : '';
+}
+
 /** The stored params, made safe for a template. */
 export function textParams(params: Record<string, unknown>, language: Language, count = 1): TextParams {
   return {
@@ -74,13 +87,19 @@ export function textParams(params: Record<string, unknown>, language: Language, 
     quantity: quantityText(params),
     dealRef: dealRefText(params.dealRef),
     dueOn: dueOnText(params.dueAt, language),
+    duePassed: typeof params.dueAt === 'string' && !Number.isNaN(Date.parse(params.dueAt)) && Date.parse(params.dueAt) <= Date.now(),
     count: Number.isSafeInteger(count) && count > 1 ? count : 1,
+    requestTitle: safeText(params.requestTitle, 100),
+    side: typeof params.side === 'string' && SIDES.has(params.side) ? (params.side as TextParams['side']) : '',
+    distanceKm: distanceText(params.distanceKm),
+    city: safeText(params.city, 60),
+    reason: typeof params.reason === 'string' && DROP_REASONS.has(params.reason) ? (params.reason as TextParams['reason']) : '',
   };
 }
 
 /**
- * `{ title, body }` for a row in `language` (English for an unknown one). `count` is a grouped chat row's
- * `unread_count` (§11.2).
+ * `{ title, body }` for a row in `language` (English for an unknown one). `count` is a grouped row's `unread_count`
+ * (chat §11.2; F8 replies and matches §10.2).
  */
 export function renderNotification(
   type: NotificationType,

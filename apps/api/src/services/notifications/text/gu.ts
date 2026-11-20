@@ -9,6 +9,24 @@ const qty = (p: TextParams) => (p.quantity ? ` ${p.quantity} માટે` : '')
 const deal = (p: TextParams) => (p.dealRef ? `ડીલ ${p.dealRef}` : 'તમારી ડીલ');
 const on = (p: TextParams) => (p.listingTitle ? ` (${p.listingTitle})` : '');
 
+// F8 (spec §10.3): request names masked by `render.ts`; never the note, a reply message, the budget or an address.
+const request = (p: TextParams) => p.requestTitle || 'તમારી જરૂરિયાત';
+const sideWord: Record<TextParams['side'], string> = { '': '', left: 'લેફ્ટ', right: 'રાઇટ', pair: 'જોડી' };
+const away = (p: TextParams) => (p.distanceKm ? `, ${p.distanceKm} કિમી દૂર` : '');
+const dropReason: Record<TextParams['reason'], string> = {
+  '': 'કારણ જોવા માટે જરૂરિયાત ખોલો.',
+  listing_removed: 'લિસ્ટિંગ દૂર કરાઈ હતી.',
+  listing_removed_by_team: 'અમારી ટીમે લિસ્ટિંગ દૂર કરી.',
+  listing_rejected: 'લિસ્ટિંગ મંજૂર થઈ નથી.',
+  request_closed: 'ખરીદનારે જરૂરિયાત બંધ કરી.',
+  request_expired: 'જરૂરિયાત પૂરી થઈ ગઈ.',
+  request_removed: 'જરૂરિયાત દૂર કરાઈ.',
+  blocked: 'તે આ ખરીદનાર સુધી પહોંચી શકતો નથી.',
+  not_eligible: 'હવે તમે આ જરૂરિયાતનો જવાબ આપી શકતા નથી.',
+  no_longer_fits: 'લિસ્ટિંગ હવે આ જરૂરિયાત સાથે મેળ ખાતી નથી.',
+};
+const line = (...parts: string[]) => parts.filter(Boolean).join(' · ');
+
 export const gu: NotificationTexts = {
   enquiry_new: (p) => ({ title: 'નવી પૂછપરછ', body: listing(p) }),
   message_new: (p) => ({
@@ -35,15 +53,42 @@ export const gu: NotificationTexts = {
     title: 'ડીલની સમીક્ષા કરો',
     body: `${who(p)}એ ${deal(p)}ની સમીક્ષા કરી છે. ${p.dueOn ? `${p.dueOn} સુધીમાં ` : ''}તમારી સમીક્ષા ઉમેરો; બંને સાથે પ્રકાશિત થશે.`,
   }),
-  part_match: (p) => ({ title: 'નવું મેળ', body: `એક લિસ્ટિંગ તમારી જરૂરિયાત સાથે મેળ ખાય છે${p.listingTitle ? `: ${p.listingTitle}` : ''}.` }),
   booking_update: () => ({ title: 'બુકિંગ અપડેટ', body: 'એક બુકિંગ બદલાયું છે. વિગતો જોવા ખોલો.' }),
   listing_status: (p) => ({ title: 'લિસ્ટિંગ અપડેટ', body: `${listing(p)}ની સ્થિતિ બદલાઈ છે.` }),
-  // F8 placeholders (plan C0-1): A3-2 replaces them with the spec §10.3 texts.
-  part_request_new: () => ({ title: 'એક ખરીદનારને પાર્ટ જોઈએ છે', body: 'જોવા માટે જરૂરિયાત ખોલો.' }),
-  part_request_reply: () => ({ title: 'તમારી જરૂરિયાત પર નવો જવાબ', body: 'જોવા માટે જરૂરિયાત ખોલો.' }),
-  part_request_expiring: () => ({ title: 'જરૂરિયાત જલ્દી પૂરી થશે', body: 'જવાબ મેળવતા રહેવા માટે તેને રિન્યૂ કરો.' }),
-  part_request_expired: () => ({ title: 'જરૂરિયાત પૂરી થઈ ગઈ', body: 'જવાબ મેળવતા રહેવા માટે તેને રિન્યૂ કરો.' }),
-  part_request_fulfil_prompt: () => ({ title: 'સોદો નક્કી થયો', body: 'શું તમારી જરૂરિયાત પૂરી થઈ તરીકે માર્ક કરશો?' }),
-  part_request_removed: () => ({ title: 'તમારી જરૂરિયાત દૂર કરાઈ', body: 'તેને અમારી ટીમે દૂર કરી છે.' }),
-  part_request_reply_dropped: () => ({ title: 'તમારો જવાબ પહોંચ્યો નથી', body: 'કારણ જોવા માટે જરૂરિયાત ખોલો.' }),
+  // F8 part requests (spec §10.3). Needs a native speaker's check.
+  part_request_new: (p) => ({
+    title: p.requestTitle ? `એક ખરીદનારને ${p.requestTitle} જોઈએ છે` : 'એક ખરીદનારે જરૂરિયાત પોસ્ટ કરી',
+    body: line(sideWord[p.side], p.quantity, p.city) || 'જોવા માટે જરૂરિયાત ખોલો.',
+  }),
+  part_request_reply: (p) =>
+    p.count > 1
+      ? { title: `${request(p)} માટે ${p.count} જવાબ`, body: p.businessName ? `સૌથી નવો: ${p.businessName}.` : 'સરખામણી કરવા માટે જરૂરિયાત ખોલો.' }
+      : { title: `${who(p)} એ તમારી જરૂરિયાતનો જવાબ આપ્યો`, body: `${p.requestTitle ? `${p.requestTitle}: ` : ''}લિસ્ટિંગ જોવા માટે ખોલો.` },
+  part_match: (p) =>
+    p.count > 1
+      ? { title: `${request(p)} માટે ${p.count} નવા મેળ`, body: `સૌથી નવું: ${listing(p)}${away(p)}. સરખામણી કરવા માટે જરૂરિયાત ખોલો.` }
+      : {
+          title: `તમારું ${sideWord[p.side] ? `${sideWord[p.side]} ` : ''}${request(p)} ઉપલબ્ધ છે`,
+          body: `${listing(p)}${away(p)}. ઑફર આપવા માટે તેને ખોલો.`,
+        },
+  part_request_expiring: (p) => ({
+    title: p.dueOn ? `${request(p)} ${p.dueOn} ના રોજ પૂરી થશે` : `${request(p)} જલ્દી પૂરી થશે`,
+    body: 'જવાબ મેળવતા રહેવા માટે તેને રિન્યૂ કરો.',
+  }),
+  part_request_expired: (p) => ({
+    title: `${request(p)} પૂરી થઈ ગઈ`,
+    body:
+      p.dueOn && !p.duePassed
+        ? `તમે તેને ${p.dueOn} સુધી રિન્યૂ કરી શકો છો.`
+        : 'તે તેના મહત્તમ સમય સુધી પહોંચી ગઈ છે. હજુ જરૂર હોય તો નવી જરૂરિયાત પોસ્ટ કરો.',
+  }),
+  part_request_fulfil_prompt: (p) => ({
+    title: p.businessName ? `${p.businessName} સાથે ડીલ નક્કી થઈ` : 'ડીલ નક્કી થઈ',
+    body: `${request(p)} ને પૂરી થઈ તરીકે માર્ક કરશો?`,
+  }),
+  part_request_removed: (p) => ({ title: 'તમારી જરૂરિયાત દૂર કરાઈ', body: `${request(p)} ને અમારી ટીમે દૂર કરી છે.` }),
+  part_request_reply_dropped: (p) => ({
+    title: `${p.requestTitle ? `${p.requestTitle} પર ` : ''}તમારો જવાબ પહોંચ્યો નથી`,
+    body: dropReason[p.reason],
+  }),
 };

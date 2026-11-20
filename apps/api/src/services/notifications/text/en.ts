@@ -12,6 +12,25 @@ const deal = (p: TextParams) => (p.dealRef ? `deal ${p.dealRef}` : 'your deal');
 const Deal = (p: TextParams) => (p.dealRef ? `Deal ${p.dealRef}` : 'Your deal');
 const on = (p: TextParams) => (p.listingTitle ? ` on ${p.listingTitle}` : '');
 
+// F8 (spec §10.3): request names masked by `render.ts`; never the note, a reply message, the budget or an address.
+const request = (p: TextParams) => p.requestTitle || 'your requirement';
+const sideWord: Record<TextParams['side'], string> = { '': '', left: 'left', right: 'right', pair: 'pair' };
+const sideLabel: Record<TextParams['side'], string> = { '': '', left: 'Left', right: 'Right', pair: 'Pair' };
+const away = (p: TextParams) => (p.distanceKm ? `, ${p.distanceKm} km away` : '');
+const dropReason: Record<TextParams['reason'], string> = {
+  '': 'Open the requirement to see why.',
+  listing_removed: 'The listing was removed.',
+  listing_removed_by_team: 'Our team removed the listing.',
+  listing_rejected: "The listing wasn't approved.",
+  request_closed: 'The buyer closed the requirement.',
+  request_expired: 'The requirement expired.',
+  request_removed: 'The requirement was removed.',
+  blocked: "It can't be delivered to this buyer.",
+  not_eligible: 'You can no longer reply to this requirement.',
+  no_longer_fits: 'The listing no longer fits the requirement.',
+};
+const line = (...parts: string[]) => parts.filter(Boolean).join(' · ');
+
 export const en: NotificationTexts = {
   enquiry_new: (p) => ({ title: 'New enquiry', body: listing(p) }),
   message_new: (p) => ({
@@ -38,16 +57,43 @@ export const en: NotificationTexts = {
     title: 'Review the deal',
     body: `${who(p)} reviewed ${deal(p)}. Add yours${p.dueOn ? ` by ${p.dueOn}` : ''}; both publish together.`,
   }),
-  // Later modules (F8, M14, F2 notices): generic text until they bring their own.
-  part_match: (p) => ({ title: 'New match', body: `A listing matches your request${p.listingTitle ? `: ${p.listingTitle}` : ''}.` }),
+  // Later modules (M14, F2 notices): generic text until they bring their own.
   booking_update: () => ({ title: 'Booking update', body: 'A booking changed. Open it to see the details.' }),
   listing_status: (p) => ({ title: 'Listing update', body: p.listingTitle ? `${p.listingTitle} changed status.` : 'Your listing changed status.' }),
-  // F8 placeholders (plan C0-1): A3-2 replaces them with the spec §10.3 texts.
-  part_request_new: () => ({ title: 'A buyer needs a part', body: 'Open the requirement to see it.' }),
-  part_request_reply: () => ({ title: 'New reply to your requirement', body: 'Open the requirement to see it.' }),
-  part_request_expiring: () => ({ title: 'Requirement expires soon', body: 'Renew it to keep getting replies.' }),
-  part_request_expired: () => ({ title: 'Requirement expired', body: 'Renew it to keep getting replies.' }),
-  part_request_fulfil_prompt: () => ({ title: 'Deal agreed', body: 'Mark your requirement fulfilled?' }),
-  part_request_removed: () => ({ title: 'Your requirement was removed', body: 'It was removed by our team.' }),
-  part_request_reply_dropped: () => ({ title: "Your reply wasn't delivered", body: 'Open the requirement to see why.' }),
+  // F8 part requests (spec §10.3).
+  part_request_new: (p) => ({
+    title: p.requestTitle ? `A buyer needs ${p.requestTitle}` : 'A buyer posted a requirement',
+    body: line(sideLabel[p.side], p.quantity, p.city) || 'Open the requirement to see it.',
+  }),
+  part_request_reply: (p) =>
+    p.count > 1
+      ? { title: `${p.count} replies for ${request(p)}`, body: p.businessName ? `Latest from ${p.businessName}.` : 'Open the requirement to compare them.' }
+      : { title: `${who(p)} replied to your requirement`, body: `${p.requestTitle ? `For ${p.requestTitle}. ` : ''}Open it to see the listing.` },
+  part_match: (p) =>
+    p.count > 1
+      ? { title: `${p.count} new matches for ${request(p)}`, body: `Latest: ${listing(p)}${away(p)}. Open the requirement to compare.` }
+      : {
+          title: `Your ${sideWord[p.side] ? `${sideWord[p.side]} ` : ''}${request(p)} is available`,
+          body: `${listing(p)}${away(p)}. Open it to make an offer.`,
+        },
+  part_request_expiring: (p) => ({
+    title: p.dueOn ? `${request(p)} expires on ${p.dueOn}` : `${request(p)} expires soon`,
+    body: 'Renew it to keep getting replies.',
+  }),
+  part_request_expired: (p) => ({
+    title: `${request(p)} has expired`,
+    body:
+      p.dueOn && !p.duePassed
+        ? `You can renew it until ${p.dueOn}.`
+        : 'It has reached its maximum time. Post a new requirement if you still need it.',
+  }),
+  part_request_fulfil_prompt: (p) => ({
+    title: p.businessName ? `Deal agreed with ${p.businessName}` : 'Deal agreed',
+    body: `Mark ${request(p)} fulfilled?`,
+  }),
+  part_request_removed: (p) => ({ title: 'Your requirement was removed', body: `${request(p)} was removed by our team.` }),
+  part_request_reply_dropped: (p) => ({
+    title: `Your reply to ${p.requestTitle || 'a requirement'} wasn't delivered`,
+    body: dropReason[p.reason],
+  }),
 };
