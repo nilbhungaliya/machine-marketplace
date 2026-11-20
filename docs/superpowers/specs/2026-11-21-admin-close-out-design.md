@@ -103,8 +103,8 @@ rollup tables, IP-based signals.
 | R12 | **Exports:** you can export what you can list (same role as the list route), with the list's filters; ≤ 10 000 rows, else `400 EXPORT_TOO_LARGE` with the count (never silent truncation); streamed CSV (`lib/csv.ts` cell rules: BOM, formula neutralised); 10 exports per 10 min per admin; every export writes `export.create` (sheet, filters with their text through `maskContact`, row count, contacts flag; never data). **Contact details** (owner phone, email) only in the businesses sheet, only for `super_admin`, only with `includeContacts=1`; PAN, street addresses, notes, messages, private budgets and site addresses never **(my call)**. |
 | R13 | **Admin sessions (AD7):** the admin JWT carries `tv`; `requireAdmin` / `requireAdminRole` and the `/admin` socket handshake load the row on every request: missing, inactive or `token_version ≠ tv` → `401 ADMIN_SESSION_ENDED`; the **role comes from the row**, not the token. Deactivate, reset password, password change, role change and "sign out" bump `token_version`, send `admin:session_ended { tv }` with the new version and drop the admin's sockets (same-process limit as users, open item). A panel signs out only when the event's `tv` is greater than its own token's, so the tab that changed its own password stores the fresh token, reconnects and keeps working. |
 | R14 | **Admin users (super_admin only):** invite (name, email, role) → a set-password link valid 48 h; change name / role; deactivate / reactivate (reason); reset password (clears the password, bumps the version, new link); sign out everywhere. **Never** on yourself (role, deactivate, reset: `409 ADMIN_SELF_ACTION`), and never leaving zero active super admins (`409 ADMIN_LAST_SUPER_ADMIN`, serialised by an advisory lock). Admin rows are never deleted (audit references). |
-| R15 | **Passwords:** 12–128 characters, not the email; bcrypt cost 12 for new hashes; links are 32 random bytes, stored as SHA-256, single-use, the newest one per admin wins; the token travels in the URL fragment (`/set-password#t=…`) and a POST body, never a query string or a log line. Login: after 5 failures for one email in 15 min, `429 TOO_MANY_ATTEMPTS` for 15 min (also for unknown emails, so nothing is probed) **(my call)**. |
-| R16 | **Audit log viewer: super_admin only** (textile: the one account), read-only, no route edits or deletes. Snapshot values are masked in the detail by default (`maskContact` on strings + whole-value masking of sensitive keys: phone, email, PAN, address, GST address, site address); "Show hidden values" returns the entry unmasked and writes `audit.reveal` (entry id, action; no values). CSV export of the filtered list carries **no snapshots**. |
+| R15 | **Passwords:** 12–128 characters, not the email; bcrypt cost 12 for new hashes; links are 32 random bytes, stored as SHA-256, single-use, the newest one per admin wins; the token travels in the URL fragment (`/set-password#t=…`) and a POST body, never a query string or a log line. Login lockout (as built, §11.4): 5 failures for one email from one IP lock that email + IP pair for 15 min, and a ceiling of 50 failures per email an hour from any IP locks the email; both answer `429 TOO_MANY_ATTEMPTS` (also for unknown emails, so nothing is probed); attempts are counted before the password check; a password set from a link clears the email's keys. `POST /admin/auth/password/change` is limited to 10 per 10 min per admin **(my call)**. |
+| R16 | **Audit log viewer: super_admin only** (textile: the one account), read-only, no route edits or deletes. Snapshot values are masked in the detail by default (`maskContact` on strings + whole-value masking of sensitive keys: phone, email, PAN, GSTIN, address, GST address, site address); "Show hidden values" returns the entry unmasked and writes `audit.reveal` (entry id, action; no values). CSV export of the filtered list carries **no snapshots**. |
 | R17 | **New-account limits (AD6 setting line) already exist:** every new account is unverified until GST, and the unverified limits are in the registry (`unverified_listing_cap`, `offer_open_limit_unverified`, `enquiry_new_per_day_unverified`, `part_request_open_limit_unverified`, `rental_open_limit_unverified`). No new limit; the Settings page groups them under a "New accounts (unverified)" note **(my call)**. Listing expiry and the requirement seller cap are already settings. |
 | R18 | **Testing (limited, important):** session ending and the super-admin guards under races, password links, dashboard definitions at IST boundaries and filter attribution, each signal rule at and below its threshold and the job's idempotence / watermark, no raw phone stored, export role / cap / contact rules, audit masking and reveal, business report rules. Not chart wiring. |
 
@@ -164,7 +164,8 @@ the phone HMAC or install hash so an admin can see two signals are about the sam
 Btree on the period columns the dashboard scans: `chat_threads(created_at)`, `offers(created_at) WHERE round = 0`,
 `deals(accepted_at)`, `rental_bookings(confirmed_at)`, `listing_status_history(to_status, created_at)`,
 `part_requests(first_posted_at)`, `businesses(created_at)`. C0 checks each against the schema and adds only the
-missing ones.
+missing ones. Migration 0020 (wave A fix) adds partial btrees `deals(completed_at)`, `part_requests(fulfilled_at)` and
+`listings(first_live_at)`, each `WHERE … IS NOT NULL`.
 
 ### 5.7 Shared types (`packages/shared-types`, section "Admin close-out")
 `DASHBOARD_RANGES`, `AdminDashboardQuery`, `AdminDashboard` (`snapshot`, `period` metrics as `{ value, previous }`,
@@ -214,7 +215,7 @@ KPI is "up is good" (closes the PROJECT_STATUS item "give `StatCard` a tone").
 | Deals completed | deals with `completed_at` in the period |
 | Rental bookings | bookings with `confirmed_at` in the period; value = Σ `agreed_total_paise` of those not `cancelled` |
 | Sold / closed | distinct listings with a `listing_status_history` row to `sold` (sold) or `unavailable` (closed) in the period |
-| Requirements posted | `first_posted_at` in the period; match rate = share with ≥ 1 delivered reply or a match |
+| Requirements posted | `first_posted_at` in the period; match rate = share with ≥ 1 delivered reply (`delivered_at` set, even if since withdrawn) or a match |
 | Fulfilment | median hours from `first_posted_at` to `fulfilled_at`, requests fulfilled in the period |
 | Reply rate | threads created in the period and at least 24 h old: share with `first_seller_reply_at ≤ created_at + 24 h`; median first reply over those answered |
 
@@ -324,6 +325,13 @@ The dashboard needs no job (R4).
   row, then stream keyset pages of 1 000 (`created_at, id`) as CSV (`text/csv; charset=utf-8`, `attachment;
   filename="<sheet>-YYYY-MM-DD.csv"`). Money in rupees with two decimals (`total_inr`), times as IST
   `YYYY-MM-DD HH:mm`, enums as their admin labels.
+- The filters and `includeContacts` are parsed before the export limit, so a bad query is `400` and spends no export.
+- An export covers rows created up to its start: a `now()` snapshot is taken with the count, and the count and every
+  page add `created_at <= snapshot` (the first keyset cursor is `(snapshot, ffffffff-…)`), so a row created mid-export
+  can't push out the oldest qualifying row. A row whose status changes mid-export can still enter or leave the pages;
+  never more rows than the count.
+- Phone cells (the owner phone) start with `'`: a leading `+` is a formula start, neutralised like any other
+  (`lib/csv.ts`).
 - Columns (no notes, messages, photos, street or site addresses, PAN, private budgets anywhere):
   - **businesses:** id, trade name, legal name, GSTIN, verification, city, state, pincode, industrial area,
     activities, categories, owner name, owner status, listings (live / all), deals as buyer / seller, created; plus
@@ -369,12 +377,21 @@ The dashboard needs no job (R4).
 Guards (R14) run inside one transaction holding `pg_advisory_xact_lock(hashtext('admin_users'))`, so two super admins
 demoting each other at once leave one.
 
+### 11.4 Login lockout and password limits (`services/admin-users/lockout.ts`, as built)
+Two Redis counters holding hashes only (never the email or the IP): per **email + IP**, 5 failures lock that pair for
+15 min (so an attacker hammering one address can't keep the admin out from their own); per **email**, a ceiling of 50
+failures an hour from any IP locks the email until the hour passes. Each attempt is counted (`INCR`) before the password
+check, so parallel attempts can't slip past; over either limit → `429 TOO_MANY_ATTEMPTS` (`details.retryAt`), unknown
+emails included. A success deletes the email + IP key and takes its attempt off the email count; a password set from a
+link clears every key of the email. `POST /admin/auth/password/change` is limited to 10 per 10 min per admin (wrong
+current passwords included).
+
 ### 11.3 Audit log reading (`services/admin-insights/audit-log.ts`, `audit-labels.ts`, ported)
 One `BASE` query joining the admin's name and an entity label per type (listing `#ref title`, business trade name,
 deal / rental booking `#ref`, part request `#ref`, category / brand / model name, admin user name; others none);
 `auditLabel(action)` plain words for every action in the code today (≈ 60, the C0 list) with the code shown for an
 unknown one; `auditHref(entityType, id)` to the admin page where one exists. Masking per R16 (`maskSnapshot` recursive:
-strings through `maskContact`; keys matching `phone|email|pan|address|gstAddress|siteAddress` replaced whole with
+strings through `maskContact`; keys matching `phone|email|pan|gstin|address|gstAddress|siteAddress` replaced whole with
 `•••`). `changedKeys` = top-level keys whose JSON differs.
 
 ## 12. Settings (`APP_SETTINGS`, int, admin section "Fraud signals")
@@ -443,7 +460,7 @@ the newer token and reconnects). No new user events. Signals and reports use the
 - **Exports:** minimal columns, contacts only for a super admin on request, every export audit-logged with its filters;
   files are never stored server-side; the CSV is the admin's responsibility once downloaded (a line on the button's
   dialog).
-- **Audit log:** super admin only; masked by default; reveals logged; snapshots kept as stored (accountability record),
+- **Audit log:** super admin only; masked by default (phones, emails, PAN, GSTINs, addresses); reveals logged; snapshots kept as stored (accountability record),
   not exported. Answers the PROJECT_STATUS DPDP note on `gst.release` before / after (masked in the viewer; retention
   still with the DPDP work).
 - **Admin auth:** tokens end on deactivation / reset / role change at the next request; links hashed, single-use,
@@ -456,7 +473,8 @@ the newer token and reconnects). No new user events. Signals and reports use the
 ## 17. Limits
 
 Exports 10 per 10 min per admin, ≤ 10 000 rows; reveal 30 per hour per admin; login 10 / min per IP (existing) + the
-per-email lockout (R15); password inspect / set 10 / min per IP; business reports per R6; dashboard cache 60 s; the job
+lockout (R15, §11.4: 5 per email + IP in 15 min, 50 per email an hour); password change 10 per 10 min per admin;
+password inspect / set 10 / min per IP; business reports per R6; dashboard cache 60 s; the job
 scans ≤ 5 000 messages a run (= 720 000 a day; raise if a backlog appears).
 
 ## 18. Testing (limited, important; API integration on real Postgres + Redis, fixtures removed in `afterAll`)
@@ -469,7 +487,7 @@ scans ≤ 5 000 messages a run (= 720 000 a day; raise if a backlog appears).
 2. **Guards under races:** two super admins demoting / deactivating each other concurrently → one refused
    (`ADMIN_LAST_SUPER_ADMIN`); every self action refused; non-super roles get 403 on every admin-user and audit route.
 3. **Password links:** single use, expiry, newest wins, raw token absent from `admin_password_tokens` and `audit_log`;
-   weak password refused; lockout after 5 failures (unknown email too).
+   weak password refused; lockout after 5 failures per email + IP and at the per-email ceiling (unknown email too).
 4. **Dashboard definitions:** one fixture per metric with rows at 23:59 and 00:01 IST on the period edges; previous
    period; cancelled deals excluded from value; reply rate's 24 h boundary and the "at least 24 h old" rule; match rate
    and median; city / area / category attribution (a deal counts for the listing's city, not the buyer's; business
@@ -566,7 +584,7 @@ retention job (3 years, with the DPDP work); scheduled exports; notification bro
 11. Invited admins have a null password hash until the link is used (§5.1).
 12. Reset clears the password at once; issuing a link signs the admin out (§11.2).
 13. A role change bumps the token version so the panel's menu matches (R13).
-14. Login lockout after 5 failures per email in 15 min, unknown emails included (R15).
+14. Login lockout after 5 failures per email + IP in 15 min, plus 50 per email an hour, unknown emails included (R15, §11.4).
 15. Audit log viewer for super admins only; reveal capped at 30 an hour (R16).
 16. Audit export without snapshots (R16).
 17. Listing reports shown read-only in Reports & flags; resolve stays in moderation (R7).
@@ -591,3 +609,17 @@ Builder check answers (2026-11-21):
     `rented` listings (§6.2).
 30. A `viewer` member may report a business, as with listings; conversation, review and part-request reports refuse
     viewers (§7.1). Admin status adds `reset_pending` (no password, signed in before) beside `invited` (§5.1, §13).
+
+## 25. Build changes (wave A fix pass, 2026-11-21)
+
+- **R15 / §11.4:** the lockout as built: 5 failures per email + IP lock that pair 15 min, plus a ceiling of 50 failures
+  per email an hour; attempts counted before the password check; a password set from a link clears the email's keys;
+  `/admin/auth/password/change` limited to 10 per 10 min per admin (§17).
+- **§11.3, §16, R16:** audit masking also covers `gstin` keys.
+- **§10 exports:** filters and `includeContacts` parsed before the export limit (a bad query spends no export); an
+  export covers rows created up to its start (snapshot with the count, `created_at <= snapshot` on the count and every
+  page); phone cells start with `'` (spreadsheet formula guard).
+- **§6.2:** the match rate counts replies with `delivered_at` set (a delivered reply withdrawn later still counts); the
+  dashboard cache falls through to the database when Redis fails; the category scope reads the subtree's ids once.
+- **§5.6, migration 0020** (`0020_admin_close_out_indexes.sql`): partial btrees `deals(completed_at)`,
+  `part_requests(fulfilled_at)`, `listings(first_live_at)` (`WHERE … IS NOT NULL`).

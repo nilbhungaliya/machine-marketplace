@@ -1,5 +1,5 @@
 import { sql, type SQL } from 'drizzle-orm';
-import { EXPORT_PAGE_SIZE, type AuditLogDetail, type AuditLogFacets, type AuditLogPage, type AuditLogRow } from '@mpm/shared-types';
+import type { AuditLogDetail, AuditLogFacets, AuditLogPage, AuditLogRow } from '@mpm/shared-types';
 import type { Db, Tx } from '../../db/index.js';
 import type { CsvCell } from '../../lib/csv.js';
 import { NotFoundError } from '../../lib/errors.js';
@@ -7,6 +7,7 @@ import { runTx, type TxApp } from '../../lib/tx-effects.js';
 import { writeAudit } from '../audit.service.js';
 import type { CsvExportSpec } from '../exports/run-export.js';
 import { istMinute } from '../exports/format.js';
+import { KEYSET_MAX_ID } from '../exports/sheet-kit.js';
 import { auditHref, auditLabel } from './audit-labels.js';
 import { changedKeys, maskSnapshot } from './audit-mask.js';
 
@@ -189,32 +190,31 @@ type Cursor = { micros: string; id: string };
 
 /**
  * The filtered list as a CSV export spec for `runCsvExport` (R16: no before / after column, no snapshot value), keyset
- * pages of `EXPORT_PAGE_SIZE` newest first.
+ * pages (`EXPORT_PAGE_SIZE` unless the spec says otherwise) newest first, rows up to the export's snapshot.
  */
 export function auditExportSpec(conn: Db | Tx, adminId: string, q: AuditLogQuery): CsvExportSpec<Cursor> {
   const parts = whereParts(q);
-  const where = whereSql(parts);
   return {
     adminId,
     sheet: 'audit_log',
     filters: { ...q },
     header: AUDIT_EXPORT_HEADER,
-    async count() {
-      const { rows } = await conn.execute<{ n: number }>(sql`SELECT count(*)::int AS n FROM (${BASE}) x ${where}`);
+    async count(asOf) {
+      const upTo = whereSql([...parts, sql`x.created_at <= ${asOf}::timestamptz`]);
+      const { rows } = await conn.execute<{ n: number }>(sql`SELECT count(*)::int AS n FROM (${BASE}) x ${upTo}`);
       return rows[0]!.n;
     },
-    async page(after) {
-      const filter = after
-        ? whereSql([
-            ...parts,
-            sql`(x.created_at, x.id) < (timestamptz 'epoch' + ${after.micros}::bigint * interval '1 microsecond', ${after.id}::uuid)`,
-          ])
-        : where;
+    async page(after, { asOf, pageSize }) {
+      // The first page starts just past the export's snapshot (`runCsvExport`).
+      const cursor = after
+        ? sql`(timestamptz 'epoch' + ${after.micros}::bigint * interval '1 microsecond', ${after.id}::uuid)`
+        : sql`(${asOf}::timestamptz, ${KEYSET_MAX_ID}::uuid)`;
+      const filter = whereSql([...parts, sql`(x.created_at, x.id) < ${cursor}`]);
       const { rows } = await conn.execute<Row>(sql`
         SELECT x.* FROM (${BASE}) x
         ${filter}
         ORDER BY x.created_at DESC, x.id DESC
-        LIMIT ${EXPORT_PAGE_SIZE}`);
+        LIMIT ${pageSize}`);
       const cells = rows.map((r): CsvCell[] => [
         istMinute(r.created_at),
         r.admin_id === null ? 'System' : (r.admin_name ?? ''),
@@ -226,7 +226,7 @@ export function auditExportSpec(conn: Db | Tx, adminId: string, q: AuditLogQuery
         auditHref(r.entity_type, r.entity_id),
       ]);
       const last = rows[rows.length - 1];
-      return { rows: cells, next: rows.length === EXPORT_PAGE_SIZE && last ? { micros: last.micros, id: last.id } : null };
+      return { rows: cells, next: rows.length === pageSize && last ? { micros: last.micros, id: last.id } : null };
     },
   };
 }

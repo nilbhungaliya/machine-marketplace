@@ -4,7 +4,7 @@ import type { Db, Tx } from '../../db/index.js';
 import type { CsvCell } from '../../lib/csv.js';
 import { businessListWhere, type BusinessListQuery } from '../admin/business-admin.service.js';
 import { istMinute } from './format.js';
-import { before, enumLabel, enumLabels, keysetTime, n, nextOf, PAGE, type SheetExport } from './sheet-kit.js';
+import { before, enumLabel, enumLabels, keysetTime, n, nextOf, type SheetExport, upTo } from './sheet-kit.js';
 
 /**
  * The businesses sheet (admin close-out §10, R12): exactly the Users & businesses list for the same filters
@@ -29,11 +29,13 @@ export function businessesExport(
     header,
     filters,
     includeContacts: contacts,
-    async count() {
-      const { rows } = await conn.execute<{ n: number }>(sql`SELECT count(*)::int AS n ${fromWhere}`);
+    async count(asOf) {
+      const { rows } = await conn.execute<{ n: number }>(
+        sql`SELECT count(*)::int AS n ${fromWhere} AND ${upTo(sql`b.created_at`, asOf)}`,
+      );
       return Number(rows[0]?.n ?? 0);
     },
-    async page(after) {
+    async page(after, { asOf, pageSize }) {
       const { rows } = await conn.execute<{
         id: string;
         sort_at: string;
@@ -68,9 +70,9 @@ export function businessesExport(
                (SELECT count(*)::int FROM deals d WHERE d.seller_business_id = b.id) AS deals_seller,
                ${contacts ? sql`o.phone` : sql`NULL::text`} AS owner_phone,
                ${contacts ? sql`b.email` : sql`NULL::text`} AS email
-        ${fromWhere} AND ${before(sql`b.created_at`, sql`b.id`, after)}
+        ${fromWhere} AND ${before(sql`b.created_at`, sql`b.id`, after, asOf)}
         ORDER BY b.created_at DESC, b.id DESC
-        LIMIT ${PAGE}`);
+        LIMIT ${pageSize}`);
       return {
         rows: rows.map((r): CsvCell[] => [
           r.id, r.trade_name, r.legal_name, r.gstin, enumLabel(r.verification_status), r.city, r.state, r.pincode, r.area,
@@ -78,7 +80,7 @@ export function businessesExport(
           n(r.listings_all), n(r.deals_buyer), n(r.deals_seller), istMinute(r.sort_at),
           ...(contacts ? [r.owner_phone, r.email] : []),
         ]),
-        next: nextOf(rows),
+        next: nextOf(rows, pageSize),
       };
     },
   };

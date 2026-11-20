@@ -141,6 +141,13 @@
       "when": 1795207512674,
       "tag": "0019_admin_close_out_checks",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1795212500547,
+      "tag": "0020_admin_close_out_indexes",
+      "breakpoints": true
     }
   ]
 }

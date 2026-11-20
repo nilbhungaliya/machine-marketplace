@@ -1,0 +1,3 @@
+CREATE INDEX IF NOT EXISTS "deals_completed_idx" ON "deals" USING btree ("completed_at") WHERE "deals"."completed_at" IS NOT NULL;--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "listings_first_live_idx" ON "listings" USING btree ("first_live_at") WHERE "listings"."first_live_at" IS NOT NULL;--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "part_requests_fulfilled_idx" ON "part_requests" USING btree ("fulfilled_at") WHERE "part_requests"."fulfilled_at" IS NOT NULL;

@@ -1,6 +1,7 @@
 import { Readable } from 'node:stream';
 import type { FastifyReply } from 'fastify';
-import { EXPORT_ROW_CAP, type ExportSheet } from '@mpm/shared-types';
+import { sql } from 'drizzle-orm';
+import { EXPORT_PAGE_SIZE, EXPORT_ROW_CAP, type ExportSheet } from '@mpm/shared-types';
 import { CSV_BOM, csvRow, type CsvCell } from '../../lib/csv.js';
 import { ValidationError } from '../../lib/errors.js';
 import { istToday } from '../../lib/ist.js';
@@ -9,9 +10,10 @@ import type { TxApp } from '../../lib/tx-effects.js';
 import { writeAudit } from '../audit.service.js';
 
 /**
- * One export (admin close-out §10, R12, plan D10). `count` and `page` run the list's own `WHERE` builder; `page` takes
- * the keyset cursor it returned last (null first) and returns up to `EXPORT_PAGE_SIZE` rows already formatted as cells
- * (`format.ts`), with `next` null on the last page.
+ * One export (admin close-out §10, R12, plan D10). `count` and `page` run the list's own `WHERE` builder, limited to
+ * rows created up to `asOf` (the export's snapshot, full-precision `timestamptz` text); `page` takes the keyset cursor it
+ * returned last (null first: it seeds its cursor just past `asOf`, e.g. sheet-kit's `startAt`) and returns up to
+ * `pageSize` rows already formatted as cells (`format.ts`), with `next` null on the last page.
  */
 export interface CsvExportSpec<C> {
   adminId: string;
@@ -20,15 +22,28 @@ export interface CsvExportSpec<C> {
   filters: Record<string, unknown>;
   includeContacts?: boolean;
   header: string[];
-  count(): Promise<number>;
-  page(after: C | null): Promise<{ rows: CsvCell[][]; next: C | null }>;
+  count(asOf: string): Promise<number>;
+  page(after: C | null, at: ExportPageAt): Promise<{ rows: CsvCell[][]; next: C | null }>;
   /** Defaults to `EXPORT_ROW_CAP`; a test passes a small one. */
   cap?: number;
+  /** Defaults to `EXPORT_PAGE_SIZE`; a test passes a small one. */
+  pageSize?: number;
 }
 
-/** Filter values as the audit row keeps them: every string (in arrays and objects too) through `maskContact`. */
+/** What every page of one export shares: its snapshot and its page size. */
+export interface ExportPageAt {
+  asOf: string;
+  pageSize: number;
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Filter values as the audit row keeps them: every string (in arrays and objects too) through `maskContact`, except a
+ * whole uuid (an id filter carries no contact, and its digit groups can look like a phone number to `maskContact`).
+ */
 export function maskFilterValues(value: unknown): unknown {
-  if (typeof value === 'string') return maskContact(value);
+  if (typeof value === 'string') return UUID.test(value) ? value : maskContact(value);
   if (Array.isArray(value)) return value.map(maskFilterValues);
   if (value instanceof Date) return value.toISOString();
   if (value !== null && typeof value === 'object') {
@@ -45,7 +60,14 @@ export function maskFilterValues(value: unknown): unknown {
  */
 export async function runCsvExport<C>(app: TxApp, reply: FastifyReply, spec: CsvExportSpec<C>): Promise<void> {
   const cap = spec.cap ?? EXPORT_ROW_CAP;
-  const total = await spec.count();
+  const pageSize = spec.pageSize ?? EXPORT_PAGE_SIZE;
+  // The snapshot: the count and every page cover rows created up to it, so a row created mid-export can't take the place
+  // of the oldest qualifying row. A row whose status (or another filtered field) changes mid-export can still enter or
+  // leave the pages, and so can one from a transaction that began before the snapshot and commits after the count
+  // (its `created_at` is that transaction's start); never more rows than the count.
+  const { rows: snap } = await app.db.execute<{ as_of: string }>(sql`SELECT to_json(now())#>>'{}' AS as_of`);
+  const asOf = snap[0]!.as_of;
+  const total = await spec.count(asOf);
   if (total > cap) {
     throw new ValidationError(
       `This export has ${total} rows; the most is ${cap}. Narrow the filters and try again.`,
@@ -65,13 +87,14 @@ export async function runCsvExport<C>(app: TxApp, reply: FastifyReply, spec: Csv
     }),
   );
 
-  // Never more rows than the audited count (≤ cap): rows that appear between the count and the last page are left out.
+  // Never more rows than the audited count (≤ cap): rows that enter the filter between the count and the last page are
+  // left out.
   async function* lines(): AsyncGenerator<string> {
     yield `${CSV_BOM}${csvRow(spec.header)}\r\n`;
     let after: C | null = null;
     let left = total;
     while (left > 0) {
-      const { rows, next } = await spec.page(after);
+      const { rows, next } = await spec.page(after, { asOf, pageSize });
       const take = rows.slice(0, left);
       left -= take.length;
       if (take.length > 0) yield take.map((r) => `${csvRow(r)}\r\n`).join('');

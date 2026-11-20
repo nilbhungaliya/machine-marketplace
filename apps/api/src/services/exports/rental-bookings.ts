@@ -5,7 +5,7 @@ import type { CsvCell } from '../../lib/csv.js';
 import { adminRentalWhere, type AdminRentalQuery } from '../rentals/admin.service.js';
 import { ownerBiz, renterBiz } from '../rentals/admin-view.js';
 import { istMinute, rupees } from './format.js';
-import { before, enumLabel, keysetTime, nextOf, PAGE, type SheetExport } from './sheet-kit.js';
+import { before, enumLabel, keysetTime, nextOf, type SheetExport, upTo } from './sheet-kit.js';
 
 /**
  * The rental bookings sheet (admin close-out §10, R12): exactly the Rental bookings list for the same filters
@@ -22,16 +22,16 @@ export function rentalBookingsExport(conn: Db | Tx, filters: Omit<AdminRentalQue
   return {
     header,
     filters,
-    async count() {
+    async count(asOf) {
       const [row] = await conn
         .select({ n: count() })
         .from(rentalBookings)
         .innerJoin(renterBiz, eq(renterBiz.id, rentalBookings.renterBusinessId))
         .innerJoin(ownerBiz, eq(ownerBiz.id, rentalBookings.ownerBusinessId))
-        .where(where);
+        .where(and(where, upTo(sql`${rentalBookings.createdAt}`, asOf)));
       return Number(row?.n ?? 0);
     },
-    async page(after) {
+    async page(after, { asOf, pageSize }) {
       const rows = await conn
         .select({
           id: rentalBookings.id,
@@ -45,16 +45,16 @@ export function rentalBookingsExport(conn: Db | Tx, filters: Omit<AdminRentalQue
         .innerJoin(renterBiz, eq(renterBiz.id, rentalBookings.renterBusinessId))
         .innerJoin(ownerBiz, eq(ownerBiz.id, rentalBookings.ownerBusinessId))
         .innerJoin(listings, eq(listings.id, rentalBookings.listingId))
-        .where(and(where, before(sql`${rentalBookings.createdAt}`, sql`${rentalBookings.id}`, after)))
+        .where(and(where, before(sql`${rentalBookings.createdAt}`, sql`${rentalBookings.id}`, after, asOf)))
         .orderBy(desc(rentalBookings.createdAt), desc(rentalBookings.id))
-        .limit(PAGE);
+        .limit(pageSize);
       return {
         rows: rows.map(({ b, listingRef, renterName, ownerName }): CsvCell[] => [
           `#${b.ref}`, enumLabel(b.status), `#${listingRef}`, b.listingTitle, renterName, ownerName, b.startDate, b.endDate,
           enumLabel(b.period), b.periodCount, b.machines, rupees(b.agreedTotalPaise), rupees(b.finalAmountPaise),
           b.siteCity, b.siteState, time(b.confirmedAt), time(b.completedAt), time(b.cancelledAt),
         ]),
-        next: nextOf(rows),
+        next: nextOf(rows, pageSize),
       };
     },
   };

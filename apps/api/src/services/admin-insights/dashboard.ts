@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { sql, type SQL } from 'drizzle-orm';
+import type { FastifyBaseLogger } from 'fastify';
 import type { Redis } from 'ioredis';
 import type { AdminDashboard, AdminDashboardQuery, PeriodCount, PeriodRate } from '@mpm/shared-types';
 import type { Db, Tx } from '../../db/index.js';
@@ -115,10 +116,10 @@ export const periodSql = {
     sql`(SELECT count(*) FROM listings l WHERE ${inWindow('l', 'first_live_at', w)} AND ${s.listing('l')})::int`,
   requirementsPosted: (s: DashboardScope, w: Window) =>
     sql`(SELECT count(*) FROM part_requests r WHERE ${inWindow('r', 'first_posted_at', w)} AND ${s.request('r')})::int`,
-  /** Of those posted in the window: with a delivered reply or a match (the match rate's numerator). */
+  /** Of those posted in the window: with a reply that was delivered (even if since withdrawn) or a match (the match rate's numerator). */
   requirementsMatched: (s: DashboardScope, w: Window) =>
     sql`(SELECT count(*) FROM part_requests r WHERE ${inWindow('r', 'first_posted_at', w)} AND ${s.request('r')}
-      AND (EXISTS (SELECT 1 FROM part_request_replies pr WHERE pr.part_request_id = r.id AND pr.status = 'delivered')
+      AND (EXISTS (SELECT 1 FROM part_request_replies pr WHERE pr.part_request_id = r.id AND pr.delivered_at IS NOT NULL)
         OR EXISTS (SELECT 1 FROM part_request_matches pm WHERE pm.part_request_id = r.id)))::int`,
   /** Median hours from first post to fulfilment, requests fulfilled in the window. */
   fulfilmentMedianHours: (s: DashboardScope, w: Window) =>
@@ -255,10 +256,11 @@ export function dashboardCacheKey(q: AdminDashboardQuery, today: string): string
 /**
  * `GET /admin/dashboard` (§6.3): snapshot, period metrics with the previous period, trend and the one breakdown asked
  * for (plan D6). A bad custom range is refused before the cache (`400 DASHBOARD_RANGE_INVALID`). Cached 60 s in Redis
- * when there is one; `generatedAt` says when the numbers were read.
+ * when there is one (a Redis error is logged and the numbers read from the database); `generatedAt` says when the numbers
+ * were read.
  */
 export async function getAdminDashboard(
-  deps: { db: Db; redis?: Redis },
+  deps: { db: Db; redis?: Redis; log?: FastifyBaseLogger },
   q: AdminDashboardQuery,
   opts: { today?: string } = {},
 ): Promise<AdminDashboard> {
@@ -266,8 +268,12 @@ export async function getAdminDashboard(
   const period = resolveDashboardPeriod(q, today);
   const key = dashboardCacheKey(q, today);
   if (deps.redis) {
-    const hit = await deps.redis.get(key);
-    if (hit) return JSON.parse(hit) as AdminDashboard;
+    try {
+      const hit = await deps.redis.get(key);
+      if (hit) return JSON.parse(hit) as AdminDashboard;
+    } catch (err) {
+      deps.log?.warn({ err }, 'dashboard cache read failed; reading the database');
+    }
   }
   const by = q.breakdown ?? 'city';
   const [snapshot, metrics, trend, breakdown] = await Promise.all([
@@ -284,6 +290,12 @@ export async function getAdminDashboard(
     trend,
     breakdown: { by, rows: breakdown },
   };
-  if (deps.redis) await deps.redis.set(key, JSON.stringify(result), 'EX', DASHBOARD_CACHE_SECONDS);
+  if (deps.redis) {
+    try {
+      await deps.redis.set(key, JSON.stringify(result), 'EX', DASHBOARD_CACHE_SECONDS);
+    } catch (err) {
+      deps.log?.warn({ err }, 'dashboard cache write failed');
+    }
+  }
   return result;
 }

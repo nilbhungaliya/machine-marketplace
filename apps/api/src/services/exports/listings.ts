@@ -4,7 +4,7 @@ import type { Db, Tx } from '../../db/index.js';
 import type { CsvCell } from '../../lib/csv.js';
 import { adminListingWhere } from '../listings/listing-admin.service.js';
 import { istMinute, rupees } from './format.js';
-import { before, enumLabel, keysetTime, n, nextOf, PAGE, type SheetExport } from './sheet-kit.js';
+import { before, enumLabel, keysetTime, n, nextOf, type SheetExport, upTo } from './sheet-kit.js';
 
 /**
  * The listings sheet (admin close-out §10, R12): exactly All listings for the same filters (`adminListingWhere`). No
@@ -21,11 +21,13 @@ export function listingsExport(conn: Db | Tx, filters: AdminListingFilters): She
   return {
     header,
     filters: { ...filters },
-    async count() {
-      const { rows } = await conn.execute<{ n: number }>(sql`SELECT count(*)::int AS n ${fromWhere}`);
+    async count(asOf) {
+      const { rows } = await conn.execute<{ n: number }>(
+        sql`SELECT count(*)::int AS n ${fromWhere} AND ${upTo(sql`l.created_at`, asOf)}`,
+      );
       return Number(rows[0]?.n ?? 0);
     },
-    async page(after) {
+    async page(after, { asOf, pageSize }) {
       const { rows } = await conn.execute<{
         id: string;
         sort_at: string;
@@ -69,9 +71,9 @@ export function listingsExport(conn: Db | Tx, filters: AdminListingFilters): She
                   AND r.status IN ('open', 'reviewing')) AS open_reports,
                ${keysetTime(sql`l.first_live_at`)} AS first_live_at,
                ${keysetTime(sql`l.refreshed_at`)} AS refreshed_at
-        ${fromWhere} AND ${before(sql`l.created_at`, sql`l.id`, after)}
+        ${fromWhere} AND ${before(sql`l.created_at`, sql`l.id`, after, asOf)}
         ORDER BY l.created_at DESC, l.id DESC
-        LIMIT ${PAGE}`);
+        LIMIT ${pageSize}`);
       return {
         rows: rows.map((r): CsvCell[] => [
           `#${r.ref}`, enumLabel(r.kind), enumLabel(r.status), r.title, r.category_path || null, r.brand, r.part_number,
@@ -79,7 +81,7 @@ export function listingsExport(conn: Db | Tx, filters: AdminListingFilters): She
           r.price_paise === null ? '' : rupees(BigInt(r.price_paise)), r.city, r.area, r.seller, n(r.open_reports),
           istMinute(r.sort_at), r.first_live_at ? istMinute(r.first_live_at) : '', r.refreshed_at ? istMinute(r.refreshed_at) : '',
         ]),
-        next: nextOf(rows),
+        next: nextOf(rows, pageSize),
       };
     },
   };

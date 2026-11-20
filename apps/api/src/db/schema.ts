@@ -575,6 +575,8 @@ export const listings = pgTable(
     partNumberNormIdx: index('listings_part_number_norm_idx').on(t.partNumberNorm).where(sql`${t.partNumberNorm} IS NOT NULL`),
     partNumberBaseIdx: index('listings_part_number_base_idx').on(t.partNumberBase).where(sql`${t.partNumberBase} IS NOT NULL`),
     statusRefreshedIdx: index('listings_status_refreshed_idx').on(t.status, t.refreshedAt),
+    // Admin close-out (wave A fix): the dashboard's new listings.
+    firstLiveIdx: index('listings_first_live_idx').on(t.firstLiveAt).where(sql`${t.firstLiveAt} IS NOT NULL`),
   }),
 );
 
@@ -1051,6 +1053,8 @@ export const deals = pgTable(
     threadIdx: index('deals_thread_idx').on(t.threadId),
     // Admin close-out §5.6: the dashboard's deals and their value.
     acceptedIdx: index('deals_accepted_idx').on(t.acceptedAt),
+    // Admin close-out (wave A fix): the dashboard's deals completed.
+    completedIdx: index('deals_completed_idx').on(t.completedAt).where(sql`${t.completedAt} IS NOT NULL`),
   }),
 );
 
@@ -1538,6 +1542,8 @@ export const partRequests = pgTable(
     statusCreatedIdx: index('part_requests_status_created_idx').on(t.status, t.createdAt.desc()),
     // Admin close-out §5.6: the dashboard's requirements posted.
     firstPostedIdx: index('part_requests_first_posted_idx').on(t.firstPostedAt),
+    // Admin close-out (wave A fix): the dashboard's fulfilment median.
+    fulfilledIdx: index('part_requests_fulfilled_idx').on(t.fulfilledAt).where(sql`${t.fulfilledAt} IS NOT NULL`),
   }),
 );
 

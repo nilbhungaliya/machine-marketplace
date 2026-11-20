@@ -1,5 +1,4 @@
 import { sql, type SQL } from 'drizzle-orm';
-import { EXPORT_PAGE_SIZE } from '@mpm/shared-types';
 import type { CsvCell } from '../../lib/csv.js';
 import type { CsvExportSpec } from './run-export.js';
 
@@ -16,20 +15,28 @@ export interface Keyset {
   id: string;
 }
 
-export const PAGE = EXPORT_PAGE_SIZE;
+/** The highest uuid: the first cursor `(asOf, KEYSET_MAX_ID)` takes every row created up to the snapshot. */
+export const KEYSET_MAX_ID = 'ffffffff-ffff-ffff-ffff-ffffffffffff';
+
+/** The first page's cursor: just past the export's snapshot (`runCsvExport`'s `asOf`). */
+export const startAt = (asOf: string): Keyset => ({ t: asOf, id: KEYSET_MAX_ID });
 
 /** `created_at` as full-precision text, so the next page's `<` comparison never skips or repeats a row. */
 export const keysetTime = (col: SQL): SQL => sql`to_json(${col})#>>'{}'`;
 
-/** `(created_at, id) < cursor` (newest first), or `true` on the first page. */
-export function before(createdAt: SQL, id: SQL, after: Keyset | null): SQL {
-  return after ? sql`(${createdAt}, ${id}) < (${after.t}::timestamptz, ${after.id}::uuid)` : sql`true`;
+/** Rows created up to the snapshot (the count's side of `startAt`). */
+export const upTo = (createdAt: SQL, asOf: string): SQL => sql`${createdAt} <= ${asOf}::timestamptz`;
+
+/** `(created_at, id) < cursor` (newest first); the first page's cursor is `startAt(asOf)`. */
+export function before(createdAt: SQL, id: SQL, after: Keyset | null, asOf: string): SQL {
+  const c = after ?? startAt(asOf);
+  return sql`(${createdAt}, ${id}) < (${c.t}::timestamptz, ${c.id}::uuid)`;
 }
 
 /** The cursor after this page, or null when it was the last (fewer rows than a page). */
-export function nextOf(rows: Array<{ sort_at: string; id: string }>): Keyset | null {
+export function nextOf(rows: Array<{ sort_at: string; id: string }>, pageSize: number): Keyset | null {
   const last = rows[rows.length - 1];
-  return rows.length === PAGE && last ? { t: last.sort_at, id: last.id } : null;
+  return rows.length === pageSize && last ? { t: last.sort_at, id: last.id } : null;
 }
 
 /** Words an admin reads where the generic rule ("pending_review" → "Pending review") isn't the admin's wording. */

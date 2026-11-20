@@ -1,12 +1,16 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import { randomUUID } from 'node:crypto';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { EXPORT_SHEETS } from '@mpm/shared-types';
 import { buildApp } from '../src/app.js';
 import { db } from '../src/db/index.js';
 import { auditLog, businesses, users } from '../src/db/schema.js';
 import { adminRateLimitKey } from '../src/lib/group-limit.js';
+import { listingListFilters } from '../src/routes/admin/list-filters.js';
+import { listingsExport } from '../src/services/exports/listings.js';
+import { runCsvExport } from '../src/services/exports/run-export.js';
+import type { SheetExport } from '../src/services/exports/sheet-kit.js';
 import { istToday, addDays } from '../src/lib/ist.js';
 import { createTestAdmin, deleteTestAdmins } from './_helpers/test-admins.js';
 import { deleteTestBusinesses } from './_helpers/test-businesses.js';
@@ -37,6 +41,8 @@ let supportId: string;
 const run = `ExpRun${Date.now()}`;
 let owner: TestSeller;
 let buyer: TestSeller;
+/** The sheet the test route exports with pages of 2. */
+let pagedSheet: SheetExport | null = null;
 
 async function seller(opts: Parameters<typeof createTestSeller>[0] = {}): Promise<TestSeller> {
   const s = await createTestSeller(opts);
@@ -102,6 +108,11 @@ beforeAll(async () => {
   delete process.env.GROUP_RATE_LIMIT_MAX;
   app = await buildApp({ logger: false });
   process.env.GROUP_RATE_LIMIT_MAX = saved;
+  // A sheet's export with pages of 2 (no rate limit), so the keyset loop crosses rows sharing a `created_at`.
+  app.get('/__test/export-pages', async (_request, reply) => {
+    await runCsvExport(app, reply, { ...pagedSheet!, adminId: adminIds[0]!, sheet: 'listings', pageSize: 2 });
+    return reply;
+  });
   for (const [k, role] of [['super', 'super_admin'], ['support', 'support'], ['operations', 'operations'], ['moderator', 'moderator']] as const) {
     const a = await createTestAdmin(role);
     adminIds.push(a.id);
@@ -275,5 +286,31 @@ describe('the admin export limit (D7)', () => {
     const res = await get(a.token, url);
     expect(res.statusCode).toBe(429);
     expect(res.json().code).toBe('RATE_LIMITED');
+  });
+});
+
+describe('keyset pages (R12, plan D10)', () => {
+  it('takes every row exactly once, newest first, over pages of 2 crossing rows that share a created_at', async () => {
+    const s = await seller();
+    const categoryId = s.cleanup.categoryIds[0]!;
+    const base = { businessId: s.businessId, userId: s.userId, kind: 'part' as const, status: 'live' as const, categoryId };
+    for (let i = 0; i < 5; i++) await insertTestListing(db, { ...base, title: `${run} page ${i}` });
+    const older = await insertTestListing(db, { ...base, title: `${run} older` });
+    await db.execute(sql`
+      UPDATE listings SET created_at = CASE WHEN id = ${older.id}::uuid THEN timestamptz '2026-01-01 00:00:00.123456+00'
+                                            ELSE timestamptz '2026-02-01 00:00:00.123456+00' END
+       WHERE business_id = ${s.businessId}::uuid`);
+    const { rows: ordered } = await db.execute<{ ref: number }>(
+      sql`SELECT ref FROM listings WHERE business_id = ${s.businessId}::uuid ORDER BY created_at DESC, id DESC`,
+    );
+    const expected = ordered.map((r) => `#${r.ref}`);
+    expect(expected).toHaveLength(6);
+    expect(expected.at(-1)).toBe(`#${older.ref}`);
+
+    pagedSheet = listingsExport(db, listingListFilters.parse({ businessId: s.businessId }));
+    const res = await app.inject({ method: 'GET', url: '/__test/export-pages' });
+    expect(res.statusCode, res.body).toBe(200);
+    const [header, ...rows] = parseCsv(res.body);
+    expect(column({ header: header!, rows }, 'Ref')).toEqual(expected);
   });
 });

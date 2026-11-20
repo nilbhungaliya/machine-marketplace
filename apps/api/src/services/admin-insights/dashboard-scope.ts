@@ -31,11 +31,14 @@ function all(parts: SQL[]): SQL {
   return parts.length ? sql.join(parts, sql` AND `) : TRUE;
 }
 
-/** The row's category (`alias.category_id`) is the machine category `root` or under it. */
+/**
+ * The row's category (`alias.category_id`) is the machine category `root` or under it: a non-correlated subquery (the
+ * subtree's ids, read once), with `starts_with` on `path + '/'` so a sibling whose path merely begins the same way is out.
+ */
 function underRoot(alias: string, root: SQL): SQL {
   const a = sql.raw(alias);
-  return sql`EXISTS (SELECT 1 FROM categories c JOIN categories root ON root.id = (${root})::uuid
-    WHERE c.id = ${a}.category_id AND (c.path = root.path OR starts_with(c.path, root.path || '/')))`;
+  return sql`${a}.category_id IN (SELECT c.id FROM categories c JOIN categories root ON root.id = (${root})::uuid
+    WHERE c.path = root.path OR starts_with(c.path, root.path || '/'))`;
 }
 
 /** The place and category conditions of a listing or a part request (both carry city, area and category). */

@@ -33,7 +33,7 @@ const adminDashboardRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get('/admin/dashboard', anyAdmin, async (request, reply) => {
     const q = dashboardQuery.parse(request.query);
     reply.headers({ 'Cache-Control': 'private, no-store' });
-    return { data: await getAdminDashboard({ db: fastify.db, redis: fastify.redis }, q) };
+    return { data: await getAdminDashboard({ db: fastify.db, redis: fastify.redis, log: request.log }, q) };
   });
 
   fastify.get('/admin/dashboard/work', anyAdmin, async (request, reply) => {
