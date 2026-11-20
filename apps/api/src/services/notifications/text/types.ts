@@ -1,9 +1,10 @@
-import type { NotificationType } from '@mpm/shared-types';
+import type { NotificationType, PartRequestDropReason } from '@mpm/shared-types';
 
 /**
  * What a notification's text may use (F6 + F7 spec §11.4), already made safe by `render.ts`: business names and listing
  * titles masked (`maskContact`), the price formatted in Indian grouping, the due date on the India calendar. Never
- * message text, notes, phone numbers, emails, review text, OTPs or GST details.
+ * message text, notes, phone numbers, emails, review text, OTPs or GST details; for F8 never the request note, a reply
+ * message, the budget, a pincode or an address.
  */
 export interface TextParams {
   /** The other business's trade name (masked); '' when unknown. */
@@ -18,8 +19,18 @@ export interface TextParams {
   dealRef: string;
   /** A due date (`review_waiting`) as "3 Dec" in the reader's language; '' when none. */
   dueOn: string;
-  /** Grouped chat rows: messages since the row opened (≥ 1). */
+  /** Grouped rows (chat, F8 replies and matches): events since the row opened (≥ 1). */
   count: number;
+  /** F8 (spec §10.3): the request name, masked; '' when unknown. */
+  requestTitle: string;
+  /** F8: the request's side key (`left` / `right` / `pair`), localised by the template; '' when none. */
+  side: '' | 'left' | 'right' | 'pair';
+  /** F8: the match's stored snapped whole km as digits; '' when none. Never a raw distance. */
+  distanceKm: string;
+  /** F8: the request's city (masked); '' when unknown. Never a pincode or address. */
+  city: string;
+  /** F8 `part_request_reply_dropped`: the drop reason code, localised by the template; '' when unknown. */
+  reason: '' | PartRequestDropReason;
 }
 
 export interface RenderedText {
