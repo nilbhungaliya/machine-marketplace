@@ -574,18 +574,11 @@ function searchSql(raw: string): SQL | null {
   return sql`(${sql.join(parts, sql` OR `)})`;
 }
 
-export interface AdminListingQuery extends AdminListingFilters {
-  page: number;
-  pageSize: AdminListingPageSize;
-}
-
 /**
- * `GET /admin/listings` (§11.4): newest update first, paged (25 / 50 / 100). Filters: status (several; default every
- * status but `draft`), kind, machine category (listings anywhere under that root), city (exact, any case), side, flags
- * (any of them), has open reports, business (`businessId`, whose name comes back in `business` for the filter chip),
- * and `q` (`searchSql`).
+ * The list's `FROM … WHERE` fragment (admin close-out plan A4-3: the listings export runs the same fragment): `listings
+ * l` with its business `b`, category `c` → `p` → `g` and rental terms `rt`. Always ends in a `WHERE`.
  */
-export async function listAdminListings(conn: Conn, f: AdminListingQuery): Promise<AdminListingList> {
+export function adminListingWhere(f: AdminListingFilters): SQL {
   const where: SQL[] = [];
   where.push(f.status?.length ? sql`l.status IN (${sqlList(f.status)})` : sql`l.status <> 'draft'`);
   if (f.kind) where.push(sql`l.kind = ${f.kind}`);
@@ -602,15 +595,30 @@ export async function listAdminListings(conn: Conn, f: AdminListingQuery): Promi
   if (f.businessId) where.push(sql`l.business_id = ${f.businessId}`);
   const search = f.q ? searchSql(f.q) : null;
   if (search) where.push(search);
-  const whereSql = sql.join(where, sql` AND `);
-  const from = sql`FROM listings l
+  return sql`FROM listings l
     JOIN businesses b ON b.id = l.business_id
     LEFT JOIN categories c ON c.id = l.category_id
     LEFT JOIN categories p ON p.id = c.parent_id
     LEFT JOIN categories g ON g.id = p.parent_id
-    LEFT JOIN listing_rentals rt ON rt.listing_id = l.id`;
+    LEFT JOIN listing_rentals rt ON rt.listing_id = l.id
+    WHERE ${sql.join(where, sql` AND `)}`;
+}
 
-  const { rows: totalRows } = await conn.execute<{ n: number }>(sql`SELECT count(*)::int AS n ${from} WHERE ${whereSql}`);
+export interface AdminListingQuery extends AdminListingFilters {
+  page: number;
+  pageSize: AdminListingPageSize;
+}
+
+/**
+ * `GET /admin/listings` (§11.4): newest update first, paged (25 / 50 / 100). Filters: status (several; default every
+ * status but `draft`), kind, machine category (listings anywhere under that root), city (exact, any case), side, flags
+ * (any of them), has open reports, business (`businessId`, whose name comes back in `business` for the filter chip),
+ * and `q` (`searchSql`).
+ */
+export async function listAdminListings(conn: Conn, f: AdminListingQuery): Promise<AdminListingList> {
+  const fromWhere = adminListingWhere(f);
+
+  const { rows: totalRows } = await conn.execute<{ n: number }>(sql`SELECT count(*)::int AS n ${fromWhere}`);
   const { rows } = await conn.execute<{
     id: string;
     ref: string;
@@ -641,8 +649,7 @@ export async function listAdminListings(conn: Conn, f: AdminListingQuery): Promi
            rt.rate_hour_paise, rt.rate_day_paise, rt.rate_week_paise, rt.rate_month_paise,
            ${THUMB} AS thumb_key,
            (SELECT count(*)::int FROM reports r WHERE r.target_id = l.id AND ${OPEN_REPORT}) AS open_reports
-    ${from}
-    WHERE ${whereSql}
+    ${fromWhere}
     ORDER BY l.updated_at DESC, l.id DESC
     LIMIT ${f.pageSize} OFFSET ${(f.page - 1) * f.pageSize}
   `);

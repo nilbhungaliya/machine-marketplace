@@ -2,6 +2,7 @@ import { and, count, desc, eq, inArray, ne, or, sql, type SQL } from 'drizzle-or
 import {
   normalizeGstin,
   type AccountStatus,
+  type AdminReportTarget,
   type AdminBusinessDetail,
   type AdminBusinessList,
   type AdminBusinessRow,
@@ -26,6 +27,8 @@ import { adminText } from '../../lib/admin-text.js';
 import { writeAudit } from '../audit.service.js';
 import { businessProfile } from '../business/profile.service.js';
 import { businessDealHistory } from '../deals/deal-read.service.js';
+import { openSignalsForBusiness } from '../fraud/admin.service.js';
+import { reportAgainstSql } from '../reports/report-subject.js';
 import { exitBookingsForGstLoss, lockOwnRentalListings } from '../rentals/system-exits.js';
 import { sellerScore } from '../reviews/review-scores.js';
 import { lockGstin } from '../verification/gst-grant.service.js';
@@ -91,21 +94,30 @@ function searchCondition(raw: string): SQL | null {
   return sql`(${sql.join(parts, sql` OR `)})`;
 }
 
-/** GET /admin/businesses: newest first, paged (`pageSize` ≤ 100), with the total for the filters. */
-export async function listBusinesses(conn: Db | Tx, q: BusinessListQuery): Promise<AdminBusinessList> {
-  const pageSize = Math.min(Math.max(1, Math.floor(q.pageSize)), PAGE_SIZE_MAX);
-  const page = Math.max(1, Math.floor(q.page));
-  const conditions: SQL[] = [];
+/**
+ * The list's `FROM … WHERE` fragment over `businesses b` with the owner (`o`, OWNER_JOIN) and the area (`ia`) joined
+ * (admin close-out plan A4-3: the businesses export runs the same fragment, so it is exactly the filtered list). Always
+ * ends in a `WHERE`, so a caller can append `AND …`.
+ */
+export function businessListWhere(q: Omit<BusinessListQuery, 'page' | 'pageSize'>): SQL {
+  const conditions: SQL[] = [sql`true`];
   const search = q.search ? searchCondition(q.search) : null;
   if (search) conditions.push(search);
   if (q.city?.trim()) conditions.push(sql`lower(b.city) = lower(${q.city.trim()})`);
   if (q.industrialAreaId) conditions.push(sql`b.industrial_area_id = ${q.industrialAreaId}`);
   if (q.verification) conditions.push(sql`b.verification_status = ${q.verification}`);
   if (q.status) conditions.push(sql`o.status = ${q.status}`);
-  const where = conditions.length > 0 ? sql`WHERE ${sql.join(conditions, sql` AND `)}` : sql``;
+  return sql`FROM businesses b ${OWNER_JOIN} ${AREA_JOIN} WHERE ${sql.join(conditions, sql` AND `)}`;
+}
+
+/** GET /admin/businesses: newest first, paged (`pageSize` ≤ 100), with the total for the filters. */
+export async function listBusinesses(conn: Db | Tx, q: BusinessListQuery): Promise<AdminBusinessList> {
+  const pageSize = Math.min(Math.max(1, Math.floor(q.pageSize)), PAGE_SIZE_MAX);
+  const page = Math.max(1, Math.floor(q.page));
+  const fromWhere = businessListWhere(q);
 
   const { rows: countRows } = await conn.execute<{ total: number }>(sql`
-    SELECT count(*)::int AS total FROM businesses b ${OWNER_JOIN} ${AREA_JOIN} ${where}
+    SELECT count(*)::int AS total ${fromWhere}
   `);
   const { rows } = await conn.execute<{
     id: string;
@@ -128,10 +140,7 @@ export async function listBusinesses(conn: Db | Tx, q: BusinessListQuery): Promi
            b.verification_status, b.verification_levels,
            to_json(b.created_at)#>>'{}' AS created_at,
            o.id AS owner_id, o.name AS owner_name, o.phone AS owner_phone, o.status AS owner_status
-    FROM businesses b
-    ${OWNER_JOIN}
-    ${AREA_JOIN}
-    ${where}
+    ${fromWhere}
     ORDER BY b.created_at DESC, b.id DESC
     LIMIT ${pageSize} OFFSET ${(page - 1) * pageSize}
   `);
@@ -230,10 +239,33 @@ export async function getBusinessDetail(conn: Db | Tx, id: string): Promise<Admi
     partRequestCount: Number(requestTotal?.n ?? 0),
     // M14 §15: every booking of the business, any status, as owner and as renter (the admin list's `businessId` filter).
     rentalBookingCount: await rentalBookingCount(conn, id),
-    // Admin close-out §7.3: lane A4 fills these (reports about the business, its fraud signals).
-    reports: { open: 0, byTarget: {} },
-    fraudSignals: [],
+    // Admin close-out §7.3: open reports against the business and what it owns, and its fraud signals.
+    reports: await openReportsAgainst(conn, id),
+    fraudSignals: await openSignalsForBusiness(conn, id),
   };
+}
+
+/**
+ * Admin close-out §7.3 "Reports (n)": reports with status `open` or `reviewing` against the business (`reportAgainstSql`:
+ * the business itself, its listings and part requests, reviews it wrote, and conversation reports filed by the other
+ * business in a thread, never its own reports of others), counted per target.
+ */
+async function openReportsAgainst(
+  conn: Db | Tx,
+  businessId: string,
+): Promise<{ open: number; byTarget: Partial<Record<AdminReportTarget, number>> }> {
+  const { rows } = await conn.execute<{ target: AdminReportTarget; n: number }>(sql`
+    SELECT r.target_type::text AS target, count(*)::int AS n
+    FROM reports r
+    WHERE r.status IN ('open', 'reviewing') AND ${reportAgainstSql('r')} = ${businessId}::uuid
+    GROUP BY r.target_type`);
+  const byTarget: Partial<Record<AdminReportTarget, number>> = {};
+  let open = 0;
+  for (const row of rows) {
+    byTarget[row.target] = Number(row.n);
+    open += Number(row.n);
+  }
+  return { open, byTarget };
 }
 
 /** M14 §15: the business's rental bookings, any status, as owner and as renter. */

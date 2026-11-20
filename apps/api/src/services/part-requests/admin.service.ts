@@ -78,15 +78,21 @@ function whereOf(f: Partial<AdminPartRequestFilters>): SQL {
   return sql.join(conds, sql` AND `);
 }
 
+/**
+ * The list's `FROM … WHERE` fragment over `part_requests pr JOIN businesses b` (admin close-out plan A4-3: the part
+ * requests export runs the same fragment). Always ends in a `WHERE`.
+ */
+export function adminPartRequestWhere(f: Partial<AdminPartRequestFilters>): SQL {
+  return sql`FROM part_requests pr JOIN businesses b ON b.id = pr.business_id WHERE ${whereOf(f)}`;
+}
+
 /** `GET /admin/part-requests`: active first, then newest; paged with the total (as the other admin lists). */
 export async function listAdminPartRequests(conn: Conn, f: AdminPartRequestFilters): Promise<AdminPartRequestList> {
-  const where = whereOf(f);
-  const total = await conn.execute<{ n: number }>(sql`
-    SELECT count(*)::int AS n FROM part_requests pr JOIN businesses b ON b.id = pr.business_id WHERE ${where}`);
+  const fromWhere = adminPartRequestWhere(f);
+  const total = await conn.execute<{ n: number }>(sql`SELECT count(*)::int AS n ${fromWhere}`);
   const { rows } = await conn.execute<AdminRowRaw>(sql`
     SELECT ${ADMIN_ROW_COLUMNS}
-    FROM part_requests pr JOIN businesses b ON b.id = pr.business_id
-    WHERE ${where}
+    ${fromWhere}
     ORDER BY (pr.status = 'active') DESC, pr.created_at DESC, pr.id DESC
     LIMIT ${f.pageSize} OFFSET ${(f.page - 1) * f.pageSize}`);
   return { rows: rows.map(toAdminRow), total: Number(total.rows[0]?.n ?? 0), page: f.page, pageSize: f.pageSize };

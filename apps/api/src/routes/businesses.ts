@@ -1,9 +1,10 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
-import { BUSINESS_ACTIVITIES, EMPLOYEE_RANGES } from '@mpm/shared-types';
+import { BUSINESS_ACTIVITIES, BUSINESS_REPORT_DETAILS_MAX, BUSINESS_REPORT_REASONS, EMPLOYEE_RANGES } from '@mpm/shared-types';
 import { getMyBusiness, setMyLocation, updateMyProfile } from '../services/business/profile.service.js';
 import { listSellerListings, SELLER_LISTINGS_MAX } from '../services/listings/listing-read.service.js';
-import { AppError } from '../lib/errors.js';
+import { isStorableText } from '../lib/spec-check.js';
+import { reportBusiness } from '../services/reports/business-report.service.js';
 
 const profileBody = z
   .object({
@@ -39,6 +40,20 @@ const locationBody = z
 
 const tags = ['Businesses'];
 
+// `other` without details is refused by the service (`400 VALIDATION_ERROR`, field `details`).
+const reportBody = z
+  .object({
+    reason: z.enum(BUSINESS_REPORT_REASONS),
+    details: z
+      .string()
+      .trim()
+      .max(BUSINESS_REPORT_DETAILS_MAX)
+      .refine(isStorableText, 'contains characters that cannot be saved')
+      .nullable()
+      .optional(),
+  })
+  .strict();
+
 const sellerListingsQuery = z.object({
   limit: z.coerce.number().int().min(1).max(SELLER_LISTINGS_MAX).default(20),
   exclude: z.string().uuid().optional(),
@@ -68,9 +83,11 @@ const businessRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   // Report a business (admin close-out §7.1, R6, plan D8; lane A4): `BusinessReportRequest` → `{ reportId }`.
-  fastify.post('/businesses/:id/reports', { schema: { tags }, preHandler: fastify.requireUser }, async () => {
-    // AC-STUB(A4): answers 501 until lane A4 builds it.
-    throw new AppError('Not implemented yet', 501, 'NOT_IMPLEMENTED');
+  // A viewer member may report; the reported side is never told.
+  fastify.post('/businesses/:id/reports', { schema: { tags }, preHandler: fastify.requireUser }, async (request) => {
+    const { id } = z.object({ id: z.string().uuid() }).parse(request.params);
+    const body = reportBody.parse(request.body ?? {});
+    return { data: await fastify.db.transaction((tx) => reportBusiness(tx, request.user!, id, body)) };
   });
 };
 

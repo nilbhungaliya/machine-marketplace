@@ -1,8 +1,9 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
-import { ADMIN_REASON_MAX, ADMIN_REASON_MIN, RENTAL_BOOKING_STATUSES } from '@mpm/shared-types';
-import { isRealDate, isStorableText } from '../../lib/spec-check.js';
+import { ADMIN_REASON_MAX, ADMIN_REASON_MIN } from '@mpm/shared-types';
+import { isStorableText } from '../../lib/spec-check.js';
 import { adminCancelBooking, getAdminRentalBooking, listAdminRentalBookings } from '../../services/rentals/admin.service.js';
+import { paged, rentalListFilters } from './list-filters.js';
 
 // M14 admin rental bookings (spec §15, §13.2, R15; plan A3-4). Roles `operations` and `support`; the cancel writes
 // `audit_log` (`rental_booking.cancel`) in its transaction (`runTx` in the service: emits after commit).
@@ -10,19 +11,11 @@ import { adminCancelBooking, getAdminRentalBooking, listAdminRentalBookings } fr
 const tags = ['Admin rentals'];
 
 const idParams = z.object({ id: z.string().uuid() });
-const isoDate = z.string().refine(isRealDate, 'must be a date (YYYY-MM-DD)');
-const listQuery = z
-  .object({
-    status: z.enum(RENTAL_BOOKING_STATUSES).optional(),
-    from: isoDate.optional(),
-    to: isoDate.optional(),
-    businessId: z.string().uuid().optional(),
-    listingId: z.string().uuid().optional(),
-    q: z.string().trim().max(100).optional(),
-    page: z.coerce.number().int().min(1).default(1),
-    pageSize: z.coerce.number().pipe(z.union([z.literal(25), z.literal(50), z.literal(100)])).default(25),
-  })
-  .strict();
+const listQuery = paged(
+  rentalListFilters,
+  z.coerce.number().int().min(1).default(1),
+  z.coerce.number().pipe(z.union([z.literal(25), z.literal(50), z.literal(100)])).default(25),
+);
 const cancelBody = z
   .object({
     reason: z

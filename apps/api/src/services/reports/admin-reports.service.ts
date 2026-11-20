@@ -1,30 +1,40 @@
 import { and, eq, inArray, sql, type SQL } from 'drizzle-orm';
 import {
-  REVIEW_FACETS, type AdminReportRow, type AdminReportTarget, type PartySide, type ReportStatus, type ReviewRatings,
+  ADMIN_REPORT_TARGETS,
+  REVIEW_FACETS,
+  type AdminReportCounts,
+  type AdminReportRow,
+  type AdminReportTarget,
+  type PartySide,
+  type ReportStatus,
+  type ReviewRatings,
 } from '@mpm/shared-types';
 import type { Db, Tx } from '../../db/index.js';
 import { reports } from '../../db/schema.js';
 import { adminText } from '../../lib/admin-text.js';
 import { AppError, ConflictError, ValidationError } from '../../lib/errors.js';
 import { writeAudit } from '../audit.service.js';
+import { countOpenReports, countOpenSignals } from '../admin-insights/counts.js';
 import { maskedRequestName } from '../part-requests/reply-views.js';
 
 /**
- * Admin Reports & flags for conversations, reviews and part requests (F6 + F7 spec §16.1–§16.2, P9; F8 spec §14): one
- * list for the three targets with a target filter, and the resolve (`actioned` / `dismissed` with a note, audit
- * `report.resolve`). Listing reports keep F2's own queue. Review text is shown as stored (staff); conversation text
- * never appears here (reads go through `POST /admin/threads/:id/read`); a part request shows its name masked and its id
- * (the row links to its admin page), never its note.
+ * Admin Reports & flags (F6 + F7 spec §16.1–§16.2, P9; F8 spec §14; admin close-out §7.2, R7): one list for every report
+ * target (business, listing, conversation, review, part request) with a target filter, and the resolve (`actioned` /
+ * `dismissed` with a note, audit `report.resolve`). Listing reports are listed read-only: F2's moderation review
+ * resolves them (`409 REPORT_RESOLVE_ELSEWHERE` here). Review text and business-report details are shown as stored
+ * (staff); conversation text never appears here (reads go through `POST /admin/threads/:id/read`); a part request shows
+ * its name masked and its id (the row links to its admin page), never its note.
  */
 
 type Conn = Db | Tx;
 
-/** Admin close-out C0-1: the shared type (five targets); this queue still lists the three below until lane A4. */
 export type { AdminReportTarget };
 
-/** The targets this queue handles (listing reports keep F2's queue). */
-export const ADMIN_REPORT_TARGETS = ['conversation', 'review', 'part_request'] as const;
-const TARGETS_SQL = sql`r.target_type::text IN ('conversation', 'review', 'part_request')`;
+/** The targets this queue lists (admin close-out R7: all five). */
+export { ADMIN_REPORT_TARGETS };
+const TARGETS_SQL = sql`r.target_type::text IN ('business', 'listing', 'conversation', 'review', 'part_request')`;
+/** The targets resolved here; listing reports are resolved in the listing's moderation review. */
+const RESOLVABLE_SQL = sql`${reports.targetType}::text IN ('business', 'conversation', 'review', 'part_request')`;
 
 interface Cursor {
   t: string;
@@ -85,6 +95,13 @@ type RawReport = {
   r_reply_hidden: boolean | null;
   p_id: string | null;
   p_name: string | null;
+  bt_id: string | null;
+  bt_name: string | null;
+  l_id: string | null;
+  l_ref: string | number | null;
+  l_title: string | null;
+  l_seller_id: string | null;
+  l_seller_name: string | null;
 };
 
 const COLUMN_OF: Record<string, keyof RawReport> = {
@@ -142,6 +159,17 @@ function toRow(r: RawReport): AdminReportRow {
     ...(r.target === 'part_request' && r.p_id
       ? { partRequestId: r.p_id, partRequestName: maskedRequestName(r.p_name ?? '') }
       : {}),
+    ...(r.target === 'business' && r.bt_id ? { business: { id: r.bt_id, name: r.bt_name ?? '' } } : {}),
+    ...(r.target === 'listing' && r.l_id
+      ? {
+          listing: {
+            id: r.l_id,
+            ref: Number(r.l_ref),
+            title: r.l_title ?? '',
+            seller: { businessId: r.l_seller_id ?? '', name: r.l_seller_name ?? '' },
+          },
+        }
+      : {}),
   };
 }
 
@@ -159,7 +187,9 @@ async function queryReports(conn: Conn, where: SQL, limit: number): Promise<Arra
            (v.rental_booking_id IS NOT NULL) AS r_rental,
            v.text AS r_text, v.reply_text AS r_reply_text,
            (v.hidden_at IS NOT NULL) AS r_hidden, (v.reply_hidden_at IS NOT NULL) AS r_reply_hidden,
-           pr.id AS p_id, pr.name AS p_name
+           pr.id AS p_id, pr.name AS p_name,
+           bt.id AS bt_id, bt.trade_name AS bt_name,
+           l.id AS l_id, l.ref AS l_ref, l.title AS l_title, l.business_id AS l_seller_id, lb.trade_name AS l_seller_name
     FROM reports r
     LEFT JOIN businesses rb ON rb.id = r.reporter_business_id
     LEFT JOIN chat_threads t ON r.target_type::text = 'conversation' AND t.id = r.target_id
@@ -169,13 +199,16 @@ async function queryReports(conn: Conn, where: SQL, limit: number): Promise<Arra
     LEFT JOIN businesses vr ON vr.id = v.reviewer_business_id
     LEFT JOIN businesses vd ON vd.id = v.reviewed_business_id
     LEFT JOIN part_requests pr ON r.target_type::text = 'part_request' AND pr.id = r.target_id
+    LEFT JOIN businesses bt ON r.target_type::text = 'business' AND bt.id = r.target_id
+    LEFT JOIN listings l ON r.target_type::text = 'listing' AND l.id = r.target_id
+    LEFT JOIN businesses lb ON lb.id = l.business_id
     WHERE ${TARGETS_SQL} AND ${where}
     ORDER BY r.created_at DESC, r.id DESC
     LIMIT ${limit}`);
   return rows;
 }
 
-/** `GET /admin/reports?target=&status=&cursor=`: conversation, review and part-request reports, newest first, 30 a page. */
+/** `GET /admin/reports?target=&status=&cursor=`: reports on every target, newest first, 30 a page. */
 export async function listAdminReports(
   conn: Conn,
   opts: { target?: AdminReportTarget; status?: ReportStatus; cursor?: string },
@@ -197,8 +230,9 @@ export async function listAdminReports(
 }
 
 /**
- * `POST /admin/reports/:id/resolve { outcome, note }`: closes one open conversation, review or part-request report; `409
- * REPORT_NOT_OPEN` when it is already closed; audit `report.resolve` with before / after.
+ * `POST /admin/reports/:id/resolve { outcome, note }`: closes one open business, conversation, review or part-request
+ * report; `409 REPORT_NOT_OPEN` when it is already closed; a listing report → `409 REPORT_RESOLVE_ELSEWHERE` (its
+ * moderation review resolves it); audit `report.resolve` with before / after.
  */
 export async function resolveAdminReport(
   tx: Tx,
@@ -207,19 +241,18 @@ export async function resolveAdminReport(
   input: { outcome: 'actioned' | 'dismissed'; note: string },
 ): Promise<AdminReportRow> {
   const note = adminText(input.note, 'message');
-  const [before] = await tx
-    .select()
-    .from(reports)
-    .where(and(eq(reports.id, id), sql`${reports.targetType}::text IN ('conversation', 'review', 'part_request')`))
-    .for('update');
-  if (!before) throw new AppError('Report not found', 404, 'REPORT_NOT_FOUND');
+  const [before] = await tx.select().from(reports).where(eq(reports.id, id)).for('update');
+  if (!before || before.targetType === 'user') throw new AppError('Report not found', 404, 'REPORT_NOT_FOUND');
+  if (before.targetType === 'listing') {
+    throw new ConflictError("Resolve this report in the listing's moderation review", 'REPORT_RESOLVE_ELSEWHERE');
+  }
   if (before.status !== 'open' && before.status !== 'reviewing') {
     throw new ConflictError('This report is already closed', 'REPORT_NOT_OPEN');
   }
   await tx
     .update(reports)
     .set({ status: input.outcome, resolvedBy: adminId, resolvedAt: sql`now()`, resolutionNote: note })
-    .where(and(eq(reports.id, id), inArray(reports.status, ['open', 'reviewing'])));
+    .where(and(eq(reports.id, id), RESOLVABLE_SQL, inArray(reports.status, ['open', 'reviewing'])));
   await writeAudit(tx, {
     adminId,
     action: 'report.resolve',
@@ -236,4 +269,10 @@ export async function resolveAdminReport(
 export async function adminReportsForTarget(conn: Conn, target: AdminReportTarget, targetId: string): Promise<AdminReportRow[]> {
   const rows = await queryReports(conn, sql`r.target_type::text = ${target} AND r.target_id = ${targetId}`, 100);
   return rows.map(toRow);
+}
+
+/** `GET /admin/reports/count` (plan D5): open reports (any target) and open fraud signals, for the nav badge. */
+export async function adminReportCounts(conn: Conn): Promise<AdminReportCounts> {
+  const [reportCount, signals] = await Promise.all([countOpenReports(conn), countOpenSignals(conn)]);
+  return { reports: reportCount, signals };
 }
