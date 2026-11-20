@@ -18,6 +18,7 @@ import { hasOtherSide } from '@/lib/listing-page';
 import { radius, spacing, useTheme } from '@/lib/theme';
 import type { RootStackScreenProps } from '@/navigation/types';
 import ListingCardItem from './listing-card-item';
+import { OtherSideRequestLink } from './other-side-block';
 
 /**
  * Other side (F2 spec §9.2, mockup "Complementary side"): the pairing header (this side's photo + the needed side as a
@@ -95,7 +96,12 @@ export default function OtherSideScreen({ navigation, route }: RootStackScreenPr
   } else if (!sided) {
     empty = <EmptyState icon={ArrowLeftRight} title={t('listing.otherSide.title')} subtitle={t('listing.otherSide.noSide')} />;
   } else {
-    empty = <EmptyState icon={ArrowLeftRight} title={t(`listing.otherSide.none_${want}`)} subtitle={t('listing.otherSide.emptyBody')} />;
+    empty = (
+      <View style={{ gap: spacing.md }}>
+        <EmptyState icon={ArrowLeftRight} title={t(`listing.otherSide.none_${want}`)} subtitle={t('listing.otherSide.emptyBody')} />
+        <OtherSideRequestLink listing={l} variant="outline" style={{ alignSelf: 'center' }} />
+      </View>
+    );
   }
 
   return (
@@ -115,6 +121,7 @@ export default function OtherSideScreen({ navigation, route }: RootStackScreenPr
         contentContainerStyle={s.list}
         ListHeaderComponent={header}
         ListEmptyComponent={empty}
+        ListFooterComponent={sided && (matches.data?.items.length ?? 0) > 0 ? <OtherSideRequestLink listing={l} variant="outline" /> : null}
       />
     </ScreenWrapper>
   );

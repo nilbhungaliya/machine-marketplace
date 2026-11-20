@@ -14,5 +14,336 @@
   "matched": "Matched",
   "daysLeft_one": "{{count}} day left",
   "daysLeft_other": "{{count}} days left",
-  "expiresToday": "Expires today"
+  "expiresToday": "Expires today",
+  "ref": "#{{ref}}",
+  "form": {
+    "titleNew": "Post a requirement",
+    "titleDetails": "Requirement details",
+    "titlePreview": "Check and post",
+    "titleEdit": "Edit requirement",
+    "stepOf": "Step {{current}} of {{total}}",
+    "kindLabel": "What do you need?",
+    "kind": {
+      "part": "A part",
+      "machine": "A machine"
+    },
+    "category": "Category",
+    "categoryPick": "Choose a category",
+    "categoryHintPart": "The part group, or a machine type for any part of it",
+    "categoryHintMachine": "The machine type you need",
+    "name": {
+      "part": "Part name",
+      "machine": "Machine name"
+    },
+    "namePlaceholder": {
+      "part": "For example, tie rod end",
+      "machine": "For example, water-jet loom 230 cm"
+    },
+    "partNumber": "Part number",
+    "optional": "Optional",
+    "side": "Which side do you need?",
+    "sideHint": "Left and right as seen from the operator's place",
+    "sideOption": {
+      "left": "Left",
+      "right": "Right",
+      "pair": "Pair"
+    },
+    "diagramTitle": "How we name the sides",
+    "diagramText": "Stand behind the machine, facing forward: left is on your left hand.",
+    "quantity": "Quantity",
+    "unit": "Unit",
+    "unitPick": "Choose a unit",
+    "fits": "Fits",
+    "makeModel": "Make and model",
+    "fitsHint": "Add up to {{max}} machines it must fit",
+    "removeFit": "Remove",
+    "addFit": "Add a machine it fits",
+    "addMakeModel": "Add make and model",
+    "conditions": "Conditions you accept",
+    "budget": "Budget per unit",
+    "showBudget": "Show to sellers",
+    "neededBy": "Needed by",
+    "neededByAny": "No date",
+    "neededByDate": "By {{date}}",
+    "urgent": "Urgent",
+    "deliverTo": "Deliver to",
+    "deliverToNone": "Your business place",
+    "deliverToHint": "Change it in Profile",
+    "reach": {
+      "label": "Tell sellers in",
+      "km": "Within {{km}} km",
+      "state": "My state",
+      "stateFallback": "Your state",
+      "allIndia": "All India"
+    },
+    "audience": {
+      "label": "Who can reply",
+      "verified_only": "GST-verified sellers",
+      "any_seller": "Any seller"
+    },
+    "specs": {
+      "show": "Add specifications",
+      "hide": "Hide specifications",
+      "hint": "Fill only what matters. An empty field means any value."
+    },
+    "photos": {
+      "label": "Photos",
+      "hint": "Up to {{max}} photos of the old part or a drawing",
+      "cameraDenied": "Allow camera access in Settings to take a photo.",
+      "pickFailed": "Couldn't open the photo. Try another one.",
+      "prepareFailed": "Couldn't upload the photo. Try again.",
+      "remove": "Remove photo {{n}}",
+      "camera": "Take a photo",
+      "library": "Choose from gallery"
+    },
+    "note": "Note for sellers",
+    "notePlaceholder": "Anything else sellers should know",
+    "noteHint": "Don't write your phone number: sellers reply in the app.",
+    "validity": "Keep it open for",
+    "validityDays_one": "{{count}} day",
+    "validityDays_other": "{{count}} days",
+    "fine": "We send it to up to {{n}} matching sellers. Your number stays hidden.",
+    "next": "Next",
+    "preview": "Preview",
+    "post": "Post requirement",
+    "save": "Save changes",
+    "myRequirements": "My requirements",
+    "limitTitle_one": "You have {{count}} open requirement",
+    "limitTitle_other": "You have {{count}} open requirements",
+    "limitBody": "You can keep up to {{limit}} open. Close one or mark it fulfilled to post another.",
+    "dailyLimit": "You've posted as many requirements as allowed today. Try again tomorrow.",
+    "leaveTitle": "Leave without posting?",
+    "leaveBody": "What you've filled in will be lost.",
+    "leave": "Leave",
+    "stay": "Keep editing",
+    "staleTitle": "This requirement changed",
+    "staleBody": "It was changed on another device. Reload it and make your edit again.",
+    "reload": "Reload",
+    "notEditableTitle": "This requirement can't be edited",
+    "notEditableBody": "Only an active requirement can be edited. Use Post again to start a new one.",
+    "errors": {
+      "category": "Choose a category",
+      "name": "Write at least {{min}} characters",
+      "nameMax": "Keep it under {{max}} characters",
+      "partNumberMax": "Keep it under {{max}} characters",
+      "side": "Choose the side you need",
+      "unit": "Choose a unit",
+      "quantity": "Enter the quantity",
+      "quantityInvalid": "Enter a number",
+      "quantityDecimals": "Use up to {{decimals}} decimals",
+      "quantityTooLarge": "That's too large",
+      "fitsMax": "Up to {{max}} machines",
+      "conditions": "Accept at least one condition",
+      "budget": "Enter a valid amount",
+      "neededBy": "Choose a date within the next year",
+      "photosMax": "Up to {{max}} photos",
+      "noteMax": "Keep it under {{max}} characters"
+    }
+  },
+  "category": {
+    "title": "Category",
+    "searchParts": "Search part groups",
+    "searchMachines": "Search machine types",
+    "noMatch": "Nothing found",
+    "browse": "Browse",
+    "up": "Back",
+    "anyPart": "Any part of {{name}}",
+    "anyPartHint": "When you don't know the part group"
+  },
+  "fit": {
+    "title": "Add a machine it fits",
+    "titleMachine": "Make and model",
+    "brand": "Brand",
+    "model": "Model",
+    "pickBrand": "Choose a brand",
+    "allModels": "All models",
+    "yearFrom": "Year from",
+    "yearTo": "Year to",
+    "add": "Add",
+    "back": "Back",
+    "search": "Search",
+    "errors": {
+      "brand": "Choose a brand",
+      "year": "Enter a year from {{min}} to {{max}}",
+      "order": "The first year must come first"
+    }
+  },
+  "preview": {
+    "title": "As sellers see it",
+    "lead": "Sellers never see your phone number or address.",
+    "anyCondition": "Any condition",
+    "noBudget": "Not given",
+    "budgetPrivate": "Private",
+    "city": "Location",
+    "photos_one": "{{count}} photo",
+    "photos_other": "{{count}} photos"
+  },
+  "posted": {
+    "title": "Requirement posted",
+    "telling": "We're telling up to {{n}} sellers now.",
+    "matching_one": "{{count}} listing already matches",
+    "matching_other": "{{count}} listings already match",
+    "matchingHint": "See them on your requirement",
+    "checking": "Looking for listings that match…",
+    "noMatches": "We'll tell you when a seller replies or a match is listed.",
+    "done": "Done",
+    "view": "View requirement"
+  },
+  "mine": {
+    "title": "My requirements",
+    "new": "New",
+    "tabActive": "Active {{count}}",
+    "tabFulfilled": "Fulfilled {{count}}",
+    "tabClosed": "Closed",
+    "replies_one": "{{count}} reply",
+    "replies_other": "{{count}} replies",
+    "matches_one": "{{count}} match",
+    "matches_other": "{{count}} matches",
+    "repliesAndMatches": "{{replies}}, {{matches}}",
+    "waiting": "Waiting for replies",
+    "newCount_one": "{{count}} new",
+    "newCount_other": "{{count}} new",
+    "loadError": "Couldn't load your requirements",
+    "empty": {
+      "active": "No open requirements",
+      "fulfilled": "Nothing fulfilled yet",
+      "closed": "Nothing closed"
+    },
+    "emptyBody": "Tell sellers what you need and they'll reply with their listings.",
+    "post": "Post a requirement"
+  },
+  "buyer": {
+    "title": "Your requirement",
+    "fitsMore_one": "+{{count}} more machine",
+    "fitsMore_other": "+{{count}} more machines",
+    "sentTo_one": "Sent to {{count}} seller",
+    "sentTo_other": "Sent to {{count}} sellers",
+    "finding": "Finding sellers…",
+    "budgetShown": "shown to sellers",
+    "expires": "Open until",
+    "tabReplies": "Replies {{count}}",
+    "tabMatches": "Auto matches {{count}}",
+    "compare_one": "Compare {{count}}",
+    "compare_other": "Compare {{count}}",
+    "notice": {
+      "expired": "This requirement expired. Renew it to keep getting replies.",
+      "closed": "You closed this requirement. Sellers no longer see it.",
+      "fulfilled": "You marked this requirement fulfilled.",
+      "removed": "Our team removed this requirement."
+    },
+    "empty": {
+      "replies": {
+        "title": "No replies yet",
+        "body": "Sellers who have it will reply here, and we'll tell you."
+      },
+      "matches": {
+        "title": "No matches yet",
+        "body": "When a matching listing is posted, it shows here."
+      }
+    }
+  },
+  "reply": {
+    "verified": "Verified",
+    "rating_one": "{{stars}} ({{count}} review)",
+    "rating_other": "{{stars}} ({{count}} reviews)",
+    "newSeller": "New seller",
+    "new": "New",
+    "notLive": "No longer available",
+    "quote": "“{{message}}”",
+    "scamWarning": "Be careful with advance payments. Pay only after you have checked the part or machine."
+  },
+  "match": {
+    "tier": {
+      "part_number": "Same part number",
+      "name_fit": "Same part, fits your machine",
+      "name": "Similar name",
+      "machine_fit": "Fits your machine"
+    },
+    "newTag": "New · {{why}}"
+  },
+  "fulfil": {
+    "title": "Mark this requirement fulfilled?",
+    "body": "You have a deal with {{name}}.",
+    "mark": "Mark fulfilled",
+    "notYet": "Not yet"
+  },
+  "menu": {
+    "a11y": "More actions",
+    "edit": "Edit",
+    "renew": "Renew",
+    "fulfil": "Mark fulfilled",
+    "close": "Close requirement",
+    "postAgain": "Post again"
+  },
+  "close": {
+    "title": "Close this requirement?",
+    "body": "Sellers stop seeing it. Choose a reason.",
+    "confirm": "Close requirement",
+    "reason": {
+      "found_elsewhere": "Found it elsewhere",
+      "no_longer_needed": "No longer needed",
+      "posted_by_mistake": "Posted by mistake",
+      "other": "Another reason"
+    }
+  },
+  "renew": {
+    "title": "Keep it open longer",
+    "body": "A requirement can stay open until {{date}}.",
+    "maxReached": "This requirement has been open as long as allowed. Post it again to start fresh.",
+    "days_one": "{{count}} more day",
+    "days_other": "{{count}} more days",
+    "confirm": "Renew"
+  },
+  "toast": {
+    "saved": "Requirement saved",
+    "closed": "Requirement closed",
+    "fulfilled": "Marked fulfilled",
+    "renewed": "Requirement renewed"
+  },
+  "compare": {
+    "title_one": "Compare {{count}}",
+    "title_other": "Compare {{count}}",
+    "lowest": "Lowest",
+    "priceOnRequest": "On request",
+    "noRating": "No rating",
+    "rating_one": "{{stars}} ({{count}})",
+    "rating_other": "{{stars}} ({{count}})",
+    "notVerified": "Not verified",
+    "emptyTitle": "Nothing to compare yet",
+    "emptyBody": "Replies and matches show here side by side.",
+    "row": {
+      "price": "Price per unit",
+      "available": "Available",
+      "side": "Side",
+      "condition": "Condition",
+      "distance": "Distance",
+      "rating": "Rating",
+      "verified": "GST"
+    },
+    "source": {
+      "reply": "Reply",
+      "match": "Match"
+    },
+    "action": {
+      "offer": "Make offer",
+      "buy": "Buy",
+      "ask_price": "Ask price",
+      "enquire": "Enquire"
+    }
+  },
+  "home": {
+    "newFor_one": "{{count}} new for your {{name}}",
+    "newFor_other": "{{count}} new for your {{name}}",
+    "waiting": "Your {{name}}: waiting for replies",
+    "nearest": "From your requirement, nearest {{distance}}",
+    "fromRequirement": "From your requirement"
+  },
+  "prefill": {
+    "title": "Can't find it?",
+    "body": "Post a requirement and we'll tell up to {{n}} sellers.",
+    "cta": "Post a requirement"
+  },
+  "otherSide": {
+    "link": "Need the other side? Post a requirement"
+  }
 }
