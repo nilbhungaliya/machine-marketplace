@@ -232,6 +232,17 @@ describe('matchRuleSql (§7.4)', () => {
     expect(await wouldMatch(l)).toEqual([]);
   });
 
+  it('a withdrawn reply excludes the listing for good; a dropped one does not', async () => {
+    const t = await tree();
+    const r = await request(t);
+    const withdrawn = await listing(t);
+    await insertTestReply({ partRequestId: r.id, sellerBusinessId: seller.businessId, listingId: withdrawn, userId: seller.userId, status: 'withdrawn' });
+    expect(await wouldMatch(withdrawn)).toEqual([]);
+    const dropped = await listing(t);
+    await insertTestReply({ partRequestId: r.id, sellerBusinessId: seller.businessId, listingId: dropped, userId: seller.userId, status: 'dropped' });
+    expect(await wouldMatch(dropped)).toEqual([r.id]);
+  });
+
   it('201 candidate requests → the 200 newest are checked, the oldest left out', async () => {
     const t = await tree();
     const all: string[] = [];

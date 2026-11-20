@@ -56,13 +56,22 @@ function errorCode(err: unknown): string {
 }
 
 async function claim(app: TxApp, batch: number): Promise<ClaimedRow[]> {
+  // A stale claim that has used every attempt (the process died mid-row each time) is dead-lettered, never retaken.
+  await app.db.execute(sql`
+    UPDATE part_request_work SET failed_at = now(), last_error = coalesce(last_error, 'stale_claim')
+    WHERE id IN (
+      SELECT q.id FROM part_request_work q
+      WHERE q.claimed_at < now() - make_interval(mins => ${WORK_STALE_CLAIM_MINUTES}::int)
+        AND q.done_at IS NULL AND q.failed_at IS NULL AND q.attempts >= ${WORK_MAX_ATTEMPTS}
+      FOR UPDATE SKIP LOCKED
+    )`);
   const { rows } = await app.db.execute<ClaimedRow & { next_attempt_at: string }>(sql`
     UPDATE part_request_work w SET claimed_at = now(), attempts = w.attempts + 1
     WHERE w.id IN (
       SELECT q.id FROM part_request_work q
       WHERE (q.claimed_at IS NULL AND q.next_attempt_at <= now())
          OR (q.claimed_at < now() - make_interval(mins => ${WORK_STALE_CLAIM_MINUTES}::int)
-             AND q.done_at IS NULL AND q.failed_at IS NULL)
+             AND q.done_at IS NULL AND q.failed_at IS NULL AND q.attempts < ${WORK_MAX_ATTEMPTS})
       ORDER BY q.next_attempt_at, q.id
       LIMIT ${batch}
       FOR UPDATE SKIP LOCKED

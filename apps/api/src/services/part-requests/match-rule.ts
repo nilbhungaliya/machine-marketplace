@@ -137,7 +137,7 @@ export function identityMatchSql(r: SQL, l: SQL): SQL {
  * 5. condition accepted;
  * 6. `l`'s business passes the audience, isn't blocked either way with `r`'s, isn't `r`'s, its owner isn't suspended;
  *    nor is the buyer's owner (a suspended buyer's requests disappear, §6 condition 2);
- * 7. `l` isn't already a pending or delivered reply on `r`.
+ * 7. `l` isn't a reply on `r` (pending, delivered or withdrawn: withdraw is final; only a dropped reply may match).
  */
 export function matchRuleSql(l: SQL, r: SQL, opts: { requireLive: boolean }): SQL {
   const live = opts.requireLive
@@ -161,7 +161,7 @@ export function matchRuleSql(l: SQL, r: SQL, opts: { requireLive: boolean }): SQ
     AND NOT ${ownerRestrictedSql(sql`${r}.business_id`)}
     AND NOT EXISTS (
       SELECT 1 FROM part_request_replies mrr
-      WHERE mrr.part_request_id = ${r}.id AND mrr.listing_id = ${l}.id AND mrr.status IN ('pending', 'delivered')
+      WHERE mrr.part_request_id = ${r}.id AND mrr.listing_id = ${l}.id AND mrr.status <> 'dropped'
     )
   )`;
 }

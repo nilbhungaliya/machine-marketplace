@@ -150,6 +150,18 @@ describe('runPartRequestWork', () => {
     expect((await one(recent)).doneAt).toBeNull();
   });
 
+  it('a stale claim at 5 attempts is dead-lettered, not taken again', async () => {
+    const dead = await enqueue();
+    await db.execute(sql`UPDATE part_request_work SET claimed_at = now() - interval '11 minutes', attempts = 5 WHERE subject_id = ${dead}`);
+    const seen: string[] = [];
+    await runPartRequestWork(txApp, { handlers: handlers(async (_tx, subject) => void seen.push(subject)) });
+    expect(seen).not.toContain(dead);
+    const row = await one(dead);
+    expect(row.failedAt).not.toBeNull();
+    expect(row.doneAt).toBeNull();
+    expect(row.attempts).toBe(5);
+  });
+
   it('two runs at once process each row once (SKIP LOCKED)', async () => {
     const mine = new Set<string>();
     for (let i = 0; i < 8; i++) mine.add(await enqueue());
