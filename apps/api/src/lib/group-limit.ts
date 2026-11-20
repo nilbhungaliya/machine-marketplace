@@ -62,9 +62,9 @@ export function groupRateLimit(group: RateGroup, max: number, windowSeconds: num
 
 /**
  * Admin close-out (plan D7, spec §17): `admin_export` (the five sheets and the audit export share one counter per admin,
- * 10 / 10 min) and `admin_reveal` (audit log reveals, 30 / hour).
+ * 10 / 10 min) and `admin_reveal` (audit log reveals, 30 / hour); A2 review: `admin_password_change` (10 / 10 min).
  */
-export type AdminRateGroup = 'admin_export' | 'admin_reveal';
+export type AdminRateGroup = 'admin_export' | 'admin_reveal' | 'admin_password_change';
 
 export function adminRateLimitKey(group: AdminRateGroup, adminId: string): string {
   return `${discoveryRedisPrefix()}rl:${group}:${adminId}`;
