@@ -24,6 +24,8 @@ export {
   Play, Pause, Pencil, RefreshCw, Tag, Flag, Star, Video, ImagePlus, EllipsisVertical, ArrowLeftRight, Truck, RotateCcw, CircleX, Ban, Inbox, Trash, Eye, Gauge,
   Heart, ChevronDown, SlidersHorizontal,
   Send, Phone, Lock, Share2, Archive,
+  // M14 owner calendar (B3): Add block.
+  Plus,
 };
 
 export const TAB_ICONS = {

@@ -4608,8 +4608,24 @@ export interface RentalBlockInput {
 export interface RentalCalendar {
   listingId: string;
   quantity: number;
+  /** The reader's role in the owner business: a `viewer` reads only (block writes `403 VIEWER_READ_ONLY`). */
+  memberRole: MemberRole;
   days: RentalCalendarDay[];
-  bookings: { id: string; ref: number; status: RentalBookingStatus; startDate: string; endDate: string; machines: number; renterName: string }[];
+  bookings: {
+    id: string;
+    ref: number;
+    status: RentalBookingStatus;
+    startDate: string;
+    endDate: string;
+    /**
+     * The days capacity counts it on (§5.7): from the earlier of its start and its on-site day, to its end, or to today
+     * while the machine is still out (`on_rent`, or disputed from it). The calendar lists a booking on these days.
+     */
+    spanStart: string;
+    spanEnd: string;
+    machines: number;
+    renterName: string;
+  }[];
   blocks: RentalBlockView[];
 }
 

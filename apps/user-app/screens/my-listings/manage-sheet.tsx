@@ -4,7 +4,9 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import Toast from 'react-native-toast-message';
-import { SELLER_LISTING_ACTIONS, type CategoryNode, type ListingCard, type SellerListingAction } from '@mpm/shared-types';
+import {
+  SELLER_LISTING_ACTIONS, type CategoryNode, type ListingCard, type MyListingCard, type SellerListingAction,
+} from '@mpm/shared-types';
 import ActionSheet, { type ActionSheetItem } from '@/components/ActionSheet';
 import { useConfirm } from '@/components/ConfirmSheet';
 import { gstStateQuery } from '@/hooks/use-business';
@@ -13,11 +15,13 @@ import { track } from '@/lib/analytics';
 import { LISTING_EVENTS } from '@/lib/analytics-events';
 import { gstScreen } from '@/lib/gst-flow';
 import {
-  ArrowLeftRight, Ban, Check, Eye, Package, Pause, Pencil, Play, RefreshCw, RotateCcw, Trash, type LucideIcon,
+  ArrowLeftRight, Ban, CalendarClock, Check, ClipboardList, Eye, Package, Pause, Pencil, Play, RefreshCw, RotateCcw, Trash,
+  type LucideIcon,
 } from '@/lib/icons';
 import { deleteDraft, fetchOwnerListing } from '@/lib/listing-api';
 import { listingWriteErrorMessage } from '@/lib/f6-errors';
 import { needsGstVerification } from '@/lib/listing-errors';
+import { errorCode } from '@/lib/api-error';
 import { quantityText } from '@/lib/listing-format';
 import { holdsManageItems, holdsOf, openDealIds, pauseNeedsWarning } from '@/lib/my-listings-holds';
 import {
@@ -33,10 +37,15 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 /** What the manage sheet needs of a listing: a My listings card and the owner view both have it. */
 export type ManageTarget = Pick<
   ListingCard, 'id' | 'status' | 'kind' | 'side' | 'title' | 'quantity' | 'availableQuantity' | 'unit' | 'businessId'
->;
+> & {
+  /** A rental's bookings for "Bookings (n)" (My listings cards, M14 D14); absent elsewhere ("Bookings"). */
+  rentalLine?: MyListingCard['rentalLine'];
+};
 
 
 const ICONS: Record<ManageItem, LucideIcon> = {
+  calendar: CalendarClock,
+  bookings: ClipboardList,
   edit: Pencil,
   quantity: Package,
   other_side: ArrowLeftRight,
@@ -53,6 +62,20 @@ const ICONS: Record<ManageItem, LucideIcon> = {
 
 const isAction = (item: ManageItem): item is SellerListingAction =>
   (SELLER_LISTING_ACTIONS as readonly string[]).includes(item);
+
+/** The Deals tab's Rentals list for one listing (M14 plan C0-5 params; My listings › Bookings (n)). */
+const openBookings = (navigation: Nav, listingId: string) =>
+  navigation.navigate('Main', { screen: 'Deals', params: { segment: 'rentals', listingId } });
+
+/** A manage-sheet row's label: Calendar, "Bookings (n)" (M14 §14.1), a seller action, or the other rows. */
+function itemLabel(t: (key: string, values?: Record<string, unknown>) => string, item: ManageItem, listing: ManageTarget): string {
+  if (item === 'calendar') return t('rentalsOwner.manage.calendar');
+  if (item === 'bookings') {
+    const n = listing.rentalLine?.activeBookings;
+    return n != null ? t('rentalsOwner.manage.bookingsCount', { n }) : t('rentalsOwner.manage.bookings');
+  }
+  return isAction(item) ? t(`listing.manage.action.${item}`) : t(`listing.manage.${item}`);
+}
 
 /**
  * Opens Edit for a listing (§10, R43): the Edit listing menu for a published one; the wizard for a draft (at its first
@@ -128,8 +151,16 @@ export function useRunListingAction() {
     } catch (err) {
       const step = gateStep(err, listing.kind);
       const dealIds = openDealIds(err);
-      if (isStaleListingError(err) || dealIds) invalidateListingLists(qc, listing.id, listing.businessId);
-      if (dealIds) {
+      const openBookingsErr = errorCode(err) === 'LISTING_HAS_OPEN_BOOKINGS';
+      if (isStaleListingError(err) || dealIds || openBookingsErr) invalidateListingLists(qc, listing.id, listing.businessId);
+      if (openBookingsErr) {
+        // M14 §7.2: remove / mark unavailable wait for the rental's bookings in progress.
+        const open = await confirm({
+          title: t('rentals.errors.listingHasOpenBookings'),
+          confirmLabel: t('rentalsOwner.manage.seeBookings'),
+        });
+        if (open) openBookings(navigation, listing.id);
+      } else if (dealIds) {
         const open = await confirm({ title: t('holds.openDealsTitle'), message: t('holds.openDealsBody'), confirmLabel: t('holds.goToDeals') });
         if (open) {
           if (dealIds.length === 1) navigation.navigate('DealRecord', { dealId: dealIds[0]! });
@@ -171,7 +202,8 @@ interface ManageSheetProps {
  * The manage sheet (F2 spec §10, mockup "Manage a listing"): Edit, Update quantity, the actions `sellerActions` allows,
  * Find the other side (left / right parts), View listing, Remove; a draft gets Edit and Delete draft. Destructive
  * actions confirm (`useRunListingAction`). With stock on hold in deals (F6 + F7 §8.3) Mark sold and Remove are left
- * out and the sheet says why; a `reserved` listing keeps Edit.
+ * out and the sheet says why; a `reserved` listing keeps Edit. A machine for rent starts with Calendar and Bookings (n)
+ * (M14 §14.1: the owner calendar, and the Deals tab's Rentals filtered to the listing).
  */
 export default function ManageSheet({ listing, showView = false, onActionDone, onClose }: ManageSheetProps) {
   const { t } = useTranslation();
@@ -195,7 +227,7 @@ export default function ManageSheet({ listing, showView = false, onActionDone, o
   const items: ActionSheetItem[] = listing
     ? holdsManageItems(manageItems(listing, { view: showView }), holds).map((item) => ({
       key: item,
-      label: isAction(item) ? t(`listing.manage.action.${item}`) : t(`listing.manage.${item}`),
+      label: itemLabel(t, item, listing),
       icon: ICONS[item],
       destructive: item === 'remove' || item === 'delete_draft',
       testID: `Manage-${item}`,
@@ -215,6 +247,12 @@ export default function ManageSheet({ listing, showView = false, onActionDone, o
       void openEdit(navigation, qc, listing).finally(onClose);
     } else if (item === 'other_side') {
       navigation.navigate('OtherSide', { listingId: listing.id, from: 'mine' });
+      onClose();
+    } else if (item === 'calendar') {
+      navigation.navigate('RentalCalendar', { listingId: listing.id });
+      onClose();
+    } else if (item === 'bookings') {
+      openBookings(navigation, listing.id);
       onClose();
     } else if (item === 'view') {
       navigation.navigate('Listing', { listingId: listing.id });

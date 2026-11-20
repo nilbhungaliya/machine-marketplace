@@ -9,6 +9,7 @@ import { FieldHint } from '@/components/Field';
 import Input from '@/components/Input';
 import { useStoreOwnerView } from '@/hooks/use-listing';
 import { patchListing } from '@/lib/listing-api';
+import { errorCode } from '@/lib/api-error';
 import { listingWriteErrorMessage } from '@/lib/f6-errors';
 import { quantityText, unitLabel } from '@/lib/listing-format';
 import { holdsOf, isBelowHeld } from '@/lib/my-listings-holds';
@@ -70,7 +71,10 @@ export default function QuantitySheet({ listing, visible, onClose }: QuantityShe
           const key = quantityToastKey(listing.status, view.status);
           Toast.show({ type: key === 'listing.quantitySheet.saved' ? 'success' : 'info', text1: t(key) });
         },
-        onError: (err) => setError(listingWriteErrorMessage(err)),
+        // M14 §7.2: a rental's quantity can't go below the machines booked from today on.
+        onError: (err) => setError(errorCode(err) === 'RENTAL_QUANTITY_BOOKED'
+          ? t('rentalsOwner.quantityBooked')
+          : listingWriteErrorMessage(err)),
       },
     );
   };

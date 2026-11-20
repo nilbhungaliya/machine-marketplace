@@ -11,6 +11,7 @@ import EmptyState from '@/components/EmptyState';
 import ListRow from '@/components/ListRow';
 import SegmentedControl from '@/components/SegmentedControl';
 import Skeleton from '@/components/Skeleton';
+import RentalLine from '@/components/my-listings/RentalLine';
 import { useMyListingsPages } from '@/hooks/use-my-listings';
 import { useType } from '@/hooks/use-type';
 import { ClipboardList, Inbox, ShieldAlert, TriangleAlert } from '@/lib/icons';
@@ -37,6 +38,8 @@ const isSegment = (g: MyListingsGroup | undefined): g is Segment =>
  *
  * F6 + F7 (§8.4, §15.2): a listing with stock on hold shows "2 available · 1 on hold in deals" and an Open deals link
  * to the Deals tab; a `reserved` listing (everything on hold) reads "On hold in deals".
+ *
+ * M14 (§14.1): a machine for rent shows "On rent" / "3 of 5 out today" with a Calendar link (`RentalLine`).
  */
 export default function MyListingsScreen({ navigation, route }: RootStackScreenProps<'MyListings'>) {
   const { t } = useTranslation();
@@ -147,6 +150,7 @@ export default function MyListingsScreen({ navigation, route }: RootStackScreenP
         testID={`My-listing-${item.ref}`}
       >
         {holdsLine}
+        <RentalLine card={item} onCalendar={() => navigation.navigate('RentalCalendar', { listingId: item.id })} />
         {renew ? (
           <View style={s.banner}>
             <Text style={s.bannerText}>{t('listing.mine.stillAvailable')}</Text>
