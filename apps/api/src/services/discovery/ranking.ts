@@ -76,10 +76,14 @@ export function relevanceSql(opts: { asOf: Date; origin: LatLng | null; radiusKm
 /**
  * The tier every sort orders by first, DESC (§5.5): `sideTier · 2 + rentTier`. `sideTier` is 1 for the exact side and
  * 0 for a Pair shown under Left / Right (1 for everything without a side filter); `rentTier` is 0 for a rented rental,
- * else 1. So under Left every Left comes before every Pair, and every available rental before every rented one.
+ * else 1 (1 for every rental with M14's "Free on" dates). So under Left every Left comes before every Pair, and every
+ * available rental before every rented one.
  */
-export function tierSql(opts: { side: SearchSide | null | undefined }): SQL<number> {
+export function tierSql(opts: { side: SearchSide | null | undefined; rentalDates?: boolean }): SQL<number> {
   const sideTier = opts.side ? sql`(CASE WHEN ${listings.side} = ${opts.side} THEN 1 ELSE 0 END)` : sql`1`;
-  const rentTier = sql`(CASE WHEN ${listings.status} = 'rented' AND ${listings.kind} = 'machine_rental' THEN 0 ELSE 1 END)`;
+  // M14 §10 (my call): with "Free on" dates every rental left is free on them, so a `rented` one ranks as available.
+  const rentTier = opts.rentalDates
+    ? sql`1`
+    : sql`(CASE WHEN ${listings.status} = 'rented' AND ${listings.kind} = 'machine_rental' THEN 0 ELSE 1 END)`;
   return sql<number>`(${sideTier} * 2 + ${rentTier})::int`;
 }

@@ -19,13 +19,14 @@ import {
 import type { Db, Tx } from '../../db/index.js';
 import { brands, categories, listings } from '../../db/schema.js';
 import { ValidationError } from '../../lib/errors.js';
+import { istDateOf } from '../../lib/ist.js';
 import { loadCards } from '../listings/listing-view.service.js';
 import type { ListingRow } from '../listings/locks.js';
 import { publicListingWhere } from '../listings/public-where.service.js';
 import { cursorAad, cursorInvalid, openCursor, requestHash, sealCursor, type CursorPayload } from './cursor.js';
 import { snappedKmSql } from './distance.js';
 import { computeFacets } from './facets.js';
-import { filterNotAvailable, filterParts, priceSql, specFieldsInPlay, whereSql, type FilterParts, type SpecFieldInPlay } from './filters.js';
+import { checkRentalDatesStart, filterNotAvailable, filterParts, priceSql, specFieldsInPlay, whereSql, type FilterParts, type SpecFieldInPlay } from './filters.js';
 import { fullMatchSql, matchScoreSql, partialMatchSql, unitCount, type MatchTerms } from './matching.js';
 import { normalizeSearchText, searchTokens } from './normalize.js';
 import { resolveOrigin, type OriginViewer, type ResolvedOrigin } from './origin.js';
@@ -233,7 +234,7 @@ export function pageSql(p: PreparedSearch, mode: 'full' | 'partial', asOf: Date,
     : sql``;
   return sql`
     SELECT s.id, s.tier, s.sk, s.sk2 FROM (
-      SELECT ${listings.id} AS id, ${tierSql({ side: p.side })} AS tier, (${sk})::float8 AS sk, (${sk2})::float8 AS sk2
+      SELECT ${listings.id} AS id, ${tierSql({ side: p.side, rentalDates: p.filters.rentalDates !== undefined })} AS tier, (${sk})::float8 AS sk, (${sk2})::float8 AS sk2
       FROM listings
       WHERE ${searchWhere(p, mode, { asOf })}
     ) s
@@ -309,6 +310,8 @@ export async function search(db: Db, req: SearchRequest, viewer: SearchViewer | 
     const cursor = req.cursor ? checkedCursor(openCursor<SearchCursor>(req.cursor, p.aad)) : null;
     const asOf = cursor ? new Date(cursor.asOf) : (deps.now?.() ?? new Date());
     if (Number.isNaN(asOf.getTime())) throw cursorInvalid();
+    // M14 "Free on": the start day is checked against the as-of date (a cursor page keeps the first page's day).
+    checkRentalDatesStart(p.filters, istDateOf(asOf));
 
     let mode: 'full' | 'partial' = cursor?.partial ? 'partial' : 'full';
     let total: number | null = null;
@@ -400,6 +403,7 @@ export async function countSearch(db: Db, req: SearchCountRequest, viewer: Searc
   }
   return inSearchTransaction(db, DISCOVERY_LIMITS.trigramThreshold, async (tx) => {
     const p = await prepareSearch(tx, req, reading, viewer);
+    checkRentalDatesStart(p.filters, istDateOf(deps.now?.() ?? new Date()));
     const total = await countOf(tx, p, 'full');
     const partialTotal = total === 0 && unitCount(p.terms) >= 2 ? await countOf(tx, p, 'partial') : null;
     return { total, partialTotal };
