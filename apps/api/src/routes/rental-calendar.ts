@@ -1,17 +1,19 @@
-import type { FastifyPluginAsync } from 'fastify';
+import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { RENTAL_BLOCK_REASONS, RENTAL_LIMITS } from '@mpm/shared-types';
+import type { Tx } from '../db/index.js';
 import { groupRateLimit } from '../lib/group-limit.js';
 import { refuseViewer } from '../lib/member-guard.js';
 import { isRealDate, isStorableText } from '../lib/spec-check.js';
 import { discoveryIpCap, discoveryRateLimits, discoveryRouteLimit } from '../services/discovery/rate-key.js';
 import { getAvailability } from '../services/rentals/availability.service.js';
-import { createBlock, deleteBlock, updateBlock } from '../services/rentals/blocks.service.js';
+import { runIdempotent } from '../services/idempotency.service.js';
+import { createBlockTx, deleteBlockTx, updateBlockTx } from '../services/rentals/blocks.service.js';
 import { getRentalCalendar } from '../services/rentals/calendar.service.js';
 
 // M14 rental calendar (spec §7.3, §10, §13.2; plan D2, A2-1). Lane A2 owns this file: the public availability strip
 // (the discovery limiter and per-IP cap), the owner's calendar (members; viewers read) and the owner's blocks (non-viewer
-// writes counted in `rental_booking_action`, D6). Thin: Zod `.strict()` → service → `{ data }`.
+// writes counted in `rental_booking_action`, D6; each takes an `Idempotency-Key`, like the booking writes). Thin: Zod `.strict()` → service → `{ data }`.
 
 const tags = ['Rentals'];
 
@@ -45,7 +47,11 @@ const rentalCalendarRoutes: FastifyPluginAsync = async (fastify) => {
   const write = {
     schema: { tags },
     preHandler: [fastify.requireUser, refuseViewer, groupRateLimit('rental_booking_action', 60, 600)],
+    config: { idempotent: true },
   };
+  /** An idempotent write: the service in `runIdempotent`'s transaction, `{ data }` with `status`. */
+  const act = (request: FastifyRequest, reply: FastifyReply, fn: (tx: Tx) => Promise<unknown>, status = 200) =>
+    runIdempotent(request, reply, fastify, async (tx) => ({ status, body: { data: await fn(tx) } }));
 
   // Public (§10): the discovery limiter per user / install id plus the per-IP cap. `RentalAvailabilityDay[]`.
   fastify.get(
@@ -74,20 +80,18 @@ const rentalCalendarRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post('/listings/:id/rental-blocks', write, async (request, reply) => {
     const { id } = idParams.parse(request.params);
     const body = createBody.parse(request.body ?? {});
-    const data = await createBlock(fastify, request.user!, id, body);
-    reply.code(201);
-    return { data };
+    return act(request, reply, (tx) => createBlockTx(tx, request.user!, id, body), 201);
   });
   // Any of the fields → `RentalBlockView`.
-  fastify.patch('/rental-blocks/:id', write, async (request) => {
+  fastify.patch('/rental-blocks/:id', write, async (request, reply) => {
     const { id } = idParams.parse(request.params);
     const body = patchBody.parse(request.body ?? {});
-    return { data: await updateBlock(fastify, request.user!, id, body) };
+    return act(request, reply, (tx) => updateBlockTx(tx, request.user!, id, body));
   });
   // → `{ id }`.
-  fastify.delete('/rental-blocks/:id', write, async (request) => {
+  fastify.delete('/rental-blocks/:id', write, async (request, reply) => {
     const { id } = idParams.parse(request.params);
-    return { data: await deleteBlock(fastify, request.user!, id) };
+    return act(request, reply, (tx) => deleteBlockTx(tx, request.user!, id));
   });
 };
 

@@ -1,7 +1,7 @@
 import { asc, eq, inArray, sql } from 'drizzle-orm';
 import { ADMIN_READ_WINDOW_DAYS, type AdminRole, type AdminThreadRead } from '@mpm/shared-types';
 import type { Tx } from '../../db/index.js';
-import { businesses, chatMessages, chatThreads, listings, users } from '../../db/schema.js';
+import { businesses, chatMessages, chatThreads, listings, rentalBookings, users } from '../../db/schema.js';
 import { adminText } from '../../lib/admin-text.js';
 import { AppError, ForbiddenError } from '../../lib/errors.js';
 import { writeAudit } from '../audit.service.js';
@@ -67,14 +67,15 @@ export async function adminReadThread(
     .where(inArray(businesses.id, [thread.buyerBusinessId, thread.sellerBusinessId]));
   const nameOf = (id: string) => names.find((n) => n.id === id)?.name ?? '';
   const rows = await tx
-    .select({ m: chatMessages, senderName: users.name })
+    .select({ m: chatMessages, senderName: users.name, bookingRef: rentalBookings.ref })
     .from(chatMessages)
     .leftJoin(users, eq(users.id, chatMessages.senderUserId))
+    .leftJoin(rentalBookings, eq(rentalBookings.id, chatMessages.rentalBookingId))
     .where(eq(chatMessages.threadId, threadId))
     .orderBy(asc(chatMessages.seq));
 
   const messages = await Promise.all(
-    rows.map(async ({ m, senderName }) => ({
+    rows.map(async ({ m, senderName, bookingRef }) => ({
       id: m.id,
       seq: String(m.seq),
       kind: m.kind,
@@ -90,6 +91,7 @@ export async function adminReadThread(
           : null,
       offerId: m.offerId,
       dealId: m.dealId,
+      bookingRef: m.kind === 'booking' ? (bookingRef ?? null) : null,
       createdAt: m.createdAt.toISOString(),
     })),
   );

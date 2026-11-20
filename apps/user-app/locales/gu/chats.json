@@ -40,7 +40,8 @@
     "offer": "ઑફર {{price}}",
     "offerPerUnit": "ઑફર {{price}} /{{unit}}",
     "offerNoPrice": "ઑફર",
-    "deal": "ડીલ નક્કી થઈ"
+    "deal": "ડીલ નક્કી થઈ",
+    "booking": "ભાડાનું બુકિંગ"
   },
   "systemPreview": {
     "offer_withdrawn": "ઑફર પાછી ખેંચાઈ",
@@ -61,7 +62,19 @@
     "deal_problem_reported": "સમસ્યા જણાવી",
     "deal_dispute_resolved": "સપોર્ટે સમસ્યા ઉકેલી",
     "contact_shared": "નંબર શેર થયા",
-    "blocked": "બિઝનેસ બ્લૉક થયો"
+    "blocked": "બિઝનેસ બ્લૉક થયો",
+    "booking_requested": "બુકિંગની વિનંતી",
+    "booking_changed": "બુકિંગ બદલાયું",
+    "booking_confirmed": "બુકિંગ પાકું થયું",
+    "booking_declined": "બુકિંગ નકારાયું",
+    "booking_withdrawn": "બુકિંગ પાછું ખેંચાયું",
+    "booking_expired": "બુકિંગ સમાપ્ત થયું",
+    "booking_on_site": "મશીન સાઇટ પર",
+    "booking_returned": "મશીન પાછું આવ્યું",
+    "booking_completed": "બુકિંગ પૂર્ણ થયું",
+    "booking_cancelled": "બુકિંગ રદ થયું",
+    "booking_problem": "સમસ્યા જણાવી",
+    "booking_dispute_resolved": "સપોર્ટે સમસ્યા ઉકેલી"
   },
   "system": {
     "offer_withdrawn": {
@@ -130,7 +143,11 @@
     "booking_completed": "બુકિંગ #{{ref}} પૂર્ણ થયું.",
     "booking_cancelled": "બુકિંગ #{{ref}} રદ થયું.",
     "booking_problem": "બુકિંગ #{{ref}} પર સમસ્યા જણાવાઈ.",
-    "booking_dispute_resolved": "અમારી ટીમે બુકિંગ #{{ref}} ની સમસ્યા બંધ કરી."
+    "booking_dispute_resolved": {
+      "completed": "અમારી ટીમે સમસ્યા બંધ કરી: બુકિંગ #{{ref}} પૂર્ણ થયું.",
+      "cancelled": "અમારી ટીમે સમસ્યા બંધ કરી: બુકિંગ #{{ref}} રદ થયું.",
+      "resumed": "અમારી ટીમે સમસ્યા બંધ કરી: બુકિંગ #{{ref}} ચાલુ છે."
+    }
   },
   "noteField": {
     "payment_method": "ચુકવણી",

@@ -4,7 +4,6 @@ import type { Tx } from '../../db/index.js';
 import { rentalBlocks } from '../../db/schema.js';
 import { ValidationError } from '../../lib/errors.js';
 import { istToday } from '../../lib/ist.js';
-import { runTx, type TxApp } from '../../lib/tx-effects.js';
 import { listingNotFound, lockBusinessThenListing, type ListingRow } from '../listings/locks.js';
 import { daysBetween, rentalDatesInvalid } from './availability.service.js';
 import { toBlockView } from './calendar.service.js';
@@ -21,11 +20,11 @@ type BlockRow = typeof rentalBlocks.$inferSelect;
 /** `RentalBlockInput`; a null note clears it. */
 export type BlockInput = Omit<RentalBlockInput, 'note'> & { note?: string | null };
 
-/** The owner's rental listing, locked (business → listing). Someone else's listing, or a removed one: 404. */
+/** The owner's rental listing, locked (business → listing). Someone else's listing, a draft or a removed one: 404. */
 async function lockOwnerRental(tx: Tx, user: User, listingId: string): Promise<ListingRow> {
   if (!user.businessId) throw listingNotFound();
   const { listing } = await lockBusinessThenListing(tx, user.businessId, listingId);
-  if (listing.kind !== 'machine_rental' || listing.status === 'removed') throw listingNotFound();
+  if (listing.kind !== 'machine_rental' || listing.status === 'removed' || listing.status === 'draft') throw listingNotFound();
   return listing;
 }
 
@@ -42,29 +41,28 @@ function checkShape(b: Pick<RentalBlockInput, 'startDate' | 'endDate' | 'machine
 /** Days from today on (a block that started earlier counts only for what is still ahead). */
 const ahead = (b: { startDate: string; endDate: string }, today: string) => ({ from: b.startDate > today ? b.startDate : today, to: b.endDate });
 
-/** `POST /listings/:id/rental-blocks` (owner, non-viewer). */
-export async function createBlock(app: TxApp, user: User, listingId: string, input: BlockInput): Promise<RentalBlockView> {
-  return runTx(app, async (tx) => {
-    const listing = await lockOwnerRental(tx, user, listingId);
-    const today = istToday();
-    checkShape(input, listing, today);
-    await assertCapacity(tx, { id: listing.id, quantity: machinesOf(listing) }, ahead(input, today), input.machines);
-    const [row] = await tx
-      .insert(rentalBlocks)
-      .values({
-        listingId: listing.id,
-        startDate: input.startDate,
-        endDate: input.endDate,
-        machines: input.machines,
-        reason: input.reason,
-        note: input.note ?? null,
-        createdByUserId: user.userId,
-      })
-      .returning();
-    await syncRentalStatus(tx, listing);
-    return toBlockView(row!);
-  });
+/** `POST /listings/:id/rental-blocks` (owner, non-viewer), in the caller's transaction (the route's `runIdempotent`). */
+export async function createBlockTx(tx: Tx, user: User, listingId: string, input: BlockInput): Promise<RentalBlockView> {
+  const listing = await lockOwnerRental(tx, user, listingId);
+  const today = istToday();
+  checkShape(input, listing, today);
+  await assertCapacity(tx, { id: listing.id, quantity: machinesOf(listing) }, ahead(input, today), input.machines);
+  const [row] = await tx
+    .insert(rentalBlocks)
+    .values({
+      listingId: listing.id,
+      startDate: input.startDate,
+      endDate: input.endDate,
+      machines: input.machines,
+      reason: input.reason,
+      note: input.note ?? null,
+      createdByUserId: user.userId,
+    })
+    .returning();
+  await syncRentalStatus(tx, listing);
+  return toBlockView(row!);
 }
+
 
 /**
  * Reads the block unlocked to find its listing, locks business → listing, then re-reads it. A block that doesn't exist
@@ -84,42 +82,40 @@ async function lockBlock(tx: Tx, user: User, blockId: string): Promise<{ listing
  * earlier start, a later end, more machines) the new span is checked with the block counted (`409
  * RENTAL_DATES_TAKEN`); a narrowing edit is never refused for an overrun it didn't cause.
  */
-export async function updateBlock(app: TxApp, user: User, blockId: string, input: Partial<BlockInput>): Promise<RentalBlockView> {
-  return runTx(app, async (tx) => {
-    const { listing, block } = await lockBlock(tx, user, blockId);
-    const next = {
-      startDate: input.startDate ?? block.startDate,
-      endDate: input.endDate ?? block.endDate,
-      machines: input.machines ?? block.machines,
-    };
-    const today = istToday();
-    // A note- or reason-only edit (even on a block in the past) isn't checked; dates or machines that change are.
-    const reshaped = next.startDate !== block.startDate || next.endDate !== block.endDate || next.machines !== block.machines;
-    if (reshaped) checkShape(next, listing, today);
-    const [row] = await tx
-      .update(rentalBlocks)
-      .set({
-        ...next,
-        ...(input.reason !== undefined ? { reason: input.reason } : {}),
-        ...(input.note !== undefined ? { note: input.note ?? null } : {}),
-        updatedAt: sql`now()`,
-      })
-      .where(eq(rentalBlocks.id, block.id))
-      .returning();
-    const adds = next.startDate < block.startDate || next.endDate > block.endDate || next.machines > block.machines;
-    // The block is already in the count: nothing more may fit on any day of its span.
-    if (adds) await assertCapacity(tx, { id: listing.id, quantity: machinesOf(listing) }, ahead(next, today), 0);
-    await syncRentalStatus(tx, listing);
-    return toBlockView(row!);
-  });
+export async function updateBlockTx(tx: Tx, user: User, blockId: string, input: Partial<BlockInput>): Promise<RentalBlockView> {
+  const { listing, block } = await lockBlock(tx, user, blockId);
+  const next = {
+    startDate: input.startDate ?? block.startDate,
+    endDate: input.endDate ?? block.endDate,
+    machines: input.machines ?? block.machines,
+  };
+  const today = istToday();
+  // A note- or reason-only edit (even on a block in the past) isn't checked; dates or machines that change are.
+  const reshaped = next.startDate !== block.startDate || next.endDate !== block.endDate || next.machines !== block.machines;
+  if (reshaped) checkShape(next, listing, today);
+  const [row] = await tx
+    .update(rentalBlocks)
+    .set({
+      ...next,
+      ...(input.reason !== undefined ? { reason: input.reason } : {}),
+      ...(input.note !== undefined ? { note: input.note ?? null } : {}),
+      updatedAt: sql`now()`,
+    })
+    .where(eq(rentalBlocks.id, block.id))
+    .returning();
+  const adds = next.startDate < block.startDate || next.endDate > block.endDate || next.machines > block.machines;
+  // The block is already in the count: nothing more may fit on any day of its span.
+  if (adds) await assertCapacity(tx, { id: listing.id, quantity: machinesOf(listing) }, ahead(next, today), 0);
+  await syncRentalStatus(tx, listing);
+  return toBlockView(row!);
 }
 
+
 /** `DELETE /rental-blocks/:id` (owner, non-viewer): hard delete (§5.4), then the status sync. */
-export async function deleteBlock(app: TxApp, user: User, blockId: string): Promise<{ id: string }> {
-  return runTx(app, async (tx) => {
-    const { listing, block } = await lockBlock(tx, user, blockId);
-    await tx.delete(rentalBlocks).where(eq(rentalBlocks.id, block.id));
-    await syncRentalStatus(tx, listing);
-    return { id: block.id };
-  });
+export async function deleteBlockTx(tx: Tx, user: User, blockId: string): Promise<{ id: string }> {
+  const { listing, block } = await lockBlock(tx, user, blockId);
+  await tx.delete(rentalBlocks).where(eq(rentalBlocks.id, block.id));
+  await syncRentalStatus(tx, listing);
+  return { id: block.id };
 }
+

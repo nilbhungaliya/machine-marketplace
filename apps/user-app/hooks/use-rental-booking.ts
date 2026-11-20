@@ -13,7 +13,9 @@ import {
 // Server state for one rental booking (M14 spec §14.2): the Booking record, its photos, the listing's availability
 // strip, the Request booking estimate, and every booking write. A write stores the returned view at once and refetches
 // the Rentals lists, the badges, the thread (its booking card and contact banner) and the listing (availability, the
-// owner's booking summary). `rental:updated` (lib/socket-rentals.ts) refetches the same keys for the other side.
+// owner's booking summary). `rental:updated` (lib/socket-rentals.ts) refetches the same keys for the other side through
+// `invalidateAfterBooking` when the booking is cached (else the lists, thread, badges and every rental listing's
+// calendar and availability).
 // The owner's sheets (components/rentals/*) use the same write hook and photo upload.
 
 /**

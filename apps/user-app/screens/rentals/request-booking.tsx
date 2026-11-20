@@ -82,8 +82,12 @@ export default function RequestBookingScreen({ navigation, route }: RootStackScr
   const [values, setValues] = useState<RentalRequestValues | null>(null);
   const [tried, setTried] = useState(false);
   const [dates, setDates] = useState(false);
-  /** The server refused the start date (`RENTAL_DATES_INVALID`: too far ahead); shown under the date until a new pick. */
-  const [startRefused, setStartRefused] = useState(false);
+  /**
+   * The server refused the start date (`RENTAL_DATES_INVALID`): `past` when the picked start is before today in IST (the
+   * day turned while the form was open), else `far` (beyond the advance window); shown under the date until a new pick.
+   */
+  const [startRefused, setStartRefused] = useState<'past' | 'far' | null>(null);
+  const refuseStart = () => setStartRefused(values?.startDate && values.startDate < istDateKey() ? 'past' : 'far');
 
   useEffect(() => {
     if (values || !terms) return;
@@ -226,7 +230,7 @@ export default function RequestBookingScreen({ navigation, route }: RootStackScr
           },
           onError: (err) => {
             track(RENTAL_EVENTS.bookingActionFailed, { bookingId: change.bookingId, action: 'change', reason: errorCode(err) });
-            if (errorCode(err) === 'RENTAL_DATES_INVALID') setStartRefused(true);
+            if (errorCode(err) === 'RENTAL_DATES_INVALID') refuseStart();
             else Toast.show({ type: 'error', text1: m14ErrorMessage(err) });
           },
         },
@@ -243,7 +247,7 @@ export default function RequestBookingScreen({ navigation, route }: RootStackScr
       },
       onError: (err) => {
         track(RENTAL_EVENTS.requestFailed, { listingId, reason: errorCode(err) });
-        if (errorCode(err) === 'RENTAL_DATES_INVALID') setStartRefused(true);
+        if (errorCode(err) === 'RENTAL_DATES_INVALID') refuseStart();
         else Toast.show({ type: 'error', text1: m14ErrorMessage(err) });
         if (errorCode(err) === 'RENTAL_DATES_TAKEN') void availability.refetch();
       },
@@ -257,7 +261,9 @@ export default function RequestBookingScreen({ navigation, route }: RootStackScr
         <Text style={s.title} numberOfLines={2}>{listing.title}</Text>
         {change ? <Notice tone="info" text={t('rentals.request.changeIntro')} /> : null}
 
-        <Field error={shownErrors.startDate ?? (startRefused ? t('rentals.form.errors.startTooFar') : undefined)}>
+        <Field error={shownErrors.startDate ?? (startRefused === 'past'
+          ? t('rentals.form.errors.startBeforeToday')
+          : startRefused === 'far' ? t('rentals.form.errors.startTooFar') : undefined)}>
           <View style={s.two}>
             <View style={s.half}>
               <Field label={t('rentals.form.from')}>
@@ -437,7 +443,7 @@ export default function RequestBookingScreen({ navigation, route }: RootStackScr
         value={values.startDate ? { start: values.startDate } : null}
         busy={busy}
         onClose={() => setDates(false)}
-        onPick={(v) => { setStartRefused(false); set({ startDate: v.start }); }}
+        onPick={(v) => { setStartRefused(null); set({ startDate: v.start }); }}
       />
     </ScreenWrapper>
   );

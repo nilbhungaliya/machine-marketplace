@@ -211,6 +211,7 @@
       "pincode": "Enter a 6-digit pincode",
       "addressMax": "Keep it under {{max}} characters",
       "noteMax": "Keep it under {{max}} characters",
+      "startBeforeToday": "Pick today or a later date",
       "startTooFar": "Pick a start date closer to today"
     }
   },

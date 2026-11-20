@@ -3414,6 +3414,8 @@ export interface AdminThreadMessage {
   enquiry: { quick: QuickEnquiry[]; quantity: string | null; note: string | null; machine: EnquiryMachine | null } | null;
   offerId: string | null;
   dealId: string | null;
+  /** A `booking` card's rental booking ref (M14), else null. */
+  bookingRef: number | null;
   createdAt: string;
 }
 
@@ -4169,7 +4171,8 @@ export function rentalBookingActions(v: RentalBookingView, today: string): Renta
       }
       break;
     case 'confirmed':
-      if (today >= addIsoDays(v.current.startDate, -1)) out.push('on_site');
+      // From the day before the start until the end date (after it the API refuses, `reason: 'ended'`).
+      if (today >= addIsoDays(v.current.startDate, -1) && today <= v.current.endDate) out.push('on_site');
       out.push('cancel', 'edit_notes');
       break;
     case 'on_rent':

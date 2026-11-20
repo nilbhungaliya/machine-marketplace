@@ -5,6 +5,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import Toast from 'react-native-toast-message';
 import type { RentalBookingActionKey, RentalBookingStatus, RentalBookingView } from '@mpm/shared-types';
+import { RENTAL_DECLINE_REASONS } from '@mpm/shared-types';
 import Button from '@/components/Button';
 import Card from '@/components/Card';
 import { useConfirm } from '@/components/ConfirmSheet';
@@ -463,7 +464,7 @@ function endedNotice(v: RentalBookingView, t: Translate): { tone: 'success' | 'i
       return {
         tone: 'info',
         title: t('rentals.status.declined'),
-        text: v.declineReason ? t(`rentals.declineReason.${v.declineReason}`) : t('rentals.record.declined'),
+        text: declineText(v.declineReason, t),
       };
     case 'withdrawn':
       return { tone: 'info', title: t('rentals.status.withdrawn'), text: t('rentals.record.withdrawn') };
@@ -479,6 +480,16 @@ function endedNotice(v: RentalBookingView, t: Translate): { tone: 'success' | 'i
     default:
       return null;
   }
+}
+
+/**
+ * Why a request was declined: the owner's reason, else a system reason (owner inactive, GST ended, a block, the listing
+ * removed), which shares its copy with the cancel reasons, else the plain "declined" line — never a raw key.
+ */
+function declineText(reason: RentalBookingView['declineReason'], t: Translate): string {
+  if (!reason) return t('rentals.record.declined');
+  if ((RENTAL_DECLINE_REASONS as readonly string[]).includes(reason)) return t(`rentals.declineReason.${reason}`);
+  return t(`rentals.cancelReason.${reason}`, { defaultValue: t('rentals.record.declined') });
 }
 
 /** The signed photos of one step (300 s URLs; a load error refetches them). */

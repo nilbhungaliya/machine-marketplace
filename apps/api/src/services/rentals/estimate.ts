@@ -48,6 +48,18 @@ export async function termsSnapshotOf(conn: Conn, listingId: string): Promise<Re
   };
 }
 
+/**
+ * A booking's estimate and total stay within migration 0017's `rental_booking_versions_shape` cap (10¹⁰ paise): a
+ * larger estimate (a long period of many machines at a high rate) is `400 RENTAL_COUNT_INVALID` with `maxTotalPaise`,
+ * never a CHECK violation (500).
+ */
+export const RENTAL_TOTAL_MAX_PAISE = 10_000_000_000;
+export function assertEstimateWithinCap(totalPaise: number): void {
+  if (!Number.isSafeInteger(totalPaise) || totalPaise < 0 || totalPaise > RENTAL_TOTAL_MAX_PAISE) {
+    throw new ValidationError('That booking is too large: book fewer periods or machines', { maxTotalPaise: RENTAL_TOTAL_MAX_PAISE }, 'RENTAL_COUNT_INVALID');
+  }
+}
+
 export function periodNotOffered(): ValidationError {
   return new ValidationError('This machine isn’t rented by that period', undefined, 'RENTAL_PERIOD_NOT_OFFERED');
 }
@@ -87,6 +99,7 @@ export async function estimateFor(
   const choices = resolveRentalChoices(terms, req);
   const money = rentalEstimate(terms, { period: req.period, count: req.count, machines: req.machines, ...choices });
   if (!money) throw periodNotOffered();
+  assertEstimateWithinCap(money.totalPaise);
   const endDate = rentalEndDate(req.startDate, req.period, req.count);
   const out = await maxOutInRange(conn, listingId, req.startDate, endDate);
   return {

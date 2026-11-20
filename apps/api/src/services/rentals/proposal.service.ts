@@ -13,6 +13,7 @@ import { toBookingView, type BookingReader } from './booking-view.js';
 import { bookingTransitionNotAllowed, writeBookingStatus } from './booking-write.js';
 import { assertCapacity, machinesOf } from './capacity.js';
 import type { RentalBookingRow } from './locks.js';
+import { assertEstimateWithinCap } from './estimate.js';
 import { istTodayOf, parseRentalRequest, type RentalChangeBody } from './request-input.js';
 import { assertListingBookable, assertPairCanRent } from './request.service.js';
 import { syncRentalStatus } from './status-sync.js';
@@ -137,6 +138,8 @@ export async function proposeChange(tx: Tx, user: UserTokenPayload, id: string, 
   await assertCapacity(tx, { id: listing.id, quantity }, { from: resolved.startDate, to: resolved.endDate }, resolved.machines, {
     excludeBookingId: b.id,
   });
+  // Both columns carry 0017's cap: the estimate (stored whatever total the owner names) and the total.
+  assertEstimateWithinCap(resolved.estimatePaise);
   const total = reader.side === 'owner' && input.totalPaise !== undefined ? input.totalPaise : resolved.estimatePaise;
   if (!Number.isSafeInteger(total) || total < 0 || total > MONEY_MAX) throw new ValidationError('That total can’t be used', { max: MONEY_MAX });
 

@@ -60,6 +60,25 @@ describe('previewFor', () => {
     expect(previewFor(last({ kind: 'text', text: 'Hi', isMine: true }), t)).toBe('chats.preview.mine {"text":"Hi"}');
     expect(previewFor({ lastMessage: null }, t)).toBe('chats.preview.none');
   });
+
+  it('a booking system line and a booking card preview to real text in en, hi and gu, never a raw key or blank', () => {
+    const bookingCodes = SYSTEM_LINE_CODES.filter((c) => c.startsWith('booking_'));
+    expect(bookingCodes.length).toBeGreaterThan(0);
+    for (const tree of [en, hi, gu]) {
+      const real: Translate = (key) => {
+        const v = key.split('.').slice(1).reduce<unknown>((n, p) => (n && typeof n === 'object' ? (n as Record<string, unknown>)[p] : undefined), tree);
+        return typeof v === 'string' ? v : key;
+      };
+      for (const code of bookingCodes) {
+        const text = previewFor(last({ kind: 'system', systemCode: code }), real);
+        expect(text, code).not.toMatch(/^chats\./);
+        expect(text.trim(), code).not.toBe('');
+      }
+      const card = previewFor(last({ kind: 'booking' }), real);
+      expect(card).not.toMatch(/^chats\./);
+      expect(card.trim()).not.toBe('');
+    }
+  });
 });
 
 describe('pillFor', () => {

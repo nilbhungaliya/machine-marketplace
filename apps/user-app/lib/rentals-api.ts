@@ -199,14 +199,14 @@ export function fetchRentalCalendar(listingId: string, range?: { from?: string; 
   return data(api.get(`/listings/${listingId}/calendar`, { params }));
 }
 
-export function createRentalBlock(listingId: string, input: RentalBlockInput): Promise<RentalBlockView> {
-  return data(api.post(`/listings/${listingId}/rental-blocks`, input));
+export function createRentalBlock(listingId: string, input: RentalBlockInput, key: string): Promise<RentalBlockView> {
+  return data(api.post(`/listings/${listingId}/rental-blocks`, input, headers(key)));
 }
 
-export function updateRentalBlock(blockId: string, input: RentalBlockInput): Promise<RentalBlockView> {
-  return data(api.patch(`/rental-blocks/${blockId}`, input));
+export function updateRentalBlock(blockId: string, input: RentalBlockInput, key: string): Promise<RentalBlockView> {
+  return data(api.patch(`/rental-blocks/${blockId}`, input, headers(key)));
 }
 
-export function deleteRentalBlock(blockId: string): Promise<unknown> {
-  return data(api.delete(`/rental-blocks/${blockId}`));
+export function deleteRentalBlock(blockId: string, key: string): Promise<unknown> {
+  return data(api.delete(`/rental-blocks/${blockId}`, headers(key)));
 }

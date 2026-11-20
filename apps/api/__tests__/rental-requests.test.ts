@@ -189,6 +189,23 @@ describe('POST /listings/:id/bookings', () => {
     const [row] = await db.select().from(rentalBookingVersions).where(eq(rentalBookingVersions.bookingId, res.json().data.id));
     expect(row!.withOperator).toBe(true);
   });
+
+  it('refuses an estimate above the 10¹⁰ paise cap with a 400 (never the CHECK 500) and inserts nothing; so does the estimate', async () => {
+    const owner = await seller({ gst: true });
+    const renter = await seller();
+    const listingId = await rental(owner, { rates: { rateDayPaise: 1_000_000_000 } });
+    const res = await request(renter.token, listingId, body({ count: 20 }));
+    expect([res.statusCode, res.json().code]).toEqual([400, 'RENTAL_COUNT_INVALID']);
+    expect(res.json().details).toMatchObject({ maxTotalPaise: 10_000_000_000 });
+    expect(await db.select().from(rentalBookings).where(eq(rentalBookings.listingId, listingId))).toHaveLength(0);
+    const est = await app.inject({
+      method: 'POST',
+      url: '/rentals/estimate',
+      headers: { 'x-install-id': '3d6f0a4e-7c1b-4f0e-9a51-2b7c8d9e0f12' },
+      payload: { listingId, startDate: tomorrow(), period: 'day', count: 20, machines: 1 },
+    });
+    expect([est.statusCode, est.json().code]).toEqual([400, 'RENTAL_COUNT_INVALID']);
+  });
 });
 
 describe('POST /rentals/estimate', () => {

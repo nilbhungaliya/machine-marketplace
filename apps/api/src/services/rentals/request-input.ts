@@ -25,7 +25,7 @@ import { isRealDate, isStorableText } from '../../lib/spec-check.js';
 import type { UserTokenPayload } from '../../plugins/auth.js';
 import { onboardingForUser } from '../business/profile.service.js';
 import { pincodeDistrict } from '../locations/pincode.service.js';
-import { periodNotOffered } from './estimate.js';
+import { assertEstimateWithinCap, periodNotOffered } from './estimate.js';
 
 // What a renter (or an owner proposing a change) sends (M14 spec §6.2, §6.3, R1, R2; plan A1-1, F8 `request-input.ts`):
 // the Zod bodies of every booking route, `parseRentalRequest` (the §6.2 checks in order, pure), the site pincode, the
@@ -166,7 +166,8 @@ export interface ResolvedRequest {
  * The §6.2 checks in order, pure (`today` is the IST date, `advanceDays` the setting): the period is priced (`400
  * RENTAL_PERIOD_NOT_OFFERED`), the count fits the period (`400 RENTAL_COUNT_INVALID`), machines 1 … the listing's
  * quantity (`400 RENTAL_MACHINES_INVALID`), the start date is today … today + `advanceDays` (`400 RENTAL_DATES_INVALID`),
- * the listing's minimum is met (`400 BELOW_MINIMUM`). Operator / transport are forced where the listing offers no choice
+ * the listing's minimum is met (`400 BELOW_MINIMUM`), the estimate within the 10¹⁰ paise cap (`400 RENTAL_COUNT_INVALID`
+ * with `maxTotalPaise`). Operator / transport are forced where the listing offers no choice
  * (`resolveRentalChoices`). The pincode is `resolveSite`'s (it needs the directory).
  */
 export function parseRentalRequest(
@@ -197,6 +198,7 @@ export function parseRentalRequest(
     throw new ValidationError('This machine has a minimum booking', { minDuration: terms.minDuration, period: terms.minDurationPeriod }, 'BELOW_MINIMUM');
   }
   const estimate = rentalEstimate(terms, { period: input.period, count: input.count, machines: input.machines, ...choices })!;
+  assertEstimateWithinCap(estimate.totalPaise);
   return {
     startDate: input.startDate,
     endDate: rentalEndDate(input.startDate, input.period, input.count),

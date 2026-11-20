@@ -147,7 +147,10 @@ booking, Booking record, owner calendar, the Deals tab's Rentals list) + Profile
   the setting, the API refuses with `RENTAL_DATES_INVALID` and the app shows it inline. The admin booking detail shows
   the contact state only as its timeline event (no contact block). `queueAdminEmit` sends to role rooms only, so a
   `super_admin`'s Rental bookings and Disputes pages don't live-refresh on `rental:updated` / `dispute:new` (true since
-  F6 for every admin emit); join `super_admin` sockets to every role room, or emit to a super-admin room too.
+  F6 for every admin emit); join `super_admin` sockets to every role room, or emit to a super-admin room too. A block
+  racing a renter's very first request (no thread yet) can leave that request open after the block commits; the
+  owner's confirm still refuses it (`assertPairCanRent`) and it expires, so only the inbox shows it (final review M5):
+  re-read open requests after the block insert in `exitBookingsForBlock`.
 - **M14 later (spec §22):** one-tap extension and scheduled off-rent, partial-quantity return, daily logsheets,
   deposits and advances through payments (M20, D7), rental requirements in F8, the card's rate for the chosen period,
   owner reply-rate and cancellation scores. Bookings, versions, events, blocks and booking photos join the DPDP export /
@@ -557,3 +560,14 @@ is settled** by F6 + F7 ruling R6: hidden until there is a deal and both sides t
   discovery clock-skew gap (Open items). Docs: PROJECT_STATUS, the three CLAUDE.md files, `product-scope.md`, F2 / F4 /
   F6 spec notes, spec and plan marked built. Lane worktrees, branches and test databases left for the owner (Open
   items). Still the owner's: the device pass, the hi / gu copy check, the admin click-through and the client's answers.
+- 2026-11-21 — **M14 final branch review** (`git diff 45683c4..HEAD`, two reviewers: API + data and app + admin, both
+  "ship after fixes") and fix wave. API: a booking estimate over the 10¹⁰-paise cap is `400 RENTAL_COUNT_INVALID`
+  (`assertEstimateWithinCap` in request, estimate and change; was a CHECK 500, tested); blocks refused on a draft
+  listing; block create / edit / delete idempotent (`*Tx` services + `runIdempotent`, the app sends a key); on site
+  refused after the end date (`409 RENTAL_TRANSITION_NOT_ALLOWED`, `reason: 'ended'`, and not offered). App: inbox
+  previews for every `booking_*` line and the booking card (tested); support's message on a rental dispute shown in
+  the thread (outcome lines); system decline reasons shown, never a raw key; `rental:updated` refreshes the calendar,
+  owner view and My listings; a past start date says so. Admin: a booking card line in Conversations
+  (`AdminThreadMessage.bookingRef`). One race left in Open items (block vs a first request, cosmetic). Verified:
+  typecheck and lint clean; touched API files (requests, calendar, steps, proposals, admin conversations, core loop)
+  pass; app 800, admin 414. M14 is complete on `develop`; next: admin close-out (AD1 + AD6 + AD7).

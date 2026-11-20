@@ -41,6 +41,8 @@ export function previewFor(row: Pick<InboxRow, 'lastMessage'>, t: Translate): st
       break;
     case 'deal':
       return t('chats.preview.deal');
+    case 'booking':
+      return t('chats.preview.booking');
     case 'system':
       return m.systemCode ? t(`chats.systemPreview.${m.systemCode}`) : '';
     default:
@@ -245,7 +247,7 @@ export interface SystemLineCopy {
   params: Record<string, string | number>;
   /** Params whose value is a copy key to translate first (reason, category, fields). */
   keyParams: Record<string, string | string[]>;
-  /** `deal_dispute_resolved`'s message from support, shown as written under the line. */
+  /** `deal_dispute_resolved` / `booking_dispute_resolved`'s message from support, shown as written under the line. */
   supportMessage: string | null;
 }
 
@@ -300,6 +302,7 @@ export function systemLineParams(
       keyParams.category = `chats.problemCategory.${oneOf(v.category, PROBLEM_CATEGORIES, 'other')}`;
       break;
     case 'deal_dispute_resolved':
+    case 'booking_dispute_resolved':
       key = `${base}.${oneOf(v.outcome, OUTCOMES, 'resumed')}`;
       supportMessage = typeof v.message === 'string' && v.message.trim() ? v.message : null;
       break;

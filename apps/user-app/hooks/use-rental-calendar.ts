@@ -1,6 +1,8 @@
+import { useRef } from 'react';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { RentalBlockInput } from '@mpm/shared-types';
 import { invalidateListingLists, listingKeys } from '@/hooks/use-listing';
+import { useIdempotencyKey } from '@/hooks/use-offers';
 import { qk } from '@/lib/query-keys';
 import {
   createRentalBlock, deleteRentalBlock, fetchRentalCalendar, updateRentalBlock,
@@ -26,16 +28,26 @@ export type BlockWrite =
 
 /**
  * Add, edit or delete a block (§7.3). Each refreshes the listing's calendar and availability, and the listing itself
- * (a block covering today can turn it `rented`, §7.1).
+ * (a block covering today can turn it `rented`, §7.1). Every write sends an `Idempotency-Key`, one per user action:
+ * kept when no answer came back so a retried tap of the same write replays it, new for a different write (another
+ * block, changed fields) so it is never refused as a reused key.
  */
 export function useRentalBlockWrite(listingId: string) {
   const qc = useQueryClient();
+  const key = useIdempotencyKey();
+  const last = useRef<string | null>(null);
   return useMutation({
     mutationFn: (w: BlockWrite): Promise<unknown> => {
-      if (w.type === 'create') return createRentalBlock(listingId, w.input);
-      if (w.type === 'update') return updateRentalBlock(w.blockId, w.input);
-      return deleteRentalBlock(w.blockId);
+      const fingerprint = JSON.stringify(w);
+      if (last.current !== fingerprint) key.settle();
+      last.current = fingerprint;
+      const k = key.take();
+      if (w.type === 'create') return createRentalBlock(listingId, w.input, k);
+      if (w.type === 'update') return updateRentalBlock(w.blockId, w.input, k);
+      return deleteRentalBlock(w.blockId, k);
     },
+    onSuccess: () => key.settle(),
+    onError: (err) => key.settle(err),
     onSettled: () => {
       void qc.invalidateQueries({ queryKey: qk.rentals.listing(listingId) });
       void qc.invalidateQueries({ queryKey: listingKeys.owner(listingId) });

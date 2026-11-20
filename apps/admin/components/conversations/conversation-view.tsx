@@ -9,6 +9,7 @@ import { Panel } from '@/components/ui/panel';
 import { QUICK_ENQUIRY_LABELS, SYSTEM_LINE_LABELS } from '@/lib/conversations-api';
 import { PARTY_SIDE_LABELS } from '@/lib/deals-api';
 import { formatRef } from '@/lib/listings-api';
+import { formatBookingRef } from '@/lib/rentals-api';
 import { cn, formatDateTime } from '@/lib/utils';
 
 function Photos({ message, onOpen }: { message: AdminThreadMessage; onOpen: (urls: string[], index: number) => void }) {
@@ -61,6 +62,13 @@ function MessageBody({ m }: { m: AdminThreadMessage }) {
   }
   if (m.kind === 'offer') return <span className="text-gray-600">Offer card{m.text ? ':' : ''} {m.text && <span className="whitespace-pre-wrap text-gray-900">{m.text}</span>}</span>;
   if (m.kind === 'deal') return <span className="text-gray-600">Deal card</span>;
+  if (m.kind === 'booking') {
+    return (
+      <span className="text-gray-600">
+        Booking card{m.bookingRef != null && <> <span className="font-mono text-gray-900">{formatBookingRef(m.bookingRef)}</span></>}
+      </span>
+    );
+  }
   return m.text ? <span className="whitespace-pre-wrap text-gray-900">{m.text}</span> : null;
 }
 

@@ -28,7 +28,7 @@ const other = (side: BookingReader['side']) => (side === 'renter' ? 'owner' : 'r
 
 /**
  * `POST /rental-bookings/:id/on-site` (either side, `confirmed`, not before `start_date − 1` IST, `409
- * RENTAL_TOO_EARLY`): optional opening hour meter and ≤ 3 photos (final keys, finalised by the route). The other side
+ * RENTAL_TOO_EARLY`, nor after `end_date`, `409 RENTAL_TRANSITION_NOT_ALLOWED` with `reason: 'ended'`): optional opening hour meter and ≤ 3 photos (final keys, finalised by the route). The other side
  * told.
  */
 export async function markOnSite(
@@ -42,6 +42,9 @@ export async function markOnSite(
   const today = await istTodayOf(tx);
   if (today < addDays(b.startDate, -1)) {
     throw new ConflictError('It’s too early to mark the machine on site', 'RENTAL_TOO_EARLY', { from: addDays(b.startDate, -1) });
+  }
+  if (today > b.endDate) {
+    throw new ConflictError('This booking’s dates are over', 'RENTAL_TRANSITION_NOT_ALLOWED', { status: b.status, action: 'on_site', reason: 'ended' });
   }
   const written = await writeBookingStatus(
     tx,
