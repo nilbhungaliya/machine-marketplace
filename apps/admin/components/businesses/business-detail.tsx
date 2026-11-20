@@ -2,7 +2,7 @@
 
 import { useState, type ReactNode } from 'react';
 import Link from 'next/link';
-import { ExternalLink, MapPin, Package } from 'lucide-react';
+import { BellRing, ExternalLink, MapPin, Package } from 'lucide-react';
 import { DEAL_STATUSES, type AdminAuditEntry, type AdminBusinessDetail, type GstState } from '@mpm/shared-types';
 import StatusBadge from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
@@ -194,12 +194,21 @@ export function BusinessDetail({ business, categoryNames, onChanged }: {
         <Panel
           title="Business"
           action={canSeeListings && (
-            <Link
-              href={`/listings/?businessId=${p.id}`}
-              className="inline-flex items-center gap-1 text-sm font-bold text-brand-700 hover:underline"
-            >
-              <Package size={13} aria-hidden /> Listings ({business.listingsCount})
-            </Link>
+            <span className="flex flex-wrap items-center gap-3">
+              <Link
+                href={`/listings/?businessId=${p.id}`}
+                className="inline-flex items-center gap-1 text-sm font-bold text-brand-700 hover:underline"
+              >
+                <Package size={13} aria-hidden /> Listings ({business.listingsCount})
+              </Link>
+              {/* Part requests has the same roles as Parts & machinery (F8 spec §14). */}
+              <Link
+                href={`/part-requests/?businessId=${p.id}`}
+                className="inline-flex items-center gap-1 text-sm font-bold text-brand-700 hover:underline"
+              >
+                <BellRing size={13} aria-hidden /> Part requests ({business.partRequestCount})
+              </Link>
+            </span>
           )}
         >
           <Facts
