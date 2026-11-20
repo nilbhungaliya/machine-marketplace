@@ -81,7 +81,10 @@ export const en: NotificationTexts = {
   rental_booking_due_back: (p) => ({ title: 'Due back today', body: Machine(p) }),
   rental_booking_overdue: (p) => ({ title: 'Still on rent', body: `Mark ${machine(p)} returned when it's back.` }),
   rental_booking_not_started: (p) => ({ title: 'Did it start?', body: `Mark ${machine(p)} on site, or cancel the booking.` }),
-  rental_booking_clash: (p) => ({ title: 'Booking clash', body: `${Machine(p)} is still out and ${p.bookingRef || 'the next booking'} starts soon.` }),
+  rental_booking_clash: (p) => ({
+    title: 'Booking clash',
+    body: `${Machine(p)} is still out on ${booking(p)}; your next booking starts soon. Mark it returned or talk to the renter.`,
+  }),
   rental_booking_problem: (p) => ({ title: 'Problem reported', body: `On ${booking(p)}. Our team will look into it.` }),
   rental_booking_dispute_resolved: (p) => ({ title: 'Booking problem resolved', body: `On ${booking(p)}.` }),
   listing_status: (p) => ({ title: 'Listing update', body: p.listingTitle ? `${p.listingTitle} changed status.` : 'Your listing changed status.' }),

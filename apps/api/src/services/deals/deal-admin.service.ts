@@ -181,8 +181,7 @@ function toAdminDisputeRow(r: DisputeRowSelect): AdminDisputeRow {
     dealId: d.dealId,
     dealRef: r.dealRef,
     rentalBookingRef: r.bookingRef,
-    // A booking dispute's category is a `RentalDisputeCategory` (the row type names F6's categories only).
-    category: d.category as AdminDisputeRow['category'],
+    category: d.category,
     status: d.status,
     outcome: d.outcome,
     openedBySide: d.openedBySide,

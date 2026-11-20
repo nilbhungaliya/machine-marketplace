@@ -75,9 +75,11 @@ async function afterConfirmation(tx: Tx, b: RentalBookingRow, listing: ListingRo
  */
 async function agree(tx: Tx, user: UserTokenPayload, id: string, versionSeq: number, action: 'confirm' | 'accept'): Promise<RentalBookingView> {
   const { booking: b, listing, reader } = await lockForProposal(tx, user, id);
+  // A party is known here (`lockBookingForAction`): a stale version is answered first (409 RENTAL_BOOKING_STALE), so a
+  // second member answering an old version learns the booking changed rather than that the step isn't allowed.
+  await assertVersion(tx, b, versionSeq);
   const expected = action === 'confirm' ? { status: 'requested', side: 'owner' } : { status: 'countered', side: 'renter' };
   if (b.status !== expected.status || reader.side !== expected.side) throw bookingTransitionNotAllowed(b, action);
-  await assertVersion(tx, b, versionSeq);
   await assertNotLapsed(tx, b, action);
   assertListingBookable(listing);
   await assertPairCanRent(tx, b.ownerBusinessId, b.renterBusinessId);
@@ -120,9 +122,9 @@ export function acceptChange(tx: Tx, user: UserTokenPayload, id: string, input: 
  */
 export async function proposeChange(tx: Tx, user: UserTokenPayload, id: string, input: RentalChangeBody): Promise<RentalBookingView> {
   const { booking: b, listing, reader } = await lockForProposal(tx, user, id);
+  await assertVersion(tx, b, input.versionSeq);
   const turnOk = (b.status === 'requested' && reader.side === 'owner') || (b.status === 'countered' && reader.side === 'renter');
   if (!turnOk) throw bookingTransitionNotAllowed(b, 'change');
-  await assertVersion(tx, b, input.versionSeq);
   await assertNotLapsed(tx, b, 'change');
   const settings = await getSettings(tx);
   if (b.changeCount >= settings.rental_max_changes) {
@@ -200,9 +202,9 @@ export async function declineBooking(
   input: { versionSeq: number; reason: RentalDeclineReason },
 ): Promise<RentalBookingView> {
   const { booking: b, reader } = await lockForProposal(tx, user, id);
+  await assertVersion(tx, b, input.versionSeq);
   const turnOk = (b.status === 'requested' && reader.side === 'owner') || (b.status === 'countered' && reader.side === 'renter');
   if (!turnOk) throw bookingTransitionNotAllowed(b, 'decline');
-  await assertVersion(tx, b, input.versionSeq);
   const written = await writeBookingStatus(
     tx,
     b,

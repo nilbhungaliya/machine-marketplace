@@ -75,7 +75,10 @@ export const hi: NotificationTexts = {
   rental_booking_due_back: (p) => ({ title: 'आज वापसी', body: machine(p) }),
   rental_booking_overdue: (p) => ({ title: 'अभी भी किराये पर', body: `${machine(p)} वापस आने पर उसे लौटाया हुआ चिह्नित करें।` }),
   rental_booking_not_started: (p) => ({ title: 'क्या शुरू हुआ?', body: `${machine(p)} को साइट पर चिह्नित करें, या बुकिंग रद्द करें।` }),
-  rental_booking_clash: (p) => ({ title: 'बुकिंग टकराव', body: `${machine(p)} अभी बाहर है और ${p.bookingRef || 'अगली बुकिंग'} जल्द शुरू होगी।` }),
+  rental_booking_clash: (p) => ({
+    title: 'बुकिंग टकराव',
+    body: `${machine(p)} अभी भी ${booking(p)} पर बाहर है; आपकी अगली बुकिंग जल्द शुरू होगी। इसे लौटाया हुआ मार्क करें या किराएदार से बात करें।`,
+  }),
   rental_booking_problem: (p) => ({ title: 'समस्या दर्ज', body: `${booking(p)} पर। हमारी टीम इसे देखेगी।` }),
   rental_booking_dispute_resolved: (p) => ({ title: 'बुकिंग की समस्या सुलझी', body: `${booking(p)} पर।` }),
   listing_status: (p) => ({ title: 'लिस्टिंग अपडेट', body: `${listing(p)} की स्थिति बदली है।` }),

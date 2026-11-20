@@ -18,11 +18,11 @@ export const GOODS_MESSAGE = 'Say whether the goods went back to the seller';
 const MESSAGE_MAX = DEAL_LIMITS.messageToPartiesMax;
 
 /**
- * The resolve form's rules (§9.6, the API's `resolveBody`): an outcome; for `cancelled` the goods answer (yes / no,
- * nothing preselected); an internal note of `ADMIN_REASON_MIN`–`MAX` (audit only); an optional message to both parties
- * of at most 500.
+ * The resolve form's rules (§9.6, the API's `resolveBody`): an outcome; for `cancelled` on a deal dispute the goods
+ * answer (yes / no, nothing preselected; a rental booking dispute has no stock, M14 R12); an internal note of
+ * `ADMIN_REASON_MIN`–`MAX` (audit only); an optional message to both parties of at most 500.
  */
-export const resolveSchema = z
+const makeResolveSchema = (hasDeal: boolean) => z
   .object({
     // A radio group with nothing checked reads as null.
     outcome: z.enum(['', ...DISPUTE_OUTCOMES]).nullable().transform((v) => v ?? ''),
@@ -35,21 +35,27 @@ export const resolveSchema = z
   })
   .superRefine((v, ctx) => {
     if (v.outcome === '') ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['outcome'], message: 'Choose an outcome' });
-    if (v.outcome === 'cancelled' && v.stockReturned === '') {
+    if (hasDeal && v.outcome === 'cancelled' && v.stockReturned === '') {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['stockReturned'], message: GOODS_MESSAGE });
     }
   });
 
+export const resolveSchema = makeResolveSchema(true);
+const rentalResolveSchema = makeResolveSchema(false);
+
 type Values = z.input<typeof resolveSchema>;
 type Parsed = z.output<typeof resolveSchema>;
 
-/** The form's values as the API body: `stockReturned` only with `cancelled`; an empty message is null. */
-export function resolveBody(v: Parsed): ResolveDisputeBody {
+/**
+ * The form's values as the API body: `stockReturned` only with `cancelled` on a deal dispute (the API refuses it for a
+ * rental booking dispute; lane B1 reworks the dialog for bookings); an empty message is null.
+ */
+export function resolveBody(v: Parsed, hasDeal = true): ResolveDisputeBody {
   if (v.outcome === '') throw new Error('No outcome');
   const message = v.messageToParties.trim();
   return {
     outcome: v.outcome,
-    ...(v.outcome === 'cancelled' ? { stockReturned: v.stockReturned === 'yes' } : {}),
+    ...(hasDeal && v.outcome === 'cancelled' ? { stockReturned: v.stockReturned === 'yes' } : {}),
     internalNote: v.internalNote.trim(),
     messageToParties: message === '' ? null : message,
   };
@@ -69,8 +75,9 @@ export function ResolveDialog({ dispute, onClose, onResolved }: {
   /** After a resolve, or a refusal that means the record is stale: reload. */
   onResolved: () => Promise<void> | void;
 }) {
+  const hasDeal = dispute.dealRef !== null;
   const { register, handleSubmit, watch, formState: { errors, isDirty, isSubmitting } } = useForm<Values>({
-    resolver: zodResolver(resolveSchema),
+    resolver: zodResolver(hasDeal ? resolveSchema : rentalResolveSchema),
     defaultValues: { outcome: '', stockReturned: '', internalNote: '', messageToParties: '' },
   });
   const outcome = watch('outcome');
@@ -78,7 +85,7 @@ export function ResolveDialog({ dispute, onClose, onResolved }: {
 
   const save = async (values: Parsed) => {
     try {
-      await resolveDispute(dispute.id, resolveBody(values));
+      await resolveDispute(dispute.id, resolveBody(values, hasDeal));
       toast.success(`Dispute on deal ${formatDealRef(dispute.dealRef)} resolved`);
       await onResolved();
       onClose();
@@ -120,7 +127,7 @@ export function ResolveDialog({ dispute, onClose, onResolved }: {
           {errors.outcome && <p className={errorCls}>{errors.outcome.message}</p>}
         </fieldset>
 
-        {outcome === 'cancelled' && (
+        {hasDeal && outcome === 'cancelled' && (
           <fieldset className="rounded-xl bg-amber-50 px-3 pb-3 pt-2.5">
             <legend className="px-1 text-sm font-bold text-gray-900">Did the goods go back to the seller?</legend>
             <div className="mt-1 grid gap-2 sm:grid-cols-2">

@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import { and, eq, sql } from 'drizzle-orm';
@@ -145,5 +146,20 @@ describe('booking problems (R12)', () => {
       .from(notifications)
       .where(and(eq(notifications.type, 'rental_booking_dispute_resolved'), eq(notifications.rentalBookingId, b.bookingId)));
     expect(resolved[0]!.n).toBeGreaterThanOrEqual(2);
+  });
+
+  it('POST /rental-bookings/:id/problem runs in the route transaction: 200 and the booking disputed', async () => {
+    const b = await bookingOn('on_rent');
+    const res = await app.inject({
+      method: 'POST',
+      url: `/rental-bookings/${b.bookingId}/problem`,
+      headers: { ...auth(renter.token), 'idempotency-key': randomUUID() },
+      payload: { category: 'breakdown', description: 'The machine stopped on day two' },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().data.status).toBe('disputed');
+    expect(await bookingRow(b.bookingId)).toMatchObject({ status: 'disputed', disputedFrom: 'on_rent' });
+    const [d] = await db.select().from(dealDisputes).where(eq(dealDisputes.rentalBookingId, b.bookingId));
+    expect(d).toMatchObject({ status: 'open', openedBySide: 'buyer', category: 'breakdown' });
   });
 });

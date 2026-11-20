@@ -111,8 +111,7 @@ export function pushMessageFor(
 ): PushMessage {
   const { title, body } = renderNotification(n.type, n.params, language, n.unreadCount);
   const tag = pushTag(n);
-  // M14 §11: `rentalBookingId` opens the Booking record (the FCM provider passes every string value through).
-  const data: PushMessage['data'] & { rentalBookingId?: string } = {
+  const data: PushMessage['data'] = {
     notificationId: n.id,
     type: n.type,
     deliveryKey: `${n.id}:${delivery.version}`,

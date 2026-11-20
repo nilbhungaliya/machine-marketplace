@@ -12,7 +12,7 @@ import { emitToBusinesses } from '../chat/chat-emit.js';
 import { assertCanWrite, type ChatReader, type ThreadRow } from '../chat/members.js';
 import { insertSystemLine } from '../chat/thread-lines.js';
 import { lockThread } from '../deals/locks.js';
-import { recordBookingEvent } from '../rentals/booking-write.js';
+import { bookingLine, recordBookingEvent } from '../rentals/booking-write.js';
 import { threadAgreement } from '../rentals/thread-agreement.js';
 
 /**
@@ -100,7 +100,7 @@ export async function maybeReveal(tx: Tx, threadId: string): Promise<boolean> {
       .from(rentalBookings)
       .where(eq(rentalBookings.id, bookingId));
     await recordBookingEvent(tx, bookingId, 'contact_shared', { side: 'system' });
-    await insertSystemLine(tx, threadId, 'contact_shared', { bookingId, ref: b!.ref });
+    await bookingLine(tx, threadId, 'contact_shared', { bookingId, ref: b!.ref });
     emitToBusinesses(tx, businessIds, 'thread:updated', { threadId, reason: 'contact_shared' });
     emitToBusinesses(tx, businessIds, 'rental:updated', { bookingId, threadId, status: b!.status, version: b!.version });
   }

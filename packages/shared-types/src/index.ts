@@ -3331,7 +3331,8 @@ export interface AdminDisputeRow {
   dealRef: number | null;
   /** Rental booking disputes only (`#700001…`). */
   rentalBookingRef: number | null;
-  category: DisputeCategory;
+  /** A rental dispute's category is a `RentalDisputeCategory`. */
+  category: DisputeCategory | RentalDisputeCategory;
   status: DisputeStatus;
   outcome: DisputeOutcome | null;
   openedBySide: PartySide;
@@ -3388,8 +3389,8 @@ export interface AdminDisputeDetail extends AdminDisputeRow {
 }
 
 /**
- * `POST /admin/disputes/:id/resolve` body. `stockReturned` is required for a deal dispute resolved `cancelled` and
- * ignored for a rental one (M14 R12: a booking resolve never touches stock).
+ * `POST /admin/disputes/:id/resolve` body. `stockReturned` is required to cancel a deal dispute; `400` if sent for a
+ * rental one (M14 R12: a booking resolve never touches stock).
  */
 export interface AdminDisputeResolveInput {
   outcome: DisputeOutcome;

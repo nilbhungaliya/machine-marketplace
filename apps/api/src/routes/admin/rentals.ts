@@ -1,7 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { ADMIN_REASON_MAX, ADMIN_REASON_MIN, RENTAL_BOOKING_STATUSES } from '@mpm/shared-types';
-import { isStorableText } from '../../lib/spec-check.js';
+import { isRealDate, isStorableText } from '../../lib/spec-check.js';
 import { adminCancelBooking, getAdminRentalBooking, listAdminRentalBookings } from '../../services/rentals/admin.service.js';
 
 // M14 admin rental bookings (spec §15, §13.2, R15; plan A3-4). Roles `operations` and `support`; the cancel writes
@@ -10,7 +10,7 @@ import { adminCancelBooking, getAdminRentalBooking, listAdminRentalBookings } fr
 const tags = ['Admin rentals'];
 
 const idParams = z.object({ id: z.string().uuid() });
-const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'a date YYYY-MM-DD');
+const isoDate = z.string().refine(isRealDate, 'must be a date (YYYY-MM-DD)');
 const listQuery = z
   .object({
     status: z.enum(RENTAL_BOOKING_STATUSES).optional(),

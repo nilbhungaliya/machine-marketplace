@@ -33,12 +33,23 @@ const asSql = (v: string | SQL): SQL => (typeof v === 'string' ? sql`${v}::uuid`
  * start `s` and end `e` (dates). `listingId` is a value or a SQL column (discovery's lateral filter, A2).
  */
 export function capacityIntervalsSql(listingId: string | SQL, opts: CapacityOptions = {}): SQL {
+  return intervalsSql(listingId, opts, false);
+}
+
+/**
+ * The intervals; `clash` (the overrun clash check only, never capacity or availability) keeps a booking already past
+ * its end out through tomorrow (`GREATEST(end_date, IST_TODAY + 1)`), so it collides with a booking starting tomorrow.
+ */
+function intervalsSql(listingId: string | SQL, opts: CapacityOptions, clash: boolean): SQL {
   const id = asSql(listingId);
   const exclude = opts.excludeBookingId ? sql`AND b.id <> ${opts.excludeBookingId}::uuid` : sql``;
+  const overrunEnd = clash
+    ? sql`CASE WHEN b.end_date < ${IST_TODAY} THEN GREATEST(b.end_date, ${IST_TODAY} + 1) ELSE GREATEST(b.end_date, ${IST_TODAY}) END`
+    : sql`GREATEST(b.end_date, ${IST_TODAY})`;
   return sql`(
     SELECT b.machines::int AS machines,
       LEAST(b.start_date, COALESCE((b.on_site_at AT TIME ZONE 'Asia/Kolkata')::date, b.start_date)) AS s,
-      CASE WHEN b.status IN ('on_rent', 'disputed') THEN GREATEST(b.end_date, ${IST_TODAY}) ELSE b.end_date END AS e
+      CASE WHEN b.status IN ('on_rent', 'disputed') THEN ${overrunEnd} ELSE b.end_date END AS e
     FROM rental_bookings b
     WHERE b.listing_id = ${id}
       AND (b.status IN ('confirmed', 'on_rent') OR (b.status = 'disputed' AND b.disputed_from = 'on_rent'))
@@ -118,10 +129,18 @@ export function machinesOf(listing: { quantity: string | null }): number {
   return Math.floor(Number(listing.quantity ?? 0));
 }
 
+/** Machines out on `day` for the clash check (`intervalsSql` with `clash`: an overrun counts through tomorrow). */
+async function clashOutOn(conn: Conn, listingId: string, day: string): Promise<number> {
+  const { rows } = await conn.execute<{ m: number }>(sql`
+    SELECT COALESCE(sum(i.machines), 0)::int AS m FROM ${intervalsSql(listingId, {}, true)} i WHERE ${day}::date BETWEEN i.s AND i.e
+  `);
+  return Number(rows[0]?.m ?? 0);
+}
+
 /**
  * The overrun clash of §6.4 for one booking, or null. For an `on_rent` (or disputed-from-`on_rent`) booking past its
  * end date: the earliest `confirmed` booking of the listing starting today or tomorrow (IST) on whose start day `out`
- * exceeds the quantity. For such a `confirmed` booking: the earliest overrunning booking of the listing. Read by A1-4's
+ * exceeds the quantity, the overrun counted out through tomorrow (`clashOutOn`). For such a `confirmed` booking: the earliest overrunning booking of the listing. Read by A1-4's
  * view ("Machine still out from #700012") and A2-3's job (the owner's `rental_booking_clash`, once per pair).
  */
 export async function clashWithFor(conn: Conn, bookingId: string): Promise<{ id: string; ref: number } | null> {
@@ -154,12 +173,12 @@ export async function clashWithFor(conn: Conn, bookingId: string): Promise<{ id:
       ORDER BY o.start_date, o.ref
     `);
     for (const n of next) {
-      if ((await maxOutInRange(conn, b.listing_id, n.start_date, n.start_date)) > quantity) return { id: n.id, ref: Number(n.ref) };
+      if ((await clashOutOn(conn, b.listing_id, n.start_date)) > quantity) return { id: n.id, ref: Number(n.ref) };
     }
     return null;
   }
   const startsSoon = b.status === 'confirmed' && b.start_date >= b.today && b.start_date <= addDays(b.today, 1);
-  if (!startsSoon || (await maxOutInRange(conn, b.listing_id, b.start_date, b.start_date)) <= quantity) return null;
+  if (!startsSoon || (await clashOutOn(conn, b.listing_id, b.start_date)) <= quantity) return null;
   const { rows: over } = await conn.execute<{ id: string; ref: string | number }>(sql`
     SELECT o.id, o.ref FROM rental_bookings o
     WHERE o.listing_id = ${b.listing_id}::uuid AND o.id <> ${b.id}::uuid AND ${overrunSql}

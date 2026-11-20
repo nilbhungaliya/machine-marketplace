@@ -148,11 +148,11 @@ describe('rental-status-sync', () => {
     expect(await statusOf(stray)).toBe('live');
   });
 
-  // `clashWithFor` (C0) counts an overrun up to today only, so the reachable clash is with a booking starting today.
-  it('tells the owner once about an overrun colliding with the next booking', async () => {
+  // `clashWithFor` counts an overrun out through tomorrow, so a booking starting tomorrow already collides.
+  it('tells the owner once about an overrun colliding with the next booking (starting tomorrow)', async () => {
     const id = await rental(1);
     const late = await book(id, { status: 'on_rent', startDate: d(-3), endDate: d(-1), onSiteAt: istNoon(-3) });
-    const next = await book(id, { status: 'confirmed', startDate: d(0), endDate: d(2) });
+    const next = await book(id, { status: 'confirmed', startDate: d(1), endDate: d(3) });
 
     await runRentalStatusSync(app);
     await runRentalStatusSync(app);

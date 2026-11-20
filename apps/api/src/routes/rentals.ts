@@ -1,11 +1,10 @@
 import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { RENTAL_BOOKING_SIDE_FILTERS, RENTAL_BOOKING_TABS } from '@mpm/shared-types';
-import type { Db, Tx } from '../db/index.js';
+import type { Tx } from '../db/index.js';
 import { groupRateLimit } from '../lib/group-limit.js';
 import { refuseViewer } from '../lib/member-guard.js';
 import { perUser } from '../lib/per-user-limit.js';
-import type { TxApp } from '../lib/tx-effects.js';
 import { replayStoredResponse } from '../plugins/idempotency.js';
 import { discoveryIpCap, discoveryRateKey, discoveryRateLimits } from '../services/discovery/rate-key.js';
 import { runIdempotent } from '../services/idempotency.service.js';
@@ -14,7 +13,7 @@ import { bookingPhotos, getRentalBooking, listRentalBookings } from '../services
 import { finalizeBookingPhotos, presignBookingPhoto, type BookingPhotoStep } from '../services/rentals/booking-photos.js';
 import { editNotes } from '../services/rentals/notes.service.js';
 import { acceptChange, confirmBooking, declineBooking, proposeChange, withdrawBooking } from '../services/rentals/proposal.service.js';
-import { reportBookingProblem } from '../services/rentals/rental-disputes.js';
+import { reportBookingProblemTx } from '../services/rentals/rental-disputes.js';
 import {
   cancelBody,
   declineBody,
@@ -197,15 +196,13 @@ const rentalRoutes: FastifyPluginAsync = async (fastify) => {
     return act(request, reply, (tx) => cancelBooking(tx, request.user!, id, { reason: body.reason, note: body.note ?? null }));
   });
 
-  // A3's `reportBookingProblem` takes an app and opens its own transaction (`runTx`); run inside this route's
-  // idempotent transaction it becomes a savepoint, so the dispute, the booking status and the stored reply commit
-  // together. (Its after-commit emits flush when the savepoint is released, a moment before the outer commit.)
+  // A3's `reportBookingProblemTx` runs in this route's idempotent transaction: the dispute, the booking status and the
+  // stored reply commit together, and its emits (queued on `tx`) go out only after that commit.
   fastify.post('/rental-bookings/:id/problem', action, async (request, reply) => {
     const { id } = idParams.parse(request.params);
     const body = problemBody.parse(request.body ?? {});
     return actWithPhotos(request, reply, id, 'problem', body.photoKeys ?? [], async (tx, finals) => {
-      const inTx: TxApp = { db: tx as unknown as Db, io: fastify.io, log: fastify.log };
-      const { bookingId } = await reportBookingProblem(inTx, request.user!, id, {
+      const { bookingId } = await reportBookingProblemTx(tx, request.user!, id, {
         category: body.category,
         description: body.description,
         photoKeys: finals,

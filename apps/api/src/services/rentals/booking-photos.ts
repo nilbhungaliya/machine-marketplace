@@ -3,7 +3,9 @@ import type { UserTokenPayload } from '../../plugins/auth.js';
 import { assertCanWrite } from '../chat/members.js';
 import { finalizePrivatePhotos, presignPrivatePhoto } from '../chat/private-photo.js';
 import { bookingForParty } from './booking-read.service.js';
+import type { BookingReader } from './booking-view.js';
 import { bookingTransitionNotAllowed } from './booking-write.js';
+import type { RentalBookingRow } from './locks.js';
 
 // Booking step photos (M14 spec §6.4, §18; plan D8): the private chat pipeline. Uploads go to `incoming-chat/<business>/`
 // (`presignPrivatePhoto`), then are re-encoded into `rental/<bookingId>/<uuid>.jpg` **before** the step's transaction
@@ -32,12 +34,25 @@ export async function presignBookingPhoto(
 }
 
 /**
- * Before a step's transaction: party and role checked, then the uploads finalised into `rental/<bookingId>/…`. Returns
+ * Whether the (unlocked) booking can take this step from this side: on site from `confirmed` (either side), return from
+ * `on_rent` (owner), a problem from `on_rent` / `returned`. The step's locked re-check stays the rule; this only spares
+ * re-encoding photos for a step that can't happen.
+ */
+function stepPossible(status: RentalBookingRow['status'], side: BookingReader['side'], step: BookingPhotoStep): boolean {
+  if (step === 'on_site') return status === 'confirmed';
+  if (step === 'return') return status === 'on_rent' && side === 'owner';
+  return status === 'on_rent' || status === 'returned';
+}
+
+/**
+ * Before a step's transaction: party, role and the step's status / side checked on the unlocked row (`409
+ * RENTAL_TRANSITION_NOT_ALLOWED`, as the locked check), then the uploads finalised into `rental/<bookingId>/…`. Returns
  * the final keys (the uploads are kept; the route deletes them once the write settled).
  */
 export async function finalizeBookingPhotos(conn: Conn, user: UserTokenPayload, id: string, keys: string[], step: BookingPhotoStep): Promise<string[]> {
   if (keys.length === 0) return [];
-  const { reader } = await bookingForParty(conn, user, id);
+  const { booking, reader } = await bookingForParty(conn, user, id);
   assertCanWrite(reader);
+  if (!stepPossible(booking.status, reader.side, step)) throw bookingTransitionNotAllowed(booking, step);
   return finalizePrivatePhotos(reader.businessId, keys, { kind: 'rental', bookingId: id, step }, { keepUploads: true });
 }

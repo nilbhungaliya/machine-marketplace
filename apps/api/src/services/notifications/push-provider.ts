@@ -24,6 +24,8 @@ export interface PushMessage {
     reviewId?: string;
     /** F8: the part request a row belongs to (the app's `parsePushData` reads it). */
     partRequestId?: string;
+    /** M14 §11: the rental booking a row belongs to (opens the Booking record). */
+    rentalBookingId?: string;
   };
 }
 
