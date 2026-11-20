@@ -12,8 +12,9 @@ import { machineCategoryOf } from './categories.js';
 import type { PartRequestRow } from './locks.js';
 
 // Whether a listing can answer a request (spec §9.2; textile `reply.service.ts` fit check): same kind, category under
-// the request's machine category (sellers categorise differently), `requestSideAccepts`, condition accepted. Shared by
-// the reply picker, the reply send and the pending-reply delivery re-check (`no_longer_fits`).
+// the request's machine category (sellers categorise differently), `requestSideAccepts`, condition accepted. The batch
+// `replyFitReasons` serves the reply picker and the reply send. The pending-reply delivery re-check (`no_longer_fits`)
+// uses the pure `replyFitReason`: the batch function would report the listing's own pending reply as `replied`.
 
 type Conn = Db | Tx;
 
@@ -31,8 +32,9 @@ export function replyFitReason(
 }
 
 /**
- * Each listing's fit for the request: `replied` when the listing already has a pending, delivered or withdrawn reply on
- * it (one reply per listing per request, withdraw final), else `replyFitReason`. Unknown listing ids are left out.
+ * Each listing's fit for the request: `replied` when the listing already has a reply row on it in **any** status
+ * (pending, delivered, withdrawn or dropped: `part_request_replies_request_listing_uq` covers every status, so a second
+ * reply could never be inserted; withdraw and drop are final), else `replyFitReason`. Unknown listing ids are left out.
  */
 export async function replyFitReasons(
   conn: Conn,
@@ -59,11 +61,7 @@ export async function replyFitReasons(
         .select({ listingId: partRequestReplies.listingId })
         .from(partRequestReplies)
         .where(
-          and(
-            eq(partRequestReplies.partRequestId, request.id),
-            inArray(partRequestReplies.listingId, listingIds),
-            inArray(partRequestReplies.status, ['pending', 'delivered', 'withdrawn']),
-          ),
+          and(eq(partRequestReplies.partRequestId, request.id), inArray(partRequestReplies.listingId, listingIds)),
         )
     ).map((r) => r.listingId),
   );

@@ -4,7 +4,7 @@ import { db } from '../src/db/index.js';
 import { businessBlocks, businesses, categories, partRequests, users } from '../src/db/schema.js';
 import { eligibleSellerCount, isEligibleSeller, requestRoleFor } from '../src/services/part-requests/eligibility.js';
 import { writeRequestStatus } from '../src/services/part-requests/lifecycle.js';
-import { replyFitReason } from '../src/services/part-requests/reply-fit.js';
+import { replyFitReason, replyFitReasons } from '../src/services/part-requests/reply-fit.js';
 import { createTestBusinessUser, deleteTestBusinesses, type TestBusinessUser } from './_helpers/test-businesses.js';
 import { createTestSeller, deleteTestSellerExtras, insertTestListing, type TestSeller } from './_helpers/test-listings.js';
 import {
@@ -195,5 +195,24 @@ describe('replyFitReason (§9.2)', () => {
 
   it('an empty condition list accepts any condition', () => {
     expect(replyFitReason({ ...req, conditionIds: [] }, { ...ok, conditionId: null })).toBeNull();
+  });
+});
+
+describe('replyFitReasons (§9.2)', () => {
+  // Review fix I1: the unique key covers every reply status, so a dropped reply still blocks a second one.
+  it('a listing with a dropped reply is replied; a fitting listing without one fits', async () => {
+    const s = await seller();
+    const listing = (side: 'left' | 'pair') => insertTestListing(db, {
+      businessId: s.businessId, userId: s.userId, kind: 'part', categoryId: tree.partGroup.id, side,
+    });
+    const dropped = await listing('left');
+    const fresh = await listing('pair');
+    await insertTestReply({
+      partRequestId: request.id, sellerBusinessId: s.businessId, listingId: dropped.id, userId: s.userId,
+      status: 'dropped', dropReason: 'no_longer_fits',
+    });
+    const fit = await replyFitReasons(db, request, [dropped.id, fresh.id]);
+    expect(fit.get(dropped.id)).toBe('replied');
+    expect(fit.get(fresh.id)).toBeNull();
   });
 });
