@@ -50,7 +50,7 @@ said F4 adds the text-search columns and indexes; F2 R23 left "similar parts nea
 
 Near-me map; saved searches and their alerts (M12, F8/F9); the side-match strip, "Buyers looking for your parts", Wanted
 tabs and the "Post a requirement" button on No results (all need part requests, F8); rental date availability ("free on
-your dates", needs bookings, F7); interchange / superseded part numbers (M4 depth); enquire-all basket (P2); featured
+your dates", needs bookings, F7; built in M14 as the "Free on" filter `SearchFilters.rentalDates`, M14 spec §10); interchange / superseded part numbers (M4 depth); enquire-all basket (P2); featured
 listings (A6); "My machines" (M4); similar parts nearby on the listing page; notifications bell (F9; built with F6 + F7); image and voice
 search (P2).
 
@@ -634,7 +634,7 @@ Sequential batches on `develop`, one at a time, each reviewed before the next (o
 ## 15. Deferred
 
 Near-me map (M2); saved searches + alerts (M12, with F8 / F9); side-match strip, buyers looking for your parts, Wanted
-tabs, requirement prefill on No results (F8); rental date availability (F7 bookings); interchange / superseded numbers
+tabs, requirement prefill on No results (F8); rental date availability (F7 bookings; built in M14); interchange / superseded numbers
 and "My machines" (M4); similar parts nearby (F2 R23); enquire-all basket (P2); featured listings (A6); notifications
 bell (F9); image / voice search, personalised ranking, trending per cluster (P2); admin tuning of ranking constants;
 translated catalogue names (A4).

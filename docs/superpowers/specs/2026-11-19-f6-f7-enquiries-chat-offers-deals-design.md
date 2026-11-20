@@ -7,7 +7,7 @@ half of **F9** for these events, **A5** (enquiries, offers and deals) and the co
 **U1** / **U2** (seller and buyer) in `docs/product-scope.txt`; modules **M9** (enquiry, offers and negotiation), **M10**
 (chat, calls and sharing), **M13** (deals and history), **M15** (reviews), the matching part of **M16** (notifications)
 and of **M19** (scam warnings, hidden numbers, report / block, rate limits), admin **AD5** and part of **AD6** in
-`docs/product-scope.md`. Rentals stay Enquire only (R2); bookings are M14, later.
+`docs/product-scope.md`. Rentals stay Enquire only (R2); bookings are M14, later. *(M14 note, 2026-11-21: built, M14 spec.)*
 
 Follows the textile project (`C:\Users\Dell\Desktop\textile stock marketplace`, also `E:\textile-marketplace`):
 - Specs: `docs/superpowers/specs/2026-11-07-m7-m8-m12-offers-chat-deals-design.md` (threads, masking, scam warning,
@@ -97,11 +97,11 @@ where they appear and listed in §26.
 | # | Ruling |
 |---|---|
 | R1 | **One thread per buyer business + listing.** Created by the first enquiry, offer or Ask price, never by opening a screen. A business can't open a thread on its own listing. The seller never starts a thread. |
-| R2 | **Rentals are Enquire only** in this build (chat, no offers, no deals). The seller's manual Mark rented / End rental from F2 stays. Bookings are M14. |
+| R2 | **Rentals are Enquire only** in this build (chat, no offers, no deals). The seller's manual Mark rented / End rental from F2 stays. Bookings are M14. *(M14 note, 2026-11-21: bookings are built and live in the listing's thread as a `booking` card and system lines; offers stay refused on rentals (`OFFERS_NOT_FOR_RENTALS`); Mark rented / End rental are retired, `rented` follows the booking calendar.)* |
 | R3 | **Team access:** every member of the buyer and seller businesses sees the thread. `owner`, `listing_manager` and `sales` write and act; **`viewer` reads only** and never sees an unmasked number or email. |
 | R4 | **Unverified buyers chat** in threads they open, under rate limits (§12.1): 30 messages a minute per user; new enquiries per business per day 10 unverified / 40 verified **(our numbers)**. |
 | R5 | **The enquiry is the thread's first message:** a card with the quick options, an optional note and the buyer's last "Check my machine" choice (brand / model / year, sent by the app). Enquiry status (open / replied / converted / closed) is **derived** from the thread (§6.2). |
-| R6 | **Phone numbers (D6):** masked (en / hi / gu digits incl. Devanagari and Gujarati, and emails) in every REST and socket output **until a deal exists in the thread AND both sides have ticked "share my number"** in it. Each tick is a consent row with a timestamp (DPDP). Stored text is never altered. Reveal is permanent, even if the deal is cancelled. `viewer` members never see unmasked numbers. The revealed number is the business's optional **contact number** (§5.12), else the owner's phone. |
+| R6 | **Phone numbers (D6):** masked (en / hi / gu digits incl. Devanagari and Gujarati, and emails) in every REST and socket output **until a deal exists in the thread AND both sides have ticked "share my number"** in it. Each tick is a consent row with a timestamp (DPDP). Stored text is never altered. Reveal is permanent, even if the deal is cancelled. `viewer` members never see unmasked numbers. The revealed number is the business's optional **contact number** (§5.12), else the owner's phone. *(M14 note, 2026-11-21: a booking that has been confirmed counts as "a deal in the thread": `threadAgreement` finds the newest deal or confirmed booking; `NO_DEAL_IN_THREAD` keeps its name.)* |
 | R7 | **Scam warning:** a UPI id, payment link or advance-payment phrase (en / hi / gu) is detected when the message is written, stored on it and shown to the other side as a warning; never blocked. |
 | R8 | **Chat media: photos only**, ≤ 5 per message, private bucket, **re-encoded with `sharp`** (EXIF / XMP / GPS dropped; textile D8), read through 300 s signed URLs. PDF / voice / video later. |
 | R9 | **System lines** are stored as a code + values and rendered in the reader's language. **Unread is per user.** Inbox filters **All / Buying / Selling / Your turn**; archive; report and block from the thread; share the listing to WhatsApp. |
@@ -862,6 +862,11 @@ is a non-viewer member of the reviewer business. Window: until `completed_at + r
 |---|---|---|---|
 | Of the seller | Buyer | Part / machine matched the listing · Communication · Handed over on time | Text ≤ 1 000, public |
 | Of the buyer | Seller | Communication · Paid as agreed · Pickup on time | None in MVP: stars are stored, not shown yet (§10.4) |
+
+*(M14 note, 2026-11-21: rental bookings reuse these reviews with a subject, `REVIEW_FACETS[subject][side]`: the renter
+rates the owner on the buyer facets (machine as described, communication, on time), so rental reviews count in the
+seller score; the owner rates the renter on communication, paid as agreed and **care** of the machine (`r_care`, in
+place of pickup). M14 spec R11.)*
 
 Missing, extra or non-integer ratings, or text on a seller → buyer review → `400 REVIEW_ANSWERS_INVALID`. Text is masked always (it can be public);
 it is **not** scam-flagged (no column; masking already removes numbers and handles, build change 4, §28). No edits or withdrawal after submitting (textile).

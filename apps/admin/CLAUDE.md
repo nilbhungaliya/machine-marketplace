@@ -63,6 +63,17 @@ Scope: `apps/admin/` (Next.js 14 App Router, React 18, Tailwind 3, English only,
   (`AdminReportTarget` = `conversation` | `review` | `part_request`; `ReportResolveDialog` takes the `target`). The
   Settings page has a "Part requests" section (`components/settings/marketplace-settings-form.tsx`). Client and label
   maps in `lib/part-requests-api.ts`; names, notes and messages arrive masked from the API: never unmask them.
+- **M14 Rental bookings** (`operations`, `support`, as Deals): `app/(dashboard)/rentals/` list
+  (`components/rentals/rentals-table.tsx`: server-paged 25 / 50 / 100, status, start dates and search (ref, business
+  or listing) in the URL, `?businessId=` / `?listingId=` from a business's "Rental bookings (n)" link
+  or a listing; live refresh on the admin socket's `rental:updated`) and `[id]` detail (`rental-detail.tsx`: terms
+  snapshot, versions, timeline, notes, hour meters, photos as 300 s links in the lightbox, site address, dispute link,
+  reviews) with **Cancel booking** (`cancel-booking-dialog.tsx`, reason required, danger; only before on site; the API
+  audit-logs `rental_booking.cancel`). A listing's detail shows its bookings and blocks (`listing-rental-block.tsx`).
+  **Disputes** carry a subject (deal or rental booking): the list and detail link to the booking, and the resolve
+  dialog asks whether the goods went back only for a deal (a booking resolve sends no `stockReturned`). The Settings page has a "Rentals" section
+  (every `rental_*` key). Client, label maps and `formatBookingRef` (`#700001`) in `lib/rentals-api.ts`; status tones in
+  `lib/status.ts`; the conversation reader labels the `booking_*` system lines. Notes and messages arrive masked.
 
 ## Rules
 - Every page handles loading (`Skeleton`/`TableSkeleton`), empty (`EmptyState`) and error (`ErrorState` with retry) states.

@@ -1,6 +1,7 @@
 # M14 machinery rental bookings — design
 
-Date: 2026-11-20. Status: **Reviewed** (owner delegated every design decision, as for F6 + F7 and F8; independent
+Date: 2026-11-20. Status: **built** (2026-11-21, on `develop`; plan Batch I done, the owner's device pass and the
+client's §23 answers open). Reviewed (owner delegated every design decision, as for F6 + F7 and F8; independent
 review applied, §25; the plan follows). Rulings R1–R16 are final in substance; smaller calls are marked **(my call)** and listed in §24.
 
 Scope IDs: **F5** (machinery rental: rates, availability), the rental half of **F7** (bookings recorded, "Mark machinery

@@ -505,7 +505,7 @@ enquire / make offer (M9) → deal (M13) → requirement **fulfilled** (or close
 | Reference photo or drawing | Optional (photo of the broken part, nameplate) |
 | Validity | 7 / 15 / 30 days; renewable |
 | Quick mode | Three fields (what, quantity, city) for speed, completed later (TI short RFQ); no-login capture with OTP at submit (F2F Express Posting, but with machinery fields) |
-| Rental requirement | Machine type, capacity, dates, site location, operator needed, hours per day (waits for M14; F8 builds parts and machines to buy) |
+| Rental requirement | Machine type, capacity, dates, site location, operator needed, hours per day (P2: M14 built bookings without rental requirements, M14 spec §22; F8 builds parts and machines to buy) |
 
 **Matching rules.**
 - Score = part number / mirror / cross-reference match + category and part name match + fitment overlap + **side
@@ -533,7 +533,7 @@ match); sellers stop seeing closed requirements (except their own replies' outco
 
 **Phase.** MVP: form, matching with cap, seller replies with listing, auto matches, alerts, compare, statuses (**built in F8,
 2026-11-20**: `docs/superpowers/specs/2026-11-20-f8-part-requests-design.md`). P2: send a quote, quick mode without login,
-public wanted pages, ask a question, early access for paid plans, seller alert settings. Rental requirements come with M14.
+public wanted pages, ask a question, early access for paid plans, seller alert settings, rental requirements (M14 left them to P2).
 
 **Inspiration.** TSM M9 (reply with a lot, compare table, capped notifications), IM (BuyLead card, "not relevant"), AL (RFQ
 reviewed then up to 15 quotes), SR (Wanted with budget band and private note), MT (Want-To-Buy and Auto-Search Matches),
@@ -557,14 +557,16 @@ F2F (buy leads, Quote Now, Express Posting). New: matching on part number, fitme
 **Purpose.** A shared record of what was agreed, even when payment happens outside the app. None of the researched machinery
 platforms records anything after first contact.
 
-- An accepted offer (or a confirmed rental booking) creates a **deal**: listing, buyer, seller, agreed price per unit, quantity,
+- An accepted offer creates a **deal** (a confirmed rental booking is its own record, M14; it counts as a deal in the
+  thread for sharing numbers): listing, buyer, seller, agreed price per unit, quantity,
   total, payment (outside the app: bank transfer, UPI, cash, credit; advance + balance allowed), pickup or delivery, expected
   date, notes.
 - Statuses (built as `DEAL_STATUSES`): agreed → completed / cancelled / disputed. Steps inside agreed: payment recorded
   (optional), handed over / delivered, confirmed by buyer.
 - Timers (TI, in calendar days): after "handed over", the buyer has 2 days to report a problem; with no report, the deal
   completes automatically after 3 days (F6 + F7 spec §9.3).
-- Completing a deal reduces listing quantity; at zero the listing becomes sold (or rented for rentals).
+- Completing a deal reduces listing quantity; at zero the listing becomes sold. (A rental listing's `rented` status
+  follows its booking calendar instead, M14.)
 - Cancel with a reason (either side before handover; both must agree after); stock returns to the listing.
 - Problem report opens a support ticket (AD5); deal goes to disputed until resolved.
 - Deal history for both parties; per-deal timeline; export (P2: GST invoice from the seller's details, IndustryBuying style).
@@ -591,19 +593,31 @@ let contractors and factories find one nearby with clear terms.
 | Availability | Calendar with booked and maintenance blocks; "indicative until the owner confirms" |
 
 **Booking workflow.** Request booking (dates, charged by hour / day / week, site location, operator, fuel, note) → owner
-confirms, counters (reusing offers, M9) or declines → confirmed → advance recorded (off-app) → machine on site (hour meter +
+confirms, counters (built as the booking's own change proposals, not offers) or declines → confirmed → advance recorded (off-app) → machine on site (hour meter +
 photos at handover) → on rent → (P2) extension requested / extended (one tap, DZ) → off-rent requested (now or scheduled; P2
 partial quantity, ES) → returned (closing hour meter, damage check) → closed → reviews both ways.
 Exit branches: cancelled by renter, cancelled by owner, expired (no owner reply in 24 h), disputed.
 
-Built enum today: `RENTAL_BOOKING_STATUSES` (to align with this list when M14 is designed in detail). How the listing's
-`rented` status follows bookings is also left to the M14 spec.
+**Built (M14, 2026-11-21; `docs/superpowers/specs/2026-11-20-m14-rental-bookings-design.md`).** Statuses
+(`RENTAL_BOOKING_STATUSES`): requested (owner's turn) ⇄ countered (renter's turn; up to 5 changes) → confirmed → on_rent
+(either side marks On site: hour meter, photos) → returned (owner: closing hour meter, final amount with a reason when it
+differs, damage note, photos) → completed (renter confirms, or 2 days after return). Exits: declined, withdrawn, expired
+(24 h unanswered or the start date passed), cancelled (either side before on site; admin before on site; listing
+removed), disputed (from on rent or returned; support resolves completed / cancelled / resumed). The owner's change is
+the booking's own proposal with its own total, not an F6 offer. A confirmed booking takes capacity on the listing's
+calendar (machines per day, owner blocks included; requests hold nothing, so availability is "indicative until the
+owner confirms"); the listing's `rented` status is system-only and follows today's capacity (the seller's Mark rented
+is retired: an offline rental is a calendar block). The booking lives in the listing's chat thread, and a confirmed
+booking counts as a deal for sharing numbers. Money (estimate → agreed → final) is recorded, never collected (D7).
+A request is charged by hour / day / week / month, starts within 180 days (setting), and a month is 30 calendar days.
 
 **Search.** "For rent" listing type; filters for machine type, capacity, with operator, available on my dates, distance; rates
-shown per chosen period plus transport.
+shown per chosen period plus transport. (Built in M14: the "Free on" date filter, ≤ 90 days, and a 30-day availability strip
+on the listing page showing free / partly booked / full, never who; the card keeps its headline rate, the rate per chosen
+period is P2.)
 
 **Phase.** MVP: rental listing, rates, operator / fuel / transport terms, availability calendar, booking request and
-confirmation, on rent / returned, rented status, reviews. P2: daily logsheet (start / end hours, fuel, operator sign-off; RNTL,
+confirmation, on rent / returned, rented status, reviews (**built in M14, 2026-11-21**). P2: daily logsheet (start / end hours, fuel, operator sign-off; RNTL,
 AUEQI), extensions and off-rent scheduling, deposits through payments (M20), telematics links, owner re-sourcing (DZ).
 
 **Inspiration.** DZ (rates incl. delivery, owner confirms, Extend), ES (off-rent now / scheduled, partial), YC (idle machines,
@@ -614,7 +628,8 @@ type). Avoid inconsistent terms on one page (BigRentz, TransRentals): one set of
 
 - Only the two parties of a **completed** deal or rental can review, within 14 days.
 - Buyer reviews seller: part matched the listing, communication, handover on time (1–5 each) + text. Seller reviews buyer:
-  communication, payment as agreed, pickup on time. Rental: machine condition, operator, timeliness; owner rates renter's care.
+  communication, payment as agreed, pickup on time. Rental (built in M14): the renter rates the owner on machine as described, communication and on time
+  (they count in the seller score), the owner rates the renter on communication, paid as agreed and care of the machine.
 - Double-blind: published when both have reviewed or after 7 days (each review stays with its author until both are in, or until 7 days after it or 14 days after completion, whichever comes first; F6 + F7 spec §10.3). Scores show after 3 reviews; seller can reply once.
 - Report a review; moderators can hide abusive text.
 
@@ -627,7 +642,7 @@ type). Avoid inconsistent terms on one page (BigRentz, TransRentals): one set of
 | New enquiry, new message | ✓ | ✓ | digest |
 | New offer, counteroffer, accepted / rejected / expired | ✓ | ✓ | accepted only |
 | **New matching part** (requirement or saved search) | ✓ | ✓ | ✓ (opt-in) |
-| Booking request, confirmed, on site, returned (P2: extension) | ✓ | ✓ | confirmed |
+| Booking request, confirmed, on site, returned (P2: extension); built in M14 with change, declined, cancelled, starts tomorrow, due back, overdue, completed, problem (no amounts in a push) | ✓ | ✓ | confirmed |
 | Listing approved / rejected / expiring / sold out | ✓ | ✓ | — |
 | Deal agreed, handed over, completed, problem reported | ✓ | ✓ | completed |
 | Verification approved / rejected | ✓ | ✓ | ✓ |
@@ -639,7 +654,7 @@ requirement matches allowed; not built yet: F8 left them to the digest work); en
 ## M17 · Seller dashboard (MVP basic; P2 analytics) — U1, F1
 
 - **Needs you:** offers to answer, enquiries without a reply, requirements you can serve (built in F8 as "Buyers looking
-  for your parts" with a For you count badge), bookings to confirm, listings expiring.
+  for your parts" with a For you count badge), bookings to confirm (since M14 the Deals tab's Rentals badge, `rentalsYourTurn`), listings expiring.
 - **Numbers:** live listings, views this week, enquiries, deals and value this month, reply rate and time.
 - **My listings** by status (Live, In review, Paused, Sold, Rented) with views, enquiries and offers per listing; quick actions
   (edit, update quantity, pause, mark sold, mark unavailable, remove).
@@ -720,7 +735,9 @@ side convention text), rental fields, synonyms for search. "Preview seller form"
 
 ### AD5 · Enquiries, offers, deals and rentals (MVP) — A5
 Read-only views of threads (on report or dispute), offers and counters, deals and their steps, rental bookings; disputes queue
-with timeline and decisions; reported conversations.
+with timeline and decisions; reported conversations. Rental bookings built in M14: list and detail (terms, versions,
+timeline, notes, hour meters, photos, site) with admin cancel before on site, booking problems in the Disputes queue,
+and a Settings section "Rentals" (reply window, changes, limits, days to complete, advance window).
 
 ### AD6 · Reports and controls (MVP basic) — A6
 Reports and flags queue (users, listings, messages, reviews) with outcomes; fraud signals (many accounts per device, repeated
@@ -774,6 +791,8 @@ No pay-per-lead and no paid trust badges.
   either side".)
 - Add Refurbished and Defective / for parts to `CONDITIONS`? (MS has Defective.)
 - Generalise `part_requests` to requirements of kind part / machine / rental (this document assumes yes).
-- Align `RENTAL_BOOKING_STATUSES` with the M14 workflow when the rental spec is written.
+- ~~Align `RENTAL_BOOKING_STATUSES` with the M14 workflow when the rental spec is written.~~ Settled in M14: requested,
+  countered, confirmed, on_rent, returned, completed, declined, withdrawn, expired, cancelled, disputed. Rental money:
+  bookings with dates; deposits and advances recorded only until payments (D7).
 - Fitment data source: sellers and admins only, or license a catalogue later?
 - Data residency for media (R2 has no India region), as in TSM.

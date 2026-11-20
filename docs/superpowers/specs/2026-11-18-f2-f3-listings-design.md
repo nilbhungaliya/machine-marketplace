@@ -102,7 +102,7 @@ and a 60-second video, played back on the listing page. Until the owner adds the
 |---|---|
 | Enquiries, chat, offers, "Request more photos" | **F6**. The contact buttons are shown and say "Coming soon" (R6) |
 | Deals, `reserved`, quantity reduced by deals, reviews | **F7** (the `reserved` transitions are defined, unused) |
-| Rental **bookings** (request / confirm, calendar, on site, returned) | **M14 bookings**. A rental listing's action is Enquire **[Owner]** |
+| Rental **bookings** (request / confirm, calendar, on site, returned) | **M14 bookings**. A rental listing's action is Enquire **[Owner]** *(M14 note, 2026-11-21: built; Request booking is the main action beside Enquire, M14 spec §10)* |
 | Requirements, availability alerts, "N buyers are looking for this part", "Post a requirement" on the Other side block | **F8** |
 | Push / in-app notifications ("listing approved", "expiring") and the reminder-stamping job | **F9**. Now: status, reason and banners in My listings (R12) |
 | Search, browse tree with counts, filters (including the side filter), home feed, similar parts nearby | **F4 / F5** (indexes they need are created now, §13.3) |
@@ -583,6 +583,12 @@ with one `listing_status_history` row. **[Scope; Claude]**
 | `remove` (admin) | moderator | every status but `draft`, `removed` | `removed` | reason required; resolves open reports as `actioned`; seller sees it 30 days (§10) |
 | `photos_removed` | system (admin deletes the last photo) | `live`, `paused`, `expired`, `unavailable`, `sold`, `rented` | `rejected` | outcome `changes_requested`, note = the delete reason (R52) |
 | `reserve` / `unreserve` | system (F7) | `live` ↔ `reserved` | | defined, unused until F7 |
+
+*(M14 note, 2026-11-21: `mark_rented` and `end_rental` are retired (with `GateAction 'end_rental'`); `rented` is
+written only by the system transitions `rent_out` (`live` → `rented`) and `rent_back` (`rented` → `live`, no gate) from
+`syncRentalStatus`, which follows the booking calendar; `pause`, `renew` and `mark_unavailable` also start from
+`rented`; `mark_sold` is for parts and machines only; listing expiry skips rentals with active bookings. Old history
+rows keep the retired actions' labels. M14 spec §7.1–§7.2.)*
 
 Anything else → `409 LISTING_TRANSITION_NOT_ALLOWED` (`details: { from, action }`), nothing written. A seller can't
 touch `hidden` except to remove it.

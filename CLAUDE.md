@@ -164,8 +164,8 @@ After editing `packages/shared-types`, run `pnpm --filter @mpm/shared-types buil
 - `services/` — all business logic; talks to the DB via Drizzle and to external APIs.
 - `plugins/` — cross-cutting: JWT auth (`requireUser`, `requireAdmin`, `requireAdminRole(...)`), DB, Redis, rate limiting, central error handler.
 
-**State machines are the product.** Listing status (F2), offer status (F6), deal status and rental booking status (F7),
-and part request status (F8) are defined in `packages/shared-types`. Transitions live in one service each and are
+**State machines are the product.** Listing status (F2), offer status (F6), deal status (F7), part request status (F8)
+and rental booking status (M14, `rentalBookingTransition`) are defined in `packages/shared-types`. Transitions live in one service each and are
 enforced server-side; clients only display them.
 
 **Left / Right / Pair (F3)** is a first-class listing and part-request field (`PART_SIDES`), not a free-text spec.
@@ -197,6 +197,31 @@ matching, replies, jobs, admin). Rules that hold for every new write:
   so an idempotent retry can finalise them again.
 - **Seller actions:** the seller view and list carry `canAct` (false for a `viewer` member); clients show Reply only
   when it is true, and the API refuses a viewer anyway.
+
+**Rental bookings (M14)** live in `services/rentals/` (request and estimate, proposals, steps, notes, photos, reads,
+calendar and blocks, availability, capacity, status sync, system exits, jobs, admin). Rules that hold for every new write:
+- **The state machine** is `rentalBookingTransition` in shared-types; `writeBookingStatus` (`booking-write.ts`) is the
+  only status write (event, system line, turns, notifications and `rental:updated` emit with it). Proposal actions name
+  the `versionSeq` they answer.
+- **Capacity has one definition** (`capacity.ts`): on a day, the listing's quantity − machines of `confirmed` /
+  `on_rent` / disputed-from-`on_rent` bookings covering it (an `on_rent` booking covers up to today while it overruns)
+  − owner blocks. Requests hold nothing. Every capacity writer (request, change, confirm, accept, on site, return,
+  cancel, resolve, blocks, a quantity decrease, the status sync) locks the **listing `FOR UPDATE` first**, then checks
+  (`assertCapacity`, `409 RENTAL_DATES_TAKEN` / `RENTAL_QUANTITY_BOOKED`).
+- **Locks** (`locks.ts`): renter business `FOR NO KEY UPDATE` (only on request, where limits are counted) → listing
+  `FOR UPDATE` → booking `FOR NO KEY UPDATE` (never `FOR UPDATE`: rows referencing it take `KEY SHARE`) → thread.
+  Jobs read ids unlocked, then per row: listing, then booking `SKIP LOCKED`, re-check, act.
+- **Listing status follows bookings:** `rented` is written only by `syncRentalStatus` (`status-sync.ts`) through the
+  system transitions `rent_out` / `rent_back`; it runs after every capacity change, from `afterListingStatusWrite` for
+  rental listings, and in the `rental-status-sync` job. There is no seller "Mark rented"; an offline rental is a block.
+  Listing writes that meet bookings follow the spec's §7.2 table (`listing-hooks.ts`): hide never cancels, admin
+  removal cancels confirmed bookings, seller remove / unavailable are refused while bookings are active.
+- **Reviews and disputes have a subject** (`deal` | `rental`, `services/reviews/subject.ts`: title, parties, the
+  right lock); a reader that joins `deals` for a review or dispute must go through it. A confirmed booking counts as a
+  deal in the thread for "Share my number" (`threadAgreement`, `thread-agreement.ts`). The site address reaches owner
+  members only after confirmation, masked until the reveal; never in notifications, lists or pushes.
+- **Dates are IST calendar dates** (`date` columns); take today and IST conversions from `lib/ist.ts` (`IST_TODAY`,
+  `istToday()`), never a local `Asia/Kolkata` expression.
 
 **Real-time:** emit to rooms from services via `fastify.io.of('/user' | '/admin').to(room)`, using the helpers in
 `socket/rooms.ts` (never hand-typed room strings). Event names are `<domain>:<event>` (`offer:received`,
@@ -254,7 +279,7 @@ machine type or listing field needs no schema change or app release.
 ```
 
 ### API route prefixes
-- `/auth/*` public · `/users/*` user JWT · `/listings/*` (incl. `/listings/:id/enquiry`, `/listings/:id/offers`, `/listings/:id/part-request-demand`), `/threads/*`, `/offers/*`, `/deals/*`, `/notifications/*`, `/part-requests/*` (`GET /part-requests/options` is public), `/rentals/*` user JWT (business writes refuse a `viewer` member, `403 VIEWER_READ_ONLY`) · `/admin/*` admin JWT + role
+- `/auth/*` public · `/users/*` user JWT · `/listings/*` (incl. `/listings/:id/enquiry`, `/listings/:id/offers`, `/listings/:id/part-request-demand`, `/listings/:id/bookings`, `/listings/:id/calendar`, `/listings/:id/rental-blocks`), `/threads/*`, `/offers/*`, `/deals/*`, `/notifications/*`, `/part-requests/*` (`GET /part-requests/options` is public), `/rental-bookings/*`, `/rental-blocks/*`, `/rentals/*` user JWT (business writes refuse a `viewer` member, `403 VIEWER_READ_ONLY`; `POST /rentals/estimate` and `GET /listings/:id/availability` are public) · `/admin/*` admin JWT + role
 
 ### Errors
 - Services throw `AppError` subclasses (`ValidationError`, `NotFoundError`, `ConflictError`, `ForbiddenError(message, code)`…) with a stable `code`.

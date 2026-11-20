@@ -181,8 +181,10 @@ A feature folder owns its sub-screens, helpers and local types; promote to `comp
 - **Asking for sign-in:** never navigate to the phone screen yourself. Call `requireSignIn({ reason, pending })` from
   `useRequireSignIn()` (`hooks/use-require-sign-in.ts`): it returns true when signed in, else opens the sign-in sheet.
   `pending` is a serialisable `PendingAction` (`lib/pending-action.ts`: `save`, since F6 the contact types
-  `enquire` / `offer` / `buy` / `ask_price`, and since F8 `post_request` with a prefill, which opens Post a requirement
-  through `hooks/use-pending-request.ts` and never posts by itself) kept in the auth slice; `usePendingActionRunner` (`hooks/use-saved.ts`)
+  `enquire` / `offer` / `buy` / `ask_price`, since F8 `post_request` with a prefill, which opens Post a requirement
+  through `hooks/use-pending-request.ts` and never posts by itself, and since M14 `request_booking` with a listing id and
+  an optional prefill, which opens Request booking through `openPendingBooking` (`hooks/use-pending-contact.ts`) and
+  never sends by itself) kept in the auth slice; `usePendingActionRunner` (`hooks/use-saved.ts`)
   runs it once after OTP **and** onboarding (contact types reopen the listing with that sheet through
   `openPendingContact`, `hooks/use-pending-contact.ts`; nothing is sent until the user taps Send); cancel drops it.
 - **Origin:** `useDiscoveryOrigin()` (`hooks/use-discovery-origin.ts`, pure store in `lib/discovery-origin.ts`) is the one
@@ -236,6 +238,40 @@ A feature folder owns its sub-screens, helpers and local types; promote to `comp
   sell wizard's category scope for a draft from a request (`lib/sell-category.ts`). Analytics: `REQUEST_EVENTS` in
   `lib/analytics-events.ts`, ids, counts and codes only (never a name, note or message).
 - **Copy:** `locales/{en,hi,gu}/requirements.json` (buyer) and `buyers.json` (seller).
+
+### 5.4 Rental bookings (M14)
+
+- **Screens** live in `screens/rentals/`: `request-booking` (`RequestBooking { listingId, prefill? }`: date sheet with
+  busy days, period, count, machines, options, site, live estimate; also the renter's changed request),
+  `booking-record` (`BookingRecord { bookingId }`, both sides: proposal card with the reader's answers, money estimate →
+  agreed → final, timeline, notes, contact, hour meters and photos, review, Report a problem, Cancel) and
+  `rental-calendar` (`RentalCalendar { listingId }`, the owner's month grid and blocks). Pieces in
+  `components/rentals/` (availability strip, estimate card, `BookingCard` for the thread, `BookingRow` for the Deals
+  tab's Rentals list, owner / renter answer bars, the propose-change / decline / on site / return / notes / cancel /
+  block / date-range sheets). The Deals tab has a Deals / Rentals switch; `ReviewDeal` and `ReportProblem` take
+  `{ subject: 'deal' | 'rental', id }`; the listing page shows Request booking + Enquire on a rental (the owner gets
+  Calendar and Bookings); search results get a "Dates" chip ("Free on") for rentals.
+- **Server calls** in `lib/rentals-api.ts`; hooks `use-rental-booking.ts` (the Booking record, photos, availability,
+  estimate and **every booking write**, with `invalidateAfterBooking` refreshing the lists, badges, thread, listing and
+  My listings), `use-rental-bookings.ts` (the Rentals list) and `use-rental-calendar.ts` (calendar and blocks).
+  **Query keys** under `qk.rentals.*` in `lib/query-keys.ts`: lists under `['rentals', …]` (`qk.rentals.all`,
+  `qk.rentals.list`, `qk.rentals.estimate`), one booking under `['rental-booking', id]` (`qk.rentals.booking`,
+  `bookingReview`, `bookingPhotos`), a listing's availability and calendar under `['rental-listing', listingId, …]`
+  (`qk.rentals.listing`, `availability`, `calendar`). Writes send an `Idempotency-Key`, one per user action, reused on
+  retry; proposal answers send the `versionSeq` shown.
+- **Socket:** `rental:updated { bookingId, threadId, status, version }` routes by the `rental:` prefix
+  (`lib/socket-route.ts`) to `lib/socket-rentals.ts`, which refetches the booking, the Rentals lists, the thread and the
+  badges. Payloads are ids only.
+- **Dates** are IST calendar dates `YYYY-MM-DD` compared as strings (`lib/rental-dates.ts`); today comes from
+  `lib/ist-date.ts` at the call site, never the device time zone. Money is integer paise; local previews (the form's
+  instant total, a change's "% vs estimate") use shared-types' `rentalEstimate` on the booking's or listing's terms, and
+  the server's `POST /rentals/estimate` / version totals are what count.
+- **Pure logic with tests:** `lib/rental-display.ts` (periods, estimate lines, status chips, actions, whose turn),
+  `lib/rental-request-form.ts` (the request's Yup schema), `lib/rental-dates.ts`, `lib/rental-calendar.ts` (the owner's
+  grid), `lib/rental-return.ts` (the owner's change and return forms), error copy `lib/m14-errors.ts`. Analytics:
+  `RENTAL_EVENTS` in `lib/analytics-events.ts`, ids, statuses, periods, counts and codes only (never an address,
+  pincode, note, message or typed amount).
+- **Copy:** `locales/{en,hi,gu}/rentals.json` (renter, Booking record) and `rentals-owner.json` (owner sheets, calendar).
 
 ---
 

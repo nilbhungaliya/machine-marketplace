@@ -5,7 +5,8 @@
 > in its own git worktree on a local lane branch, one implementer per lane doing its tasks in order, an independent
 > review per lane, then the controller merges. Steps use checkbox (`- [ ]`) syntax.
 
-**Status:** Draft plan (2026-11-20), reviewed before C0.
+**Status:** **Built** (2026-11-20/21: C0, waves A and B and Batch I on `develop`; I-5 is the owner's, listed in
+`docs/PROJECT_STATUS.md` Open items). Push of the close-out: the controller's.
 
 **Goal:** A signed-in renter sees a rental listing's availability and requests a booking for dates; the owner confirms,
 declines or proposes a change; a confirmed booking takes capacity on the listing's calendar (never over-committed);
