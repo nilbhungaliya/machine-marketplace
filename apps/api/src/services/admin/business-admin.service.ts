@@ -10,7 +10,16 @@ import {
   type VerificationStatus,
 } from '@mpm/shared-types';
 import type { Db, Tx } from '../../db/index.js';
-import { adminUsers, auditLog, businessVerifications, businesses, gstRepresentativeProofs, listings, users } from '../../db/schema.js';
+import {
+  adminUsers,
+  auditLog,
+  businessVerifications,
+  businesses,
+  gstRepresentativeProofs,
+  listings,
+  partRequests,
+  users,
+} from '../../db/schema.js';
 import { ConflictError, NotFoundError } from '../../lib/errors.js';
 import { adminText } from '../../lib/admin-text.js';
 import { writeAudit } from '../audit.service.js';
@@ -201,6 +210,8 @@ export async function getBusinessDetail(conn: Db | Tx, id: string): Promise<Admi
     .select({ n: count() })
     .from(listings)
     .where(and(eq(listings.businessId, id), ne(listings.status, 'draft')));
+  // F8 §14: every request the business posted, any status (the admin list's `businessId` filter shows them).
+  const [requestTotal] = await conn.select({ n: count() }).from(partRequests).where(eq(partRequests.businessId, id));
 
   return {
     profile: await businessProfile(conn, id, owner?.name ?? null),
@@ -214,7 +225,7 @@ export async function getBusinessDetail(conn: Db | Tx, id: string): Promise<Admi
     // F6 + F7 §16.1: deals by status, disputes with outcomes and the review score.
     dealHistory: await businessDealHistory(conn, id),
     sellerScore: await sellerScore(conn, id),
-    partRequestCount: 0,
+    partRequestCount: Number(requestTotal?.n ?? 0),
   };
 }
 

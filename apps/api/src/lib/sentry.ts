@@ -23,24 +23,44 @@ export function initSentry(): boolean {
     dataCollection: { userInfo: false, httpBodies: [] },
     beforeSend: scrub,
     beforeBreadcrumb: (crumb) => {
-      if (crumb.data) crumb.data = redact(crumb.data);
+      if (crumb.data) crumb.data = redact(crumb.data, { url: crumb.data.url });
       return crumb;
     },
   });
   return true;
 }
 
-/** Header and body keys that must never leave the server. F6 + F7 §19 adds message / note / review text, numbers, FCM tokens and photo keys. */
-const SECRET_KEYS = /^(authorization|cookie|x-api-key|token|refreshtoken|password|otp|phone|firebase_token|phone_token|razorpay_signature|gstin|pan|account_number|ifsc|text|note|notestext|description|replytext|messagetoparties|contactphone|number|fcmtoken|photokeys)$/i;
+/**
+ * Header and body keys that must never leave the server. F6 + F7 §19 adds message / note / review text, numbers, FCM
+ * tokens and photo keys; F8 §17 adds a reply's `message`.
+ */
+const SECRET_KEYS = /^(authorization|cookie|x-api-key|token|refreshtoken|password|otp|phone|firebase_token|phone_token|razorpay_signature|gstin|pan|account_number|ifsc|text|note|notestext|description|replytext|messagetoparties|contactphone|number|fcmtoken|photokeys|message)$/i;
 
-export function redact(input: unknown): any {
-  if (!input || typeof input !== 'object') return input;
-  if (Array.isArray(input)) return input.map(redact);
-  const out: Record<string, unknown> = {};
-  for (const [k, v] of Object.entries(input as Record<string, unknown>)) {
-    out[k] = SECRET_KEYS.test(k) ? '[redacted]' : redact(v);
-  }
-  return out;
+/**
+ * F8 §17: a request's `name` is the buyer's free text, so it goes from **request bodies of `/part-requests` routes**
+ * only, not through the global list (other events keep their names: business, category, file names).
+ */
+const PART_REQUEST_BODY_KEYS = /^name$/i;
+const PART_REQUEST_PATH = /^(?:[a-z]+:\/\/[^/]+)?\/(?:admin\/)?part-requests(?:[/?#]|$)/i;
+
+/** Whether `url` (a path or a full URL) is a `/part-requests` or `/admin/part-requests` route. */
+export function isPartRequestUrl(url: unknown): boolean {
+  return typeof url === 'string' && PART_REQUEST_PATH.test(url);
+}
+
+/** Redacts secret keys at any depth; with `{ url }` of a `/part-requests` route, also `name` (a request body). */
+export function redact(input: unknown, opts: { url?: string } = {}): any {
+  const partRequest = isPartRequestUrl(opts.url);
+  const walk = (value: unknown): any => {
+    if (!value || typeof value !== 'object') return value;
+    if (Array.isArray(value)) return value.map(walk);
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+      out[k] = SECRET_KEYS.test(k) || (partRequest && PART_REQUEST_BODY_KEYS.test(k)) ? '[redacted]' : walk(v);
+    }
+    return out;
+  };
+  return walk(input);
 }
 
 /** Exported for tests — the scrubbing is the part worth pinning. */
@@ -50,8 +70,9 @@ export function scrub<T extends { request?: any; extra?: any; contexts?: any }>(
     event.request.cookies = undefined;
     event.request.data = undefined;   // bodies never go, whatever dataCollection says
   }
-  if (event.extra) event.extra = redact(event.extra);
-  if (event.contexts) event.contexts = redact(event.contexts);
+  const url: string | undefined = event.request?.url;
+  if (event.extra) event.extra = redact(event.extra, { url });
+  if (event.contexts) event.contexts = redact(event.contexts, { url });
   return event;
 }
 

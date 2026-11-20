@@ -9,6 +9,8 @@ import { sendDuePushes } from '../services/notifications/push-sender.js';
 import { deleteOldNotifications } from '../services/notifications/retention.js';
 import { expireOffers, notifyExpiringOffers } from '../services/offers/offer-jobs.js';
 import { publishDueReviews } from '../services/reviews/review-jobs.js';
+import { deletePartRequestHistory, expirePartRequests, notifyExpiringPartRequests } from '../services/part-requests/request-jobs.js';
+import { runPartRequestWork } from '../services/part-requests/work-job.js';
 import type { JobSpec } from './runner.js';
 
 /**
@@ -70,6 +72,20 @@ export function allJobs(app: FastifyInstance): JobSpec[] {
       run: async () => {
         const deleted = await sweepIdempotencyKeys(app.db);
         if (deleted > 0) app.log.info({ job: 'idempotency-cleanup', deleted }, 'old idempotency keys deleted');
+      },
+    },
+    // F8 part requests (spec §5.7, §9.1, §14): the work queue (targeting, matching, pending replies), expiry, the
+    // expiring-soon reminder and retention.
+    { name: 'part-request-work', everyMs: 10_000, run: () => runPartRequestWork(app).then(() => undefined) },
+    { name: 'part-request-expiry', everyMs: 3_600_000, run: () => expirePartRequests(app).then(() => undefined) },
+    { name: 'part-request-expiring-soon', everyMs: 3_600_000, run: () => notifyExpiringPartRequests(app).then(() => undefined) },
+    {
+      name: 'part-request-retention',
+      everyMs: 86_400_000,
+      firstRunMs: 1_200_000,
+      run: async () => {
+        const deleted = await deletePartRequestHistory(app.db);
+        if (deleted > 0) app.log.info({ job: 'part-request-retention', deleted }, 'old part request history deleted');
       },
     },
   ];

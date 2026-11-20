@@ -49,6 +49,9 @@ import adminDisputeRoutes from './routes/admin/disputes.js';
 import adminConversationRoutes from './routes/admin/conversations.js';
 import adminReportRoutes from './routes/admin/reports.js';
 import adminReviewRoutes from './routes/admin/reviews.js';
+import partRequestRoutes from './routes/part-requests.js';
+import partRequestReplyRoutes from './routes/part-request-replies.js';
+import adminPartRequestRoutes from './routes/admin/part-requests.js';
 
 export interface BuildAppOptions {
   /** false in unit tests that must not touch Postgres/Redis. */
@@ -135,6 +138,10 @@ export async function buildApp({ infra = true, logger = true }: BuildAppOptions 
     await app.register(adminConversationRoutes);
     await app.register(adminReportRoutes);
     await app.register(adminReviewRoutes);
+    // F8 part requests (spec §12.2, §14).
+    await app.register(partRequestRoutes);
+    await app.register(partRequestReplyRoutes);
+    await app.register(adminPartRequestRoutes);
   }
 
   return app;
