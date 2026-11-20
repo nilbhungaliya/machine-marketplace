@@ -14,22 +14,27 @@ import Notice from '@/components/Notice';
 import ScreenWrapper from '@/components/ScreenWrapper';
 import Skeleton from '@/components/Skeleton';
 import RequestPrefillCard from '@/components/part-requests/RequestPrefillCard';
+import DateRangeSheet from '@/components/rentals/DateRangeSheet';
 import { useSearch } from '@/hooks/use-discover';
 import { originStore, useDiscoveryOrigin } from '@/hooks/use-discovery-origin';
 import { useBrands, useMasterData } from '@/hooks/use-listing';
 import { useType } from '@/hooks/use-type';
 import { track } from '@/lib/analytics';
-import { SEARCH_EVENTS } from '@/lib/analytics-events';
+import { RENTAL_EVENTS, SEARCH_EVENTS } from '@/lib/analytics-events';
 import { errorCode, errorKey } from '@/lib/api-error';
 import { isSearchRedirect } from '@/lib/discover-api';
-import { ChevronLeft, MapPin, Package, Search, SlidersHorizontal, TriangleAlert } from '@/lib/icons';
+import { CalendarClock, ChevronLeft, MapPin, Package, Search, SlidersHorizontal, TriangleAlert } from '@/lib/icons';
+import { isLanguage } from '@/lib/i18n';
+import { rangeLength } from '@/lib/rental-dates';
+import { dateRangeLabel } from '@/lib/rental-display';
 import { LISTING_ERROR_KEYS } from '@/lib/listing-errors';
 import { prefillFromReading } from '@/lib/part-request-form';
 import { recordRecentSearch } from '@/lib/recent-searches';
 import { countFilters, filterChipSummaries, radiusLabel } from '@/lib/search-filters';
 import {
   bannerCopy, clearFilter, countLine, noResultsCopy, normaliseRequest, readingChips, removeReadingChip, rentalsOnly,
-  sortOptions, submittedProps, withFilters, withQuery, withRadius, withSort, type ClearableFilter, type ResultsRequest,
+  sortOptions, submittedProps, withFilters, withQuery, withRadius, withRentalDates, withSort, type ClearableFilter,
+  type ResultsRequest,
 } from '@/lib/search-request';
 import { radius, spacing, useTheme } from '@/lib/theme';
 import type { RootStackScreenProps } from '@/navigation/types';
@@ -47,7 +52,7 @@ interface Frozen {
 const captureOrigin = (freeze: () => DiscoveryOrigin): Frozen => ({ origin: freeze(), radiusKm: originStore.getSnapshot().radiusKm });
 
 /** Codes a retry can't fix: the screen offers to reset the search instead. */
-const RESET_CODES = new Set(['LOCATION_REQUIRED', 'SORT_NEEDS_MACHINES', 'FILTER_NOT_AVAILABLE']);
+const RESET_CODES = new Set(['LOCATION_REQUIRED', 'SORT_NEEDS_MACHINES', 'FILTER_NOT_AVAILABLE', 'RENTAL_DATES_INVALID']);
 
 /**
  * Search results (F4 + F5 spec §8.4, mockups "Search results", "No results", "Machines for rent"): the search bar, the
@@ -56,7 +61,8 @@ const RESET_CODES = new Set(['LOCATION_REQUIRED', 'SORT_NEEDS_MACHINES', 'FILTER
  * The route params are the request; the origin is frozen per list (R18) once the stored location is read.
  */
 export default function SearchResultsScreen({ navigation, route }: RootStackScreenProps<'SearchResults'>) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const lang = isLanguage(i18n.language) ? i18n.language : 'en';
   const { colors } = useTheme();
   const type = useType();
   const origin = useDiscoveryOrigin();
@@ -96,6 +102,7 @@ export default function SearchResultsScreen({ navigation, route }: RootStackScre
   useEffect(() => setText(request.q ?? ''), [request.q]);
   const [sortOpen, setSortOpen] = useState(false);
   const [locationOpen, setLocationOpen] = useState(false);
+  const [datesOpen, setDatesOpen] = useState(false);
 
   // `#ref` of a public listing: open it in place of the results.
   useEffect(() => {
@@ -191,6 +198,19 @@ export default function SearchResultsScreen({ navigation, route }: RootStackScre
       testID: 'Search-chip-kinds',
     });
   }
+  // M14 "Free on" (R13; mockup rental · "Machines for rent" "21–23 Nov"): rentals only.
+  if (rentalsOnly(filters)) {
+    const range = filters.rentalDates;
+    chips.push({
+      id: 'dates',
+      label: range ? dateRangeLabel(range.from, range.to, lang) : t('rentals.search.dates'),
+      icon: CalendarClock,
+      selected: !!range,
+      onPress: () => setDatesOpen(true),
+      onRemove: range ? () => update(withRentalDates(request, null)) : undefined,
+      testID: 'Search-chip-dates',
+    });
+  }
   for (const c of readingChips(shown?.reading)) {
     chips.push({
       id: `reading-${c.id}`,
@@ -281,10 +301,12 @@ export default function SearchResultsScreen({ navigation, route }: RootStackScre
       ) : page.total !== null && items.length > 0 ? (
         <View style={s.countRow}>
           <Text style={s.count}>
-            {(() => {
-              const c = countLine(page.total, sort);
-              return t(c.key, { ...c.params, order: t(c.orderKey) });
-            })()}
+            {filters.rentalDates
+              ? t('rentals.search.freeCount', { count: page.total })
+              : (() => {
+                const c = countLine(page.total, sort);
+                return t(c.key, { ...c.params, order: t(c.orderKey) });
+              })()}
           </Text>
           <Button title={t('discover.search.results.sort')} variant="ghost" size="sm" phLabel="Search-sort" onPress={() => setSortOpen(true)} />
         </View>
@@ -388,6 +410,19 @@ export default function SearchResultsScreen({ navigation, route }: RootStackScre
         onClose={() => setSortOpen(false)}
       />
       <LocationSheet visible={locationOpen} onClose={closeLocation} />
+      {rentalsOnly(filters) ? (
+        <DateRangeSheet
+          visible={datesOpen}
+          mode="range"
+          value={filters.rentalDates ? { start: filters.rentalDates.from, end: filters.rentalDates.to } : null}
+          onClose={() => setDatesOpen(false)}
+          onPick={(v) => {
+            const to = v.end ?? v.start;
+            track(RENTAL_EVENTS.datesFilterSet, { days: rangeLength(v.start, to) });
+            update(withRentalDates(request, { from: v.start, to }));
+          }}
+        />
+      ) : null}
     </ScreenWrapper>
   );
 }

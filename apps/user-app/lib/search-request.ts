@@ -12,6 +12,7 @@ import {
   type SearchSort,
 } from '@mpm/shared-types';
 import type { CopyKey, FilterChipId } from './search-filters';
+import { istDateKey } from './ist-date';
 
 // The results list's request on the phone (F4 + F5 spec §5.3, §5.6, §5.8, §5.11, §8.4): what the results screen keeps
 // in its route params (words, filters, removed chips, sort), the reader's chips and what removing one does, the reset
@@ -49,6 +50,8 @@ export function normaliseRequest(request: ResultsRequest): ResultsRequest {
   const q = request.q?.trim();
   if (q) out.q = q;
   const filters = cleanFilters(request.filters);
+  // "Free on" dates kept past IST midnight start in the past: the API refuses them (`RENTAL_DATES_INVALID`).
+  if (filters.rentalDates && filters.rentalDates.from < istDateKey()) delete filters.rentalDates;
   if (Object.keys(filters).length) out.filters = filters;
   const removed = REMOVABLE_CHIPS.filter((c) => request.removedChips?.includes(c));
   if (removed.length) out.removedChips = removed;
@@ -68,6 +71,17 @@ export function withFilters(request: ResultsRequest, filters: SearchFilters): Re
 
 export function withSort(request: ResultsRequest, sort: SearchSort): ResultsRequest {
   return normaliseRequest({ ...request, sort });
+}
+
+/**
+ * M14 "Free on" (spec §10, R13): the rentals list's dates, set only while the list is rentals only (the filter means
+ * nothing for parts and machines for sale); `null` clears them. A one-day pick is `{ from, to: from }`.
+ */
+export function withRentalDates(request: ResultsRequest, range: { from: string; to?: string } | null): ResultsRequest {
+  const filters: SearchFilters = { ...request.filters };
+  delete filters.rentalDates;
+  if (range && rentalsOnly(request.filters)) filters.rentalDates = { from: range.from, to: range.to ?? range.from };
+  return normaliseRequest({ ...request, filters });
 }
 
 /** "Widen": the same list at the next radius with full matches (§5.6); null = All India. */
@@ -135,7 +149,7 @@ export function clearFilter(request: ResultsRequest, id: ClearableFilter): Resul
     case 'delivers': delete f.delivers; break;
     case 'hasVideo': delete f.hasVideo; break;
     case 'specs': delete f.specs; break;
-    case 'kinds': delete f.kinds; break;
+    case 'kinds': delete f.kinds; delete f.rentalDates; break;
   }
   return normaliseRequest({ ...request, filters: f });
 }

@@ -1,13 +1,76 @@
 {
   "request": {
-    "title": "Request booking"
+    "title": "Request booking",
+    "changeTitle": "Change the booking",
+    "loadError": "Couldn't load this machine",
+    "loadErrorBody": "Check your connection and try again.",
+    "notBookableTitle": "This machine can't be booked",
+    "changeIntro": "Change the dates or terms and send them to the owner.",
+    "changeSent": "Change sent",
+    "sent": "Booking request sent",
+    "send": "Send request",
+    "sendChange": "Send change"
   },
   "record": {
-    "title": "Booking"
+    "title": "Booking",
+    "goneTitle": "Booking not found",
+    "loadError": "Couldn't load the booking",
+    "loadErrorBody": "Check your connection and try again.",
+    "viewerOnly": "You can view this booking. Only the owner or a manager of your business can act on it.",
+    "clash": "Booking #{{ref}} on this machine is still out on these dates.",
+    "declined": "The owner declined the request.",
+    "withdrawn": "The renter withdrew the request.",
+    "expired": "There was no answer in time, so the request expired.",
+    "returnedRenter": "The owner marked the machine returned. Confirm the return or report a problem by {{date}}; after that it completes by itself.",
+    "request": "Booking request",
+    "ownerChange": "Owner's change",
+    "renterChange": "Renter's change",
+    "changesLeft_one": "{{count}} change left",
+    "changesLeft_other": "{{count}} changes left",
+    "dates": "Dates",
+    "length": "Length",
+    "machines": "Machines",
+    "replyBy": "Answer by {{when}}",
+    "withOperator": "with operator",
+    "withoutOperator": "without operator",
+    "renterPicksUp": "Renter picks up",
+    "fromOwner": "from {{name}}",
+    "toRenter": "to {{name}}",
+    "site": "Site",
+    "siteIn": "{{city}}, {{state}} {{pincode}}",
+    "siteDistance": "{{km}} km from the machine",
+    "addressAfterConfirm": "The full address shows once you confirm.",
+    "addressNone": "No address given.",
+    "beyondRadius": "Beyond the service area",
+    "onSiteTitle": "On site and return",
+    "onSiteAt": "On site (marked by {{actor}})",
+    "hourMeterOpen": "Hour meter at start",
+    "hourMeterClose": "Hour meter at return",
+    "returnedAt": "Returned",
+    "hoursRun": "Hours run",
+    "damage": "Damage noted",
+    "problemTitle": "Problem with support",
+    "problemOpen": "Support is looking into it.",
+    "confirmReturnTitle": "Confirm the return?",
+    "confirmReturnBody": "The owner's final amount is {{amount}}. Confirming completes the booking.",
+    "confirmReturnBodyNoAmount": "Confirming completes the booking.",
+    "returnConfirmed": "Return confirmed",
+    "messageOwner": "Message owner",
+    "messageRenter": "Message renter",
+    "cancelledBy": "Cancelled by {{actor}}"
   },
   "dates": {
     "pickStart": "Choose a start date",
-    "pickRange": "Choose your dates"
+    "pickRange": "Choose your dates",
+    "prevMonth": "Previous month",
+    "nextMonth": "Next month",
+    "fullA11y": "{{date}}: booked",
+    "fullLegend": "Booked",
+    "done": "Done",
+    "tapStart": "Tap the start date",
+    "tapRange": "Tap the first and the last day",
+    "rangeSummary_one": "{{dates}} · {{count}} day",
+    "rangeSummary_other": "{{dates}} · {{count}} days"
   },
   "status": {
     "yourAnswer": "Your answer",
@@ -36,7 +99,16 @@
     "operator": "Operator",
     "transport": "Transport",
     "estimate": "Estimate",
-    "total": "Total"
+    "total": "Total",
+    "title": "Money",
+    "agreed": "Agreed",
+    "final": "Final",
+    "whenConfirmed": "When confirmed",
+    "atReturn": "At return",
+    "changed": "Changed",
+    "reason": "Reason: {{reason}}",
+    "outsideApp": "Recorded here, paid outside the app",
+    "ownerTotal": "Owner's total"
   },
   "errors": {
     "rentalPeriodNotOffered": "This machine isn't rented out by that period. Choose another.",
@@ -58,5 +130,282 @@
     "listingHasOpenBookings": "This listing has bookings in progress. Finish or cancel them first.",
     "listingNotBookable": "This machine can't be booked right now.",
     "rentalBookingNotFound": "This booking is no longer available."
+  },
+  "machinesCount_one": "{{count}} machine",
+  "machinesCount_other": "{{count}} machines",
+  "duration": {
+    "hour_one": "{{count}} hour",
+    "hour_other": "{{count}} hours",
+    "day_one": "{{count}} day",
+    "day_other": "{{count}} days",
+    "week_one": "{{count}} week",
+    "week_other": "{{count}} weeks",
+    "month_one": "{{count}} month",
+    "month_other": "{{count}} months"
+  },
+  "availability": {
+    "title": "Availability",
+    "retry": "Retry",
+    "free": "Free",
+    "partial": "Some booked",
+    "full": "Booked",
+    "note": "Dates are held only once the owner confirms.",
+    "a11y": {
+      "free": "{{day}}: free",
+      "partial": "{{day}}: some machines booked",
+      "full": "{{day}}: booked"
+    }
+  },
+  "estimate": {
+    "title": "Estimate",
+    "fuel": "Fuel: {{fuel}}",
+    "deposit": "Deposit {{amount}}, paid outside the app",
+    "failed": "Couldn't work out the estimate. Try again.",
+    "pickDate": "Choose a start date to see the estimate.",
+    "outsideApp": "Recorded here, paid outside the app",
+    "datesFull": "Some of these dates are already booked. Choose other dates.",
+    "belowMinimum": "This is shorter than the owner's minimum booking.",
+    "beyondRadiusKm": "Your site is beyond the owner's {{km}} km service area. They may decline or ask for more.",
+    "beyondRadius": "Your site is beyond the owner's service area."
+  },
+  "form": {
+    "from": "From",
+    "to": "To",
+    "pickDate": "Pick a date",
+    "datesFull": "Some of these dates are already booked.",
+    "chargedBy": "Charged by",
+    "howMany": {
+      "hour": "How many hours",
+      "day": "How many days",
+      "week": "How many weeks",
+      "month": "How many months"
+    },
+    "machines": "Machines",
+    "machinesHint_one": "The owner has {{count}} machine",
+    "machinesHint_other": "The owner has {{count}} machines",
+    "operator": "Operator",
+    "withOperator": "With operator",
+    "withoutOperator": "Without operator",
+    "transport": "Transport",
+    "ownerDelivers": "Owner delivers",
+    "iPickUp": "I'll pick it up",
+    "sitePincode": "Site pincode",
+    "siteIn": "{{city}}, {{state}}",
+    "pincodeUnknown": "We don't know this pincode",
+    "useBusiness": "Use my business location",
+    "siteAddress": "Site address",
+    "siteAddressHint": "Optional",
+    "addressPrivate": "The owner sees the address only after confirming.",
+    "message": "Message",
+    "note": "Note to the owner",
+    "noteHint": "Optional",
+    "decrease": "Decrease: {{label}}",
+    "increase": "Increase: {{label}}",
+    "errors": {
+      "startDate": "Choose a start date",
+      "startPast": "The start date can't be in the past",
+      "period": "Choose how it's charged",
+      "count": "Choose a length from 1 to {{max}}",
+      "minimum": "This is shorter than the owner's minimum booking",
+      "machines": "Choose 1 to {{max}} machines",
+      "pincode": "Enter a 6-digit pincode",
+      "addressMax": "Keep it under {{max}} characters",
+      "noteMax": "Keep it under {{max}} characters",
+      "startTooFar": "Pick a start date closer to today"
+    }
+  },
+  "listing": {
+    "calendar": "Calendar",
+    "bookings": "Bookings",
+    "openRequests_one": "{{count}} open request",
+    "openRequests_other": "{{count}} open requests",
+    "activeBookings_one": "{{count}} active booking",
+    "activeBookings_other": "{{count}} active bookings",
+    "outToday_one": "{{count}} out today",
+    "outToday_other": "{{count}} out today",
+    "noBookings": "No bookings yet"
+  },
+  "card": {
+    "title": "Booking #{{ref}}"
+  },
+  "row": {
+    "renting": "Renting · {{total}} · {{name}}",
+    "rentingOut": "Renting out · {{total}} · {{name}}"
+  },
+  "list": {
+    "segmentDeals": "Deals",
+    "segmentRentals": "Rentals",
+    "sides": {
+      "all": "All",
+      "renter": "Renting",
+      "owner": "Renting out"
+    },
+    "thisListing": "This listing",
+    "empty": {
+      "active": "No active rentals",
+      "completed": "No completed rentals yet",
+      "cancelled": "No cancelled rentals"
+    },
+    "emptySubtitle": "Bookings you request or receive for machines on rent show here."
+  },
+  "actor": {
+    "you": "you",
+    "renter": "the renter",
+    "owner": "the owner",
+    "system": "the app",
+    "admin": "support"
+  },
+  "actions": {
+    "on_site": "Mark on site",
+    "return": "Mark returned",
+    "confirm_return": "Confirm return",
+    "review": "Rate this booking",
+    "report_problem": "Report a problem",
+    "cancel": "Cancel booking"
+  },
+  "answer": {
+    "accept": "Accept",
+    "acceptTitle": "Accept the owner's change?",
+    "acceptBody": "The booking is confirmed at {{total}}.",
+    "accepted": "Booking confirmed",
+    "change": "Change",
+    "decline": "Decline",
+    "withdraw": "Withdraw request",
+    "withdrawTitle": "Withdraw this request?",
+    "withdrawBody": "The owner is told and the dates are freed.",
+    "withdrawn": "Request withdrawn"
+  },
+  "cancel": {
+    "title": "Cancel this booking?",
+    "body": "Choose why. The other business is told.",
+    "note": "Note (optional)",
+    "noteError": "Keep it under {{max}} characters",
+    "confirm": "Cancel booking",
+    "done": "Booking cancelled",
+    "reasonRequired": "Choose a reason"
+  },
+  "cancelReason": {
+    "plans_changed": "Plans changed",
+    "found_another": "Found another machine",
+    "owner_not_responding": "Owner not responding",
+    "machine_unavailable": "Machine not available",
+    "breakdown": "Machine broke down",
+    "renter_not_responding": "Renter not responding",
+    "other": "Other reason",
+    "listing_removed": "The listing was removed",
+    "blocked": "One business blocked the other",
+    "owner_inactive": "The owner's account is inactive",
+    "owner_gst": "The owner's GST verification ended",
+    "renter_inactive": "The renter's account is inactive",
+    "support_closed": "Closed by support",
+    "admin": "Cancelled by the team"
+  },
+  "declineReason": {
+    "dates_unavailable": "The machine isn't free on those dates.",
+    "site_too_far": "The site is too far for the owner.",
+    "terms": "The terms didn't suit the owner.",
+    "other": "The owner declined the request."
+  },
+  "completedHow": {
+    "renter_confirmed": "The renter confirmed the return.",
+    "auto": "Completed by itself after the return.",
+    "support": "Closed by support."
+  },
+  "finalReason": {
+    "extra_time": "Extra time",
+    "overtime": "Overtime hours",
+    "fuel": "Fuel",
+    "transport": "Transport",
+    "damage": "Damage",
+    "discount": "Discount",
+    "other": "Other"
+  },
+  "outcome": {
+    "completed": "Support closed it: the booking is completed.",
+    "cancelled": "Support closed it: the booking is cancelled.",
+    "resumed": "Support closed it: the booking continues."
+  },
+  "notes": {
+    "title": "Notes",
+    "edit": "Edit",
+    "editTitle": "Booking notes",
+    "payment": "Payment method",
+    "advance": "Advance paid",
+    "deposit": "Deposit paid",
+    "depositReturned": "Deposit returned",
+    "returned": "returned",
+    "time": "Expected on site at",
+    "timePlaceholder": "e.g. 09:30",
+    "timeError": "Enter a time like 09:30",
+    "text": "Note",
+    "textHint": "Anything both sides should remember",
+    "textError": "Keep it under {{max}} characters",
+    "amountError": "Enter an amount in rupees",
+    "save": "Save notes",
+    "saved": "Notes saved",
+    "empty": "Nothing noted yet."
+  },
+  "review": {
+    "title": "Review",
+    "done": "You've rated this booking. Thank you!",
+    "rate_renter": "How did renting from this owner go? Rate them.",
+    "rate_owner": "How was this renter? Rate them.",
+    "closed": "Reviews for this booking are closed.",
+    "reviewOwner": "Review the owner",
+    "reviewRenter": "Review the renter",
+    "renterPrivate": "Your ratings of the renter are kept on record. They aren't shown to anyone yet.",
+    "facet": {
+      "matched_listing": "Machine as described",
+      "communication": "Communication",
+      "on_time": "On time",
+      "payment": "Paid as agreed",
+      "care": "Care of the machine"
+    }
+  },
+  "problem": {
+    "intro": "Support will look into it. The booking waits until it's sorted.",
+    "category": {
+      "not_as_described": "Not as described",
+      "breakdown": "Breakdown",
+      "damage": "Damage",
+      "hours_or_amount": "Hours or amount",
+      "no_show": "Didn't turn up",
+      "other": "Other"
+    }
+  },
+  "search": {
+    "dates": "Dates",
+    "freeOn": "Free on",
+    "freeOnHint": "Only machines free on every day of your dates",
+    "anyDates": "Any dates",
+    "freeCount_one": "{{count}} machine free on your dates",
+    "freeCount_other": "{{count}} machines free on your dates"
+  },
+  "timeline": {
+    "title": "Booking updates",
+    "requested": "Booking requested",
+    "changed_by_owner": "Owner proposed a change",
+    "changed_by_renter": "Renter proposed a change",
+    "confirmed": "Booking confirmed",
+    "change_accepted": "Change accepted",
+    "declined": "Request declined",
+    "withdrawn": "Request withdrawn",
+    "expired": "Request expired",
+    "on_site": "Machine on site ({{actor}})",
+    "returned": "Machine returned",
+    "return_confirmed": "Return confirmed",
+    "auto_completed": "Completed by itself",
+    "cancelled": "Cancelled ({{actor}})",
+    "problem_reported": "Problem reported ({{actor}})",
+    "dispute_resolved": "Support closed the problem",
+    "notes_changed": "Notes updated",
+    "contact_shared": "Number shared ({{actor}})",
+    "next": {
+      "confirmed": "Owner confirms",
+      "on_site": "Machine on site",
+      "returned": "Machine returned",
+      "completed": "Return confirmed",
+      "reviews": "Both sides review"
+    }
   }
 }

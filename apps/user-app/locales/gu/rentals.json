@@ -1,13 +1,76 @@
 {
   "request": {
-    "title": "બુકિંગ માંગો"
+    "title": "બુકિંગ માંગો",
+    "changeTitle": "બુકિંગ બદલો",
+    "loadError": "આ મશીન લોડ થઈ શક્યું નહીં",
+    "loadErrorBody": "તમારું કનેક્શન તપાસો અને ફરી પ્રયાસ કરો.",
+    "notBookableTitle": "આ મશીન બુક થઈ શકે એમ નથી",
+    "changeIntro": "તારીખો અથવા શરતો બદલો અને માલિકને મોકલો.",
+    "changeSent": "ફેરફાર મોકલ્યો",
+    "sent": "બુકિંગ વિનંતી મોકલી",
+    "send": "વિનંતી મોકલો",
+    "sendChange": "ફેરફાર મોકલો"
   },
   "record": {
-    "title": "બુકિંગ"
+    "title": "બુકિંગ",
+    "goneTitle": "બુકિંગ મળ્યું નહીં",
+    "loadError": "બુકિંગ લોડ થઈ શક્યું નહીં",
+    "loadErrorBody": "તમારું કનેક્શન તપાસો અને ફરી પ્રયાસ કરો.",
+    "viewerOnly": "તમે આ બુકિંગ જોઈ શકો છો. તેના પર પગલું ફક્ત તમારા બિઝનેસના માલિક કે મેનેજર લઈ શકે.",
+    "clash": "આ મશીનનું બુકિંગ #{{ref}} આ તારીખોએ હજી બહાર છે.",
+    "declined": "માલિકે વિનંતીની ના પાડી.",
+    "withdrawn": "ભાડૂતે વિનંતી પાછી ખેંચી.",
+    "expired": "સમયસર જવાબ ન આવ્યો, તેથી વિનંતીની મુદત પૂરી થઈ.",
+    "returnedRenter": "માલિકે મશીન પાછું આવ્યું નોંધ્યું છે. {{date}} સુધીમાં પરત કન્ફર્મ કરો અથવા સમસ્યા જણાવો; પછી તે આપમેળે પૂરું થશે.",
+    "request": "બુકિંગ વિનંતી",
+    "ownerChange": "માલિકનો ફેરફાર",
+    "renterChange": "ભાડૂતનો ફેરફાર",
+    "changesLeft_one": "{{count}} ફેરફાર બાકી",
+    "changesLeft_other": "{{count}} ફેરફાર બાકી",
+    "dates": "તારીખો",
+    "length": "અવધિ",
+    "machines": "મશીનો",
+    "replyBy": "{{when}} સુધીમાં જવાબ આપો",
+    "withOperator": "ઑપરેટર સાથે",
+    "withoutOperator": "ઑપરેટર વગર",
+    "renterPicksUp": "ભાડૂત લઈ જશે",
+    "fromOwner": "{{name}} પાસેથી",
+    "toRenter": "{{name}} ને",
+    "site": "સાઇટ",
+    "siteIn": "{{city}}, {{state}} {{pincode}}",
+    "siteDistance": "મશીનથી {{km}} km",
+    "addressAfterConfirm": "કન્ફર્મ કર્યા પછી પૂરું સરનામું દેખાશે.",
+    "addressNone": "કોઈ સરનામું આપ્યું નથી.",
+    "beyondRadius": "સેવા વિસ્તારની બહાર",
+    "onSiteTitle": "સાઇટ પર અને પરત",
+    "onSiteAt": "સાઇટ પર (નોંધ્યું: {{actor}})",
+    "hourMeterOpen": "શરૂઆતમાં અવર મીટર",
+    "hourMeterClose": "પરત વખતે અવર મીટર",
+    "returnedAt": "પાછું આવ્યું",
+    "hoursRun": "ચાલેલા કલાક",
+    "damage": "નોંધાયેલું નુકસાન",
+    "problemTitle": "સપોર્ટ પાસે સમસ્યા",
+    "problemOpen": "સપોર્ટ આ જોઈ રહ્યું છે.",
+    "confirmReturnTitle": "પરત કન્ફર્મ કરશો?",
+    "confirmReturnBody": "માલિકની અંતિમ રકમ {{amount}} છે. કન્ફર્મ કરવાથી બુકિંગ પૂરું થશે.",
+    "confirmReturnBodyNoAmount": "કન્ફર્મ કરવાથી બુકિંગ પૂરું થશે.",
+    "returnConfirmed": "પરત કન્ફર્મ થયું",
+    "messageOwner": "માલિકને મેસેજ કરો",
+    "messageRenter": "ભાડૂતને મેસેજ કરો",
+    "cancelledBy": "રદ કર્યું: {{actor}}"
   },
   "dates": {
     "pickStart": "શરૂ થવાની તારીખ પસંદ કરો",
-    "pickRange": "તમારી તારીખો પસંદ કરો"
+    "pickRange": "તમારી તારીખો પસંદ કરો",
+    "prevMonth": "પાછલો મહિનો",
+    "nextMonth": "આગલો મહિનો",
+    "fullA11y": "{{date}}: બુક છે",
+    "fullLegend": "બુક છે",
+    "done": "થઈ ગયું",
+    "tapStart": "શરૂઆતની તારીખ પસંદ કરો",
+    "tapRange": "પહેલો અને છેલ્લો દિવસ પસંદ કરો",
+    "rangeSummary_one": "{{dates}} · {{count}} દિવસ",
+    "rangeSummary_other": "{{dates}} · {{count}} દિવસ"
   },
   "status": {
     "yourAnswer": "તમારો જવાબ",
@@ -36,7 +99,16 @@
     "operator": "ઓપરેટર",
     "transport": "ટ્રાન્સપોર્ટ",
     "estimate": "અંદાજ",
-    "total": "કુલ"
+    "total": "કુલ",
+    "title": "રકમ",
+    "agreed": "નક્કી રકમ",
+    "final": "અંતિમ રકમ",
+    "whenConfirmed": "કન્ફર્મ થયે",
+    "atReturn": "પરત વખતે",
+    "changed": "બદલાઈ",
+    "reason": "કારણ: {{reason}}",
+    "outsideApp": "અહીં નોંધાયેલું, ચુકવણી ઍપની બહાર",
+    "ownerTotal": "માલિકનો કુલ"
   },
   "errors": {
     "rentalPeriodNotOffered": "આ મશીન આ સમયગાળા પ્રમાણે ભાડે અપાતું નથી. બીજો સમયગાળો પસંદ કરો.",
@@ -58,5 +130,282 @@
     "listingHasOpenBookings": "આ લિસ્ટિંગનાં બુકિંગ ચાલુ છે. પહેલાં તેને પૂરાં કરો અથવા રદ કરો.",
     "listingNotBookable": "આ મશીન અત્યારે બુક થઈ શકતું નથી.",
     "rentalBookingNotFound": "આ બુકિંગ હવે ઉપલબ્ધ નથી."
+  },
+  "machinesCount_one": "{{count}} મશીન",
+  "machinesCount_other": "{{count}} મશીનો",
+  "duration": {
+    "hour_one": "{{count}} કલાક",
+    "hour_other": "{{count}} કલાક",
+    "day_one": "{{count}} દિવસ",
+    "day_other": "{{count}} દિવસ",
+    "week_one": "{{count}} અઠવાડિયું",
+    "week_other": "{{count}} અઠવાડિયાં",
+    "month_one": "{{count}} મહિનો",
+    "month_other": "{{count}} મહિના"
+  },
+  "availability": {
+    "title": "ઉપલબ્ધતા",
+    "retry": "ફરી પ્રયાસ કરો",
+    "free": "ખાલી",
+    "partial": "થોડું બુક",
+    "full": "બુક છે",
+    "note": "માલિક કન્ફર્મ કરે ત્યારે જ તારીખો રોકાય છે.",
+    "a11y": {
+      "free": "{{day}}: ખાલી",
+      "partial": "{{day}}: થોડાં મશીન બુક",
+      "full": "{{day}}: બુક છે"
+    }
+  },
+  "estimate": {
+    "title": "અંદાજ",
+    "fuel": "ઈંધણ: {{fuel}}",
+    "deposit": "ડિપોઝિટ {{amount}}, ઍપની બહાર ચૂકવાય છે",
+    "failed": "અંદાજ નીકળી શક્યો નહીં. ફરી પ્રયાસ કરો.",
+    "pickDate": "અંદાજ જોવા માટે શરૂઆતની તારીખ પસંદ કરો.",
+    "outsideApp": "અહીં નોંધાયેલું, ચુકવણી ઍપની બહાર",
+    "datesFull": "આમાંની કેટલીક તારીખો પહેલેથી બુક છે. બીજી તારીખો પસંદ કરો.",
+    "belowMinimum": "આ માલિકના લઘુતમ બુકિંગ કરતાં ઓછું છે.",
+    "beyondRadiusKm": "તમારી સાઇટ માલિકના {{km}} km સેવા વિસ્તારની બહાર છે. તેઓ ના પાડી શકે અથવા વધુ માગી શકે.",
+    "beyondRadius": "તમારી સાઇટ માલિકના સેવા વિસ્તારની બહાર છે."
+  },
+  "form": {
+    "from": "થી",
+    "to": "સુધી",
+    "pickDate": "તારીખ પસંદ કરો",
+    "datesFull": "આમાંની કેટલીક તારીખો પહેલેથી બુક છે.",
+    "chargedBy": "ભાડું કયા હિસાબે",
+    "howMany": {
+      "hour": "કેટલા કલાક",
+      "day": "કેટલા દિવસ",
+      "week": "કેટલાં અઠવાડિયાં",
+      "month": "કેટલા મહિના"
+    },
+    "machines": "મશીનો",
+    "machinesHint_one": "માલિક પાસે {{count}} મશીન છે",
+    "machinesHint_other": "માલિક પાસે {{count}} મશીનો છે",
+    "operator": "ઑપરેટર",
+    "withOperator": "ઑપરેટર સાથે",
+    "withoutOperator": "ઑપરેટર વગર",
+    "transport": "ટ્રાન્સપોર્ટ",
+    "ownerDelivers": "માલિક પહોંચાડશે",
+    "iPickUp": "હું લઈ જઈશ",
+    "sitePincode": "સાઇટનો પિનકોડ",
+    "siteIn": "{{city}}, {{state}}",
+    "pincodeUnknown": "આ પિનકોડ અમને મળ્યો નહીં",
+    "useBusiness": "મારા બિઝનેસનું લોકેશન લો",
+    "siteAddress": "સાઇટનું સરનામું",
+    "siteAddressHint": "વૈકલ્પિક",
+    "addressPrivate": "માલિકને સરનામું કન્ફર્મ કર્યા પછી જ દેખાશે.",
+    "message": "મેસેજ",
+    "note": "માલિક માટે નોંધ",
+    "noteHint": "વૈકલ્પિક",
+    "decrease": "ઘટાડો: {{label}}",
+    "increase": "વધારો: {{label}}",
+    "errors": {
+      "startDate": "શરૂઆતની તારીખ પસંદ કરો",
+      "startPast": "શરૂઆતની તારીખ વીતેલી ન હોઈ શકે",
+      "period": "ભાડું કયા હિસાબે, તે પસંદ કરો",
+      "count": "1 થી {{max}} સુધીની અવધિ પસંદ કરો",
+      "minimum": "આ માલિકના લઘુતમ બુકિંગ કરતાં ઓછું છે",
+      "machines": "1 થી {{max}} મશીનો પસંદ કરો",
+      "pincode": "6 અંકનો પિનકોડ લખો",
+      "addressMax": "{{max}} અક્ષરોથી ઓછું રાખો",
+      "noteMax": "{{max}} અક્ષરોથી ઓછું રાખો",
+      "startTooFar": "આજની નજીકની શરૂઆતની તારીખ પસંદ કરો"
+    }
+  },
+  "listing": {
+    "calendar": "કૅલેન્ડર",
+    "bookings": "બુકિંગ",
+    "openRequests_one": "{{count}} ખુલ્લી વિનંતી",
+    "openRequests_other": "{{count}} ખુલ્લી વિનંતીઓ",
+    "activeBookings_one": "{{count}} ચાલુ બુકિંગ",
+    "activeBookings_other": "{{count}} ચાલુ બુકિંગ",
+    "outToday_one": "આજે {{count}} બહાર",
+    "outToday_other": "આજે {{count}} બહાર",
+    "noBookings": "હજી કોઈ બુકિંગ નથી"
+  },
+  "card": {
+    "title": "બુકિંગ #{{ref}}"
+  },
+  "row": {
+    "renting": "ભાડે લીધું · {{total}} · {{name}}",
+    "rentingOut": "ભાડે આપ્યું · {{total}} · {{name}}"
+  },
+  "list": {
+    "segmentDeals": "ડીલ",
+    "segmentRentals": "ભાડું",
+    "sides": {
+      "all": "બધા",
+      "renter": "ભાડે લીધેલાં",
+      "owner": "ભાડે આપેલાં"
+    },
+    "thisListing": "આ લિસ્ટિંગ",
+    "empty": {
+      "active": "કોઈ ચાલુ ભાડું નથી",
+      "completed": "હજી કોઈ પૂરું ભાડું નથી",
+      "cancelled": "કોઈ રદ ભાડું નથી"
+    },
+    "emptySubtitle": "ભાડાનાં મશીનો માટે તમે મોકલેલી કે મળેલી બુકિંગ વિનંતીઓ અહીં દેખાશે."
+  },
+  "actor": {
+    "you": "તમે",
+    "renter": "ભાડૂત",
+    "owner": "માલિક",
+    "system": "ઍપ",
+    "admin": "સપોર્ટ"
+  },
+  "actions": {
+    "on_site": "સાઇટ પર પહોંચ્યું",
+    "return": "પાછું આવ્યું",
+    "confirm_return": "પરત કન્ફર્મ કરો",
+    "review": "આ બુકિંગને રેટ કરો",
+    "report_problem": "સમસ્યા જણાવો",
+    "cancel": "બુકિંગ રદ કરો"
+  },
+  "answer": {
+    "accept": "સ્વીકારો",
+    "acceptTitle": "માલિકનો ફેરફાર સ્વીકારશો?",
+    "acceptBody": "બુકિંગ {{total}} પર કન્ફર્મ થશે.",
+    "accepted": "બુકિંગ કન્ફર્મ થયું",
+    "change": "બદલો",
+    "decline": "ના પાડો",
+    "withdraw": "વિનંતી પાછી ખેંચો",
+    "withdrawTitle": "આ વિનંતી પાછી ખેંચશો?",
+    "withdrawBody": "માલિકને જાણ થશે અને તારીખો ખાલી થશે.",
+    "withdrawn": "વિનંતી પાછી ખેંચી"
+  },
+  "cancel": {
+    "title": "આ બુકિંગ રદ કરશો?",
+    "body": "કારણ પસંદ કરો. બીજા બિઝનેસને જાણ થશે.",
+    "note": "નોંધ (વૈકલ્પિક)",
+    "noteError": "{{max}} અક્ષરોથી ઓછું રાખો",
+    "confirm": "બુકિંગ રદ કરો",
+    "done": "બુકિંગ રદ થયું",
+    "reasonRequired": "કારણ પસંદ કરો"
+  },
+  "cancelReason": {
+    "plans_changed": "યોજના બદલાઈ",
+    "found_another": "બીજું મશીન મળી ગયું",
+    "owner_not_responding": "માલિક જવાબ આપતા નથી",
+    "machine_unavailable": "મશીન ઉપલબ્ધ નથી",
+    "breakdown": "મશીન બગડી ગયું",
+    "renter_not_responding": "ભાડૂત જવાબ આપતા નથી",
+    "other": "બીજું કારણ",
+    "listing_removed": "લિસ્ટિંગ દૂર કરાયું",
+    "blocked": "એક બિઝનેસે બીજાને બ્લૉક કર્યો",
+    "owner_inactive": "માલિકનું એકાઉન્ટ નિષ્ક્રિય છે",
+    "owner_gst": "માલિકનું GST વેરિફિકેશન પૂરું થયું",
+    "renter_inactive": "ભાડૂતનું એકાઉન્ટ નિષ્ક્રિય છે",
+    "support_closed": "સપોર્ટે બંધ કર્યું",
+    "admin": "ટીમે રદ કર્યું"
+  },
+  "declineReason": {
+    "dates_unavailable": "એ તારીખોએ મશીન ખાલી નથી.",
+    "site_too_far": "સાઇટ માલિક માટે બહુ દૂર છે.",
+    "terms": "શરતો માલિકને યોગ્ય ન લાગી.",
+    "other": "માલિકે વિનંતીની ના પાડી."
+  },
+  "completedHow": {
+    "renter_confirmed": "ભાડૂતે પરત કન્ફર્મ કર્યું.",
+    "auto": "પરત આવ્યા પછી આપમેળે પૂરું થયું.",
+    "support": "સપોર્ટે બંધ કર્યું."
+  },
+  "finalReason": {
+    "extra_time": "વધારાનો સમય",
+    "overtime": "ઓવરટાઇમ કલાક",
+    "fuel": "ઈંધણ",
+    "transport": "ટ્રાન્સપોર્ટ",
+    "damage": "નુકસાન",
+    "discount": "છૂટ",
+    "other": "બીજું"
+  },
+  "outcome": {
+    "completed": "સપોર્ટે બંધ કર્યું: બુકિંગ પૂરું થયું.",
+    "cancelled": "સપોર્ટે બંધ કર્યું: બુકિંગ રદ થયું.",
+    "resumed": "સપોર્ટે બંધ કર્યું: બુકિંગ ચાલુ છે."
+  },
+  "notes": {
+    "title": "નોંધો",
+    "edit": "બદલો",
+    "editTitle": "બુકિંગની નોંધો",
+    "payment": "ચુકવણીની રીત",
+    "advance": "ચૂકવેલ એડવાન્સ",
+    "deposit": "ચૂકવેલ ડિપોઝિટ",
+    "depositReturned": "ડિપોઝિટ પાછી આપી",
+    "returned": "પાછી આપી",
+    "time": "સાઇટ પર પહોંચવાનો સમય",
+    "timePlaceholder": "જેમ કે 09:30",
+    "timeError": "09:30 જેવો સમય લખો",
+    "text": "નોંધ",
+    "textHint": "જે બંનેએ યાદ રાખવાનું છે",
+    "textError": "{{max}} અક્ષરોથી ઓછું રાખો",
+    "amountError": "રૂપિયામાં રકમ લખો",
+    "save": "નોંધો સેવ કરો",
+    "saved": "નોંધો સેવ થઈ",
+    "empty": "હજી કંઈ નોંધાયું નથી."
+  },
+  "review": {
+    "title": "રિવ્યૂ",
+    "done": "તમે આ બુકિંગને રેટ કરી દીધું છે. આભાર!",
+    "rate_renter": "આ માલિક પાસેથી ભાડે લેવાનું કેવું રહ્યું? તેમને રેટ કરો.",
+    "rate_owner": "આ ભાડૂત કેવા રહ્યા? તેમને રેટ કરો.",
+    "closed": "આ બુકિંગના રિવ્યૂ બંધ થઈ ગયા છે.",
+    "reviewOwner": "માલિકનો રિવ્યૂ કરો",
+    "reviewRenter": "ભાડૂતનો રિવ્યૂ કરો",
+    "renterPrivate": "ભાડૂતને આપેલું તમારું રેટિંગ રેકૉર્ડમાં રહે છે. હજી તે કોઈને દેખાતું નથી.",
+    "facet": {
+      "matched_listing": "મશીન જેવું કહ્યું હતું તેવું જ",
+      "communication": "વાતચીત",
+      "on_time": "સમયસર",
+      "payment": "નક્કી કર્યા મુજબ ચુકવણી",
+      "care": "મશીનની સંભાળ"
+    }
+  },
+  "problem": {
+    "intro": "સપોર્ટ આ જોશે. મામલો ઉકેલાય ત્યાં સુધી બુકિંગ રોકાયેલું રહેશે.",
+    "category": {
+      "not_as_described": "કહ્યા મુજબ નથી",
+      "breakdown": "ખરાબી",
+      "damage": "નુકસાન",
+      "hours_or_amount": "કલાક અથવા રકમ",
+      "no_show": "કોઈ આવ્યું નહીં",
+      "other": "બીજું"
+    }
+  },
+  "search": {
+    "dates": "તારીખો",
+    "freeOn": "આ તારીખોએ ખાલી",
+    "freeOnHint": "ફક્ત એવાં મશીનો જે તમારી દરેક તારીખે ખાલી છે",
+    "anyDates": "કોઈ પણ તારીખ",
+    "freeCount_one": "તમારી તારીખોએ {{count}} મશીન ખાલી",
+    "freeCount_other": "તમારી તારીખોએ {{count}} મશીનો ખાલી"
+  },
+  "timeline": {
+    "title": "બુકિંગ અપડેટ",
+    "requested": "બુકિંગની વિનંતી",
+    "changed_by_owner": "માલિકે ફેરફાર મોકલ્યો",
+    "changed_by_renter": "ભાડૂતે ફેરફાર મોકલ્યો",
+    "confirmed": "બુકિંગ કન્ફર્મ થયું",
+    "change_accepted": "ફેરફાર સ્વીકારાયો",
+    "declined": "વિનંતીની ના પડી",
+    "withdrawn": "વિનંતી પાછી ખેંચાઈ",
+    "expired": "વિનંતીની મુદત પૂરી",
+    "on_site": "મશીન સાઇટ પર ({{actor}})",
+    "returned": "મશીન પાછું આવ્યું",
+    "return_confirmed": "પરત કન્ફર્મ થયું",
+    "auto_completed": "આપમેળે પૂરું થયું",
+    "cancelled": "રદ થયું ({{actor}})",
+    "problem_reported": "સમસ્યા જણાવી ({{actor}})",
+    "dispute_resolved": "સપોર્ટે સમસ્યા બંધ કરી",
+    "notes_changed": "નોંધો બદલાઈ",
+    "contact_shared": "નંબર શેર કર્યો ({{actor}})",
+    "next": {
+      "confirmed": "માલિક કન્ફર્મ કરશે",
+      "on_site": "મશીન સાઇટ પર",
+      "returned": "મશીન પાછું",
+      "completed": "પરત કન્ફર્મ",
+      "reviews": "બંને રિવ્યૂ કરશે"
+    }
   }
 }

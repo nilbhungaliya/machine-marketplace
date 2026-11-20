@@ -3,7 +3,7 @@ import { SEARCH_SORTS, type QueryReading } from '@mpm/shared-types';
 import { resources } from '@/locales';
 import {
   bannerCopy, clearAllFilters, clearFilter, footerCopy, noResultsCopy, readingChips, removeReadingChip, sortOptions,
-  submittedProps, withFilters, withQuery, type ResultsRequest,
+  submittedProps, withFilters, withQuery, withRentalDates, type ResultsRequest,
 } from './search-request';
 
 type Tree = { [k: string]: string | Tree };
@@ -128,5 +128,23 @@ describe('copy', () => {
     const props = submittedProps(reading({ words: ['gear', 'pump'], brand: { id: 'b', name: 'Kirloskar' } }), { kinds: ['part'] });
     expect(props).toEqual({ words: 2, chips: 1, kinds: 'part' });
     expect(JSON.stringify(props)).not.toMatch(/gear|pump|Kirloskar/);
+  });
+});
+
+describe('withRentalDates (M14 "Free on")', () => {
+  const rentals: ResultsRequest = { q: 'jcb', filters: { kinds: ['machine_rental'] } };
+
+  it('sets the dates on a rentals-only list; one day is from = to', () => {
+    expect(withRentalDates(rentals, { from: '2099-03-01', to: '2099-03-03' }).filters?.rentalDates)
+      .toEqual({ from: '2099-03-01', to: '2099-03-03' });
+    expect(withRentalDates(rentals, { from: '2099-03-01' }).filters?.rentalDates).toEqual({ from: '2099-03-01', to: '2099-03-01' });
+  });
+
+  it('never sets them on a list that is not rentals only, and null clears them', () => {
+    expect(withRentalDates({ filters: { kinds: ['machine', 'machine_rental'] } }, { from: '2099-03-01' }).filters?.rentalDates).toBeUndefined();
+    expect(withRentalDates({ q: 'jcb' }, { from: '2099-03-01' }).filters).toBeUndefined();
+    const dated = withRentalDates(rentals, { from: '2099-03-01', to: '2099-03-03' });
+    expect(withRentalDates(dated, null)).toEqual(rentals);
+    expect(withRentalDates(rentals, { from: '2020-01-01', to: '2020-01-03' }).filters?.rentalDates).toBeUndefined();
   });
 });
