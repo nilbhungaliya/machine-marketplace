@@ -22,6 +22,8 @@ export interface PushMessage {
     offerId?: string;
     dealId?: string;
     reviewId?: string;
+    /** F8: the part request a row belongs to (the app's `parsePushData` reads it). */
+    partRequestId?: string;
   };
 }
 

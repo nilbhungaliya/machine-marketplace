@@ -39,10 +39,16 @@ export interface ForSellersQuery {
 
 /**
  * The base filter of a seller list: eligible, the `kind` segment and, with `forListing` (a listing of the reader's
- * business), only the requests `demandRequestIds` returns for it (D16). Null when nothing can match.
+ * business), only the requests `demandRequestIds` returns for it (D16). Null when nothing can match. Every tab needs
+ * an active request or one the business replied to, so the base says so too: the tab counts then scan those rows, not
+ * every request ever posted.
  */
 async function baseWhere(conn: Conn, businessId: string, f: SellerFacts, q: Pick<ForSellersQuery, 'kind' | 'forListing'>): Promise<SQL | null> {
-  const where: SQL[] = [f.eligible];
+  const where: SQL[] = [
+    sql`(part_requests.status = 'active' OR part_requests.id IN (SELECT rb.part_request_id FROM part_request_replies rb
+      WHERE rb.seller_business_id = ${businessId}::uuid))`,
+    f.eligible,
+  ];
   if (q.kind) where.push(eq(partRequests.kind, q.kind));
   if (q.forListing) {
     const [own] = await conn

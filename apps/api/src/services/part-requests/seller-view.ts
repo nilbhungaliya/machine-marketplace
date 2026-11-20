@@ -16,6 +16,7 @@ import { getSettings } from '../settings.service.js';
 import { buyerCounts, fitLine, loadFitViews, requestCommon } from './buyer-view.js';
 import { eligibleSellerSql } from './eligibility.js';
 import { partRequestNotFound, type PartRequestRow } from './locks.js';
+import { replyAllowance } from './reply-options.js';
 import { sellerReplyViews } from './reply-views.js';
 
 // The request as an eligible seller sees it (spec §12.3; plan A1-4; textile `services/requirements/eligibility.ts` seller
@@ -158,11 +159,7 @@ export async function sellerView(conn: Conn, user: UserTokenPayload, row: PartRe
   const common = await requestCommon(conn, rec.r, counts);
   const myReplies = await sellerReplyViews(conn, rec.r.id, sellerBusinessId);
   const [member] = await conn.select({ memberRole: users.memberRole }).from(users).where(eq(users.id, user.userId));
-  // merge: replyAllowance — lane A2's `replyAllowance` (`./reply-options.ts`, not on this lane's base) is the one
-  // definition of a seller's reply slots: at merge, take `slotsLeft` (and the `canReply` slot test) from it and drop
-  // this inline count (`part_request_reply_listings_max` − the seller's pending + delivered replies).
-  const s = await getSettings(conn);
-  const slotsLeft = Math.max(0, s.part_request_reply_listings_max - Number(rec.myReplyCount));
+  const { slotsLeft } = await replyAllowance(conn, await getSettings(conn), rec.r.id, sellerBusinessId);
   return {
     ...common,
     role: 'seller',

@@ -9,7 +9,6 @@ import {
   SELLER_PART_REQUEST_TABS,
 } from '@mpm/shared-types';
 import type { Tx } from '../db/index.js';
-import { AppError } from '../lib/errors.js';
 import { groupRateLimit } from '../lib/group-limit.js';
 import { refuseViewer } from '../lib/member-guard.js';
 import { perUser } from '../lib/per-user-limit.js';
@@ -41,8 +40,6 @@ import { listForSellers } from '../services/part-requests/seller-read.service.js
 // deleted when it fails (or turns out to be a concurrent replay), the dropped ones after it commits.
 
 const tags = ['Part requests'];
-
-export const notImplemented = (): AppError => new AppError('Not implemented yet', 501, 'NOT_IMPLEMENTED');
 
 const idParams = z.object({ id: z.string().uuid() });
 const presignBody = z.object({ contentType: z.string().max(100), contentLength: z.number().int().positive() }).strict();

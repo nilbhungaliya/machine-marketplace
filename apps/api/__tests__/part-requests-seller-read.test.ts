@@ -4,6 +4,7 @@ import { eq, inArray, or } from 'drizzle-orm';
 import { buildApp } from '../src/app.js';
 import { db } from '../src/db/index.js';
 import { businessBlocks, businesses } from '../src/db/schema.js';
+import { getSettings } from '../src/services/settings.service.js';
 import { deleteTestBusinesses } from './_helpers/test-businesses.js';
 import { createTestSeller, deleteTestSellerExtras, insertTestListing, type TestSeller } from './_helpers/test-listings.js';
 import {
@@ -127,6 +128,20 @@ describe('what a seller sees (§12.3)', () => {
       expect((await send('POST', `/part-requests/${id}/not-relevant`, who.token, {})).statusCode).toBe(404);
       expect((await send('POST', `/part-requests/${id}/report`, who.token, { reason: 'spam' })).statusCode).toBe(404);
     }
+  });
+
+  it('slotsLeft comes from the reply caps: a delivered reply takes a slot, a withdrawn one does not; none left → canReply false', async () => {
+    const s = await business();
+    const r = await request();
+    const max = (await getSettings(db)).part_request_reply_listings_max;
+    await insertTestReply({ partRequestId: r.id, sellerBusinessId: s.businessId, listingId: (await live(s)).id, userId: s.userId });
+    await insertTestReply({ partRequestId: r.id, sellerBusinessId: s.businessId, listingId: (await live(s)).id, userId: s.userId, status: 'withdrawn' });
+    const one = (await get(`/part-requests/${r.id}`, s.token)).json().data;
+    expect(one).toMatchObject({ slotsLeft: max - 1, canReply: max > 1 });
+    for (let i = 1; i < max; i++) {
+      await insertTestReply({ partRequestId: r.id, sellerBusinessId: s.businessId, listingId: (await live(s)).id, userId: s.userId, status: 'pending' });
+    }
+    expect((await get(`/part-requests/${r.id}`, s.token)).json().data).toMatchObject({ slotsLeft: 0, canReply: false });
   });
 });
 
