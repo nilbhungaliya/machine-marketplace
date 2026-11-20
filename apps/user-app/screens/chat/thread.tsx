@@ -25,6 +25,7 @@ import ScamWarning from '@/components/chat/ScamWarning';
 import SystemLine from '@/components/chat/SystemLine';
 import ThreadMenu, { type ThreadMenuAction } from '@/components/chat/ThreadMenu';
 import ShareNumberSheet from '@/components/contact/ShareNumberSheet';
+import BookingCard from '@/components/rentals/BookingCard';
 import OfferSheet from '@/components/offers/OfferSheet';
 import {
   useAppActive, useArchiveThread, useBlockThread, useMarkRead, useMessages, useOpenThread, useThread, useThreadViewing,
@@ -218,6 +219,8 @@ export default function ThreadScreen({ route, navigation }: RootStackScreenProps
         return m.offer ? <OfferCard offer={m.offer} thread={d} /> : null;
       case 'deal':
         return <DealCard message={m} thread={d} />;
+      case 'booking':
+        return m.booking ? <BookingCard booking={m.booking} thread={d} /> : null;
       default:
         return <MessageBubble message={m} onPhotoExpired={onPhotoExpired} />;
     }
@@ -251,7 +254,8 @@ export default function ThreadScreen({ route, navigation }: RootStackScreenProps
         machineTip={detail.machineTip}
         onOpen={strip.noLongerListed ? undefined : () => navigation.navigate('Listing', { listingId: strip.listingId })}
       />
-      {detail.deals.length > 0 ? (
+      {/* M14 §8: a confirmed booking counts as a deal in the thread for share-my-number. */}
+      {detail.deals.length > 0 || detail.bookings.some((b) => b.confirmedAt) ? (
         <ContactBanner contact={detail.contact} counterpartName={name} onShare={() => setShareNumber(true)} />
       ) : null}
       <FlatList<ThreadMessage>

@@ -1,11 +1,17 @@
-import { DEAL_LIMITS, REVIEW_FACETS, type PartySide, type ReviewFacet, type SellerScore } from '@mpm/shared-types';
+import {
+  DEAL_LIMITS, REVIEW_FACETS, type PartySide, type ReviewFacet, type ReviewSubjectKind, type SellerScore,
+} from '@mpm/shared-types';
 
 // The review form (F6 + F7 spec §10.2, §10.4; plan L8-1). Pure: the screens and the API agree on the same rules, so the
 // form never sends what the server would refuse with `400 REVIEW_ANSWERS_INVALID`.
 
-/** The facets the reviewer rates, by the reviewer's side: the buyer rates the seller (3 facets) and back. */
-export function reviewFacets(side: PartySide): readonly ReviewFacet[] {
-  return REVIEW_FACETS.deal[side]; // M14: A3/B-lanes pass the subject (rental seller rates care, not pickup)
+/**
+ * The facets the reviewer rates, by the subject and the reviewer's side: the buyer rates the seller (3 facets) and
+ * back. M14 R11: on a rental the renter is the buyer side, and the owner rates the renter's care of the machine in
+ * place of pickup.
+ */
+export function reviewFacets(side: PartySide, subject: ReviewSubjectKind = 'deal'): readonly ReviewFacet[] {
+  return REVIEW_FACETS[subject][side];
 }
 
 /** Only the buyer's review of the seller has text (public, ≤ 1 000); the seller's review of the buyer is stars only. */
@@ -30,8 +36,8 @@ const wholeStar = (v: unknown): v is number => typeof v === 'number' && Number.i
  * Exactly the side's facets, each a whole 1–5 star; anything else in `ratings` is dropped. Text only on the buyer's side,
  * trimmed, ≤ `DEAL_LIMITS.reviewTextMax`; empty text is left out of the body.
  */
-export function validateReview(side: PartySide, values: ReviewValues): ReviewCheck {
-  const facets = reviewFacets(side);
+export function validateReview(side: PartySide, values: ReviewValues, subject: ReviewSubjectKind = 'deal'): ReviewCheck {
+  const facets = reviewFacets(side, subject);
   const problems: ReviewProblem[] = [];
   const ratings: Record<string, number> = {};
   for (const facet of facets) {

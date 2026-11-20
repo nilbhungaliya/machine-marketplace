@@ -38,6 +38,9 @@ import ListingCardItem from './listing-card-item';
 import ListingView from './listing-view';
 import OtherSideBlock from './other-side-block';
 import ReportSheet from './report-sheet';
+import AvailabilityStrip from '@/components/rentals/AvailabilityStrip';
+import { useRentalAvailability } from '@/hooks/use-rental-booking';
+import { CalendarClock, ClipboardList } from '@/lib/icons';
 
 /** "More from this seller" (§8.1 item 9): up to 6 of the seller's other public listings. */
 const MORE_LIMIT = 6;
@@ -71,6 +74,9 @@ export default function ListingScreen({ navigation, route }: RootStackScreenProp
   const wantsCard = !!listing && !listing.isOwner && viewer.signedIn;
   const cardQuery = useCards(useMemo(() => [listingId], [listingId]), null, wantsCard);
   const cardSaved = cardQuery.data ? cardQuery.data.find((c) => c.id === listingId)?.saved ?? null : undefined;
+  // M14 (R13): the 30-day availability strip of a rental (public; free / partly booked / full, never who).
+  const isRental = listing?.kind === 'machine_rental';
+  const availability = useRentalAvailability(listingId, null, isRental);
 
   // Recently viewed (§8.5, R13): on the phone only, own listings skipped; once per opened listing.
   const loaded = !!listing && listing.id === listingId;
@@ -97,6 +103,7 @@ export default function ListingScreen({ navigation, route }: RootStackScreenProp
     ownerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
     ownerNote: { ...type('caption'), color: colors.text },
     heldLink: { alignSelf: 'flex-start' },
+    rentalOwner: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
     more: { gap: spacing.md },
     section: { ...type('section'), color: colors.text },
     footer: { paddingTop: spacing.sm },
@@ -142,11 +149,42 @@ export default function ListingScreen({ navigation, route }: RootStackScreenProp
   const heldRaw = isOwner && 'heldQuantity' in listing ? listing.heldQuantity : null;
   const held = heldRaw && quantityToMilli(heldRaw) > 0n ? heldRaw : null;
 
+  // M14 (D14): the owner's booking summary ("2 requests to answer · 1 booked · 1 out today").
+  const summary = isOwner && 'bookingSummary' in listing ? listing.bookingSummary : null;
+  const bookingLine = summary
+    ? [
+      summary.openRequests > 0 ? t('rentals.listing.openRequests', { count: summary.openRequests }) : null,
+      summary.activeBookings > 0 ? t('rentals.listing.activeBookings', { count: summary.activeBookings }) : null,
+      summary.outToday > 0 ? t('rentals.listing.outToday', { count: summary.outToday }) : null,
+    ].filter(Boolean).join(' · ') || t('rentals.listing.noBookings')
+    : null;
+
   const ownerHeader = isOwner ? (
     <View style={s.owner}>
       <Notice tone={isPublic ? 'info' : 'warning'} icon={isPublic ? Info : TriangleAlert} text={t(isPublic ? 'listing.page.ownerPublic' : 'listing.page.ownerHiddenFromBuyers')}>
         <View style={s.ownerRow}><StatusChip label={t(chip.key)} tone={chip.tone} /></View>
         {note ? <Text style={s.ownerNote}>{t(note.key, note.values)}</Text> : null}
+        {bookingLine ? <Text style={s.ownerNote}>{bookingLine}</Text> : null}
+        {isRental ? (
+          <View style={s.rentalOwner}>
+            <Button
+              title={t('rentals.listing.calendar')}
+              onPress={() => navigation.navigate('RentalCalendar', { listingId })}
+              variant="outline"
+              size="sm"
+              icon={CalendarClock}
+              phLabel="Listing-rental-calendar"
+            />
+            <Button
+              title={t('rentals.listing.bookings')}
+              onPress={() => navigation.navigate('Main', { screen: 'Deals', params: { segment: 'rentals', listingId } })}
+              variant="outline"
+              size="sm"
+              icon={ClipboardList}
+              phLabel="Listing-rental-bookings"
+            />
+          </View>
+        ) : null}
         {held ? (
           <Button
             title={t('listing.owner.onHold', { qty: quantityText(held, listing.unit) })}
@@ -161,7 +199,16 @@ export default function ListingScreen({ navigation, route }: RootStackScreenProp
     </View>
   ) : null;
 
-  const otherSideBlock = hasOtherSide(listing) ? (
+  // A rental draws its availability strip in the Other side slot (block 5, right after the rates and terms): rentals
+  // never have an Other side.
+  const otherSideBlock = isRental ? (
+    <AvailabilityStrip
+      days={availability.data}
+      loading={availability.isLoading}
+      error={availability.isError}
+      onRetry={() => void availability.refetch()}
+    />
+  ) : hasOtherSide(listing) ? (
     <OtherSideBlock
       side={listing.side}
       result={otherSide.data}
@@ -189,6 +236,11 @@ export default function ListingScreen({ navigation, route }: RootStackScreenProp
   ) : null;
 
   const contact = contactButtons(listing);
+  // The last footer button is the violet one: on a rental that is Request booking, with Enquire beside it in outline
+  // (M14 R13, mockup rental · "Rental listing").
+  const footerButtons = [...contact.buttons].sort(
+    (a, b) => Number(a.action === 'request_booking') - Number(b.action === 'request_booking'),
+  );
   const sheets = contactSheets({ isOwner, kind: listing.kind, priceModel: listing.priceModel });
   const tapContact = (action: ContactButtonAction) => {
     track(LISTING_EVENTS.contactTapped, { action, kind: listing.kind });
@@ -198,7 +250,7 @@ export default function ListingScreen({ navigation, route }: RootStackScreenProp
     }
     // Login at the moment of intent (R24): the pending action reopens this page with the sheet after sign-in.
     if (!requireSignIn({ reason: signInReasonOf(action), pending: pendingContactOf(action, listingId) })) return;
-    // M14 (C0-5): Request booking opens its own screen; B2-2 builds the rental block and footer around it.
+    // M14: Request booking opens its own screen (a guest gets here after sign-in through the pending action).
     if (action === 'request_booking') {
       navigation.navigate('RequestBooking', { listingId });
       return;
@@ -252,7 +304,7 @@ export default function ListingScreen({ navigation, route }: RootStackScreenProp
             ) : null}
           </>
         ) : (
-          contact.buttons.map((b, i, all) => (
+          footerButtons.map((b, i, all) => (
             <Button
               key={b.action}
               title={b.disabled ? t('listing.contact.allOnHold') : t(`listing.contact.${b.action}`)}

@@ -13,6 +13,7 @@ import Header from '@/components/Header';
 import Input from '@/components/Input';
 import ScreenWrapper from '@/components/ScreenWrapper';
 import SideToken from '@/components/SideToken';
+import DateRangeSheet from '@/components/rentals/DateRangeSheet';
 import { useCountOnly } from '@/hooks/use-discover';
 import { useBrands, useMasterData, useModels } from '@/hooks/use-listing';
 import { useType } from '@/hooks/use-type';
@@ -21,6 +22,9 @@ import { SEARCH_EVENTS } from '@/lib/analytics-events';
 import { toAsciiDigits } from '@/lib/digits';
 import { videoUploadEnabled } from '@/lib/media-prepare';
 import { parseRupees, rupeesInput } from '@/lib/money';
+import { isLanguage } from '@/lib/i18n';
+import { CalendarClock } from '@/lib/icons';
+import { dateRangeLabel } from '@/lib/rental-display';
 import { countFilters } from '@/lib/search-filters';
 import { clearAllFilters, footerCopy, rentalsOnly, withFilters } from '@/lib/search-request';
 import { radius, spacing, useTheme } from '@/lib/theme';
@@ -48,10 +52,12 @@ type RangeText = Record<string, { min: string; max: string }>;
  */
 export default function SearchFiltersScreen({ navigation, route }: RootStackScreenProps<'SearchFilters'>) {
   const { request, origin, originLabel, facets } = route.params;
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const lang = isLanguage(i18n.language) ? i18n.language : 'en';
   const { colors } = useTheme();
   const type = useType();
   const master = useMasterData();
+  const [datesOpen, setDatesOpen] = useState(false);
 
   const start = cleanFilters(request.filters);
   const [draft, setDraft] = useState<SearchFilters>(start);
@@ -179,6 +185,22 @@ export default function SearchFiltersScreen({ navigation, route }: RootStackScre
         rightIcon={<Button title={t('discover.search.filters.clearAll')} variant="ghost" size="sm" phLabel="Search-filters-clear-all" onPress={clearAll} />}
       />
       <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
+        {rentals ? (
+          <Field label={t('rentals.search.freeOn')} hint={t('rentals.search.freeOnHint')}>
+            <View style={s.chips}>
+              <Chip
+                label={filters.rentalDates ? dateRangeLabel(filters.rentalDates.from, filters.rentalDates.to, lang) : t('rentals.search.dates')}
+                icon={CalendarClock}
+                selected={!!filters.rentalDates}
+                onPress={() => setDatesOpen(true)}
+                testID="Search-filter-dates"
+              />
+              {filters.rentalDates ? (
+                <Chip label={t('rentals.search.anyDates')} onPress={() => set({ rentalDates: undefined })} testID="Search-filter-dates-clear" />
+              ) : null}
+            </View>
+          </Field>
+        ) : null}
         {parts && !rentals ? (
           <Field label={t('discover.search.filters.side')}>
             <View style={s.sides}>
@@ -398,6 +420,15 @@ export default function SearchFiltersScreen({ navigation, route }: RootStackScre
           onPress={apply}
         />
       </FooterBar>
+      {rentals ? (
+        <DateRangeSheet
+          visible={datesOpen}
+          mode="range"
+          value={filters.rentalDates ? { start: filters.rentalDates.from, end: filters.rentalDates.to } : null}
+          onClose={() => setDatesOpen(false)}
+          onPick={(v) => set({ rentalDates: { from: v.start, to: v.end ?? v.start } })}
+        />
+      ) : null}
 
       <PickerSheet
         visible={picker === 'brand'}

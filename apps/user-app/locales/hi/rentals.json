@@ -1,13 +1,76 @@
 {
   "request": {
-    "title": "बुकिंग माँगें"
+    "title": "बुकिंग माँगें",
+    "changeTitle": "बुकिंग बदलें",
+    "loadError": "यह मशीन लोड नहीं हो सकी",
+    "loadErrorBody": "अपना कनेक्शन जाँचें और फिर कोशिश करें।",
+    "notBookableTitle": "यह मशीन बुक नहीं हो सकती",
+    "changeIntro": "तारीख़ें या शर्तें बदलें और मालिक को भेजें।",
+    "changeSent": "बदलाव भेजा गया",
+    "sent": "बुकिंग अनुरोध भेजा गया",
+    "send": "अनुरोध भेजें",
+    "sendChange": "बदलाव भेजें"
   },
   "record": {
-    "title": "बुकिंग"
+    "title": "बुकिंग",
+    "goneTitle": "बुकिंग नहीं मिली",
+    "loadError": "बुकिंग लोड नहीं हो सकी",
+    "loadErrorBody": "अपना कनेक्शन जाँचें और फिर कोशिश करें।",
+    "viewerOnly": "आप यह बुकिंग देख सकते हैं। इस पर कार्रवाई सिर्फ़ आपके बिज़नेस के मालिक या मैनेजर कर सकते हैं।",
+    "clash": "इस मशीन की बुकिंग #{{ref}} इन तारीख़ों पर अभी भी बाहर है।",
+    "declined": "मालिक ने अनुरोध मना किया।",
+    "withdrawn": "किरायेदार ने अनुरोध वापस लिया।",
+    "expired": "समय पर जवाब नहीं आया, इसलिए अनुरोध की अवधि ख़त्म हो गई।",
+    "returnedRenter": "मालिक ने मशीन वापस आई दर्ज की है। {{date}} तक वापसी कन्फ़र्म करें या समस्या बताएँ; उसके बाद यह अपने-आप पूरी हो जाएगी।",
+    "request": "बुकिंग अनुरोध",
+    "ownerChange": "मालिक का बदलाव",
+    "renterChange": "किरायेदार का बदलाव",
+    "changesLeft_one": "{{count}} बदलाव बाकी",
+    "changesLeft_other": "{{count}} बदलाव बाकी",
+    "dates": "तारीख़ें",
+    "length": "अवधि",
+    "machines": "मशीनें",
+    "replyBy": "{{when}} तक जवाब दें",
+    "withOperator": "ऑपरेटर के साथ",
+    "withoutOperator": "बिना ऑपरेटर",
+    "renterPicksUp": "किरायेदार ले जाएँगे",
+    "fromOwner": "{{name}} से",
+    "toRenter": "{{name}} को",
+    "site": "साइट",
+    "siteIn": "{{city}}, {{state}} {{pincode}}",
+    "siteDistance": "मशीन से {{km}} km",
+    "addressAfterConfirm": "कन्फ़र्म करने पर पूरा पता दिखेगा।",
+    "addressNone": "कोई पता नहीं दिया गया।",
+    "beyondRadius": "सेवा क्षेत्र से बाहर",
+    "onSiteTitle": "साइट पर और वापसी",
+    "onSiteAt": "साइट पर (दर्ज किया: {{actor}})",
+    "hourMeterOpen": "शुरू में आवर मीटर",
+    "hourMeterClose": "वापसी पर आवर मीटर",
+    "returnedAt": "वापस आई",
+    "hoursRun": "चले घंटे",
+    "damage": "दर्ज नुकसान",
+    "problemTitle": "सपोर्ट के पास समस्या",
+    "problemOpen": "सपोर्ट इसे देख रहा है।",
+    "confirmReturnTitle": "वापसी कन्फ़र्म करें?",
+    "confirmReturnBody": "मालिक की अंतिम रकम {{amount}} है। कन्फ़र्म करने पर बुकिंग पूरी हो जाएगी।",
+    "confirmReturnBodyNoAmount": "कन्फ़र्म करने पर बुकिंग पूरी हो जाएगी।",
+    "returnConfirmed": "वापसी कन्फ़र्म हुई",
+    "messageOwner": "मालिक को मैसेज करें",
+    "messageRenter": "किरायेदार को मैसेज करें",
+    "cancelledBy": "रद्द किया: {{actor}}"
   },
   "dates": {
     "pickStart": "शुरू होने की तारीख़ चुनें",
-    "pickRange": "अपनी तारीख़ें चुनें"
+    "pickRange": "अपनी तारीख़ें चुनें",
+    "prevMonth": "पिछला महीना",
+    "nextMonth": "अगला महीना",
+    "fullA11y": "{{date}}: बुक है",
+    "fullLegend": "बुक है",
+    "done": "हो गया",
+    "tapStart": "शुरू की तारीख़ चुनें",
+    "tapRange": "पहला और आख़िरी दिन चुनें",
+    "rangeSummary_one": "{{dates}} · {{count}} दिन",
+    "rangeSummary_other": "{{dates}} · {{count}} दिन"
   },
   "status": {
     "yourAnswer": "आपका जवाब",
@@ -36,7 +99,16 @@
     "operator": "ऑपरेटर",
     "transport": "ट्रांसपोर्ट",
     "estimate": "अनुमान",
-    "total": "कुल"
+    "total": "कुल",
+    "title": "रकम",
+    "agreed": "तय रकम",
+    "final": "अंतिम रकम",
+    "whenConfirmed": "कन्फ़र्म होने पर",
+    "atReturn": "वापसी पर",
+    "changed": "बदली गई",
+    "reason": "कारण: {{reason}}",
+    "outsideApp": "यहाँ दर्ज, भुगतान ऐप के बाहर",
+    "ownerTotal": "मालिक का कुल"
   },
   "errors": {
     "rentalPeriodNotOffered": "यह मशीन इस अवधि के हिसाब से किराए पर नहीं दी जाती। कोई और अवधि चुनें।",
@@ -58,5 +130,282 @@
     "listingHasOpenBookings": "इस लिस्टिंग की बुकिंग चल रही हैं। पहले उन्हें पूरा या रद्द करें।",
     "listingNotBookable": "यह मशीन अभी बुक नहीं हो सकती।",
     "rentalBookingNotFound": "यह बुकिंग अब उपलब्ध नहीं है।"
+  },
+  "machinesCount_one": "{{count}} मशीन",
+  "machinesCount_other": "{{count}} मशीनें",
+  "duration": {
+    "hour_one": "{{count}} घंटा",
+    "hour_other": "{{count}} घंटे",
+    "day_one": "{{count}} दिन",
+    "day_other": "{{count}} दिन",
+    "week_one": "{{count}} हफ़्ता",
+    "week_other": "{{count}} हफ़्ते",
+    "month_one": "{{count}} महीना",
+    "month_other": "{{count}} महीने"
+  },
+  "availability": {
+    "title": "उपलब्धता",
+    "retry": "फिर कोशिश करें",
+    "free": "खाली",
+    "partial": "कुछ बुक",
+    "full": "बुक है",
+    "note": "मालिक के कन्फ़र्म करने पर ही तारीख़ें रोकी जाती हैं।",
+    "a11y": {
+      "free": "{{day}}: खाली",
+      "partial": "{{day}}: कुछ मशीनें बुक",
+      "full": "{{day}}: बुक है"
+    }
+  },
+  "estimate": {
+    "title": "अनुमान",
+    "fuel": "ईंधन: {{fuel}}",
+    "deposit": "डिपॉज़िट {{amount}}, ऐप के बाहर दिया जाता है",
+    "failed": "अनुमान नहीं निकल पाया। फिर कोशिश करें।",
+    "pickDate": "अनुमान देखने के लिए शुरू की तारीख़ चुनें।",
+    "outsideApp": "यहाँ दर्ज, भुगतान ऐप के बाहर",
+    "datesFull": "इनमें से कुछ तारीख़ें पहले से बुक हैं। दूसरी तारीख़ें चुनें।",
+    "belowMinimum": "यह मालिक की न्यूनतम बुकिंग से कम है।",
+    "beyondRadiusKm": "आपकी साइट मालिक के {{km}} km सेवा क्षेत्र से बाहर है। वे मना कर सकते हैं या ज़्यादा माँग सकते हैं।",
+    "beyondRadius": "आपकी साइट मालिक के सेवा क्षेत्र से बाहर है।"
+  },
+  "form": {
+    "from": "से",
+    "to": "तक",
+    "pickDate": "तारीख़ चुनें",
+    "datesFull": "इनमें से कुछ तारीख़ें पहले से बुक हैं।",
+    "chargedBy": "किराया किस हिसाब से",
+    "howMany": {
+      "hour": "कितने घंटे",
+      "day": "कितने दिन",
+      "week": "कितने हफ़्ते",
+      "month": "कितने महीने"
+    },
+    "machines": "मशीनें",
+    "machinesHint_one": "मालिक के पास {{count}} मशीन है",
+    "machinesHint_other": "मालिक के पास {{count}} मशीनें हैं",
+    "operator": "ऑपरेटर",
+    "withOperator": "ऑपरेटर के साथ",
+    "withoutOperator": "बिना ऑपरेटर",
+    "transport": "ट्रांसपोर्ट",
+    "ownerDelivers": "मालिक पहुँचाएँगे",
+    "iPickUp": "मैं ले जाऊँगा",
+    "sitePincode": "साइट का पिनकोड",
+    "siteIn": "{{city}}, {{state}}",
+    "pincodeUnknown": "यह पिनकोड हमें नहीं मिला",
+    "useBusiness": "मेरे बिज़नेस की लोकेशन लें",
+    "siteAddress": "साइट का पता",
+    "siteAddressHint": "वैकल्पिक",
+    "addressPrivate": "मालिक को पता कन्फ़र्म करने के बाद ही दिखेगा।",
+    "message": "मैसेज",
+    "note": "मालिक के लिए नोट",
+    "noteHint": "वैकल्पिक",
+    "decrease": "घटाएँ: {{label}}",
+    "increase": "बढ़ाएँ: {{label}}",
+    "errors": {
+      "startDate": "शुरू की तारीख़ चुनें",
+      "startPast": "शुरू की तारीख़ बीती हुई नहीं हो सकती",
+      "period": "किराया किस हिसाब से, यह चुनें",
+      "count": "1 से {{max}} तक की अवधि चुनें",
+      "minimum": "यह मालिक की न्यूनतम बुकिंग से कम है",
+      "machines": "1 से {{max}} मशीनें चुनें",
+      "pincode": "6 अंकों का पिनकोड डालें",
+      "addressMax": "{{max}} अक्षरों से कम रखें",
+      "noteMax": "{{max}} अक्षरों से कम रखें",
+      "startTooFar": "आज के पास की शुरू की तारीख़ चुनें"
+    }
+  },
+  "listing": {
+    "calendar": "कैलेंडर",
+    "bookings": "बुकिंग",
+    "openRequests_one": "{{count}} खुला अनुरोध",
+    "openRequests_other": "{{count}} खुले अनुरोध",
+    "activeBookings_one": "{{count}} चालू बुकिंग",
+    "activeBookings_other": "{{count}} चालू बुकिंग",
+    "outToday_one": "आज {{count}} बाहर",
+    "outToday_other": "आज {{count}} बाहर",
+    "noBookings": "अभी कोई बुकिंग नहीं"
+  },
+  "card": {
+    "title": "बुकिंग #{{ref}}"
+  },
+  "row": {
+    "renting": "किराये पर ली · {{total}} · {{name}}",
+    "rentingOut": "किराये पर दी · {{total}} · {{name}}"
+  },
+  "list": {
+    "segmentDeals": "डील",
+    "segmentRentals": "किराया",
+    "sides": {
+      "all": "सभी",
+      "renter": "किराये पर ली",
+      "owner": "किराये पर दी"
+    },
+    "thisListing": "यह लिस्टिंग",
+    "empty": {
+      "active": "कोई चालू किराया नहीं",
+      "completed": "अभी कोई पूरा किराया नहीं",
+      "cancelled": "कोई रद्द किराया नहीं"
+    },
+    "emptySubtitle": "किराये की मशीनों के लिए आपके भेजे या मिले बुकिंग अनुरोध यहाँ दिखेंगे।"
+  },
+  "actor": {
+    "you": "आप",
+    "renter": "किरायेदार",
+    "owner": "मालिक",
+    "system": "ऐप",
+    "admin": "सपोर्ट"
+  },
+  "actions": {
+    "on_site": "साइट पर पहुँची",
+    "return": "वापस आई",
+    "confirm_return": "वापसी कन्फ़र्म करें",
+    "review": "इस बुकिंग को रेट करें",
+    "report_problem": "समस्या बताएँ",
+    "cancel": "बुकिंग रद्द करें"
+  },
+  "answer": {
+    "accept": "मंज़ूर करें",
+    "acceptTitle": "मालिक का बदलाव मंज़ूर करें?",
+    "acceptBody": "बुकिंग {{total}} पर कन्फ़र्म हो जाएगी।",
+    "accepted": "बुकिंग कन्फ़र्म हुई",
+    "change": "बदलें",
+    "decline": "मना करें",
+    "withdraw": "अनुरोध वापस लें",
+    "withdrawTitle": "यह अनुरोध वापस लें?",
+    "withdrawBody": "मालिक को बताया जाएगा और तारीख़ें खाली हो जाएँगी।",
+    "withdrawn": "अनुरोध वापस लिया गया"
+  },
+  "cancel": {
+    "title": "यह बुकिंग रद्द करें?",
+    "body": "कारण चुनें। दूसरे बिज़नेस को बताया जाएगा।",
+    "note": "नोट (वैकल्पिक)",
+    "noteError": "{{max}} अक्षरों से कम रखें",
+    "confirm": "बुकिंग रद्द करें",
+    "done": "बुकिंग रद्द हुई",
+    "reasonRequired": "कारण चुनें"
+  },
+  "cancelReason": {
+    "plans_changed": "योजना बदल गई",
+    "found_another": "दूसरी मशीन मिल गई",
+    "owner_not_responding": "मालिक जवाब नहीं दे रहे",
+    "machine_unavailable": "मशीन उपलब्ध नहीं",
+    "breakdown": "मशीन ख़राब हो गई",
+    "renter_not_responding": "किरायेदार जवाब नहीं दे रहे",
+    "other": "दूसरा कारण",
+    "listing_removed": "लिस्टिंग हटा दी गई",
+    "blocked": "एक बिज़नेस ने दूसरे को ब्लॉक किया",
+    "owner_inactive": "मालिक का अकाउंट निष्क्रिय है",
+    "owner_gst": "मालिक का GST वेरिफ़िकेशन ख़त्म हुआ",
+    "renter_inactive": "किरायेदार का अकाउंट निष्क्रिय है",
+    "support_closed": "सपोर्ट ने बंद किया",
+    "admin": "टीम ने रद्द किया"
+  },
+  "declineReason": {
+    "dates_unavailable": "उन तारीख़ों पर मशीन खाली नहीं है।",
+    "site_too_far": "साइट मालिक के लिए बहुत दूर है।",
+    "terms": "शर्तें मालिक को ठीक नहीं लगीं।",
+    "other": "मालिक ने अनुरोध मना किया।"
+  },
+  "completedHow": {
+    "renter_confirmed": "किरायेदार ने वापसी कन्फ़र्म की।",
+    "auto": "वापसी के बाद अपने-आप पूरी हुई।",
+    "support": "सपोर्ट ने बंद की।"
+  },
+  "finalReason": {
+    "extra_time": "ज़्यादा समय",
+    "overtime": "ओवरटाइम घंटे",
+    "fuel": "ईंधन",
+    "transport": "ट्रांसपोर्ट",
+    "damage": "नुकसान",
+    "discount": "छूट",
+    "other": "दूसरा"
+  },
+  "outcome": {
+    "completed": "सपोर्ट ने बंद किया: बुकिंग पूरी हुई।",
+    "cancelled": "सपोर्ट ने बंद किया: बुकिंग रद्द हुई।",
+    "resumed": "सपोर्ट ने बंद किया: बुकिंग जारी है।"
+  },
+  "notes": {
+    "title": "नोट्स",
+    "edit": "बदलें",
+    "editTitle": "बुकिंग नोट्स",
+    "payment": "भुगतान का तरीका",
+    "advance": "दिया गया एडवांस",
+    "deposit": "दिया गया डिपॉज़िट",
+    "depositReturned": "डिपॉज़िट लौटाया",
+    "returned": "लौटाया",
+    "time": "साइट पर पहुँचने का समय",
+    "timePlaceholder": "जैसे 09:30",
+    "timeError": "09:30 जैसा समय डालें",
+    "text": "नोट",
+    "textHint": "जो दोनों को याद रखना है",
+    "textError": "{{max}} अक्षरों से कम रखें",
+    "amountError": "रुपयों में रकम डालें",
+    "save": "नोट्स सेव करें",
+    "saved": "नोट्स सेव हुए",
+    "empty": "अभी कुछ दर्ज नहीं।"
+  },
+  "review": {
+    "title": "रिव्यू",
+    "done": "आपने यह बुकिंग रेट कर दी है। धन्यवाद!",
+    "rate_renter": "इस मालिक से किराये पर लेना कैसा रहा? उन्हें रेट करें।",
+    "rate_owner": "यह किरायेदार कैसे रहे? उन्हें रेट करें।",
+    "closed": "इस बुकिंग के रिव्यू बंद हो चुके हैं।",
+    "reviewOwner": "मालिक का रिव्यू करें",
+    "reviewRenter": "किरायेदार का रिव्यू करें",
+    "renterPrivate": "किरायेदार को दी गई आपकी रेटिंग रिकॉर्ड में रहती है। यह अभी किसी को नहीं दिखती।",
+    "facet": {
+      "matched_listing": "मशीन वैसी ही थी जैसी बताई",
+      "communication": "बातचीत",
+      "on_time": "समय पर",
+      "payment": "तय भुगतान किया",
+      "care": "मशीन की देखभाल"
+    }
+  },
+  "problem": {
+    "intro": "सपोर्ट इसे देखेगा। मामला सुलझने तक बुकिंग रुकी रहेगी।",
+    "category": {
+      "not_as_described": "जैसा बताया वैसा नहीं",
+      "breakdown": "ख़राबी",
+      "damage": "नुकसान",
+      "hours_or_amount": "घंटे या रकम",
+      "no_show": "कोई नहीं आया",
+      "other": "दूसरा"
+    }
+  },
+  "search": {
+    "dates": "तारीख़ें",
+    "freeOn": "इन तारीख़ों पर खाली",
+    "freeOnHint": "सिर्फ़ वे मशीनें जो आपकी हर तारीख़ पर खाली हैं",
+    "anyDates": "कोई भी तारीख़",
+    "freeCount_one": "आपकी तारीख़ों पर {{count}} मशीन खाली",
+    "freeCount_other": "आपकी तारीख़ों पर {{count}} मशीनें खाली"
+  },
+  "timeline": {
+    "title": "बुकिंग अपडेट",
+    "requested": "बुकिंग का अनुरोध",
+    "changed_by_owner": "मालिक ने बदलाव भेजा",
+    "changed_by_renter": "किरायेदार ने बदलाव भेजा",
+    "confirmed": "बुकिंग कन्फ़र्म हुई",
+    "change_accepted": "बदलाव मंज़ूर हुआ",
+    "declined": "अनुरोध मना हुआ",
+    "withdrawn": "अनुरोध वापस लिया गया",
+    "expired": "अनुरोध की अवधि ख़त्म",
+    "on_site": "मशीन साइट पर ({{actor}})",
+    "returned": "मशीन वापस आई",
+    "return_confirmed": "वापसी कन्फ़र्म हुई",
+    "auto_completed": "अपने-आप पूरी हुई",
+    "cancelled": "रद्द हुई ({{actor}})",
+    "problem_reported": "समस्या बताई गई ({{actor}})",
+    "dispute_resolved": "सपोर्ट ने समस्या बंद की",
+    "notes_changed": "नोट्स बदले गए",
+    "contact_shared": "नंबर शेयर किया ({{actor}})",
+    "next": {
+      "confirmed": "मालिक कन्फ़र्म करेंगे",
+      "on_site": "मशीन साइट पर",
+      "returned": "मशीन वापस",
+      "completed": "वापसी कन्फ़र्म",
+      "reviews": "दोनों रिव्यू करेंगे"
+    }
   }
 }

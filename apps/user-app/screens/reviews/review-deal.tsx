@@ -25,33 +25,43 @@ import { formatRupees } from '@/lib/money';
 import { qk } from '@/lib/query-keys';
 import { reviewFacets, reviewHasText, validateReview } from '@/lib/review-form';
 import { fetchDealForReview, fetchReviewState, submitReview } from '@/lib/reviews-api';
+import { fetchRentalBooking, fetchRentalReviewState, submitRentalReview } from '@/lib/rentals-api';
 import { radius, spacing, useTheme } from '@/lib/theme';
 import type { RootStackScreenProps } from '@/navigation/types';
 import { Stars, StarInput } from './review-parts';
 
 /**
- * Review a completed deal (F6 + F7 spec §10; mockup deals · "Review"): the buyer rates the seller on three facets with
+ * Review a completed deal (F6 + F7 spec §10; mockup deals · "Review") or, since M14 (R11), a completed rental booking
+ * (`subject: 'rental'`: the booking's review routes, the renter rates the owner on machine as described,
+ * communication and on time; the owner rates the renter's communication, payment and care of the machine): the buyer rates the seller on three facets with
  * optional public text; the seller rates the buyer on three facets, stars only (kept on record, not shown yet, §10.4).
  * Blind: a submitted review shows only to its author until both have reviewed or its wait runs out ("published when
  * both have reviewed, or 7 days after the first"). Opened from the Deal record's review card (L7) and the
  * `review_waiting` notification.
  */
 export default function ReviewDealScreen({ navigation, route }: RootStackScreenProps<'ReviewDeal'>) {
-  // M14-STUB(B2): `subject: 'rental'` reads the booking's review routes (B2-4); C0-5 reads the deal subject only.
-  const { id: dealId } = route.params;
+  const { subject, id: dealId } = route.params;
+  const rental = subject === 'rental';
   const { t } = useTranslation();
   const { colors } = useTheme();
   const type = useType();
   const qc = useQueryClient();
-  const state = useQuery({ queryKey: qk.reviewState(dealId), queryFn: () => fetchReviewState(dealId), staleTime: 0 });
-  const deal = useQuery({ queryKey: qk.deal(dealId), queryFn: () => fetchDealForReview(dealId) });
+  const stateKey = rental ? qk.rentals.bookingReview(dealId) : qk.reviewState(dealId);
+  const state = useQuery({
+    queryKey: stateKey,
+    queryFn: () => (rental ? fetchRentalReviewState(dealId) : fetchReviewState(dealId)),
+    staleTime: 0,
+  });
+  const deal = useQuery({ queryKey: qk.deal(dealId), queryFn: () => fetchDealForReview(dealId), enabled: !rental });
+  const booking = useQuery({ queryKey: qk.rentals.booking(dealId), queryFn: () => fetchRentalBooking(dealId), enabled: rental });
   const [ratings, setRatings] = useState<Record<string, number>>({});
   const [text, setText] = useState('');
   const [tried, setTried] = useState(false);
   // One key per form: a retried tap after a lost response replays the stored reply instead of `409 REVIEW_EXISTS`.
   const [idempotencyKey] = useState(newInstallId);
   const submit = useMutation({
-    mutationFn: (body: { ratings: Record<string, number>; text?: string }) => submitReview(dealId, body, idempotencyKey),
+    mutationFn: (body: { ratings: Record<string, number>; text?: string }) =>
+      (rental ? submitRentalReview(dealId, body, idempotencyKey) : submitReview(dealId, body, idempotencyKey)),
   });
 
   const s = useMemo(() => StyleSheet.create({
@@ -74,9 +84,15 @@ export default function ReviewDealScreen({ navigation, route }: RootStackScreenP
   }), [colors, type]);
 
   const view = state.data;
-  const side = view?.mySide ?? deal.data?.side ?? 'buyer';
-  const title = side === 'buyer' ? t('reviews.reviewSeller') : t('reviews.reviewBuyer');
-  const check = validateReview(side, { ratings, text });
+  const side = view?.mySide ?? deal.data?.side ?? (booking.data ? (booking.data.side === 'owner' ? 'seller' : 'buyer') : 'buyer');
+  const subjectKind = rental ? 'rental' : 'deal';
+  const title = rental
+    ? t(side === 'buyer' ? 'rentals.review.reviewOwner' : 'rentals.review.reviewRenter')
+    : side === 'buyer' ? t('reviews.reviewSeller') : t('reviews.reviewBuyer');
+  // Rental facets read "Machine as described", "Care of the machine" (M14 R11); deals keep F6's labels.
+  const facetLabel = (facet: string) => t(rental ? `rentals.review.facet.${facet}` : `reviews.facet.${facet}`);
+  const privateNote = rental ? t('rentals.review.renterPrivate') : t('reviews.buyerPrivate');
+  const check = validateReview(side, { ratings, text }, subjectKind);
   const missing = !check.ok && check.problems.some((p) => p.problem === 'missing');
   const tooLong = !check.ok && check.problems.some((p) => p.field === 'text');
 
@@ -85,10 +101,15 @@ export default function ReviewDealScreen({ navigation, route }: RootStackScreenP
     if (!check.ok) return;
     submit.mutate(check.body, {
       onSuccess: (next: ReviewState) => {
-        qc.setQueryData(qk.reviewState(dealId), next);
-        void qc.invalidateQueries({ queryKey: qk.deal(dealId) });
-        void qc.invalidateQueries({ queryKey: qk.allDeals });
-        track(REVIEW_EVENTS.reviewSubmitted, { side });
+        qc.setQueryData(stateKey, next);
+        if (rental) {
+          void qc.invalidateQueries({ queryKey: qk.rentals.booking(dealId) });
+          void qc.invalidateQueries({ queryKey: qk.rentals.all });
+        } else {
+          void qc.invalidateQueries({ queryKey: qk.deal(dealId) });
+          void qc.invalidateQueries({ queryKey: qk.allDeals });
+        }
+        track(REVIEW_EVENTS.reviewSubmitted, { side, subject: subjectKind });
         Toast.show({ type: 'success', text1: t('reviews.submitted') });
       },
       onError: (err) => {
@@ -98,12 +119,22 @@ export default function ReviewDealScreen({ navigation, route }: RootStackScreenP
     });
   };
 
-  const dealHead = deal.data ? (
+  const head = rental
+    ? booking.data
+      ? {
+        name: booking.data.counterpart.tradeName,
+        sub: `${booking.data.listing.title}, ${formatRupees(booking.data.finalAmountPaise ?? booking.data.agreedTotalPaise ?? booking.data.current.totalPaise)}`,
+      }
+      : null
+    : deal.data
+      ? { name: deal.data.counterpart.name, sub: `${deal.data.listingTitle}, ${formatRupees(Number(deal.data.totalPaise))}` }
+      : null;
+  const dealHead = head ? (
     <Card style={s.dealHead}>
       <View style={s.dealArt} />
       <View style={s.dealText}>
-        <Text style={s.dealName} numberOfLines={1}>{deal.data.counterpart.name}</Text>
-        <Text style={s.dealSub} numberOfLines={2}>{`${deal.data.listingTitle}, ${formatRupees(Number(deal.data.totalPaise))}`}</Text>
+        <Text style={s.dealName} numberOfLines={1}>{head.name}</Text>
+        <Text style={s.dealSub} numberOfLines={2}>{head.sub}</Text>
       </View>
     </Card>
   ) : null;
@@ -139,9 +170,9 @@ export default function ReviewDealScreen({ navigation, route }: RootStackScreenP
               <StatusChip label={t('reviews.mine.published')} tone="ok" />
             ) : null}
           </View>
-          {reviewFacets(view.mySide).map((facet) => (
+          {reviewFacets(view.mySide, subjectKind).map((facet) => (
             <View key={facet} style={s.facetRow}>
-              <Text style={s.facetLabel}>{t(`reviews.facet.${facet}`)}</Text>
+              <Text style={s.facetLabel}>{facetLabel(facet)}</Text>
               <Stars filled={mine.ratings[facet] ?? 0} />
             </View>
           ))}
@@ -154,7 +185,7 @@ export default function ReviewDealScreen({ navigation, route }: RootStackScreenP
             text={due ? t('reviews.mine.waiting', { date: formatDate(due) }) : t('reviews.mine.waitingNoDate')}
           />
         ) : null}
-        {view.mySide === 'seller' ? <Notice tone="info" icon={Info} text={t('reviews.buyerPrivate')} /> : null}
+        {view.mySide === 'seller' ? <Notice tone="info" icon={Info} text={privateNote} /> : null}
       </>
     );
     footer = (
@@ -175,10 +206,10 @@ export default function ReviewDealScreen({ navigation, route }: RootStackScreenP
       <>
         {dealHead}
         <View style={s.facets}>
-          {reviewFacets(view.mySide).map((facet) => (
+          {reviewFacets(view.mySide, subjectKind).map((facet) => (
             <StarInput
               key={facet}
-              label={t(`reviews.facet.${facet}`)}
+              label={facetLabel(facet)}
               value={ratings[facet]}
               onChange={(n) => setRatings((r) => ({ ...r, [facet]: n }))}
               testID={`Review-star-${facet}`}
@@ -198,7 +229,7 @@ export default function ReviewDealScreen({ navigation, route }: RootStackScreenP
             testID="Review-text"
           />
         ) : (
-          <Notice tone="info" icon={Info} text={t('reviews.buyerPrivate')} />
+          <Notice tone="info" icon={Info} text={privateNote} />
         )}
         {view.theirsSubmitted ? <Notice tone="success" text={t('reviews.theirsIn')} /> : null}
         <Text style={s.fine}>{t('reviews.blindNote')}</Text>
