@@ -13,9 +13,10 @@ import LocationSheet from '@/components/LocationSheet';
 import Notice from '@/components/Notice';
 import ScreenWrapper from '@/components/ScreenWrapper';
 import Skeleton from '@/components/Skeleton';
+import RequestPrefillCard from '@/components/part-requests/RequestPrefillCard';
 import { useSearch } from '@/hooks/use-discover';
 import { originStore, useDiscoveryOrigin } from '@/hooks/use-discovery-origin';
-import { useMasterData } from '@/hooks/use-listing';
+import { useBrands, useMasterData } from '@/hooks/use-listing';
 import { useType } from '@/hooks/use-type';
 import { track } from '@/lib/analytics';
 import { SEARCH_EVENTS } from '@/lib/analytics-events';
@@ -23,6 +24,7 @@ import { errorCode, errorKey } from '@/lib/api-error';
 import { isSearchRedirect } from '@/lib/discover-api';
 import { ChevronLeft, MapPin, Package, Search, SlidersHorizontal, TriangleAlert } from '@/lib/icons';
 import { LISTING_ERROR_KEYS } from '@/lib/listing-errors';
+import { prefillFromReading } from '@/lib/part-request-form';
 import { recordRecentSearch } from '@/lib/recent-searches';
 import { countFilters, filterChipSummaries, radiusLabel } from '@/lib/search-filters';
 import {
@@ -303,6 +305,10 @@ export default function SearchResultsScreen({ navigation, route }: RootStackScre
     </View>
   ) : null;
 
+  // F8: a brand chip becomes the prefill's fit only for a brand that makes machines (a parts brand is not a machine).
+  const machineBrands = useBrands('machines');
+  const machineBrandIds = useMemo(() => (machineBrands.data ? new Set(machineBrands.data.map((b) => b.id)) : null), [machineBrands.data]);
+
   let empty: React.ReactElement | null = null;
   const code = search.isError ? errorCode(search.error) : null;
   if (!frozen || search.isLoading || code === 'CURSOR_INVALID' || (first && isSearchRedirect(first))) {
@@ -324,14 +330,18 @@ export default function SearchResultsScreen({ navigation, route }: RootStackScre
   } else if (page) {
     const none = noResultsCopy(page, radiusKm, hasOrigin);
     empty = (
-      <EmptyState
-        icon={Search}
-        title={t(none.title.key, none.title.params)}
-        subtitle={t('discover.search.noResults.body')}
-        ctaTitle={none.widen ? t(none.widen.key, none.widen.params) : undefined}
-        ctaPhLabel="Search-no-results-widen"
-        onCtaPress={none.widen ? () => widen(page.widen!.radiusKm) : undefined}
-      />
+      <View style={{ gap: spacing.lg }}>
+        <EmptyState
+          icon={Search}
+          title={t(none.title.key, none.title.params)}
+          subtitle={t('discover.search.noResults.body')}
+          ctaTitle={none.widen ? t(none.widen.key, none.widen.params) : undefined}
+          ctaPhLabel="Search-no-results-widen"
+          onCtaPress={none.widen ? () => widen(page.widen!.radiusKm) : undefined}
+        />
+        {/* F8 R15: a part or machine nobody lists yet can be asked for (not for rentals, which F8 doesn't cover). */}
+        {!rentalsOnly(filters) ? <RequestPrefillCard prefill={prefillFromReading(page.reading, request.q ?? '', machineBrandIds)} /> : null}
+      </View>
     );
   }
 
