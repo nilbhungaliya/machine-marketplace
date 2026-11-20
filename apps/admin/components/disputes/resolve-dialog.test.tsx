@@ -124,3 +124,29 @@ describe('ResolveDialog (F6 + F7 §9.6)', () => {
     expect(resolveDispute).not.toHaveBeenCalled();
   });
 });
+
+describe('ResolveDialog for a rental booking (M14 R12, §15)', () => {
+  it('asks no goods question and sends no stockReturned when cancelling a booking dispute', async () => {
+    const user = userEvent.setup();
+    vi.mocked(resolveDispute).mockResolvedValue({} as never);
+    const booking = {
+      id: '22222222-2222-4222-8222-222222222222',
+      subject: { kind: 'rental' as const, rentalBookingId: '55555555-5555-4555-8555-555555555555' },
+      dealId: null,
+      dealRef: null,
+      rentalBookingRef: 700001,
+      buyer: { businessId: 'r', name: 'Renter Works' },
+      seller: { businessId: 'o', name: 'Owner Cranes' },
+    };
+    render(<ConfirmProvider><ResolveDialog dispute={booking} onClose={vi.fn()} onResolved={vi.fn()} /></ConfirmProvider>);
+    await user.click(screen.getByRole('radio', { name: /Close as cancelled/ }));
+    expect(screen.queryByText('Did the goods go back to the seller?')).toBeNull();
+    await note(user);
+    await submit(user);
+    await waitFor(() => expect(resolveDispute).toHaveBeenCalledWith(booking.id, {
+      outcome: 'cancelled',
+      internalNote: 'Seller showed the courier slip',
+      messageToParties: null,
+    }));
+  });
+});

@@ -4,12 +4,14 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
-import { ADMIN_REASON_MAX, ADMIN_REASON_MIN, DEAL_LIMITS, DISPUTE_OUTCOMES, type AdminPartyRef } from '@mpm/shared-types';
+import {
+  ADMIN_REASON_MAX, ADMIN_REASON_MIN, DEAL_LIMITS, DISPUTE_OUTCOMES, type AdminPartyRef, type DisputeSubject,
+} from '@mpm/shared-types';
 import { FormDialog } from '@/components/ui/form-dialog';
 import { errorCls, inputCls, labelCls } from '@/components/ui/field-classes';
-import { formatDealRef } from '@/lib/deals-api';
 import {
-  DISPUTE_OUTCOME_LABELS, explainDisputeError, resolveDispute, type ResolveDisputeBody,
+  DISPUTE_OUTCOME_LABELS, RENTAL_DISPUTE_OUTCOME_LABELS, disputePartyLabels, disputeSubject, explainDisputeError,
+  resolveDispute, type ResolveDisputeBody,
 } from '@/lib/disputes-api';
 import { cn } from '@/lib/utils';
 
@@ -48,7 +50,7 @@ type Parsed = z.output<typeof resolveSchema>;
 
 /**
  * The form's values as the API body: `stockReturned` only with `cancelled` on a deal dispute (the API refuses it for a
- * rental booking dispute; lane B1 reworks the dialog for bookings); an empty message is null.
+ * rental booking dispute, M14 R12); an empty message is null.
  */
 export function resolveBody(v: Parsed, hasDeal = true): ResolveDisputeBody {
   if (v.outcome === '') throw new Error('No outcome');
@@ -65,17 +67,30 @@ const optionCls =
   'flex cursor-pointer items-start gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm has-[:checked]:border-brand-600 has-[:checked]:bg-brand-50';
 
 /**
- * Resolve a dispute (F6 + F7 spec §9.6): outcome, "Did the goods go back to the seller?" for cancelled (yes releases the
- * hold, no converts it), an internal note (audit only) and an optional message shown to both parties in the thread.
- * Danger submit. Mount it only while open.
+ * Resolve a dispute (F6 + F7 spec §9.6; M14 R12, §15): outcome, for a deal "Did the goods go back to the seller?" on
+ * cancelled (yes releases the hold, no converts it), an internal note (audit only) and an optional message shown to both
+ * parties in the thread. A rental booking dispute has no goods question; its outcomes explain what happens to the
+ * booking. Danger submit. Mount it only while open.
  */
 export function ResolveDialog({ dispute, onClose, onResolved }: {
-  dispute: { id: string; dealRef: number | null; buyer: AdminPartyRef; seller: AdminPartyRef };
+  dispute: {
+    id: string;
+    subject?: DisputeSubject;
+    dealId?: string | null;
+    dealRef: number | null;
+    rentalBookingRef?: number | null;
+    buyer: AdminPartyRef;
+    seller: AdminPartyRef;
+  };
   onClose: () => void;
   /** After a resolve, or a refusal that means the record is stale: reload. */
   onResolved: () => Promise<void> | void;
 }) {
-  const hasDeal = dispute.dealRef !== null;
+  const subject = disputeSubject({ ...dispute, dealId: dispute.dealId ?? null });
+  const hasDeal = subject.kind === 'deal' && dispute.dealRef !== null;
+  const outcomes = subject.kind === 'rental' ? RENTAL_DISPUTE_OUTCOME_LABELS : DISPUTE_OUTCOME_LABELS;
+  const sides = disputePartyLabels(subject.kind);
+  const on = `${subject.noun} ${subject.ref}`;
   const { register, handleSubmit, watch, formState: { errors, isDirty, isSubmitting } } = useForm<Values>({
     resolver: zodResolver(hasDeal ? resolveSchema : rentalResolveSchema),
     defaultValues: { outcome: '', stockReturned: '', internalNote: '', messageToParties: '' },
@@ -86,7 +101,7 @@ export function ResolveDialog({ dispute, onClose, onResolved }: {
   const save = async (values: Parsed) => {
     try {
       await resolveDispute(dispute.id, resolveBody(values, hasDeal));
-      toast.success(`Dispute on deal ${formatDealRef(dispute.dealRef)} resolved`);
+      toast.success(`Dispute on ${on} resolved`);
       await onResolved();
       onClose();
     } catch (err) {
@@ -101,8 +116,8 @@ export function ResolveDialog({ dispute, onClose, onResolved }: {
       open
       size="lg"
       onClose={onClose}
-      title={`Resolve the dispute on deal ${formatDealRef(dispute.dealRef)}`}
-      description={`${dispute.buyer.name} (buyer) and ${dispute.seller.name} (seller) are both told the outcome.`}
+      title={`Resolve the dispute on ${on}`}
+      description={`${dispute.buyer.name} (${sides.buyer.toLowerCase()}) and ${dispute.seller.name} (${sides.seller.toLowerCase()}) are both told the outcome.`}
       dirty={isDirty}
       submitting={isSubmitting}
       submitLabel="Resolve"
@@ -118,8 +133,8 @@ export function ResolveDialog({ dispute, onClose, onResolved }: {
               <label key={o} className={optionCls}>
                 <input type="radio" value={o} className="mt-1" {...register('outcome')} />
                 <span>
-                  <span className="block font-bold text-gray-900">{DISPUTE_OUTCOME_LABELS[o].label}</span>
-                  <span className="block text-[13px] text-gray-600">{DISPUTE_OUTCOME_LABELS[o].hint}</span>
+                  <span className="block font-bold text-gray-900">{outcomes[o].label}</span>
+                  <span className="block text-[13px] text-gray-600">{outcomes[o].hint}</span>
                 </span>
               </label>
             ))}

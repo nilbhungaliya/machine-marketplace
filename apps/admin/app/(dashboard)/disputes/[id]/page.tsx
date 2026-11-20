@@ -9,8 +9,9 @@ import { PageHeader } from '@/components/ui/page-header';
 import { StaleWarning } from '@/components/ui/stale-warning';
 import { ErrorState, TableSkeleton } from '@/components/ui/states';
 import { useBackTarget } from '@/lib/back-link';
-import { formatDealRef } from '@/lib/deals-api';
-import { DISPUTE_CATEGORY_LABELS, DISPUTE_STATUS_LABELS, DISPUTE_STATUS_TONES, fetchDispute } from '@/lib/disputes-api';
+import {
+  DISPUTE_CATEGORY_LABELS, DISPUTE_STATUS_LABELS, DISPUTE_STATUS_TONES, disputePartyLabels, disputeSubject, fetchDispute,
+} from '@/lib/disputes-api';
 import { classifyLoadError } from '@/lib/load-error';
 import { refreshNavBadges } from '@/lib/nav-badges';
 
@@ -20,7 +21,7 @@ const LOAD_MESSAGES = {
   failed: 'Check your connection and try again.',
 };
 
-/** One dispute (F6 + F7 spec §9.6, §16.1). */
+/** One dispute (F6 + F7 spec §9.6, §16.1): on a deal or, since M14 (R12), on a rental booking. */
 export default function DisputePage() {
   const { id } = useParams<{ id: string }>();
   const back = useBackTarget({ href: '/disputes/', label: 'Disputes' });
@@ -50,15 +51,18 @@ export default function DisputePage() {
     );
   }
 
+  const subject = disputeSubject(dispute);
+  const sides = disputePartyLabels(subject.kind);
+
   return (
     <div>
       <PageHeader
         back={back}
-        trail={[formatDealRef(dispute.dealRef)]}
-        title={<span>{DISPUTE_CATEGORY_LABELS[dispute.category]} · deal <span className="font-mono">{formatDealRef(dispute.dealRef)}</span></span>}
+        trail={[subject.ref]}
+        title={<span>{DISPUTE_CATEGORY_LABELS[dispute.category]} · {subject.noun} <span className="font-mono">{subject.ref}</span></span>}
         description={
           <span className="inline-flex flex-wrap items-center gap-2">
-            <span>{dispute.buyer.name} (buyer) and {dispute.seller.name} (seller)</span>
+            <span>{dispute.buyer.name} ({sides.buyer.toLowerCase()}) and {dispute.seller.name} ({sides.seller.toLowerCase()})</span>
             <StatusBadge status={dispute.status} label={DISPUTE_STATUS_LABELS[dispute.status]} tone={DISPUTE_STATUS_TONES[dispute.status]} />
           </span>
         }
