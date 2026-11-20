@@ -1,4 +1,205 @@
 {
-  "title": "Buyers looking",
-  "subtitle": "Requirements from buyers near you that your listings could answer."
+  "title": "Buyers looking for your parts",
+  "subtitle": "Requirements from buyers near you that your listings could answer.",
+  "lead": "Matched to your categories and stock.",
+  "forListing": "Requirements your listing could answer",
+  "showAll": "Show all",
+  "loadErrorTitle": "Couldn't load requirements",
+  "loadErrorBody": "Check your connection and try again.",
+  "tabs": {
+    "forYou": "For you",
+    "all": "All",
+    "replied": "Replied",
+    "forYouCount_one": "For you {{count}}",
+    "forYouCount_other": "For you {{count}}",
+    "allCount_one": "All {{count}}",
+    "allCount_other": "All {{count}}",
+    "repliedCount_one": "Replied {{count}}",
+    "repliedCount_other": "Replied {{count}}"
+  },
+  "empty": {
+    "title": "No buyers looking right now",
+    "body": "When a buyer posts a requirement your listings could answer, it shows up here and we tell you.",
+    "explainTitle": "Who sees requirements",
+    "sell": "Businesses that sell: add Sell to your business activities.",
+    "categories": "Pick the machine categories you deal in on your profile.",
+    "verified": "Most buyers want verified sellers: verify your GST to see their requirements.",
+    "repliedTitle": "No replies yet",
+    "repliedBody": "Requirements you answer with a listing show up here."
+  },
+  "row": {
+    "budget": "Budget {{price}} a unit",
+    "budgetPrivate": "Budget private",
+    "anyCondition": "Any condition",
+    "someConditions_one": "{{count}} condition",
+    "someConditions_other": "{{count}} conditions",
+    "neededBy": "Needed by {{date}}",
+    "outsideReach": "Outside their area",
+    "urgent": "Urgent",
+    "forYou": "For you",
+    "youHaveStock": "You have stock",
+    "youReplied_one": "You replied",
+    "youReplied_other": "You replied {{count}} times",
+    "replies_one": "{{count}} seller replied",
+    "replies_other": "{{count}} sellers replied",
+    "noReplies": "No replies yet",
+    "reply": "Reply"
+  },
+  "buyer": {
+    "memberSince": "Member since {{year}}",
+    "verified": "Verified",
+    "a11y": "Buyer: {{name}}"
+  },
+  "home": {
+    "new_one": "{{count}} new",
+    "new_other": "{{count}} new",
+    "seeAll": "See all"
+  },
+  "request": {
+    "title": "Requirement",
+    "category": "Category",
+    "accepts": "Side",
+    "quantity": "Quantity",
+    "fits": "Fits",
+    "makeModel": "Make and model",
+    "condition": "Condition",
+    "budget": "Budget",
+    "needed": "Needed",
+    "place": "Buyer's place",
+    "open": "Open for",
+    "note": "Note from the buyer",
+    "scamWarning": "This note may ask for an advance or for contact outside the app. Never pay before you have checked the buyer.",
+    "photos_one": "{{count}} reference photo",
+    "photos_other": "{{count}} reference photos",
+    "showPhotos": "Show photos",
+    "photosError": "Couldn't load the photos. Try again later.",
+    "photoA11y": "Photo {{n}}",
+    "closePhoto": "Close photo",
+    "notOpen": "This requirement is no longer open. You can still see your replies.",
+    "reply": "Reply with my listing",
+    "replyBlocked": {
+      "closed": "This requirement is no longer open for replies.",
+      "viewer": "Your role in this business can read requirements but not reply. Ask the owner or a manager.",
+      "full": "You've replied with the most listings for this requirement. Withdraw one to send another."
+    }
+  },
+  "myReplies": {
+    "title": "Your replies",
+    "pending": "Pending: goes when your listing is live",
+    "delivered": "Sent to the buyer",
+    "seen": "Seen by buyer",
+    "withdrawn": "You withdrew this reply",
+    "dropped": {
+      "listing_removed": "Not sent: you removed the listing",
+      "listing_removed_by_team": "Not sent: our team removed the listing",
+      "listing_rejected": "Not sent: the listing wasn't approved",
+      "request_closed": "Not sent: the buyer closed the requirement",
+      "request_expired": "Not sent: the requirement expired",
+      "request_removed": "Not sent: the requirement was removed",
+      "blocked": "Not sent: you can't reach this buyer",
+      "not_eligible": "Not sent: the buyer's settings don't include your business",
+      "no_longer_fits": "Not sent: the listing no longer fits the requirement",
+      "other": "Not sent"
+    },
+    "chip": {
+      "pending": "Pending",
+      "delivered": "Sent",
+      "withdrawn": "Withdrawn",
+      "dropped": "Not sent"
+    },
+    "withdraw": "Withdraw",
+    "withdrawTitle": "Withdraw this reply?",
+    "withdrawBody": "The buyer won't see this listing for the requirement any more. You can't send the same listing again.",
+    "withdrawDone": "Reply withdrawn",
+    "openListing": "Open listing"
+  },
+  "notRelevant": {
+    "title": "Not relevant to you?",
+    "action": "Not relevant",
+    "send": "Hide it",
+    "done": "Hidden from your lists",
+    "undone": "Back in your lists",
+    "undo": "Undo",
+    "hiddenTitle": "You marked this not relevant",
+    "hiddenBody": "It's hidden from your lists. We use your reason to send you better requirements.",
+    "reason": {
+      "dont_sell_this": "I don't sell this",
+      "too_far": "Too far away",
+      "wrong_category": "Not my category",
+      "other": "Something else"
+    }
+  },
+  "report": {
+    "title": "Report requirement",
+    "details": "Details",
+    "detailsHint": "Optional: tell us more",
+    "detailsRequired": "Tell us what is wrong",
+    "detailsTooLong": "Keep it under {{max}} characters",
+    "reasonRequired": "Choose a reason",
+    "sent": "Thanks. Our team will check it.",
+    "send": "Send report",
+    "reason": {
+      "spam": "Spam",
+      "fake": "Fake requirement",
+      "contact_details": "Shares phone or contact details",
+      "prohibited": "Prohibited item",
+      "other": "Something else"
+    }
+  },
+  "reply": {
+    "title": "Reply with my listing",
+    "lead_one": "Pick {{count}} of your live listings. The buyer sees it with your message.",
+    "lead_other": "Pick up to {{count}} of your live listings. The buyer sees them with your message.",
+    "dailyUsed": "You've sent the most replies for today. Try again tomorrow.",
+    "noListingsTitle": "No live listings to send",
+    "noListings": {
+      "part": "You have no live part listings. Create a new listing for this requirement below.",
+      "machine": "You have no live machine listings. Create a new listing for this requirement below."
+    },
+    "noneFit": "None of your live listings fits this requirement. Create a new listing below.",
+    "selected": "Selected",
+    "full": "You've picked as many as you can send",
+    "reason": {
+      "kind": "Not the kind the buyer wants",
+      "category": "Different category",
+      "side": "Wrong side",
+      "condition": "Condition not accepted",
+      "replied": "Already sent",
+      "other": "Can't be sent"
+    },
+    "invalid": {
+      "kind": "That listing isn't the kind the buyer wants.",
+      "category": "That listing is in a different category.",
+      "side": "That listing's side doesn't match.",
+      "condition": "The buyer doesn't accept that condition.",
+      "replied": "You already sent that listing.",
+      "generic": "A listing changed and can't be sent. We've updated the list."
+    },
+    "message": "Message (optional)",
+    "messageHint": "Price, stock, delivery…",
+    "messageTooLong": "Keep it under {{max}} characters",
+    "messageCount": "{{n}} / {{max}}",
+    "newTitle": "Not listed yet?",
+    "newBody": "Create a listing for this part. It goes to the buyer once it's live.",
+    "create": "Create a new listing",
+    "send": "Send",
+    "sendCount_one": "Send {{count}} listing",
+    "sendCount_other": "Send {{count}} listings",
+    "sent_one": "Sent to the buyer",
+    "sent_other": "{{count}} listings sent to the buyer",
+    "ownBody": "Sellers reply to your requirement; you can't reply to it yourself.",
+    "loadErrorTitle": "Couldn't load your listings"
+  },
+  "sell": {
+    "scopeTitle": "For the requirement \"{{name}}\"",
+    "scopeBody": "Pick the part group under {{type}}.",
+    "pendingTitle": "Reply to \"{{name}}\"",
+    "pendingBody": "Goes to the buyer when your listing is live.",
+    "pendingLive": "Your listing is live: we're sending it to the buyer now.",
+    "demand_one": "{{count}} buyer is looking for this part.",
+    "demand_other": "{{count}} buyers are looking for this part.",
+    "demandReview": "We will tell them when it goes live.",
+    "demandLive": "We've told them.",
+    "seeRequirements": "See their requirements"
+  }
 }
