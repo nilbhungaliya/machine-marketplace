@@ -59,8 +59,12 @@ export function statusChip(status: ListingStatus): { key: string; tone: StatusTo
 
 // ─── The manage sheet, the edit menu and the cards (§10; plan Task 27) ───
 
-/** A manage-sheet row: Edit, Update quantity, Find the other side, View listing, Delete draft, or a seller action (§7.2). */
-export type ManageItem = 'edit' | 'quantity' | 'other_side' | 'view' | 'delete_draft' | SellerListingAction;
+/**
+ * A manage-sheet row: Edit, Update quantity, Find the other side, View listing, Delete draft, a seller action (§7.2),
+ * or for a machine for rent the owner's Calendar and Bookings (n) (M14 §14.1).
+ */
+export type ManageItem =
+  | 'edit' | 'quantity' | 'other_side' | 'view' | 'delete_draft' | 'calendar' | 'bookings' | SellerListingAction;
 
 /** What the manage sheet runs through the API: a seller action, or deleting a draft (`DELETE /listings/:id`). */
 export type ManageAction = SellerListingAction | 'delete_draft';
@@ -70,7 +74,8 @@ const isEditable = (status: ListingStatus): boolean => (EDITABLE_LISTING_STATUSE
 /**
  * The manage sheet's rows (§10, mockup "Manage a listing"): Edit and Update quantity while editable, the actions
  * `sellerActions` allows (no Duplicate, decision 8), Find the other side for a left / right part, View listing when
- * asked for (My listings), and Remove last. A removed listing has none.
+ * asked for (My listings), and Remove last. A removed listing has none. A machine for rent starts with Calendar and
+ * Bookings (n) (M14 §14.1).
  */
 export function manageItems(
   l: { status: ListingStatus; kind: ListingKind; side: PartSide | null },
@@ -81,6 +86,8 @@ export function manageItems(
   if (l.status === 'draft') return ['edit', ...(opts.view ? (['view'] as const) : []), 'delete_draft'];
   const actions = sellerActions(l.status, l.kind);
   const items: ManageItem[] = [];
+  // M14 §14.1: a rental's calendar and bookings first (Mark rented / Available again are retired, §7.1).
+  if (l.kind === 'machine_rental') items.push('calendar', 'bookings');
   if (isEditable(l.status)) items.push('edit', 'quantity');
   items.push(...actions.filter((a) => a !== 'remove'));
   if (l.kind === 'part' && (l.side === 'left' || l.side === 'right')) items.push('other_side');
@@ -211,4 +218,16 @@ export function myCardNudge(
 export function ownerNote(l: ListingOwnerView): { key: string; values?: Record<string, string> } | null {
   if (l.status !== 'rejected' && l.status !== 'hidden') return null;
   return myCardNudge({ ...l, scoreMissing: [] }, { videoEnabled: false });
+}
+
+/**
+ * A rental's line on its My listings card (M14 §14.1, plan D14): "On rent" when every machine is out today, "3 of 5
+ * out today" when some are; null when none are out (or for anything but a rental).
+ */
+export function rentalLine(
+  line: Pick<NonNullable<MyListingCard['rentalLine']>, 'quantity' | 'outToday'> | null | undefined,
+): { key: string; values?: { out: number; q: number } } | null {
+  if (!line || line.outToday <= 0) return null;
+  if (line.outToday >= line.quantity) return { key: 'rentalsOwner.mine.onRent' };
+  return { key: 'rentalsOwner.mine.outOfToday', values: { out: line.outToday, q: line.quantity } };
 }

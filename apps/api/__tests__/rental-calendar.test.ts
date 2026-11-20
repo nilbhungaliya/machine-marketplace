@@ -93,6 +93,19 @@ describe('availability and the owner calendar', () => {
     expect(cal.days[1]!.free).toBe(1);
     expect(cal.bookings.map((x) => [x.id, x.status]).sort()).toEqual([[b.bookingId, 'confirmed'], [open.bookingId, 'requested']].sort());
   });
+
+  it('lists a machine still out past its end date on every day capacity counts it, to today', async () => {
+    const id = await rental(1);
+    const late = await book(id, {
+      status: 'on_rent', startDate: d(-3), endDate: d(-1), onSiteAt: new Date(Date.now() - 4 * 86_400_000),
+    });
+    const res = await app.inject({ method: 'GET', url: `/listings/${id}/calendar?from=${d(-5)}&to=${d(1)}`, headers: auth(owner.token) });
+    expect(res.statusCode, res.body).toBe(200);
+    const cal = res.json().data as RentalCalendar;
+    expect(cal.memberRole).toBe('owner');
+    expect(cal.bookings.find((x) => x.id === late.bookingId)).toMatchObject({ spanStart: d(-4), spanEnd: today });
+    expect(cal.days.find((x) => x.date === today)!.out).toBe(1);
+  });
 });
 
 describe('blocks', () => {

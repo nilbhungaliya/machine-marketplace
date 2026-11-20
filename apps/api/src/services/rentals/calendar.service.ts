@@ -1,7 +1,7 @@
 import { and, asc, eq, gte, lte, sql } from 'drizzle-orm';
 import type { RentalBlockView, RentalBookingStatus, RentalCalendar } from '@mpm/shared-types';
 import type { Db, Tx } from '../../db/index.js';
-import { listings, rentalBlocks } from '../../db/schema.js';
+import { listings, rentalBlocks, users } from '../../db/schema.js';
 import { IST_TODAY } from '../../lib/ist.js';
 import { publicText } from '../chat/chat-view.js';
 import { listingNotFound, type ListingRow } from '../listings/locks.js';
@@ -34,10 +34,14 @@ export function toBlockView(b: typeof rentalBlocks.$inferSelect): RentalBlockVie
   return { id: b.id, startDate: b.startDate, endDate: b.endDate, machines: b.machines, reason: b.reason, note: b.note };
 }
 
-/** `GET /listings/:id/calendar?from=&to=` (owner members, viewers read; window as availability, default 30 days). */
+/**
+ * `GET /listings/:id/calendar?from=&to=` (owner members, viewers read; window as availability, default 30 days). Each
+ * booking carries the span capacity counts (`spanStart` / `spanEnd`), and the reader's `memberRole` tells the app
+ * whether block writes are open to them.
+ */
 export async function getRentalCalendar(
   conn: Conn,
-  user: { businessId: string | null },
+  user: { userId: string; businessId: string | null },
   listingId: string,
   q: { from?: string; to?: string },
 ): Promise<RentalCalendar> {
@@ -55,18 +59,24 @@ export async function getRentalCalendar(
     status: RentalBookingStatus;
     start_date: string;
     end_date: string;
+    span_start: string;
+    span_end: string;
     machines: number;
     renter_name: string | null;
   }>(sql`
-    SELECT b.id, b.ref, b.status, b.start_date::text, b.end_date::text, b.machines, rb.trade_name AS renter_name
-    FROM rental_bookings b JOIN businesses rb ON rb.id = b.renter_business_id
-    WHERE b.listing_id = ${listing.id}::uuid
-      AND b.status::text IN (${statuses})
-      AND LEAST(b.start_date, COALESCE((b.on_site_at AT TIME ZONE 'Asia/Kolkata')::date, b.start_date)) <= ${to}::date
-      AND (CASE WHEN b.status = 'on_rent' OR (b.status = 'disputed' AND b.disputed_from = 'on_rent')
-             THEN GREATEST(b.end_date, ${IST_TODAY}) ELSE b.end_date END) >= ${from}::date
-    ORDER BY b.start_date, b.ref
+    SELECT x.* FROM (
+      SELECT b.id, b.ref, b.status, b.start_date::text, b.end_date::text, b.machines, rb.trade_name AS renter_name,
+        LEAST(b.start_date, COALESCE((b.on_site_at AT TIME ZONE 'Asia/Kolkata')::date, b.start_date))::text AS span_start,
+        (CASE WHEN b.status = 'on_rent' OR (b.status = 'disputed' AND b.disputed_from = 'on_rent')
+              THEN GREATEST(b.end_date, ${IST_TODAY}) ELSE b.end_date END)::text AS span_end
+      FROM rental_bookings b JOIN businesses rb ON rb.id = b.renter_business_id
+      WHERE b.listing_id = ${listing.id}::uuid
+        AND b.status::text IN (${statuses})
+    ) x
+    WHERE x.span_start::date <= ${to}::date AND x.span_end::date >= ${from}::date
+    ORDER BY x.start_date, x.ref
   `);
+  const [member] = await conn.select({ role: users.memberRole }).from(users).where(eq(users.id, user.userId));
 
   const blocks = await conn
     .select()
@@ -77,6 +87,7 @@ export async function getRentalCalendar(
   return {
     listingId: listing.id,
     quantity,
+    memberRole: member?.role ?? 'viewer',
     days,
     bookings: rows.map((r) => ({
       id: r.id,
@@ -84,6 +95,8 @@ export async function getRentalCalendar(
       status: r.status,
       startDate: r.start_date,
       endDate: r.end_date,
+      spanStart: r.span_start,
+      spanEnd: r.span_end,
       machines: Number(r.machines),
       renterName: publicText(r.renter_name) ?? '',
     })),

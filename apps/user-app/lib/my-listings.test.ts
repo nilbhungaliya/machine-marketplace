@@ -5,8 +5,8 @@ import type { CategoryNode, MyListingCard } from '@mpm/shared-types';
 import { cardFixture, ownerFixture } from './listing-fixtures.test-helper';
 import {
   MY_LISTINGS_SEGMENTS, actionToastKey, editEntry, editSections, gateStep, isStaleListingError, manageItems, myCardChip,
-  myCardNudge, myCardSubtitle, needsConfirm, nodeHasSides, ownerNote, quantityToastKey, showRenew, statusChip, statusGroup,
-  wizardStartStep,
+  myCardNudge, myCardSubtitle, needsConfirm, nodeHasSides, ownerNote, quantityToastKey, rentalLine, showRenew, statusChip,
+  statusGroup, wizardStartStep,
 } from './my-listings';
 
 const mine = (over: Partial<MyListingCard> = {}): MyListingCard => ({
@@ -72,9 +72,9 @@ describe('manageItems (§10)', () => {
       'edit', 'quantity', 'resume', 'mark_sold', 'mark_unavailable', 'remove',
     ]);
   });
-  it('a machine for rent: no Mark sold and no rental-only action (M14 §7.1: its bookings set rented)', () => {
+  it('a machine for rent: Calendar and Bookings, no Mark sold and no rental-only action (M14 §7.1: its bookings set rented)', () => {
     expect(manageItems({ status: 'live', kind: 'machine_rental', side: null })).toEqual([
-      'edit', 'quantity', 'pause', 'renew', 'mark_unavailable', 'remove',
+      'calendar', 'bookings', 'edit', 'quantity', 'pause', 'renew', 'mark_unavailable', 'remove',
     ]);
     const rented = manageItems({ status: 'rented', kind: 'machine_rental', side: null });
     expect(rented).toEqual(expect.arrayContaining(['pause', 'renew', 'mark_unavailable', 'remove']));
@@ -241,5 +241,13 @@ describe('review fixes (L6 review)', () => {
     });
     expect(ownerNote(view({ status: 'hidden', statusReason: 'Stock photo' }))?.key).toBe('listing.mine.hiddenReason');
     expect(ownerNote(view({ status: 'live', score: { score: 20, missing: ['video'] } }))).toBeNull();
+  });
+});
+
+describe('rentalLine (M14 §14.1)', () => {
+  it('"3 of 5 out today" while some machines are out, "On rent" when all are', () => {
+    expect(rentalLine({ quantity: 5, outToday: 3 })).toEqual({ key: 'rentalsOwner.mine.outOfToday', values: { out: 3, q: 5 } });
+    expect(rentalLine({ quantity: 5, outToday: 5 })?.key).toBe('rentalsOwner.mine.onRent');
+    expect(rentalLine({ quantity: 5, outToday: 0 })).toBeNull();
   });
 });

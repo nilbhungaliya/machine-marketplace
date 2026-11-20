@@ -1,17 +1,171 @@
 {
+  "tooLong": "Keep it under {{max}} characters.",
+  "answer": {
+    "title": "Your answer",
+    "replyBy": "Answer by {{date}}, {{time}}",
+    "changesLeft_one": "1 change left in this booking",
+    "changesLeft_other": "{{count}} changes left in this booking",
+    "noChangesLeft": "No changes left: confirm or decline",
+    "beyondRadius": "The site is outside the area you serve.",
+    "confirm": "Confirm booking",
+    "change": "Propose change",
+    "decline": "Decline",
+    "confirmTitle": "Confirm this booking?",
+    "confirmMessage_one": "{{dates}}, 1 machine, total {{total}}. The machine is held for these dates.",
+    "confirmMessage_other": "{{dates}}, {{count}} machines, total {{total}}. The machines are held for these dates.",
+    "confirmed": "Booking confirmed"
+  },
   "calendar": {
-    "title": "Calendar"
+    "title": "Calendar",
+    "prev": "Previous month",
+    "next": "Next month",
+    "cellLabel": "{{date}}, {{out}} of {{q}} out",
+    "legend": {
+      "free": "All free",
+      "partial": "Some out",
+      "full": "None free"
+    },
+    "dayCount": "{{out}} of {{q}} out, {{free}} free",
+    "dayEmpty": "Nothing booked or blocked on this day.",
+    "bookingHint_one": "#{{ref}}, {{dates}}, 1 machine",
+    "bookingHint_other": "#{{ref}}, {{dates}}, {{count}} machines",
+    "blockHint_one": "{{dates}}, 1 machine",
+    "blockHint_other": "{{dates}}, {{count}} machines",
+    "addBlock": "Add block",
+    "loadError": "Check your connection and try again."
+  },
+  "block": {
+    "addTitle": "Block dates",
+    "editTitle": "Edit block",
+    "subtitle": "Blocked machines can't be booked on these dates.",
+    "dates": "Dates",
+    "pickDates": "Choose dates",
+    "datesRequired": "Choose the first and last day.",
+    "datesPast": "These dates have passed. Choose dates from today on.",
+    "datesTooLong": "A block can cover up to {{max}} days.",
+    "machines": "Machines",
+    "machinesHint_one": "You have 1 machine on this listing.",
+    "machinesHint_other": "You have {{count}} machines on this listing.",
+    "machinesInvalid": "Enter a number from 1 to {{max}}.",
+    "reason": "Reason",
+    "note": "Note (only you see it)",
+    "noteHint": "For example, engine service",
+    "takenFree_one": "Only 1 machine is free on some of those days.",
+    "takenFree_other": "Only {{count}} machines are free on some of those days.",
+    "save": "Save block",
+    "added": "Dates blocked",
+    "saved": "Block saved",
+    "delete": "Delete block",
+    "deleteTitle": "Delete this block?",
+    "deleteMessage": "These machines can be booked on these dates again.",
+    "deleted": "Block deleted"
+  },
+  "blockReason": {
+    "maintenance": "Maintenance",
+    "booked_outside": "Booked outside the app",
+    "other": "Other"
   },
   "change": {
-    "title": "Propose a change"
+    "title": "Propose a change",
+    "subtitle": "#{{ref}} for {{name}}",
+    "start": "Start date",
+    "ends": "Ends {{date}}",
+    "chargedBy": "Charged by",
+    "count": {
+      "hour": "Hours",
+      "day": "Days",
+      "week": "Weeks",
+      "month": "Months"
+    },
+    "countInvalid": "Enter a number from {{min}} to {{max}}.",
+    "machines": "Machines",
+    "operator": "Operator",
+    "withOperator": "With operator",
+    "withoutOperator": "Without operator",
+    "transport": "Transport",
+    "ownerDelivers": "I deliver",
+    "renterPicksUp": "Renter picks up",
+    "estimate": "Estimate for these terms",
+    "total": "Your total",
+    "totalInvalid": "Enter an amount in rupees.",
+    "belowEstimate": "{{percent}}% below the estimate",
+    "aboveEstimate": "{{percent}}% above the estimate",
+    "sameAsEstimate": "Same as the estimate",
+    "message": "Message (optional)",
+    "messageHint": "Why the change, for example the machine is out until Monday",
+    "changesAfter_one": "After this, 1 more change is possible.",
+    "changesAfter_other": "After this, {{count}} more changes are possible.",
+    "submit": "Send change",
+    "sent": "Change sent to the renter"
   },
   "decline": {
-    "title": "Decline the request"
+    "title": "Decline the request",
+    "titleChange": "Decline the change",
+    "body": "The renter is told why. Choose a reason.",
+    "bodyChange": "The owner is told why. Choose a reason.",
+    "pickReason": "Choose a reason.",
+    "submit": "Decline",
+    "done": "Declined"
+  },
+  "declineReason": {
+    "dates_unavailable": "Dates not available",
+    "site_too_far": "Site too far",
+    "terms": "Terms don't work",
+    "other": "Other"
+  },
+  "meter": {
+    "opening": "Opening hour meter (optional)",
+    "closing": "Closing hour meter (optional)",
+    "placeholder": "Reading in hours",
+    "invalid": "Enter the reading as a whole number of hours.",
+    "belowStart": "The closing reading can't be lower than the opening one ({{start}}).",
+    "openingWas": "Opening reading:"
+  },
+  "photos": {
+    "label": "Photos (optional)",
+    "hint": "Up to {{max}}. Only you and the other business see them.",
+    "uploadFailed": "Couldn't upload the photo. Check your connection and try again."
   },
   "onSite": {
-    "title": "Machine on site"
+    "title": "Machine on site",
+    "subtitle": "#{{ref}}, {{dates}}",
+    "body": "Mark it when the machine reaches the site. The booking moves to On rent.",
+    "submit": "Mark on site",
+    "done": "Marked on site"
   },
   "return": {
-    "title": "Machine returned"
-  }
+    "title": "Machine returned",
+    "subtitle": "#{{ref}} with {{name}}",
+    "agreed": "Agreed total",
+    "amount": "Final amount",
+    "amountRequired": "Enter the final amount.",
+    "more": "{{amount}} more than agreed",
+    "less": "{{amount}} less than agreed",
+    "reason": "Why it differs",
+    "finalNote": "Note on the amount (optional)",
+    "damage": "Damage (optional)",
+    "damageHint": "Describe any damage you found",
+    "submit": "Mark returned",
+    "done": "Marked returned. The renter is asked to confirm."
+  },
+  "finalReason": {
+    "extra_time": "Extra time",
+    "overtime": "Overtime",
+    "fuel": "Fuel",
+    "transport": "Transport",
+    "damage": "Damage",
+    "discount": "Discount",
+    "other": "Other"
+  },
+  "manage": {
+    "calendar": "Calendar",
+    "bookings": "Bookings",
+    "bookingsCount": "Bookings ({{n}})",
+    "seeBookings": "See bookings"
+  },
+  "mine": {
+    "onRent": "On rent",
+    "outOfToday": "{{out}} of {{q}} out today"
+  },
+  "quantityBooked": "Machines are booked from today on, so the quantity can't go below what is booked. See the calendar."
 }
