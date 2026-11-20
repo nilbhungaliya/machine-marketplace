@@ -47,7 +47,8 @@ describe('MarketplaceSettingsForm', () => {
     expect(field('Expiry reminder (days)').value).toBe('7');
     expect(field('Review first listings').value).toBe('3');
     expect(field('Unverified listing cap').value).toBe('3');
-    expect(screen.getByText(/7 to 365/)).not.toBeNull();
+    // Listing expiry and (F8) the part-request maximum both run 7 to 365.
+    expect(screen.getAllByText(/7 to 365/).length).toBeGreaterThan(0);
     expect(screen.getByText(/Must be less than the expiry/)).not.toBeNull();
   });
 

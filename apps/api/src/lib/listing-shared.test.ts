@@ -335,8 +335,9 @@ describe('APP_SETTINGS / validateSettings (§12)', () => {
       listing_review_first_n: 3,
       unverified_listing_cap: 3,
     });
-    // + the 15 F6 + F7 settings (spec §17).
-    expect(APP_SETTINGS.map((s) => s.key)).toHaveLength(19);
+    // + the 15 F6 + F7 settings (spec §17) + the 14 F8 part-request settings (F8 spec §16).
+    expect(APP_SETTINGS.map((s) => s.key)).toHaveLength(33);
+    expect(APP_SETTINGS.filter((s) => s.key.startsWith('part_request_'))).toHaveLength(14);
   });
 
   it('accepts the defaults', () => {
