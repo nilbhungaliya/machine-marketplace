@@ -38,6 +38,15 @@ export function snappedKmSql(point: SQL | AnyColumn, origin: LatLng): SQL<number
 }
 
 /**
+ * F8 (plan C0-3a): snapped whole km between two geography expressions, by `snappedKmSql`'s rule (both snapped to the
+ * grid, `floor`, at least 1); NULL when either is NULL. The only distance F8 shows or stores.
+ */
+export function snappedKmBetweenSql(a: SQL | AnyColumn, b: SQL | AnyColumn): SQL<number | null> {
+  return sql<number | null>`(CASE WHEN (${a}) IS NULL OR (${b}) IS NULL THEN NULL
+    ELSE GREATEST(1, floor(ST_Distance(${snappedSql(a)}, ${snappedSql(b)}) / 1000))::int END)`;
+}
+
+/**
  * Within `radiusKm` by the same number the card shows: `ST_DWithin` on the raw points with a 3 km margin (uses the
  * GiST index; snapping moves each point up to ~0.78 km, so the raw distance of a match can reach ~r + 2.6 km) **and**
  * the snapped km ≤ the radius, so a listing never shows "51 km" under 50 km.
