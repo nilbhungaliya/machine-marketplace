@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { CategoryNode } from '@mpm/shared-types';
 import {
-  categoryLevelFor, findNode, hasSidesFor, machineTypeIdOf, nodePath, pushRecent, recentNodes, searchCategories,
+  categoryLevelFor, findNode, hasSidesFor, machineTypeIdOf, nodePath, pushRecent, recentNodes,
+  requestScopeTypeId, scopedPartGroups, searchCategories,
 } from './sell-category';
 
 const node = (over: Partial<CategoryNode> & Pick<CategoryNode, 'id' | 'level' | 'name'>): CategoryNode => ({
@@ -85,5 +86,21 @@ describe('sell-category', () => {
 
   it('shows recent picks still in the tree at the right level', () => {
     expect(recentNodes(tree, 'part', ['hooks', 'gone', 'rapier', 'temple']).map((n) => n.id)).toEqual(['hooks', 'temple']);
+  });
+});
+
+describe('scopedPartGroups (F8 §9.3)', () => {
+  it("returns only the machine type's part groups, and every part group without a type", () => {
+    expect(scopedPartGroups(tree, 'rapier').map((n) => n.id)).toEqual(['temple', 'gears']);
+    expect(scopedPartGroups(tree, 'airjet')).toEqual([]);
+    expect(scopedPartGroups(tree, null).map((n) => n.id)).toEqual(['temple', 'gears', 'hooks']);
+    expect(scopedPartGroups(tree, 'nope').map((n) => n.id)).toEqual(['temple', 'gears', 'hooks']);
+  });
+
+  it('scopes only a part request on a machine type', () => {
+    expect(requestScopeTypeId(tree, { kind: 'part', categoryId: 'rapier' })).toBe('rapier');
+    expect(requestScopeTypeId(tree, { kind: 'part', categoryId: 'temple' })).toBeNull();
+    expect(requestScopeTypeId(tree, { kind: 'machine', categoryId: 'rapier' })).toBeNull();
+    expect(requestScopeTypeId(tree, null)).toBeNull();
   });
 });

@@ -16,7 +16,7 @@ import { useListingTemplate, useMasterData } from '@/hooks/use-listing';
 import { usePublishListing } from '@/hooks/use-sell-draft';
 import { useType } from '@/hooks/use-type';
 import { errorCode } from '@/lib/api-error';
-import { Check, Info, ShieldCheck, TriangleAlert } from '@/lib/icons';
+import { Check, ClipboardList, Info, ShieldCheck, TriangleAlert } from '@/lib/icons';
 import { incompleteProblems, listingErrorMessage, needsGstVerification } from '@/lib/listing-errors';
 import { priceText, quantityText, unitLabel } from '@/lib/listing-format';
 import { videoUploadEnabled } from '@/lib/media-prepare';
@@ -42,7 +42,8 @@ export function flagText(t: (k: string, o?: Record<string, unknown>) => string, 
 /**
  * Preview (F2 spec §5.4, §5.5): the listing as buyers will see it (`ListingView` from the owner view), the listing
  * score with its nudges, the sanity warnings the seller confirms, then Publish. `LISTING_INCOMPLETE` opens the step of
- * the first problem; `UNVERIFIED_LISTING_CAP` and `RENTAL_NEEDS_GST` offer the GST flow.
+ * the first problem; `UNVERIFIED_LISTING_CAP` and `RENTAL_NEEDS_GST` offer the GST flow. A draft answering a part
+ * request (F8 §9.3, `pendingRequestReply`) says the reply goes to the buyer when the listing is live.
  */
 export default function Preview({ ctx }: StepProps) {
   const { t } = useTranslation();
@@ -113,6 +114,14 @@ export default function Preview({ ctx }: StepProps) {
   const header = (
     <View style={s.header}>
       <Notice tone="info" icon={Info} text={t('sell.preview.note')} />
+      {listing.pendingRequestReply ? (
+        <Notice
+          tone="info"
+          icon={ClipboardList}
+          title={t('buyers.sell.pendingTitle', { name: listing.pendingRequestReply.name })}
+          text={t('buyers.sell.pendingBody')}
+        />
+      ) : null}
       {gstBlock ? (
         <Notice tone="warning" icon={ShieldCheck} title={gstBlock} text={t('sell.preview.gstHelp')}>
           <Button title={t('sell.verifyGst')} phLabel="Sell-preview-verify-gst" size="sm" loading={gst.opening} onPress={() => void gst.open()} />

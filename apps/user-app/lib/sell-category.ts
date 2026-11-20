@@ -89,3 +89,27 @@ export function recentNodes(tree: readonly CategoryNode[], kind: ListingKind, id
   const level = categoryLevelFor(kind);
   return ids.map((id) => findNode(tree, id)).filter((n): n is CategoryNode => !!n && n.level === level);
 }
+
+/**
+ * The part groups a reply-with-a-new-listing draft may pick (F8 spec §9.3): a part request on a machine type gives its
+ * draft no category, and the wizard scopes the part-group picker to that type. `machineTypeId` null (or not in the
+ * tree) → every part group, in tree order.
+ */
+export function scopedPartGroups(tree: readonly CategoryNode[], machineTypeId: string | null | undefined): CategoryNode[] {
+  const all = nodesAt(tree, 'part_group').map((h) => h.node);
+  const scope = machineTypeId ? findNode(tree, machineTypeId) : null;
+  if (!scope || scope.level !== 'machine_type') return all;
+  return nodesAt([scope], 'part_group').map((h) => h.node);
+}
+
+/**
+ * The machine type a part request scopes the draft's picker to (§9.3): the request's category when it is a machine
+ * type and the kind is `part`; null otherwise (a part group is copied onto the draft, a machine request's type too).
+ */
+export function requestScopeTypeId(
+  tree: readonly CategoryNode[], request: { kind: string; categoryId: string } | null | undefined,
+): string | null {
+  if (!request || request.kind !== 'part') return null;
+  const n = findNode(tree, request.categoryId);
+  return n?.level === 'machine_type' ? n.id : null;
+}
