@@ -3,6 +3,7 @@ import { z } from 'zod';
 import {
   LISTING_KINDS,
   REMOVABLE_CHIPS,
+  RENTAL_LIMITS,
   SEARCH_SORTS,
   type ListingKind,
   type SearchFilters,
@@ -12,6 +13,8 @@ import {
 import type { Db, Tx } from '../../db/index.js';
 import { categories, listings, templateFieldOptions, templateFields } from '../../db/schema.js';
 import { ValidationError } from '../../lib/errors.js';
+import { isRealDate } from '../../lib/spec-check.js';
+import { capacityIntervalsSql } from '../rentals/capacity.js';
 import { withinRadiusSql, type LatLng } from './distance.js';
 import { discoveryWhere } from './visibility.js';
 
@@ -45,6 +48,7 @@ const minQty = z.union([z.literal(2), z.literal(10), z.literal(50)]);
 const money = z.number().int().min(0).max(1_000_000_000_000);
 const specKey = z.string().min(1).max(64).regex(/^[a-z0-9_]+$/);
 const specRange = z.object({ min: z.number().finite().optional(), max: z.number().finite().optional() }).strict();
+const isoDate = z.string().refine(isRealDate, 'must be a date (YYYY-MM-DD)');
 
 export const searchFiltersSchema = z
   .object({
@@ -66,6 +70,8 @@ export const searchFiltersSchema = z
     delivers: z.boolean().optional(),
     hasVideo: z.boolean().optional(),
     specs: z.record(specKey, z.union([z.array(z.string().min(1).max(64)).max(50), specRange])).optional(),
+    // M14 R13 "Free on": IST dates; at most 90 days (`rentalFreeSql`), from today (`checkRentalDatesStart`).
+    rentalDates: z.object({ from: isoDate, to: isoDate }).strict().optional(),
   })
   .strict();
 
@@ -251,6 +257,7 @@ export function filterParts(ctx: FilterContext): FilterParts {
   }
   // F6 + F7 §8.4: what is still available, not the listed quantity (facet counts share this clause).
   if (f.minQty !== undefined) base.push(sql`(${listings.quantity} - ${listings.heldQuantity}) >= ${f.minQty}`);
+  if (f.rentalDates) base.push(rentalFreeSql(f.rentalDates));
   if (f.hasVideo) base.push(sql`EXISTS (SELECT 1 FROM listing_media vm WHERE vm.listing_id = ${listings.id} AND vm.type = 'video')`);
 
   if (ctx.kinds.length) groups.set('kinds', inArray(listings.kind, ctx.kinds));
@@ -269,6 +276,40 @@ export function filterParts(ctx: FilterContext): FilterParts {
     }
   }
   return { base, radius, groups };
+}
+
+const rentalDatesInvalid = () => new ValidationError('Those dates are not valid', { field: 'rentalDates' }, 'RENTAL_DATES_INVALID');
+
+/** "Free on" starts today or later (`400 RENTAL_DATES_INVALID`); `today` is the IST date of the search's as-of time. */
+export function checkRentalDatesStart(filters: SearchFilters, today: string): void {
+  if (filters.rentalDates && filters.rentalDates.from < today) throw rentalDatesInvalid();
+}
+
+/** Whole days from `a` to `b` (`YYYY-MM-DD`). */
+const dayDiff = (a: string, b: string) => Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / 86_400_000);
+
+/**
+ * M14 "Free on" (spec §10, R13, §5.7): a `machine_rental` listing passes when at least one machine is free on every
+ * day of `[from, to]` (other kinds are untouched). Capacity's one definition (`capacityIntervalsSql`, correlated on the
+ * row): `out` only rises where an interval starts, so it is checked on `from` and each effective start inside the
+ * range, as a `NOT EXISTS` over the bookings' partial capacity index. `to ≥ from` and `to − from ≤ 89`, else `400
+ * RENTAL_DATES_INVALID`; `from ≥ today` is `checkRentalDatesStart`'s, against the page's as-of date (a cursor page
+ * after IST midnight keeps the first page's day). A `rented` listing free on the range passes (and ranks as available,
+ * `tierSql`).
+ */
+export function rentalFreeSql(range: { from: string; to: string }): SQL {
+  const { from, to } = range;
+  if (to < from || dayDiff(from, to) + 1 > RENTAL_LIMITS.freeOnMaxDays) throw rentalDatesInvalid();
+  const intervals = capacityIntervalsSql(sql`${listings.id}`);
+  return sql`(${listings.kind} <> 'machine_rental' OR NOT EXISTS (
+    SELECT 1 FROM (
+      SELECT ${from}::date AS d
+      UNION
+      SELECT fi.s FROM ${intervals} fi WHERE fi.s > ${from}::date AND fi.s <= ${to}::date
+    ) fd
+    WHERE (SELECT COALESCE(sum(fo.machines), 0) FROM ${intervals} fo WHERE fd.d BETWEEN fo.s AND fo.e)
+      >= COALESCE(floor(${listings.quantity}), 0)
+  ))`;
 }
 
 export const gstSql: SQL = sql`EXISTS (SELECT 1 FROM businesses gb WHERE gb.id = ${listings.businessId} AND gb.verification_levels ? 'gst')`;
