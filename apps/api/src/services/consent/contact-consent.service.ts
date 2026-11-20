@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, isNotNull, sql } from 'drizzle-orm';
+import { and, asc, eq, isNotNull, sql } from 'drizzle-orm';
 import {
   CONSENT_WORDING_VERSION,
   type ConsentPhoneSource,
@@ -6,12 +6,14 @@ import {
   type ContactState,
 } from '@mpm/shared-types';
 import type { Db, Tx } from '../../db/index.js';
-import { businesses, chatThreads, contactShareConsents, dealEvents, deals, users } from '../../db/schema.js';
+import { businesses, chatThreads, contactShareConsents, dealEvents, deals, rentalBookings, users } from '../../db/schema.js';
 import { ConflictError, ForbiddenError } from '../../lib/errors.js';
 import { emitToBusinesses } from '../chat/chat-emit.js';
 import { assertCanWrite, type ChatReader, type ThreadRow } from '../chat/members.js';
 import { insertSystemLine } from '../chat/thread-lines.js';
 import { lockThread } from '../deals/locks.js';
+import { recordBookingEvent } from '../rentals/booking-write.js';
+import { threadAgreement } from '../rentals/thread-agreement.js';
 
 /**
  * Share my number and the reveal (F6 + F7 spec §5.5, §6.6, R6; ported from textile
@@ -66,43 +68,42 @@ export async function validConsent(conn: Db | Tx, threadId: string, businessId: 
   return hasValidGrant(conn, threadId, businessId, current.phone);
 }
 
-/** The latest deal of a thread, or undefined. */
-async function latestDealId(conn: Conn, threadId: string): Promise<string | undefined> {
-  const [d] = await conn
-    .select({ id: deals.id })
-    .from(deals)
-    .where(eq(deals.threadId, threadId))
-    .orderBy(desc(deals.acceptedAt), desc(deals.id))
-    .limit(1);
-  return d?.id;
-}
-
 /**
- * Sets `contact_unlocked_at` (with the `contact_shared` system line and deal event) when the thread has a deal and both
- * sides hold a valid consent. Returns whether the thread is unlocked after the call. Locks the thread (last in §8.5); a
- * caller holding the deal row (accept) has inserted it in this transaction.
+ * Sets `contact_unlocked_at` (with the `contact_shared` system line and the agreement's event) when the thread has an
+ * agreement — a deal or a rental booking ever confirmed (M14 R9, `threadAgreement`) — and both sides hold a valid
+ * consent. Returns whether the thread is unlocked after the call. Locks the thread (last in §8.5); a caller holding the
+ * deal or booking row (accept, confirm) has written it in this transaction.
  */
 export async function maybeReveal(tx: Tx, threadId: string): Promise<boolean> {
   const thread = await lockThread(tx, threadId);
   if (thread.contactUnlockedAt !== null) return true;
-  const dealId = await latestDealId(tx, threadId);
-  if (!dealId) return false;
+  const agreement = await threadAgreement(tx, threadId);
+  if (!agreement) return false;
   if (!(await validConsent(tx, threadId, thread.buyerBusinessId))) return false;
   if (!(await validConsent(tx, threadId, thread.sellerBusinessId))) return false;
 
   await tx.update(chatThreads).set({ contactUnlockedAt: sql`now()`, updatedAt: sql`now()` }).where(eq(chatThreads.id, threadId));
-  await tx.insert(dealEvents).values({ dealId, code: 'contact_shared', actorSide: 'system', values: {} });
-  // Built after the unlock, so its `message:new` (and the inbox row) already reads unmasked for non-viewers.
-  await insertSystemLine(tx, threadId, 'contact_shared', { dealId });
-  // Every member's open thread refetches: old messages now read unmasked (ids only, R10).
-  emitToBusinesses(tx, [thread.buyerBusinessId, thread.sellerBusinessId], 'thread:updated', { threadId, reason: 'contact_shared' });
-  const [deal] = await tx.select({ status: deals.status, version: deals.version }).from(deals).where(eq(deals.id, dealId));
-  emitToBusinesses(tx, [thread.buyerBusinessId, thread.sellerBusinessId], 'deal:updated', {
-    dealId,
-    threadId,
-    status: deal!.status,
-    version: deal!.version,
-  });
+  const businessIds = [thread.buyerBusinessId, thread.sellerBusinessId];
+  if (agreement.kind === 'deal') {
+    const dealId = agreement.id;
+    await tx.insert(dealEvents).values({ dealId, code: 'contact_shared', actorSide: 'system', values: {} });
+    // Built after the unlock, so its `message:new` (and the inbox row) already reads unmasked for non-viewers.
+    await insertSystemLine(tx, threadId, 'contact_shared', { dealId });
+    // Every member's open thread refetches: old messages now read unmasked (ids only, R10).
+    emitToBusinesses(tx, businessIds, 'thread:updated', { threadId, reason: 'contact_shared' });
+    const [deal] = await tx.select({ status: deals.status, version: deals.version }).from(deals).where(eq(deals.id, dealId));
+    emitToBusinesses(tx, businessIds, 'deal:updated', { dealId, threadId, status: deal!.status, version: deal!.version });
+  } else {
+    const bookingId = agreement.id;
+    const [b] = await tx
+      .select({ ref: rentalBookings.ref, status: rentalBookings.status, version: rentalBookings.version })
+      .from(rentalBookings)
+      .where(eq(rentalBookings.id, bookingId));
+    await recordBookingEvent(tx, bookingId, 'contact_shared', { side: 'system' });
+    await insertSystemLine(tx, threadId, 'contact_shared', { bookingId, ref: b!.ref });
+    emitToBusinesses(tx, businessIds, 'thread:updated', { threadId, reason: 'contact_shared' });
+    emitToBusinesses(tx, businessIds, 'rental:updated', { bookingId, threadId, status: b!.status, version: b!.version });
+  }
   return true;
 }
 
@@ -117,7 +118,8 @@ export async function contactState(conn: Conn, thread: ThreadRow, reader: ChatRe
   const mine = mineCurrent ? await hasValidGrant(conn, thread.id, reader.businessId, mineCurrent.phone) : false;
   const theirs = otherCurrent ? await hasValidGrant(conn, thread.id, other, otherCurrent.phone) : false;
   const revealed = thread.contactUnlockedAt !== null;
-  const [deal] = await conn.select({ id: deals.id }).from(deals).where(eq(deals.threadId, thread.id)).limit(1);
+  // A deal or a confirmed rental booking (M14 R9) makes the tick available.
+  const agreed = (await threadAgreement(conn, thread.id)) !== null;
   const isViewer = reader.memberRole === 'viewer';
   const ownerPhoneOnly = mineCurrent?.source === 'owner_phone' && reader.memberRole !== 'owner';
   return {
@@ -125,8 +127,8 @@ export async function contactState(conn: Conn, thread: ThreadRow, reader: ChatRe
     theirs,
     revealed,
     number: revealed && theirs && !isViewer ? otherCurrent!.phone : null,
-    canTick: deal !== undefined && !isViewer && !mine && mineCurrent !== null && !ownerPhoneOnly,
-    ownerOnlyHint: deal !== undefined && !isViewer && ownerPhoneOnly,
+    canTick: agreed && !isViewer && !mine && mineCurrent !== null && !ownerPhoneOnly,
+    ownerOnlyHint: agreed && !isViewer && ownerPhoneOnly,
   };
 }
 
@@ -139,9 +141,12 @@ export async function contactState(conn: Conn, thread: ThreadRow, reader: ChatRe
  */
 export async function shareContact(tx: Tx, thread: ThreadRow, reader: ChatReader): Promise<{ revealed: boolean; number: string | null }> {
   assertCanWrite(reader);
-  const dealId = await latestDealId(tx, thread.id);
-  if (!dealId) throw new ConflictError('You can share your number once you have a deal here', 'NO_DEAL_IN_THREAD');
-  await tx.select({ id: deals.id }).from(deals).where(eq(deals.id, dealId)).for('key share');
+  const agreement = await threadAgreement(tx, thread.id);
+  if (!agreement) throw new ConflictError('You can share your number once you have a deal or a confirmed booking here', 'NO_DEAL_IN_THREAD');
+  // The agreement's row before the thread (§8.5 / M14 §6.7), so its event's foreign key never waits behind a route
+  // holding the thread and that row.
+  if (agreement.kind === 'deal') await tx.select({ id: deals.id }).from(deals).where(eq(deals.id, agreement.id)).for('key share');
+  else await tx.select({ id: rentalBookings.id }).from(rentalBookings).where(eq(rentalBookings.id, agreement.id)).for('key share');
   const locked = await lockThread(tx, thread.id);
 
   const current = await currentContactNumber(tx, reader.businessId);

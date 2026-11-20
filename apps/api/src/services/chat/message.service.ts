@@ -1,10 +1,11 @@
 import { and, desc, eq, inArray, lt } from 'drizzle-orm';
-import { CHAT_LIMITS, type OfferView, type SignedPhoto, type ThreadMessage } from '@mpm/shared-types';
+import { CHAT_LIMITS, type OfferView, type RentalBookingCardView, type SignedPhoto, type ThreadMessage } from '@mpm/shared-types';
 import type { Db, Tx } from '../../db/index.js';
 import { businesses, chatMessages, deals } from '../../db/schema.js';
 import { ConflictError, NotFoundError, ValidationError } from '../../lib/errors.js';
 import type { UserTokenPayload } from '../../plugins/auth.js';
 import { upsertChatNotification } from '../notifications/chat-rows.js';
+import { bookingCardViews } from '../rentals/booking-view.js';
 import { publicText, visibleText } from './chat-view.js';
 import { assertCanWrite, getThreadForParty, type ChatReader, type ThreadRow } from './members.js';
 import { privatePhotoUrl } from './private-photo.js';
@@ -42,6 +43,10 @@ export async function toThreadMessages(conn: Conn, rows: MessageRow[], reader: C
         .where(inArray(deals.id, dealIds))
     : [];
   const dealsById = new Map(dealRows.map((d) => [d.id, d]));
+  const bookingIds = rows.flatMap((r) => (r.kind === 'booking' && r.rentalBookingId ? [r.rentalBookingId] : []));
+  const bookingViews = bookingIds.length
+    ? await bookingCardViews(conn, bookingIds, reader, thread)
+    : new Map<string, RentalBookingCardView>();
   return Promise.all(
     rows.map(async (row): Promise<ThreadMessage> => {
       const deal = row.dealId ? dealsById.get(row.dealId) : undefined;
@@ -70,8 +75,8 @@ export async function toThreadMessages(conn: Conn, rows: MessageRow[], reader: C
             : null,
         offer: row.offerId ? (offerViews.get(row.offerId) ?? null) : null,
         deal: deal ? { id: deal.id, ref: deal.ref, status: deal.status, totalPaise: deal.totalPaise.toString() } : null,
-        // M14: A1 builds the `booking` card view (`RentalBookingCardView`).
-        booking: null,
+        // M14 §8: the booking card as the reader sees it (version message masked per reader).
+        booking: row.rentalBookingId && row.kind === 'booking' ? (bookingViews.get(row.rentalBookingId) ?? null) : null,
         createdAt: row.createdAt.toISOString(),
       };
     }),
