@@ -69,7 +69,7 @@ describe('parsePushData (§11.5)', () => {
 });
 
 describe('badges (§15.2)', () => {
-  const badges = { unreadThreads: 3, dealsYourTurn: 120, notificationsUnread: 5 };
+  const badges = { unreadThreads: 3, dealsYourTurn: 120, notificationsUnread: 5, requestsForYou: 0 };
 
   it('Chats shows unread threads, Deals the deals waiting on you', () => {
     expect(tabBadgeCount('Chats', badges)).toBe(3);

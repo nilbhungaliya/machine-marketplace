@@ -38,4 +38,12 @@ export const gu: NotificationTexts = {
   part_match: (p) => ({ title: 'નવું મેળ', body: `એક લિસ્ટિંગ તમારી જરૂરિયાત સાથે મેળ ખાય છે${p.listingTitle ? `: ${p.listingTitle}` : ''}.` }),
   booking_update: () => ({ title: 'બુકિંગ અપડેટ', body: 'એક બુકિંગ બદલાયું છે. વિગતો જોવા ખોલો.' }),
   listing_status: (p) => ({ title: 'લિસ્ટિંગ અપડેટ', body: `${listing(p)}ની સ્થિતિ બદલાઈ છે.` }),
+  // F8 placeholders (plan C0-1): A3-2 replaces them with the spec §10.3 texts.
+  part_request_new: () => ({ title: 'એક ખરીદનારને પાર્ટ જોઈએ છે', body: 'જોવા માટે જરૂરિયાત ખોલો.' }),
+  part_request_reply: () => ({ title: 'તમારી જરૂરિયાત પર નવો જવાબ', body: 'જોવા માટે જરૂરિયાત ખોલો.' }),
+  part_request_expiring: () => ({ title: 'જરૂરિયાત જલ્દી પૂરી થશે', body: 'જવાબ મેળવતા રહેવા માટે તેને રિન્યૂ કરો.' }),
+  part_request_expired: () => ({ title: 'જરૂરિયાત પૂરી થઈ ગઈ', body: 'જવાબ મેળવતા રહેવા માટે તેને રિન્યૂ કરો.' }),
+  part_request_fulfil_prompt: () => ({ title: 'સોદો નક્કી થયો', body: 'શું તમારી જરૂરિયાત પૂરી થઈ તરીકે માર્ક કરશો?' }),
+  part_request_removed: () => ({ title: 'તમારી જરૂરિયાત દૂર કરાઈ', body: 'તેને અમારી ટીમે દૂર કરી છે.' }),
+  part_request_reply_dropped: () => ({ title: 'તમારો જવાબ પહોંચ્યો નથી', body: 'કારણ જોવા માટે જરૂરિયાત ખોલો.' }),
 };

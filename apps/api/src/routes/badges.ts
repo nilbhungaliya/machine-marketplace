@@ -13,6 +13,7 @@ const badgeRoutes: FastifyPluginAsync = async (fastify) => {
       unreadThreads: await unreadThreadCount(fastify.db, user),
       dealsYourTurn: await dealsYourTurnCount(fastify.db, user),
       notificationsUnread: await notificationUnreadCount(fastify.db, user.userId),
+      requestsForYou: 0,
     };
     return { data };
   });

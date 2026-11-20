@@ -23,6 +23,7 @@ const CATEGORY_ICONS: Record<NotificationCategory, LucideIcon> = {
   offers: Tag,
   deals: TAB_ICONS.deals,
   reviews: Star,
+  requests: BellRing,
 };
 
 /** Today: the time; earlier: the day and month (IST). */

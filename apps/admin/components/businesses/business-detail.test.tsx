@@ -76,6 +76,7 @@ function business({ userStatus = 'active', verified = true, reviewOpen = false, 
     listingsCount: 0,
     dealHistory: { byStatus: { agreed: 0, handed_over: 0, completed: 0, cancelled: 0, disputed: 0 }, disputes: [] },
     sellerScore: null,
+    partRequestCount: 0,
   };
 }
 

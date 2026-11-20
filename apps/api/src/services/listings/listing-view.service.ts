@@ -489,6 +489,8 @@ export async function toOwnerView(conn: Conn, row: ListingRow, settings: AppSett
   return {
     ...d,
     isOwner: true,
+    partRequestId: null,
+    pendingRequestReply: null,
     version: row.version,
     // F6 + F7 §8.4: on hold in open deals ("On hold in deals: n").
     heldQuantity: trimQuantity(row.heldQuantity) ?? '0',

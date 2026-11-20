@@ -214,6 +214,7 @@ export async function getBusinessDetail(conn: Db | Tx, id: string): Promise<Admi
     // F6 + F7 §16.1: deals by status, disputes with outcomes and the review score.
     dealHistory: await businessDealHistory(conn, id),
     sellerScore: await sellerScore(conn, id),
+    partRequestCount: 0,
   };
 }
 

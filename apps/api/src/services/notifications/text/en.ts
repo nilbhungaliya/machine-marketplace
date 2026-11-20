@@ -42,4 +42,12 @@ export const en: NotificationTexts = {
   part_match: (p) => ({ title: 'New match', body: `A listing matches your request${p.listingTitle ? `: ${p.listingTitle}` : ''}.` }),
   booking_update: () => ({ title: 'Booking update', body: 'A booking changed. Open it to see the details.' }),
   listing_status: (p) => ({ title: 'Listing update', body: p.listingTitle ? `${p.listingTitle} changed status.` : 'Your listing changed status.' }),
+  // F8 placeholders (plan C0-1): A3-2 replaces them with the spec §10.3 texts.
+  part_request_new: () => ({ title: 'A buyer needs a part', body: 'Open the requirement to see it.' }),
+  part_request_reply: () => ({ title: 'New reply to your requirement', body: 'Open the requirement to see it.' }),
+  part_request_expiring: () => ({ title: 'Requirement expires soon', body: 'Renew it to keep getting replies.' }),
+  part_request_expired: () => ({ title: 'Requirement expired', body: 'Renew it to keep getting replies.' }),
+  part_request_fulfil_prompt: () => ({ title: 'Deal agreed', body: 'Mark your requirement fulfilled?' }),
+  part_request_removed: () => ({ title: 'Your requirement was removed', body: 'It was removed by our team.' }),
+  part_request_reply_dropped: () => ({ title: "Your reply wasn't delivered", body: 'Open the requirement to see why.' }),
 };

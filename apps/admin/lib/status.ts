@@ -1,4 +1,4 @@
-import type { ListingStatus } from '@mpm/shared-types';
+import type { ListingStatus, PartRequestStatus } from '@mpm/shared-types';
 
 export type StatusTone = 'green' | 'blue' | 'amber' | 'red' | 'gray';
 
@@ -26,6 +26,19 @@ export const LISTING_STATUS_LABELS: Record<ListingStatus, string> = {
   reserved: 'Reserved', sold: 'Sold', rented: 'On rent', unavailable: 'Unavailable', expired: 'Expired', hidden: 'Hidden',
   removed: 'Removed',
 };
+
+/**
+ * Part request statuses (F8 §14): `active` is in progress (brand lavender), `fulfilled` green, `closed` / `expired`
+ * grey, `removed` (taken down by the team) red. Typed so a new status can't slip in without one; the shared
+ * `statusTone` map keeps listing tones for `active` / `removed`, so part-request pages use `partRequestStatusTone`.
+ */
+export const PART_REQUEST_STATUS_TONES: Record<PartRequestStatus, StatusTone> = {
+  active: 'blue', fulfilled: 'green', closed: 'gray', expired: 'gray', removed: 'red',
+};
+
+export function partRequestStatusTone(status: PartRequestStatus): StatusTone {
+  return PART_REQUEST_STATUS_TONES[status];
+}
 
 // Listing statuses (above), enquiry and offer (F6), deal and rental booking (F7), part request (F8), verification and GST
 // review (A2), account (A2) and report (A6) statuses. A word several domains share (rejected, expired…) keeps one tone.

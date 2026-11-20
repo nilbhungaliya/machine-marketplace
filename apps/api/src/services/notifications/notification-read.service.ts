@@ -43,6 +43,7 @@ export function toNotificationRow(n: Row, language: Language): NotificationRow {
     offerId: n.offerId,
     dealId: n.dealId,
     reviewId: n.reviewId,
+    partRequestId: null,
     unreadCount: n.unreadCount,
     read: n.readAt !== null,
     createdAt: n.createdAt.toISOString(),

@@ -269,8 +269,11 @@ export const CONVERSATION_REPORT_REASONS = ['spam', 'scam_or_advance_payment', '
 export type ConversationReportReason = (typeof CONVERSATION_REPORT_REASONS)[number];
 
 // ─── part request ───
-/** Part request / availability alert lifecycle (scope F8, flow U3). Stays active until fulfilled or closed. */
-export const PART_REQUEST_STATUSES = ['active', 'matched', 'fulfilled', 'closed', 'expired'] as const;
+/**
+ * Part request lifecycle (scope F8, flow U3; F8 spec §9.1, R3). "Matched" is a derived badge (`isMatched`), never a
+ * status. The rest of F8's contracts are in the "F8: part requests" section at the end of this file.
+ */
+export const PART_REQUEST_STATUSES = ['active', 'fulfilled', 'closed', 'expired', 'removed'] as const;
 export type PartRequestStatus = (typeof PART_REQUEST_STATUSES)[number];
 
 // ─── reports ───
@@ -278,7 +281,7 @@ export type PartRequestStatus = (typeof PART_REQUEST_STATUSES)[number];
  * Reports and flags (scope A2, A3, A6). `review` added by F6 + F7 (§5.15); no migration statement uses it (§5.17: a
  * new enum value can't be used in the transaction that adds it).
  */
-export const REPORT_TARGETS = ['user', 'business', 'listing', 'conversation', 'review'] as const;
+export const REPORT_TARGETS = ['user', 'business', 'listing', 'conversation', 'review', 'part_request'] as const;
 export type ReportTarget = (typeof REPORT_TARGETS)[number];
 
 export const REPORT_STATUSES = ['open', 'reviewing', 'actioned', 'dismissed'] as const;
@@ -293,17 +296,22 @@ export const NOTIFICATION_TYPES = [
   'deal_cancelled', 'deal_problem', 'deal_dispute_resolved', 'deal_agreed_reminder', 'review_received',
   // §10.3: the other side is told it has until `publish_due_at` to review (plan review I6).
   'review_waiting',
+  // F8 part requests (F8 spec §10.1); `part_match` above is F8's grouped auto-match row.
+  'part_request_new', 'part_request_reply', 'part_request_expiring', 'part_request_expired',
+  'part_request_fulfil_prompt', 'part_request_removed', 'part_request_reply_dropped',
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 
-export const NOTIFICATION_CATEGORIES = ['chat', 'offers', 'deals', 'reviews'] as const;
+export const NOTIFICATION_CATEGORIES = ['chat', 'offers', 'deals', 'reviews', 'requests'] as const;
 export type NotificationCategory = (typeof NOTIFICATION_CATEGORIES)[number];
 
 /**
- * The category of a type (§11.3). `part_match`, `booking_update` and `listing_status` belong to later modules (F8,
- * M14, F2 notices) and fall under `deals` until those modules give them one of their own.
+ * The category of a type (§11.3). Every `part_request_*` type and `part_match` are `requests` (F8 §5.11);
+ * `booking_update` and `listing_status` belong to later modules (M14, F2 notices) and fall under `deals` until those
+ * modules give them one of their own.
  */
 export function notificationCategory(type: NotificationType): NotificationCategory {
+  if (type === 'part_match' || type.startsWith('part_request_')) return 'requests';
   if (type === 'enquiry_new' || type === 'message_new') return 'chat';
   if (type.startsWith('offer_')) return 'offers';
   if (type === 'review_received' || type === 'review_waiting') return 'reviews';
@@ -848,6 +856,8 @@ export interface AdminBusinessDetail {
   dealHistory: AdminBusinessDealHistory;
   /** F6 + F7 §10.4: the seller score; null under `review_min_published` reviews. */
   sellerScore: SellerScore | null;
+  /** F8 §14: the business's part requests in any status; the page links "Part requests (n)" to the filtered list. */
+  partRequestCount: number;
 }
 
 // ─── Listings (F2 + F3 + A3; spec 2026-11-18-f2-f3-listings-design) ───
@@ -1395,6 +1405,77 @@ export const APP_SETTINGS = [
     label: 'Hand-over reminder (days)',
     help: 'Both sides of a deal still agreed after this long are reminded (no auto-cancel).',
   },
+  // ─── Part requests (F8 spec §16) ───
+  {
+    key: 'part_request_reach_n', type: 'int', default: 15, min: 1, max: 50,
+    label: 'Sellers told per requirement',
+    help: 'The best-matching eligible sellers notified when a requirement is posted (every eligible seller can still find it).',
+  },
+  {
+    key: 'part_request_open_limit_unverified', type: 'int', default: 3, min: 1, max: 50,
+    label: 'Open requirements, unverified buyer',
+    help: 'Active requirements a business without GST verification may have at a time.',
+  },
+  {
+    key: 'part_request_open_limit_verified', type: 'int', default: 15, min: 1, max: 200,
+    label: 'Open requirements, verified buyer',
+    help: 'Active requirements a GST-verified business may have at a time.',
+  },
+  {
+    key: 'part_request_posts_per_day', type: 'int', default: 5, min: 1, max: 100,
+    label: 'New requirements a day',
+    help: 'Requirements a business may post in a day (IST).',
+  },
+  {
+    key: 'part_request_validity_days_1', type: 'int', default: 7, min: 1, max: 90,
+    label: 'Requirement validity, short (days)',
+    help: 'The shortest validity a buyer can pick. Must be less than the middle one.',
+  },
+  {
+    key: 'part_request_validity_days_2', type: 'int', default: 15, min: 1, max: 90,
+    label: 'Requirement validity, default (days)',
+    help: 'The middle validity choice, picked by default. Must be less than the long one.',
+  },
+  {
+    key: 'part_request_validity_days_3', type: 'int', default: 30, min: 1, max: 90,
+    label: 'Requirement validity, long (days)',
+    help: 'The longest validity choice. At most the maximum open time.',
+  },
+  {
+    key: 'part_request_max_days', type: 'int', default: 90, min: 7, max: 365,
+    label: 'Requirement open at most (days)',
+    help: 'Renewals stop this many days after the first post.',
+  },
+  {
+    key: 'part_request_expiring_notice_hours', type: 'int', default: 24, min: 1, max: 72,
+    label: 'Requirement "expires soon" notice (hours)',
+    help: 'The buyer hears this long before a requirement expires. Must be shorter than the short validity.',
+  },
+  {
+    key: 'part_request_seller_push_daily_cap', type: 'int', default: 10, min: 0, max: 100,
+    label: 'Requirement pushes a seller gets a day',
+    help: 'Beyond this a seller still gets the in-app notification, without a push (0 = never pushed).',
+  },
+  {
+    key: 'part_request_match_push_daily_cap', type: 'int', default: 3, min: 0, max: 20,
+    label: 'Match pushes per requirement a day',
+    help: 'Auto-match pushes a buyer gets for one requirement in a day (IST). At most the total.',
+  },
+  {
+    key: 'part_request_match_push_total_cap', type: 'int', default: 20, min: 0, max: 200,
+    label: 'Match pushes per requirement in all',
+    help: 'Auto-match pushes a buyer gets for one requirement over its life; later matches still show in the app.',
+  },
+  {
+    key: 'part_request_reply_listings_max', type: 'int', default: 3, min: 1, max: 10,
+    label: 'Listings per seller per requirement',
+    help: 'Listings one seller business may send to one requirement (pending and delivered).',
+  },
+  {
+    key: 'part_request_replies_per_day', type: 'int', default: 20, min: 1, max: 500,
+    label: 'Requirement replies a seller sends a day',
+    help: 'Replies a seller business may send in a day (IST).',
+  },
 ] as const satisfies readonly AppSettingDef[];
 
 export type AppSettingKey = (typeof APP_SETTINGS)[number]['key'];
@@ -1433,6 +1514,25 @@ export function validateSettings(values: AppSettingsValues): { key: AppSettingKe
   }
   if (values.offer_backup_max_days * 24 < values.offer_validity_hours_3) {
     return { key: 'offer_backup_max_days', message: 'A backup must live at least as long as the long offer validity' };
+  }
+  // F8 §16 cross-checks.
+  if (values.part_request_validity_days_1 >= values.part_request_validity_days_2) {
+    return { key: 'part_request_validity_days_1', message: 'The short validity must be less than the default one' };
+  }
+  if (values.part_request_validity_days_2 >= values.part_request_validity_days_3) {
+    return { key: 'part_request_validity_days_2', message: 'The default validity must be less than the long one' };
+  }
+  if (values.part_request_validity_days_3 > values.part_request_max_days) {
+    return { key: 'part_request_validity_days_3', message: 'The long validity must not be longer than the maximum open time' };
+  }
+  if (values.part_request_expiring_notice_hours >= values.part_request_validity_days_1 * 24) {
+    return {
+      key: 'part_request_expiring_notice_hours',
+      message: 'The "expires soon" notice must be shorter than the short validity',
+    };
+  }
+  if (values.part_request_match_push_daily_cap > values.part_request_match_push_total_cap) {
+    return { key: 'part_request_match_push_daily_cap', message: 'The daily match pushes must not exceed the total' };
   }
   return null;
 }
@@ -1582,6 +1682,13 @@ export interface ListingOwnerView extends ListingDetail {
   /** The hide / remove reason, or the seller's own note. */
   statusReason: string | null;
   score: { score: number; missing: ListingScoreItem[] };
+  /**
+   * F8 §9.3, plan D4: the part request this listing answers, from its one `pending` reply (made only by
+   * `POST /listings { kind, partRequestId }`), so the wizard can load the request; null when there is none.
+   */
+  partRequestId: string | null;
+  /** F8 §9.3: "Goes to the buyer when your listing is live" (name masked); null without a pending reply. */
+  pendingRequestReply: { partRequestId: string; name: string } | null;
   location: {
     source: ListingLocationSource;
     pincode: string | null;
@@ -1833,6 +1940,8 @@ export type CdnPurgeResult = (typeof CDN_PURGE_RESULTS)[number];
 /** `POST /listings` body → `ListingOwnerView` (201). */
 export interface CreateListingRequest {
   kind: ListingKind;
+  /** F8 §9.3: reply to this part request with the new draft (prefilled; the reply stays pending until it goes live). */
+  partRequestId?: string;
 }
 
 /** `POST /listings/:id/publish` and `POST /listings/:id/actions` response. */
@@ -2975,6 +3084,8 @@ export interface NotificationRow {
   offerId: string | null;
   dealId: string | null;
   reviewId: string | null;
+  /** F8 §10: the part request a `part_*` row opens. */
+  partRequestId: string | null;
   /** Grouped chat rows: messages since the row opened. */
   unreadCount: number;
   read: boolean;
@@ -2993,6 +3104,8 @@ export interface Badges {
   unreadThreads: number;
   dealsYourTurn: number;
   notificationsUnread: number;
+  /** F8 §12.2: requests this business was targeted for that are active, unopened, unreplied and not dismissed. */
+  requestsForYou: number;
 }
 
 /** `GET /offers/options` (§12.2). */
@@ -3178,11 +3291,14 @@ export interface AdminThreadRead {
   messages: AdminThreadMessage[];
 }
 
-/** `GET /admin/reports?target=conversation|review`. */
+/** `GET /admin/reports?target=conversation|review|part_request`. */
 export interface AdminReportRow {
   id: string;
-  target: 'conversation' | 'review';
+  target: 'conversation' | 'review' | 'part_request';
   targetId: string;
+  /** F8 §14: part-request reports, the request and its name (masked), linking to its admin page. */
+  partRequestId?: string;
+  partRequestName?: string;
   reason: string;
   details: string | null;
   status: ReportStatus;
@@ -3218,4 +3334,535 @@ export interface AdminBusinessDealHistory {
     createdAt: string;
     resolvedAt: string | null;
   }>;
+}
+
+// ─── F8: part requests, seller targeting and availability alerts (spec 2026-11-20-f8-part-requests-design) ───
+// UI copy says "requirement"; code says `part_request`. `PART_REQUEST_STATUSES` is in the "part request" section above.
+
+export const PART_REQUEST_ACTIONS = ['post', 'edit', 'renew', 'fulfil', 'close', 'expire', 'remove', 'restore'] as const;
+export type PartRequestAction = (typeof PART_REQUEST_ACTIONS)[number];
+
+/** The state machine (§9.1), enforced by the API's `writeRequestStatus`; `post` starts from no row. */
+export const PART_REQUEST_TRANSITIONS: Record<
+  PartRequestAction,
+  { actor: 'buyer' | 'system' | 'admin'; from: readonly PartRequestStatus[] }
+> = {
+  post: { actor: 'buyer', from: [] },
+  edit: { actor: 'buyer', from: ['active'] },
+  renew: { actor: 'buyer', from: ['active', 'expired'] },
+  fulfil: { actor: 'buyer', from: ['active'] },
+  close: { actor: 'buyer', from: ['active'] },
+  expire: { actor: 'system', from: ['active'] },
+  remove: { actor: 'admin', from: ['active', 'fulfilled', 'closed', 'expired'] },
+  restore: { actor: 'admin', from: ['removed'] },
+};
+
+/**
+ * Where `action` takes a request in `from` (§9.1), or null when it isn't allowed. `post` starts from null; `edit`
+ * keeps the status; `restore` goes to the stored `returnStatus`, except an `active` return already past its expiry,
+ * which lands `expired` (§9.1, review Q8).
+ */
+export function partRequestTransition(
+  from: PartRequestStatus | null,
+  action: PartRequestAction,
+  opts?: { returnStatus?: PartRequestStatus | null; pastExpiry?: boolean },
+): PartRequestStatus | null {
+  if (action === 'post') return from === null ? 'active' : null;
+  if (from === null || !PART_REQUEST_TRANSITIONS[action].from.includes(from)) return null;
+  switch (action) {
+    case 'edit':
+      return from;
+    case 'renew':
+      return 'active';
+    case 'fulfil':
+      return 'fulfilled';
+    case 'close':
+      return 'closed';
+    case 'expire':
+      return 'expired';
+    case 'remove':
+      return 'removed';
+    case 'restore': {
+      const back = opts?.returnStatus ?? null;
+      if (back === null || back === 'removed') return null;
+      return back === 'active' && opts?.pastExpiry ? 'expired' : back;
+    }
+  }
+}
+
+/** A part or a machine to buy (R1); rental requests wait for M14. */
+export const PART_REQUEST_KINDS = ['part', 'machine'] as const;
+export type PartRequestKind = (typeof PART_REQUEST_KINDS)[number];
+export const PART_REQUEST_REACHES = ['radius_50', 'radius_200', 'state', 'all_india'] as const;
+export type PartRequestReach = (typeof PART_REQUEST_REACHES)[number];
+export const PART_REQUEST_REACH_KM = { radius_50: 50, radius_200: 200 } as const;
+export const PART_REQUEST_AUDIENCES = ['verified_only', 'any_seller'] as const;
+export type PartRequestAudience = (typeof PART_REQUEST_AUDIENCES)[number];
+export const PART_REQUEST_CLOSE_REASONS = ['found_elsewhere', 'no_longer_needed', 'posted_by_mistake', 'other'] as const;
+export type PartRequestCloseReason = (typeof PART_REQUEST_CLOSE_REASONS)[number];
+export const PART_REQUEST_REPLY_STATUSES = ['pending', 'delivered', 'withdrawn', 'dropped'] as const;
+export type PartRequestReplyStatus = (typeof PART_REQUEST_REPLY_STATUSES)[number];
+/** §5.4: why a reply was dropped. Only `listing_removed` (the seller's own removal) is silent. */
+export const PART_REQUEST_DROP_REASONS = [
+  'listing_removed', 'listing_removed_by_team', 'listing_rejected', 'request_closed', 'request_expired',
+  'request_removed', 'blocked', 'not_eligible', 'no_longer_fits',
+] as const;
+export type PartRequestDropReason = (typeof PART_REQUEST_DROP_REASONS)[number];
+export const PART_REQUEST_MATCH_TIERS = ['part_number', 'name_fit', 'name', 'machine_fit'] as const;
+export type PartRequestMatchTier = (typeof PART_REQUEST_MATCH_TIERS)[number];
+/** Plan D12: a match found when a listing went live, or by the at-post backfill (never notified). */
+export const PART_REQUEST_MATCH_SOURCES = ['listing_live', 'at_post'] as const;
+export type PartRequestMatchSource = (typeof PART_REQUEST_MATCH_SOURCES)[number];
+export const PART_REQUEST_FEEDBACK_REASONS = ['dont_sell_this', 'too_far', 'wrong_category', 'other'] as const;
+export type PartRequestFeedbackReason = (typeof PART_REQUEST_FEEDBACK_REASONS)[number];
+export const PART_REQUEST_REPORT_REASONS = ['spam', 'fake', 'contact_details', 'prohibited', 'other'] as const;
+export type PartRequestReportReason = (typeof PART_REQUEST_REPORT_REASONS)[number];
+export const PART_REQUEST_WORK_KINDS = ['target_request', 'listing_changed'] as const;
+export type PartRequestWorkKind = (typeof PART_REQUEST_WORK_KINDS)[number];
+/** Why a listing can't answer a request (§9.2), greyed in the reply picker. */
+export const REPLY_FIT_REASONS = ['kind', 'category', 'side', 'condition', 'replied'] as const;
+export type ReplyFitReason = (typeof REPLY_FIT_REASONS)[number];
+
+/** Code constants (§5.11; settings in §16 are admin-tunable, these aren't). */
+export const PART_REQUEST_LIMITS = {
+  nameMin: 3,
+  nameMax: 100,
+  noteMax: 500,
+  messageMax: 300,
+  photosMax: 3,
+  fitsMax: 5,
+  minNameSimilarity: 0.5,
+  listingsPageSize: 20,
+  replyListingsPerCall: 3,
+  compareMax: 10,
+  demandIdsMax: 10,
+  homeSellerItems: 3,
+  backfillMax: 20,
+  matchCandidatesMax: 200,
+} as const;
+
+/**
+ * Whether a listing's side answers a request's side (§7.4, the one definition): Left ← Left / Pair; Right ← Right /
+ * Pair; Pair ← Pair; a request with no side accepts anything. A Left / Right / Pair request never accepts a listing
+ * with no side or `not_applicable`.
+ */
+export function requestSideAccepts(requestSide: PartSide | null, listingSide: PartSide | null): boolean {
+  if (requestSide === null || requestSide === 'not_applicable') return true;
+  if (requestSide === 'pair') return listingSide === 'pair';
+  return listingSide === requestSide || listingSide === 'pair';
+}
+
+/** The derived "Matched" badge (R3): at least one delivered reply or auto match. */
+export function isMatched(v: { deliveredReplyCount: number; matchCount: number }): boolean {
+  return v.deliveredReplyCount > 0 || v.matchCount > 0;
+}
+
+/** Whole days left until `expiresAt`, rounded up (23 h → 1), never below 0. */
+export function partRequestDaysLeft(expiresAt: string | Date, now: Date): number {
+  const end = typeof expiresAt === 'string' ? new Date(expiresAt) : expiresAt;
+  const ms = end.getTime() - now.getTime();
+  return ms <= 0 ? 0 : Math.ceil(ms / DAY_MS);
+}
+
+/** §15: the new error codes (the app's error copy test checks each has text in en / hi / gu). */
+export const PART_REQUEST_ERROR_CODES = [
+  'PART_REQUEST_NOT_FOUND',
+  'PART_REQUEST_STALE',
+  'PART_REQUEST_TRANSITION_NOT_ALLOWED',
+  'PART_REQUEST_NOT_ACTIVE',
+  'PART_REQUEST_OPEN_LIMIT',
+  'PART_REQUEST_DAILY_LIMIT',
+  'PART_REQUEST_MAX_DAYS',
+  'VALIDITY_INVALID',
+  'UNIT_INVALID',
+  'CONDITION_INVALID',
+  'REPLY_EXISTS',
+  'REPLY_LIMIT',
+  'REPLY_DAILY_LIMIT',
+  'REPLY_LISTING_INVALID',
+  'REPLY_NOT_FOUND',
+  'REPLY_NOT_OPEN',
+  'OWN_PART_REQUEST',
+  'DEAL_INVALID',
+] as const;
+export type PartRequestErrorCode = (typeof PART_REQUEST_ERROR_CODES)[number];
+
+// ─── F8 payloads and views (§12.2, §12.3, §14). Money in paise (JSON number); quantities as decimal strings. ───
+
+/** One "fits" row of a request: brand → model → year range (§5.2). */
+export interface PartRequestFitInput {
+  brandId: string;
+  modelId?: string | null;
+  yearFrom?: number | null;
+  yearTo?: number | null;
+}
+
+/** `POST /part-requests` body (Zod strict). */
+export interface PartRequestInput {
+  kind: PartRequestKind;
+  categoryId: string;
+  name: string;
+  partNumber?: string | null;
+  side?: PartSide | null;
+  fits?: PartRequestFitInput[];
+  specs?: Specs;
+  quantity: string;
+  unitId?: string | null;
+  conditionIds?: string[];
+  budgetPerUnitPaise?: number | null;
+  budgetVisible?: boolean;
+  /** `YYYY-MM-DD`, today … today + 365 (IST). */
+  neededBy?: string | null;
+  urgent?: boolean;
+  reach: PartRequestReach;
+  audience: PartRequestAudience;
+  /** One of the three validity settings (`400 VALIDITY_INVALID`). */
+  validityDays: number;
+  photoKeys?: string[];
+  note?: string | null;
+}
+
+/**
+ * `PATCH /part-requests/:id`: the fields sent change; `version` guards (`409 PART_REQUEST_STALE`). Renew owns
+ * validity. `photoKeys`, when sent, is the full final list: kept final keys plus new uploads.
+ */
+export type PartRequestPatch = { version: number } & Partial<Omit<PartRequestInput, 'kind' | 'validityDays'>>;
+
+/**
+ * What opens the form prefilled (§13.2). `categorySeedId`: a machine category that only opens the category picker
+ * there (a machine category isn't a valid request category).
+ */
+export type PartRequestPrefill = Partial<
+  Pick<PartRequestInput, 'kind' | 'categoryId' | 'name' | 'partNumber' | 'side' | 'fits' | 'quantity' | 'unitId'>
+> & { source: 'no_results' | 'other_side' | 'post_tab' | 'copy'; categorySeedId?: string };
+
+/** `GET /part-requests/options` (public; the three counts are null for a guest). */
+export interface PartRequestOptions {
+  validityDays: number[];
+  defaultValidityDays: number;
+  reachN: number;
+  openLimit: number | null;
+  openCount: number | null;
+  postsLeftToday: number | null;
+  maxDays: number;
+}
+
+export interface PartRequestFitView {
+  brandId: string;
+  brandName: string;
+  modelId: string | null;
+  modelName: string | null;
+  yearFrom: number | null;
+  yearTo: number | null;
+}
+
+/** What every reader of a request sees. `name` and `note` are masked (`maskContact`) for every reader. */
+export interface PartRequestCommon {
+  id: string;
+  ref: number;
+  kind: PartRequestKind;
+  status: PartRequestStatus;
+  /** The derived badge (`isMatched`). */
+  matched: boolean;
+  categoryId: string;
+  categoryPath: { id: string; name: string }[];
+  name: string;
+  partNumber: string | null;
+  side: PartSide | null;
+  fits: PartRequestFitView[];
+  specs: Specs;
+  quantity: string;
+  unit: { id: string; key: string; label: string };
+  /** Empty = any condition. */
+  conditionIds: string[];
+  neededBy: string | null;
+  urgent: boolean;
+  reach: PartRequestReach;
+  audience: PartRequestAudience;
+  city: string | null;
+  state: string | null;
+  note: string | null;
+  noteFlagged: boolean;
+  photoCount: number;
+  daysLeft: number;
+  expiresAt: string;
+  firstPostedAt: string;
+  createdAt: string;
+}
+
+/** The buyer business's own view (`GET /part-requests/:id` as the buyer, and every buyer write's reply). */
+export interface PartRequestBuyerView extends PartRequestCommon {
+  role: 'buyer';
+  version: number;
+  /** The buyer's own final photo keys, for the edit form; never in a seller or admin view. */
+  photoKeys: string[];
+  budgetPerUnitPaise: number | null;
+  budgetVisible: boolean;
+  validityDays: number;
+  closeReason: PartRequestCloseReason | null;
+  fulfilledDealId: string | null;
+  counts: { replies: number; matches: number; newReplies: number; newMatches: number };
+  targetedCount: number;
+  /** §9.4: a non-cancelled deal on a reply / match listing while the request is active. */
+  fulfilPrompt: { dealId: string; businessName: string } | null;
+  /** `first_posted_at + part_request_max_days`. */
+  renewableUntil: string;
+}
+
+/** The buyer as a seller sees it (§12.3): never a phone, email, pincode, address or point. */
+export interface PartRequestBuyerBlock {
+  tradeName: string;
+  city: string | null;
+  verified: boolean;
+  /** The business's `created_at` year. */
+  memberSince: number;
+}
+
+/** A seller's reply on a request, as the replying business sees it (message masked). */
+export interface SellerReplyView {
+  id: string;
+  listingId: string;
+  listingTitle: string;
+  status: PartRequestReplyStatus;
+  dropReason: PartRequestDropReason | null;
+  message: string | null;
+  deliveredAt: string | null;
+  withdrawnAt: string | null;
+  droppedAt: string | null;
+  seenByBuyer: boolean;
+  createdAt: string;
+}
+
+/** An eligible seller's view (§6, §12.3). The budget is null when the buyer keeps it private. */
+export interface PartRequestSellerView extends PartRequestCommon {
+  role: 'seller';
+  budgetPerUnitPaise: number | null;
+  buyer: PartRequestBuyerBlock;
+  /** Snapped whole km from the seller's business point. */
+  distanceKm: number | null;
+  inReach: boolean;
+  targeted: boolean;
+  notRelevant: boolean;
+  replyCount: number;
+  hasMatchingStock: boolean;
+  myReplies: SellerReplyView[];
+  canReply: boolean;
+  slotsLeft: number;
+}
+
+/** `GET /part-requests/:id`: by the API's `role`. */
+export type PartRequestView = PartRequestBuyerView | PartRequestSellerView;
+
+/** A row of My requirements. */
+export interface MyPartRequestRow {
+  id: string;
+  name: string;
+  kind: PartRequestKind;
+  side: PartSide | null;
+  quantity: string;
+  unitLabel: string;
+  firstFit: string | null;
+  status: PartRequestStatus;
+  matched: boolean;
+  replyCount: number;
+  matchCount: number;
+  newCount: number;
+  daysLeft: number;
+  createdAt: string;
+}
+
+/** `GET /part-requests/mine?status=` tabs (plan D15: `closed` = closed + expired + removed). */
+export const MY_PART_REQUEST_TABS = ['active', 'fulfilled', 'closed'] as const;
+export type MyPartRequestTab = (typeof MY_PART_REQUEST_TABS)[number];
+
+/** `GET /part-requests/mine`. */
+export interface MyPartRequestsPage {
+  items: MyPartRequestRow[];
+  nextCursor: string | null;
+  counts: { active: number; fulfilled: number; closed: number };
+}
+
+/** A row of "Buyers looking for your parts" (§12.3). */
+export interface SellerPartRequestRow {
+  id: string;
+  name: string;
+  kind: PartRequestKind;
+  side: PartSide | null;
+  quantity: string;
+  unitLabel: string;
+  firstFit: string | null;
+  conditionIds: string[];
+  budgetPerUnitPaise: number | null;
+  neededBy: string | null;
+  urgent: boolean;
+  daysLeft: number;
+  city: string | null;
+  distanceKm: number | null;
+  inReach: boolean;
+  replyCount: number;
+  targeted: boolean;
+  hasMatchingStock: boolean;
+  photoCount: number;
+  buyer: PartRequestBuyerBlock;
+  note: string | null;
+  noteFlagged: boolean;
+  myReplyCount: number;
+  createdAt: string;
+}
+
+/** `GET /part-requests/for-sellers?tab=` (For you = `matched`). */
+export const SELLER_PART_REQUEST_TABS = ['matched', 'all', 'replied'] as const;
+export type SellerPartRequestTab = (typeof SELLER_PART_REQUEST_TABS)[number];
+
+/** `GET /part-requests/for-sellers` (plan D15). */
+export interface SellerPartRequestsPage {
+  items: SellerPartRequestRow[];
+  nextCursor: string | null;
+  counts: { forYou: number; all: number; replied: number };
+}
+
+/** A delivered reply as the buyer sees it (§12.2). */
+export interface PartRequestReplyItem {
+  replyId: string;
+  card: ListingCard;
+  seller: { businessId: string; name: string; verified: boolean; score: SellerScore | null };
+  message: string | null;
+  messageFlagged: boolean;
+  /** The listing is public now. */
+  live: boolean;
+  deliveredAt: string;
+  viewed: boolean;
+}
+
+export interface PartRequestMatchItem {
+  listingId: string;
+  card: ListingCard;
+  tier: PartRequestMatchTier;
+  distanceKm: number | null;
+  seen: boolean;
+  createdAt: string;
+}
+
+/** One column of Compare (§12.2), ≤ `PART_REQUEST_LIMITS.compareMax`. */
+export interface CompareColumn {
+  listingId: string;
+  source: 'reply' | 'match';
+  title: string;
+  pricePerUnitPaise: number | null;
+  priceOnRequest: boolean;
+  availableQuantity: string | null;
+  unitLabel: string | null;
+  side: PartSide | null;
+  conditionLabel: string | null;
+  distanceKm: number | null;
+  rating: number | null;
+  reviewCount: number;
+  verified: boolean;
+  lowestPrice: boolean;
+  contactAction: 'offer' | 'buy' | 'ask_price' | 'enquire';
+}
+
+/** One of the seller's listings in the reply picker (§9.2). */
+export interface ReplyOption {
+  listingId: string;
+  card: ListingCard;
+  fit: boolean;
+  reason: ReplyFitReason | null;
+}
+
+/** `GET /part-requests/:id/reply-options`. */
+export interface ReplyOptionsResponse {
+  listings: ReplyOption[];
+  slotsLeft: number;
+  dailyLeft: number;
+}
+
+/** `POST /part-requests/:id/replies` body. */
+export interface SendRepliesRequest {
+  listingIds: string[];
+  message?: string | null;
+}
+
+/** `GET /part-requests/:id/photos` (300 s URLs). */
+export interface PartRequestPhotos {
+  photos: { url: string; expiresAt: string }[];
+}
+
+/** `GET /part-requests/home` (§12.2, review Q6). */
+export interface PartRequestHome {
+  buyer: { partRequestId: string; name: string; side: PartSide | null; newCount: number; nearestKm: number | null } | null;
+  seller: { newCount: number; items: SellerPartRequestRow[] } | null;
+}
+
+/** `GET /listings/:id/part-request-demand` (owner). */
+export interface PartRequestDemand {
+  count: number;
+  partRequestIds: string[];
+}
+
+/** `GET /admin/part-requests` row (§14). */
+export interface AdminPartRequestRow {
+  id: string;
+  ref: number;
+  name: string;
+  kind: PartRequestKind;
+  /** Names joined with " › ". */
+  categoryPath: string;
+  buyer: { businessId: string; name: string };
+  city: string | null;
+  status: PartRequestStatus;
+  targetedCount: number;
+  replyCount: number;
+  matchCount: number;
+  openReports: number;
+  createdAt: string;
+  expiresAt: string;
+}
+
+/** `GET /admin/part-requests` page: `rows`, `total`, `page`, `pageSize` as the other admin lists. */
+export interface AdminPartRequestList {
+  rows: AdminPartRequestRow[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+/** `GET /admin/part-requests/:id` (§14): the buyer view's fields, note masked, no phone, no photo keys. */
+export interface AdminPartRequestDetail extends Omit<PartRequestBuyerView, 'role' | 'fulfilPrompt' | 'photoKeys'> {
+  buyer: { businessId: string; name: string };
+  eligibleNow: number;
+  targets: {
+    businessId: string;
+    name: string;
+    rank: number;
+    score: string;
+    pushed: boolean;
+    notifiedAt: string;
+    openedAt: string | null;
+    replied: boolean;
+    notRelevant: boolean;
+  }[];
+  replies: {
+    id: string;
+    listingId: string;
+    listingTitle: string;
+    seller: { businessId: string; name: string };
+    status: PartRequestReplyStatus;
+    dropReason: PartRequestDropReason | null;
+    message: string | null;
+    createdAt: string;
+  }[];
+  matches: {
+    listingId: string;
+    listingTitle: string;
+    seller: { businessId: string; name: string };
+    tier: PartRequestMatchTier;
+    distanceKm: number | null;
+    pushed: boolean;
+    createdAt: string;
+  }[];
+  reports: AdminReportRow[];
+  removedAt: string | null;
+  removedReason: string | null;
+  returnStatus: PartRequestStatus | null;
 }

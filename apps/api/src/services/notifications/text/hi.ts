@@ -38,4 +38,12 @@ export const hi: NotificationTexts = {
   part_match: (p) => ({ title: 'नया मिलान', body: `एक लिस्टिंग आपकी ज़रूरत से मेल खाती है${p.listingTitle ? `: ${p.listingTitle}` : ''}।` }),
   booking_update: () => ({ title: 'बुकिंग अपडेट', body: 'एक बुकिंग बदली है। विवरण देखने के लिए खोलें।' }),
   listing_status: (p) => ({ title: 'लिस्टिंग अपडेट', body: `${listing(p)} की स्थिति बदली है।` }),
+  // F8 placeholders (plan C0-1): A3-2 replaces them with the spec §10.3 texts.
+  part_request_new: () => ({ title: 'एक खरीदार को पार्ट चाहिए', body: 'देखने के लिए ज़रूरत खोलें।' }),
+  part_request_reply: () => ({ title: 'आपकी ज़रूरत पर नया जवाब', body: 'देखने के लिए ज़रूरत खोलें।' }),
+  part_request_expiring: () => ({ title: 'ज़रूरत जल्द समाप्त होगी', body: 'जवाब पाते रहने के लिए इसे रिन्यू करें।' }),
+  part_request_expired: () => ({ title: 'ज़रूरत समाप्त हो गई', body: 'जवाब पाते रहने के लिए इसे रिन्यू करें।' }),
+  part_request_fulfil_prompt: () => ({ title: 'सौदा तय हुआ', body: 'क्या अपनी ज़रूरत को पूरी हुई मार्क करें?' }),
+  part_request_removed: () => ({ title: 'आपकी ज़रूरत हटा दी गई', body: 'इसे हमारी टीम ने हटाया है।' }),
+  part_request_reply_dropped: () => ({ title: 'आपका जवाब नहीं पहुँचा', body: 'कारण देखने के लिए ज़रूरत खोलें।' }),
 };
