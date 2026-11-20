@@ -6,7 +6,7 @@ import { ValidationError } from '../../lib/errors.js';
 import type { UserTokenPayload } from '../../plugins/auth.js';
 import { openCursor, sealCursor } from '../discovery/cursor.js';
 import { demandRequestIds } from './demand.js';
-import { sellerFacts, sellerRows, sellerSelect, type SellerFacts } from './seller-view.js';
+import { readerCanAct, sellerFacts, sellerRows, sellerSelect, type SellerFacts } from './seller-view.js';
 
 // "Buyers looking for your parts" (spec §12.3, plan A1-4, D15, D16): every request the business is eligible for (§6),
 // in three tabs. For you (`matched`) = targeted or holding matching stock; All = every eligible active one; Replied =
@@ -62,10 +62,14 @@ async function baseWhere(conn: Conn, businessId: string, f: SellerFacts, q: Pick
   return and(...where)!;
 }
 
-/** `GET /part-requests/for-sellers?tab=&kind=&forListing=&cursor=` (§12.2): 20 a page by a sealed keyset cursor. */
+/**
+ * `GET /part-requests/for-sellers?tab=&kind=&forListing=&cursor=` (§12.2): 20 a page by a sealed keyset cursor;
+ * `canAct` false for a viewer member (the app hides Reply).
+ */
 export async function listForSellers(conn: Conn, user: UserTokenPayload, q: ForSellersQuery): Promise<SellerPartRequestsPage> {
-  const empty: SellerPartRequestsPage = { items: [], nextCursor: null, counts: { forYou: 0, all: 0, replied: 0 } };
   const businessId = user.businessId;
+  const canAct = businessId ? await readerCanAct(conn, user.userId) : false;
+  const empty: SellerPartRequestsPage = { items: [], nextCursor: null, counts: { forYou: 0, all: 0, replied: 0 }, canAct };
   if (!businessId) return empty;
   const f = sellerFacts(businessId);
   const aad = `part-requests:for-sellers:${user.userId}:${q.tab}:${q.kind ?? ''}:${q.forListing ?? ''}`;
@@ -107,5 +111,6 @@ export async function listForSellers(conn: Conn, user: UserTokenPayload, q: ForS
     items: await sellerRows(conn, page),
     nextCursor,
     counts: { forYou: Number(c?.forYou ?? 0), all: Number(c?.all ?? 0), replied: Number(c?.replied ?? 0) },
+    canAct,
   };
 }

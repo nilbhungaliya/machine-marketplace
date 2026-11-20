@@ -134,7 +134,7 @@ export function ReviewReportsTable() {
       {body()}
       {moderating && <ReviewHideDialog review={moderating} onClose={() => setModerating(null)} onDone={() => void reload()} />}
       {resolving && (
-        <ReportResolveDialog reportId={resolving.id} what="review" onClose={() => setResolving(null)} onDone={() => void reload()} />
+        <ReportResolveDialog reportId={resolving.id} target="review" onClose={() => setResolving(null)} onDone={() => void reload()} />
       )}
     </div>
   );

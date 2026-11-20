@@ -132,7 +132,7 @@ export function ConversationReportsTable() {
       {resolving && (
         <ReportResolveDialog
           reportId={resolving.id}
-          what="conversation"
+          target="conversation"
           onClose={() => setResolving(null)}
           onDone={() => void reload()}
         />

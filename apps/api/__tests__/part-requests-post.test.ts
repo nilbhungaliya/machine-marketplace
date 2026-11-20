@@ -23,7 +23,11 @@ import { countF8Rows, createTestPartTree, type TestPartTree } from './_helpers/t
 // F8 A1-1: posting a requirement (spec §5.1, §9.1 `post`, §12.1, §17; plan A1-1). Storage calls are mocked; the photo
 // pipeline (key check, sniff, re-encode) runs for real on a JPEG made here.
 
-const flags = vi.hoisted(() => ({ failEnqueue: false }));
+const flags = vi.hoisted(() => ({
+  failEnqueue: false,
+  /** When set, the next enqueue (inside the post's transaction) calls `entered` and waits for `release`. */
+  hold: null as null | { entered: () => void; release: Promise<void> },
+}));
 
 vi.mock('../src/lib/storage.js', async (importOriginal) => {
   const real = await importOriginal<typeof import('../src/lib/storage.js')>();
@@ -46,6 +50,12 @@ vi.mock('../src/services/part-requests/work-queue.js', async (importOriginal) =>
     ...real,
     enqueuePartRequestWork: vi.fn(async (...args: Parameters<typeof real.enqueuePartRequestWork>) => {
       if (flags.failEnqueue) throw new Error('forced failure');
+      const hold = flags.hold;
+      if (hold) {
+        flags.hold = null;
+        hold.entered();
+        await hold.release;
+      }
       return real.enqueuePartRequestWork(...args);
     }),
   };
@@ -121,6 +131,7 @@ beforeAll(async () => {
 
 beforeEach(() => {
   flags.failEnqueue = false;
+  flags.hold = null;
   finalizeSpy.mockClear();
   vi.mocked(storage.getObjectBytes).mockReset().mockResolvedValue(jpeg);
   vi.mocked(storage.putPrivateObject).mockReset().mockResolvedValue(undefined);
@@ -301,6 +312,43 @@ describe('photos (§17)', () => {
     expect(rows).toHaveLength(1);
     expect(rows[0]!.photoKeys).toHaveLength(1);
     expect(rows[0]!.photoKeys[0]).toMatch(new RegExp(`^part-request/${rows[0]!.id}/[0-9a-f-]+\\.jpg$`));
+  });
+
+  it('a retry sent while the first post is in flight replays the stored 201 and creates no duplicate', async () => {
+    const b = await business();
+    // Storage as it really behaves: a deleted upload reads as missing.
+    const deletedKeys = new Set<string>();
+    vi.mocked(storage.deleteObject).mockImplementation(async (key: string) => {
+      deletedKeys.add(key);
+    });
+    vi.mocked(storage.getObjectBytes).mockImplementation(async (key: string) => (deletedKeys.has(key) ? null : jpeg));
+    let entered!: () => void;
+    const inTx = new Promise<void>((r) => (entered = r));
+    let release!: () => void;
+    flags.hold = { entered: () => entered(), release: new Promise<void>((r) => (release = r)) };
+
+    const uploadKey = upload(b.businessId);
+    const headers = { 'idempotency-key': randomUUID() };
+    const payload = partBody({ photoKeys: [uploadKey] });
+    const first = post(b.token, payload, headers);
+    await inTx; // the first post holds the key's lock inside its transaction, its upload still in storage
+    const retry = post(b.token, payload, headers);
+    // Let the retry finalise its own copy before the first commits (it then waits on the key's lock).
+    for (let i = 0; i < 200 && vi.mocked(storage.putPrivateObject).mock.calls.length < 2; i++) await new Promise((r) => setTimeout(r, 10));
+    release();
+    const [a, r] = await Promise.all([first, retry]);
+
+    expect(a.statusCode).toBe(201);
+    expect(r.statusCode).toBe(201);
+    expect(r.headers['idempotent-replay']).toBe('true');
+    expect(r.json()).toEqual(a.json());
+    const rows = await rowsOf(b.businessId);
+    expect(rows).toHaveLength(1);
+    // The upload is gone after commit, and so is the retry's unused copy; the stored photo is kept.
+    const finals = vi.mocked(storage.putPrivateObject).mock.calls.map((c) => c[0]);
+    expect(finals).toHaveLength(2);
+    expect(deletedKeys.has(uploadKey)).toBe(true);
+    for (const k of finals) expect(deletedKeys.has(k)).toBe(!rows[0]!.photoKeys.includes(k));
   });
 
   it('a post refused by the open limit or by SIDE_REQUIRED never finalises photos', async () => {

@@ -86,14 +86,25 @@ export function idempotencyContextOf(request: FastifyRequest): IdempotencyContex
   });
 }
 
-const replayPreHandler = async (request: FastifyRequest, reply: FastifyReply) => {
+/**
+ * Sends the stored response for the request's key and returns true; false when the request has no key or nothing is
+ * stored (another request hash → `422 IDEMPOTENCY_KEY_REUSED`). The preHandler's fast path; a route that does work
+ * before `runIdempotent` (F8 post / edit) also calls it when that work fails, since a first use that committed in the
+ * meantime (an in-flight retry) explains the refusal.
+ */
+export async function replayStoredResponse(request: FastifyRequest, reply: FastifyReply): Promise<boolean> {
   const ctx = idempotencyContextOf(request);
-  if (!ctx) return;
+  if (!ctx) return false;
   const stored = await readStoredResponse(request.server.db, ctx.scope, ctx.key);
-  if (!stored) return;
+  if (!stored) return false;
   if (stored.requestHash !== ctx.requestHash) throw new IdempotencyKeyReusedError();
   ctx.replayed = true;
-  return reply.code(stored.status).header('Idempotent-Replay', 'true').send(stored.body);
+  void reply.code(stored.status).header('Idempotent-Replay', 'true').send(stored.body);
+  return true;
+}
+
+const replayPreHandler = async (request: FastifyRequest, reply: FastifyReply) => {
+  if (await replayStoredResponse(request, reply)) return reply;
 };
 
 export default fp(async (fastify) => {

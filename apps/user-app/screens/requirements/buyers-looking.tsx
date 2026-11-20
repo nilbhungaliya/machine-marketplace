@@ -26,7 +26,8 @@ const TABS: { value: SellerPartRequestTab; key: 'forYou' | 'all' | 'replied' }[]
 
 /**
  * Buyers looking for your parts (F8 spec §12.3, §13.1; mockup requirements · "Seller sees a requirement"): "Matched to
- * your categories and stock.", segments For you / All / Replied with counts, rows with Reply, infinite scroll and pull
+ * your categories and stock.", segments For you / All / Replied with counts, rows with Reply (not for a viewer member:
+ * the page's `canAct`), infinite scroll and pull
  * to refresh, refetched on focus. `forListing` (Published's "See their requirements") lists the requests one of the
  * business's listings could answer; "Show all" clears it. The empty state explains who sees requirements.
  */
@@ -56,6 +57,8 @@ export default function BuyersLookingScreen({ navigation, route }: RootStackScre
   const pages = list.data?.pages ?? [];
   const counts = pages[0]?.counts;
   const items: SellerPartRequestRow[] = pages.flatMap((p) => p.items);
+  // A viewer member reads only: no Reply on the rows (the page still opens).
+  const canAct = pages[0]?.canAct === true;
 
   const options = TABS.map(({ value, key }) => {
     const n = counts ? counts[key] : 0;
@@ -128,7 +131,7 @@ export default function BuyersLookingScreen({ navigation, route }: RootStackScre
           <SellerRequestRow
             row={item}
             onPress={() => navigation.navigate('Requirement', { partRequestId: item.id })}
-            onReply={() => navigation.navigate('ReplyWithListing', { partRequestId: item.id })}
+            onReply={canAct ? () => navigation.navigate('ReplyWithListing', { partRequestId: item.id }) : undefined}
             testID={`BuyersLooking-row-${item.id}`}
           />
         )}

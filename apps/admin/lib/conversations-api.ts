@@ -15,7 +15,8 @@ import { api, ApiError } from './api';
 export const readThread = (threadId: string, reason: string) =>
   api.post<AdminThreadRead>(`/admin/threads/${threadId}/read`, { reason });
 
-export type AdminReportTarget = 'conversation' | 'review';
+/** The targets of Reports & flags: conversations, reviews and (F8 §14) part requests. */
+export type AdminReportTarget = 'conversation' | 'review' | 'part_request';
 
 export interface AdminReportPage {
   items: AdminReportRow[];

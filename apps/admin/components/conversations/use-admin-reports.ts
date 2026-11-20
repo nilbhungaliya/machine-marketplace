@@ -2,23 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { AdminReportRow, ReportStatus } from '@mpm/shared-types';
-import { api } from '@/lib/api';
-import type { AdminReportPage } from '@/lib/conversations-api';
+import { fetchAdminReports, type AdminReportTarget } from '@/lib/conversations-api';
 import { getAdminSocket } from '@/lib/socket';
 
 /** The targets of Reports & flags: conversations, reviews and (F8 §14) part requests. */
-export type ReportsTarget = AdminReportRow['target'];
-
-/**
- * `GET /admin/reports?target=&status=&cursor=` for any of the three targets (`conversations-api`'s
- * `fetchAdminReports` is typed for the F6 two; the API takes all three since F8).
- */
-function fetchReports(q: { target: ReportsTarget; status?: ReportStatus; cursor?: string }): Promise<AdminReportPage> {
-  const params = new URLSearchParams({ target: q.target });
-  if (q.status) params.set('status', q.status);
-  if (q.cursor) params.set('cursor', q.cursor);
-  return api.get<AdminReportPage>(`/admin/reports?${params.toString()}`);
-}
+export type ReportsTarget = AdminReportTarget;
 
 /**
  * One target's reports (`GET /admin/reports`), newest first, 30 a page by cursor: the first page on mount and on a
@@ -34,7 +22,7 @@ export function useAdminReports(target: ReportsTarget, status: ReportStatus | un
   const reload = useCallback(async () => {
     const ticket = ++latest.current;
     try {
-      const page = await fetchReports({ target, status });
+      const page = await fetchAdminReports({ target, status });
       if (ticket !== latest.current) return;
       setItems(page.items);
       setCursor(page.nextCursor);
@@ -49,7 +37,7 @@ export function useAdminReports(target: ReportsTarget, status: ReportStatus | un
     const ticket = latest.current;
     setLoadingMore(true);
     try {
-      const page = await fetchReports({ target, status, cursor });
+      const page = await fetchAdminReports({ target, status, cursor });
       if (ticket !== latest.current) return;
       setItems((prev) => [...(prev ?? []), ...page.items]);
       setCursor(page.nextCursor);

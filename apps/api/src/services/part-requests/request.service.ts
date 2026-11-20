@@ -97,20 +97,23 @@ export interface PreparedPost {
   resolved: ResolvedRequestFields;
   /** Final private keys (already in storage). */
   photoKeys: string[];
+  /** The `incoming-chat/` uploads they came from: deleted by the route after the write commits. */
+  uploads: string[];
 }
 
 /**
  * Everything a post does before its transaction: onboarding (`409 ONBOARDING_INCOMPLETE`), the fields
  * (`resolveRequestFields`), an **unlocked** limit pre-check (so a refused post never copies photos), the request's uuid,
- * then the photos finalised into `part-request/<id>/…`. The idempotent replay is the plugin's fast path, before this.
+ * then the photos finalised into `part-request/<id>/…` (uploads kept until commit). The idempotent replay is the
+ * plugin's fast path, before this; the route replays a response stored meanwhile when this throws.
  */
 export async function preparePartRequest(db: Db, user: UserTokenPayload, input: ParsedPartRequestInput): Promise<PreparedPost> {
   const businessId = await assertOnboarded(db, user);
   const resolved = await resolveRequestFields(db, input, null);
   await assertLimits(db, businessId, { daily: true });
   const id = randomUUID();
-  const photoKeys = input.photoKeys?.length ? (await resolveRequestPhotos(businessId, id, input.photoKeys, [])).keys : [];
-  return { id, businessId, resolved, photoKeys };
+  const photos = input.photoKeys?.length ? await resolveRequestPhotos(businessId, id, input.photoKeys, []) : null;
+  return { id, businessId, resolved, photoKeys: photos?.keys ?? [], uploads: photos?.uploads ?? [] };
 }
 
 /**
@@ -143,8 +146,11 @@ export async function insertPartRequest(tx: Tx, user: UserTokenPayload, p: Prepa
 // ─── Edit (A1-2) ───
 
 export interface PreparedEdit {
-  /** Present when the PATCH sent `photoKeys`: the final list and the new finals (deleted if the write fails). */
-  photos?: { keys: string[]; added: string[] };
+  /**
+   * Present when the PATCH sent `photoKeys`: the final list, the new finals (deleted if the write fails) and the
+   * uploads they came from (deleted after the write commits).
+   */
+  photos?: { keys: string[]; added: string[]; uploads: string[] };
 }
 
 /**
@@ -160,7 +166,7 @@ export async function prepareEdit(db: Db, user: UserTokenPayload, id: string, pa
   if (row.version !== patch.version) throw stale();
   await resolveRequestFields(db, patch, row);
   const photos = await resolveRequestPhotos(row.businessId, row.id, patch.photoKeys, row.photoKeys);
-  return { photos: { keys: photos.keys, added: photos.added } };
+  return { photos: { keys: photos.keys, added: photos.added, uploads: photos.uploads } };
 }
 
 const stale = () => new ConflictError('This requirement was changed meanwhile; reload it', 'PART_REQUEST_STALE');

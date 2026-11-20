@@ -58,16 +58,19 @@ describe('reply picker (F8 §9.2)', () => {
   });
 
   it('keeps a viewer away from Reply, Not relevant, Withdraw and Report', () => {
-    const viewer = sellerActions({ status: 'active', canReply: false, slotsLeft: 3, notRelevant: false });
+    const viewer = sellerActions({ status: 'active', canAct: false, canReply: false, notRelevant: false });
     expect(viewer).toMatchObject({ viewer: true, reply: false, notRelevant: false, undoNotRelevant: false, report: false, withdraw: false });
     expect(viewer.replyBlockedKey).toBe('buyers.request.replyBlocked.viewer');
+    // A viewer is told apart on a closed request too.
+    expect(sellerActions({ status: 'closed', canAct: false, canReply: false, notRelevant: false }))
+      .toMatchObject({ viewer: true, report: false, withdraw: false, replyBlockedKey: 'buyers.request.replyBlocked.closed' });
 
-    const seller = sellerActions({ status: 'active', canReply: true, slotsLeft: 2, notRelevant: true });
+    const seller = sellerActions({ status: 'active', canAct: true, canReply: true, notRelevant: true });
     expect(seller).toMatchObject({ viewer: false, reply: true, notRelevant: false, undoNotRelevant: true, report: true });
 
-    expect(sellerActions({ status: 'active', canReply: false, slotsLeft: 0, notRelevant: false }).replyBlockedKey)
+    expect(sellerActions({ status: 'active', canAct: true, canReply: false, notRelevant: false }).replyBlockedKey)
       .toBe('buyers.request.replyBlocked.full');
-    expect(sellerActions({ status: 'closed', canReply: false, slotsLeft: 3, notRelevant: false }))
+    expect(sellerActions({ status: 'closed', canAct: true, canReply: false, notRelevant: false }))
       .toMatchObject({ viewer: false, notRelevant: false, replyBlockedKey: 'buyers.request.replyBlocked.closed' });
   });
 });

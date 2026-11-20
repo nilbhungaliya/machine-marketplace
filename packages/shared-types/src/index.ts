@@ -3646,6 +3646,9 @@ export interface PartRequestSellerView extends PartRequestCommon {
   replyCount: number;
   hasMatchingStock: boolean;
   myReplies: SellerReplyView[];
+  /** The reader may act for their business (not a `viewer` member): reply, mark not relevant, report. */
+  canAct: boolean;
+  /** `canAct`, the request is active and the seller has reply slots left. */
   canReply: boolean;
   slotsLeft: number;
 }
@@ -3719,6 +3722,8 @@ export interface SellerPartRequestsPage {
   items: SellerPartRequestRow[];
   nextCursor: string | null;
   counts: { forYou: number; all: number; replied: number };
+  /** The reader may act for their business (not a `viewer` member): the rows' Reply buttons show only then. */
+  canAct: boolean;
 }
 
 /** A delivered reply as the buyer sees it (§12.2). */

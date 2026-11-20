@@ -16,7 +16,8 @@ import { deleteObject, getObjectBytes, presignPrivateGet, presignSignedPut, putP
  * 1. `presignPrivatePhoto` signs a PUT to `incoming-chat/<businessId>/<uuid>`.
  * 2. `finalizePrivatePhotos` (before the message / deal transaction) checks each key is this business's upload, reads
  *    it, sniffs JPEG / PNG / WebP, re-encodes, writes `chat/<threadId>/<uuid>.jpg` or `deal/<dealId>/<uuid>.jpg` and
- *    deletes the upload, so a second finalize of the same key is `PHOTO_KEY_INVALID`.
+ *    deletes the upload, so a second finalize of the same key is `PHOTO_KEY_INVALID` (F8's post / edit pass
+ *    `keepUploads` and delete them after commit).
  */
 
 export type PhotoDestination =
@@ -101,13 +102,15 @@ async function finalizeOne(key: string, dest: PhotoDestination): Promise<string>
  * destination: `photosPerMessage` for chat and deals, `PART_REQUEST_LIMITS.photosMax` for a request) answer
  * `400 TOO_MANY_PHOTOS { max }`; every key's shape is checked before any storage call (`400 PHOTO_KEY_INVALID`). Any later
  * failure deletes the finals already written and answers `400 PHOTO_INVALID` (a missing upload: `PHOTO_KEY_INVALID`); storage being down stays `503 STORAGE_UNAVAILABLE`.
- * Uploads are deleted only once every photo is stored.
+ * Uploads are deleted only once every photo is stored, unless `opts.keepUploads`: then the caller deletes them after its
+ * write commits (F8 post / edit, so a retry of a request whose transaction failed or whose reply was lost can still
+ * read them; the `incoming-chat/` lifecycle rule sweeps any left behind).
  */
 export async function finalizePrivatePhotos(
   businessId: string,
   keys: string[],
   dest: PhotoDestination,
-  opts: { max?: number } = {},
+  opts: { max?: number; keepUploads?: boolean } = {},
 ): Promise<string[]> {
   const max = opts.max ?? defaultMax(dest);
   if (keys.length > max) throw tooMany(max);
@@ -121,7 +124,7 @@ export async function finalizePrivatePhotos(
     await Promise.allSettled(finals.map((k) => deleteObject(k)));
     throw err;
   }
-  await Promise.allSettled(keys.map((k) => deleteObject(k)));
+  if (!opts.keepUploads) await Promise.allSettled(keys.map((k) => deleteObject(k)));
   return finals;
 }
 

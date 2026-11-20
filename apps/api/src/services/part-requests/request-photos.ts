@@ -32,15 +32,16 @@ export async function presignRequestPhoto(
 /**
  * The photo list a post or an edit stores, from what the client sent: keys already stored on the request are kept in
  * place, this business's uploads are finalised (at most `photosMax` in all, `TOO_MANY_PHOTOS`), anything else is
- * `PHOTO_KEY_INVALID`. Returns the final list, the new final keys (to delete if the write fails) and the stored keys
- * left out (to delete after the write commits).
+ * `PHOTO_KEY_INVALID`. Returns the final list, the new final keys (to delete if the write fails), the stored keys
+ * left out and the uploads it read (both to delete after the write commits: the uploads are kept until then, so a retry
+ * after a failed transaction or a lost reply can finalise them again).
  */
 export async function resolveRequestPhotos(
   businessId: string,
   partRequestId: string,
   sent: string[],
   stored: string[],
-): Promise<{ keys: string[]; added: string[]; dropped: string[] }> {
+): Promise<{ keys: string[]; added: string[]; dropped: string[]; uploads: string[] }> {
   if (sent.length > PART_REQUEST_LIMITS.photosMax) {
     throw new ValidationError('Too many photos', { max: PART_REQUEST_LIMITS.photosMax }, 'TOO_MANY_PHOTOS');
   }
@@ -49,13 +50,19 @@ export async function resolveRequestPhotos(
   const uploads = sent.filter((k) => !kept.has(k));
   for (const k of uploads) if (!isOwnPhotoUpload(businessId, k)) throw keyInvalid();
   const finals = uploads.length
-    ? await finalizePrivatePhotos(businessId, uploads, { kind: 'part_request', partRequestId }, { max: PART_REQUEST_LIMITS.photosMax })
+    ? await finalizePrivatePhotos(
+        businessId,
+        uploads,
+        { kind: 'part_request', partRequestId },
+        { max: PART_REQUEST_LIMITS.photosMax, keepUploads: true },
+      )
     : [];
   const byUpload = new Map(uploads.map((k, i) => [k, finals[i]!]));
   return {
     keys: sent.map((k) => byUpload.get(k) ?? k),
     added: finals,
     dropped: stored.filter((k) => !sent.includes(k)),
+    uploads,
   };
 }
 

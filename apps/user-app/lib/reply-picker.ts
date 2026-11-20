@@ -130,15 +130,14 @@ export interface SellerActions {
 }
 
 /**
- * What the seller page offers (§12.3, R2). The API's `canReply` is "active, not a viewer, slots left", so an active
- * request with slots left and `canReply` false is read by a viewer: no Reply, Not relevant, Withdraw or Report (all
- * `403 VIEWER_READ_ONLY`). A viewer with no slots left can't be told apart; the API still refuses its writes.
+ * What the seller page offers (§12.3, R2). `canAct` false is a viewer member: no Reply, Not relevant, Withdraw or
+ * Report (all `403 VIEWER_READ_ONLY`). The API's `canReply` is "active, `canAct`, slots left".
  */
 export function sellerActions(
-  view: Pick<PartRequestSellerView, 'status' | 'canReply' | 'slotsLeft' | 'notRelevant'>,
+  view: Pick<PartRequestSellerView, 'status' | 'canAct' | 'canReply' | 'notRelevant'>,
 ): SellerActions {
   const active = view.status === 'active';
-  const viewer = active && view.slotsLeft > 0 && !view.canReply;
+  const viewer = !view.canAct;
   const replyBlockedKey = view.canReply
     ? null
     : !active ? 'buyers.request.replyBlocked.closed'

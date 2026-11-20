@@ -76,7 +76,7 @@ export function PartRequestReportList({ reports, showRequest, onChanged }: {
         </table>
       </div>
       {resolving && (
-        <ReportResolveDialog reportId={resolving.id} what="part request" onClose={() => setResolving(null)} onDone={onChanged} />
+        <ReportResolveDialog reportId={resolving.id} target="part_request" onClose={() => setResolving(null)} onDone={onChanged} />
       )}
     </>
   );

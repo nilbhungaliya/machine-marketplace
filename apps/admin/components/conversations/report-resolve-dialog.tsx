@@ -3,19 +3,36 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { ReasonDialog } from '@/components/ui/reason-dialog';
-import { explainReportError, resolveReport, type ReportOutcome } from '@/lib/conversations-api';
+import { explainReportError, resolveReport, type AdminReportTarget, type ReportOutcome } from '@/lib/conversations-api';
 
 const optionCls =
   'flex cursor-pointer items-start gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm has-[:checked]:border-brand-600 has-[:checked]:bg-brand-50';
 
+/** Per target: the title's noun and what an admin does first, on its own, before closing the report. */
+const COPY: Record<AdminReportTarget, { what: string; first: string }> = {
+  conversation: {
+    what: 'conversation',
+    first: 'Suspending or blocking an account is done first, on its own; this closes the report.',
+  },
+  review: {
+    what: 'review',
+    first: 'Hiding the review or reply, or suspending an account, is done first, on its own; this closes the report.',
+  },
+  part_request: {
+    what: 'part request',
+    first:
+      'Removing the requirement closes its open reports by itself. Suspending the buyer’s account is done first, on its own; this closes the report.',
+  },
+};
+
 /**
- * Close a conversation or review report (F6 + F7 spec §16.2): actioned (something was done: a review hidden, an account
- * suspended) or dismissed, with a note (3–500) for the audit log. Mount it only while open.
+ * Close a conversation, review or part-request report (F6 + F7 spec §16.2, F8 §14): actioned (something was done:
+ * a review hidden, an account suspended) or dismissed, with a note (3–500) for the audit log. The wording follows the
+ * report's target. Mount it only while open.
  */
-export function ReportResolveDialog({ reportId, what, onClose, onDone }: {
+export function ReportResolveDialog({ reportId, target, onClose, onDone }: {
   reportId: string;
-  /** "conversation" or "review", for the wording. */
-  what: string;
+  target: AdminReportTarget;
   onClose: () => void;
   onDone: () => void;
 }) {
@@ -23,8 +40,8 @@ export function ReportResolveDialog({ reportId, what, onClose, onDone }: {
 
   return (
     <ReasonDialog
-      title={`Resolve this ${what} report`}
-      description="Hiding a review or suspending an account is done first, on its own; this closes the report."
+      title={`Resolve this ${COPY[target].what} report`}
+      description={COPY[target].first}
       label="Note"
       hint="For the audit log. 3 to 500 characters."
       submitLabel={outcome === 'dismissed' ? 'Dismiss report' : 'Close as actioned'}

@@ -138,10 +138,17 @@ export async function sellerRows(conn: Conn, recs: SellerRecord[]): Promise<Sell
   }));
 }
 
+/** The reader may act for their business: any member but a `viewer` (the routes refuse a viewer's writes). */
+export async function readerCanAct(conn: Conn, userId: string): Promise<boolean> {
+  const [member] = await conn.select({ memberRole: users.memberRole }).from(users).where(eq(users.id, userId));
+  return member !== undefined && member.memberRole !== 'viewer';
+}
+
 /**
  * The seller's view of one request (`GET /part-requests/:id` for an eligible business, §12.3). The first read by a
- * member of a targeted business sets `part_request_targets.opened_at` (the "Requests for you" badge). `canReply`: the
- * request is `active`, the reader isn't a viewer and the seller has reply slots left. 404 when not eligible.
+ * member of a targeted business sets `part_request_targets.opened_at` (the "Requests for you" badge). `canAct`: the
+ * reader isn't a viewer; `canReply`: that, the request is `active` and the seller has reply slots left. 404 when not
+ * eligible.
  */
 export async function sellerView(conn: Conn, user: UserTokenPayload, row: PartRequestRow): Promise<PartRequestSellerView> {
   const sellerBusinessId = user.businessId;
@@ -158,7 +165,7 @@ export async function sellerView(conn: Conn, user: UserTokenPayload, row: PartRe
   const counts = await buyerCounts(conn, rec.r);
   const common = await requestCommon(conn, rec.r, counts);
   const myReplies = await sellerReplyViews(conn, rec.r.id, sellerBusinessId);
-  const [member] = await conn.select({ memberRole: users.memberRole }).from(users).where(eq(users.id, user.userId));
+  const canAct = await readerCanAct(conn, user.userId);
   const { slotsLeft } = await replyAllowance(conn, await getSettings(conn), rec.r.id, sellerBusinessId);
   return {
     ...common,
@@ -172,7 +179,8 @@ export async function sellerView(conn: Conn, user: UserTokenPayload, row: PartRe
     replyCount: Number(rec.replyCount),
     hasMatchingStock: rec.hasStock === true,
     myReplies,
-    canReply: rec.r.status === 'active' && member?.memberRole !== 'viewer' && slotsLeft > 0,
+    canAct,
+    canReply: rec.r.status === 'active' && canAct && slotsLeft > 0,
     slotsLeft,
   };
 }

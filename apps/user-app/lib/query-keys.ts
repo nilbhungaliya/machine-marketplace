@@ -38,6 +38,7 @@ export const qk = {
   partRequestReplies: (id: string) => ['part-request', id, 'replies'] as const,
   partRequestMatches: (id: string) => ['part-request', id, 'matches'] as const,
   partRequestCompare: (id: string) => ['part-request', id, 'compare'] as const,
+  partRequestPhotos: (id: string) => ['part-request', id, 'photos'] as const,
   replyOptions: (id: string) => ['part-request', id, 'reply-options'] as const,
   /** The owner's listing demand line; under `['part-requests', …]` so a request event refreshes it. */
   partRequestDemand: (listingId: string) => ['part-requests', 'demand', listingId] as const,

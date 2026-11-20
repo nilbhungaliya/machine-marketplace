@@ -275,6 +275,8 @@ export default function PostRequirementScreen({ navigation, route }: RootStackSc
       return;
     }
     const patch = toPartRequestPatch(values, baseline, version, { hasSides });
+    // Without the category tree (`node` null) `hasSides` is unknown, not false: leave the stored side alone.
+    if (!node) delete patch.side;
     if (!patchChanges(patch)) {
       done.current = true;
       navigation.goBack();

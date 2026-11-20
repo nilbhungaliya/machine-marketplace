@@ -13,6 +13,7 @@ import { groupRateLimit } from '../lib/group-limit.js';
 import { refuseViewer } from '../lib/member-guard.js';
 import { perUser } from '../lib/per-user-limit.js';
 import { runTx } from '../lib/tx-effects.js';
+import { replayStoredResponse } from '../plugins/idempotency.js';
 import { runIdempotent } from '../services/idempotency.service.js';
 import { compareColumns } from '../services/part-requests/compare.service.js';
 import { clearNotRelevant, setNotRelevant } from '../services/part-requests/feedback.service.js';
@@ -37,7 +38,9 @@ import { listForSellers } from '../services/part-requests/seller-read.service.js
 // Part requests (F8 spec §12.2; lane A1): the buyer's requests and the sellers' read side. Thin controllers:
 // Zod-parse → service → `{ data }`. Every business write but `read` refuses a viewer; **I** routes take an
 // `Idempotency-Key` (`runIdempotent`). Post and edit finalise photos before their transaction: the new finals are
-// deleted when it fails (or turns out to be a concurrent replay), the dropped ones after it commits.
+// deleted when it fails (or turns out to be a concurrent replay), the uploads they came from and the dropped ones after
+// it commits. A committed key is replayed by the plugin's preHandler before prepare; when prepare itself is refused
+// (upload gone, limit, stale version), a response stored meanwhile by an in-flight first use is replayed instead.
 
 const tags = ['Part requests'];
 
@@ -74,13 +77,29 @@ const partRequestRoutes: FastifyPluginAsync = async (fastify) => {
     runIdempotent(request, reply, fastify, async (tx) => ({ status, body: { data: await fn(tx) } }));
 
   /**
+   * Post / edit's work before the transaction (fields, limits, version, photos). When it is refused, a response a
+   * first use with the same key stored meanwhile (the retry arrived while it was in flight) is replayed instead: its
+   * commit explains the refusal (uploads deleted, limit reached, version moved on). Null when replayed.
+   */
+  const prepareOrReplay = async <T>(request: FastifyRequest, reply: FastifyReply, prepare: () => Promise<T>): Promise<T | null> => {
+    try {
+      return await prepare();
+    } catch (err) {
+      if (await replayStoredResponse(request, reply)) return null;
+      throw err;
+    }
+  };
+
+  /**
    * A write whose photos were finalised before its transaction: the finals are deleted again when the transaction
-   * fails, or when `runIdempotent` replayed a concurrent first use (nothing points at this request's copies).
+   * fails, or when `runIdempotent` replayed a concurrent first use (nothing points at this request's copies). The
+   * uploads they came from are deleted only once the write is settled (committed or replayed), so a retry after a
+   * failed transaction can finalise them again.
    */
   const actWithFinals = async (
     request: FastifyRequest,
     reply: FastifyReply,
-    finals: string[],
+    photos: { finals: string[]; uploads: string[] },
     fn: (tx: Tx) => Promise<unknown>,
     status = 200,
   ): Promise<FastifyReply> => {
@@ -88,10 +107,11 @@ const partRequestRoutes: FastifyPluginAsync = async (fastify) => {
     try {
       sent = await act(request, reply, fn, status);
     } catch (err) {
-      await deletePhotoKeys(finals, request.log);
+      await deletePhotoKeys(photos.finals, request.log);
       throw err;
     }
-    if (reply.getHeader('idempotent-replay') === 'true') await deletePhotoKeys(finals, request.log);
+    if (reply.getHeader('idempotent-replay') === 'true') await deletePhotoKeys(photos.finals, request.log);
+    await deletePhotoKeys(photos.uploads, request.log);
     return sent;
   };
 
@@ -111,16 +131,20 @@ const partRequestRoutes: FastifyPluginAsync = async (fastify) => {
 
   fastify.post('/part-requests', requestWrite, async (request, reply) => {
     const input = partRequestInputSchema.parse(request.body ?? {});
-    const prepared = await preparePartRequest(fastify.db, request.user!, input);
-    return actWithFinals(request, reply, prepared.photoKeys, (tx) => insertPartRequest(tx, request.user!, prepared), 201);
+    const prepared = await prepareOrReplay(request, reply, () => preparePartRequest(fastify.db, request.user!, input));
+    if (!prepared) return reply;
+    const photos = { finals: prepared.photoKeys, uploads: prepared.uploads };
+    return actWithFinals(request, reply, photos, (tx) => insertPartRequest(tx, request.user!, prepared), 201);
   });
 
   fastify.patch('/part-requests/:id', requestWrite, async (request, reply) => {
     const { id } = idParams.parse(request.params);
     const patch = parsePartRequestPatch(request.body);
-    const prepared = await prepareEdit(fastify.db, request.user!, id, patch);
+    const prepared = await prepareOrReplay(request, reply, () => prepareEdit(fastify.db, request.user!, id, patch));
+    if (!prepared) return reply;
+    const photos = { finals: prepared.photos?.added ?? [], uploads: prepared.photos?.uploads ?? [] };
     let dropped: string[] = [];
-    const sent = await actWithFinals(request, reply, prepared.photos?.added ?? [], async (tx) => {
+    const sent = await actWithFinals(request, reply, photos, async (tx) => {
       const done = await editPartRequest(tx, request.user!, id, patch, prepared);
       dropped = done.droppedPhotos;
       return done.view;

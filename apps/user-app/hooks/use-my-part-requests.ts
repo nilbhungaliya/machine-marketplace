@@ -52,7 +52,7 @@ export function usePartRequestCompare(id: string) {
 /** The request's private photos (300 s URLs): never cached past a minute. Under `['part-request', id]` like the rest. */
 export function usePartRequestPhotos(id: string | null, enabled = true) {
   return useQuery({
-    queryKey: ['part-request', id ?? '', 'photos'] as const,
+    queryKey: qk.partRequestPhotos(id ?? ''),
     queryFn: () => fetchPartRequestPhotos(id!),
     enabled: enabled && !!id,
     staleTime: 60_000,

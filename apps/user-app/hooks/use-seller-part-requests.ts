@@ -71,7 +71,7 @@ export function useReplyOptions(partRequestId: string) {
 /** The request's reference photos (300 s signed URLs): fetched when the seller opens them, never cached for long. */
 export function useRequestPhotos(partRequestId: string, enabled: boolean) {
   return useQuery({
-    queryKey: [...qk.partRequest(partRequestId), 'photos'] as const,
+    queryKey: qk.partRequestPhotos(partRequestId),
     queryFn: () => fetchPartRequestPhotos(partRequestId),
     enabled,
     staleTime: 120_000,

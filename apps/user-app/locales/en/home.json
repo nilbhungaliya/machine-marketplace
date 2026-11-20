@@ -21,7 +21,6 @@
   "loadErrorTitle": "Couldn't load Home",
   "loadErrorBody": "Check your connection and try again.",
   "requests": {
-    "buyerTitle": "Responses to your requirement",
     "sellerTitle": "Buyers looking near you"
   }
 }
