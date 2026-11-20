@@ -180,8 +180,9 @@ A feature folder owns its sub-screens, helpers and local types; promote to `comp
   Deals ask a guest to sign in (`screens/tabs/guest-gate.tsx`); Profile shows a Sign in card.
 - **Asking for sign-in:** never navigate to the phone screen yourself. Call `requireSignIn({ reason, pending })` from
   `useRequireSignIn()` (`hooks/use-require-sign-in.ts`): it returns true when signed in, else opens the sign-in sheet.
-  `pending` is a serialisable `PendingAction` (`lib/pending-action.ts`: `save`, and since F6 the contact types
-  `enquire` / `offer` / `buy` / `ask_price`) kept in the auth slice; `usePendingActionRunner` (`hooks/use-saved.ts`)
+  `pending` is a serialisable `PendingAction` (`lib/pending-action.ts`: `save`, since F6 the contact types
+  `enquire` / `offer` / `buy` / `ask_price`, and since F8 `post_request` with a prefill, which opens Post a requirement
+  through `hooks/use-pending-request.ts` and never posts by itself) kept in the auth slice; `usePendingActionRunner` (`hooks/use-saved.ts`)
   runs it once after OTP **and** onboarding (contact types reopen the listing with that sheet through
   `openPendingContact`, `hooks/use-pending-contact.ts`; nothing is sent until the user taps Send); cancel drops it.
 - **Origin:** `useDiscoveryOrigin()` (`hooks/use-discovery-origin.ts`, pure store in `lib/discovery-origin.ts`) is the one
@@ -212,6 +213,29 @@ A feature folder owns its sub-screens, helpers and local types; promote to `comp
 - **Push** (`lib/push.ts`, `hooks/use-push.ts`): Android only, opt-in after the explainer; `expo-notifications` loads only
   when its native module is in the build, and without `google-services.json` the token call fails quietly. It is a
   native module: **a new dev-client build** is needed after F6 (and to pick up a `google-services.json`).
+
+### 5.3 Part requests (F8)
+
+- **Screens** live in `screens/requirements/`: buyer `post-requirement` (post, edit, copy), `requirement-posted`,
+  `my-requirements`, `requirement-buyer`, `compare-responses`; seller `requirement-seller`, `reply-with-listing`,
+  `buyers-looking`; `requirement.tsx` loads `GET /part-requests/:id` once and renders the buyer or the seller screen by
+  the view's `role`. Pieces in `components/part-requests/` (the form in `form/`, Home strips, reply / match cards,
+  sheets, `BuyerBlock`, which never shows a contact field). UI copy says "requirement", code says `part_request`.
+- **Server calls** in `lib/part-requests-api.ts`; hooks `use-part-request.ts`, `use-my-part-requests.ts`,
+  `use-seller-part-requests.ts`, `use-part-request-home.ts`. **Query keys** in `lib/query-keys.ts`: lists under
+  `['part-requests', …]` (`qk.partRequestsMine`, `qk.partRequestsForSellers`, `qk.partRequestHome`,
+  `qk.partRequestDemand`…), one request and its parts under `['part-request', id, …]` (`qk.partRequest`,
+  `qk.partRequestReplies`, `qk.partRequestMatches`, `qk.partRequestCompare`, `qk.partRequestPhotos`).
+  Writes (post, edit, renew, close, fulfil, replies) send an `Idempotency-Key`, one per user action, reused on retry.
+- **Socket:** `part_request:updated { partRequestId, reason }` routes by the `part_request:` prefix
+  (`lib/socket-route.ts`) to `lib/socket-part-requests.ts`, which invalidates the request's keys and the lists.
+- **Seller actions:** show Reply / List a matching part only when the view's `canAct` is true (a `viewer` member gets
+  false) and `canReply` allows it; `lib/reply-picker.ts` (`sellerActions`) decides, with tests.
+- **Pure logic with tests:** the form and its Yup schema (`lib/part-request-form.ts`), compare rows
+  (`lib/part-request-compare.ts`), display helpers (`lib/part-request-display.ts`), error copy (`lib/f8-errors.ts`), the
+  sell wizard's category scope for a draft from a request (`lib/sell-category.ts`). Analytics: `REQUEST_EVENTS` in
+  `lib/analytics-events.ts`, ids, counts and codes only (never a name, note or message).
+- **Copy:** `locales/{en,hi,gu}/requirements.json` (buyer) and `buyers.json` (seller).
 
 ---
 

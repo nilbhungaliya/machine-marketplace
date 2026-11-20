@@ -664,7 +664,8 @@ touch `hidden` except to remove it.
    complementary side ("8 pcs, 18 km" from the **best match of that side**, or "Not listed"), and Pair (the **best pair
    match**, computed separately, or "Not listed"); a line "Right side also available, 8 pcs from <business>, <city>"
    (or "Possibly the other side: …" for a tier-3 match) and **See all** → Other side screen (§9). With no match: "No
-   right side listed yet". The "Post a requirement" link waits for F8 (R22).
+   right side listed yet". The "Post a requirement" link waits for F8 (R22). *(F8 note, 2026-11-20: the link exists, on
+   the block and on the Other side screen, prefilled with the other side; F8 spec §13.2.)*
 6. **Specifications:** template fields in template order with labels and units (retired fields still labelled), then
    part number (JetBrains Mono), part brand, reference `#100234`; machines add year, hours, running, inspection.
 7. **Delivery and location:** delivery chips, industrial area, city, distance ("2 km away" when known).
@@ -1121,7 +1122,7 @@ Rulings marked *(rev 2)* changed in revision 2.
 22. **R22** *(rev 2)* Other side: tier 1 equal normalised or side-stripped part numbers; tier 2 same part group, name
     similarity ≥ 0.5 and real fitment overlap; tier 3 the same without fitment on one side, labelled "Possibly";
     pairs count as complements; best match and count per side computed separately; same seller included; distance from
-    the viewer's business, else the listing; "Post a requirement" waits for F8.
+    the viewer's business, else the listing; "Post a requirement" waits for F8 (built in F8, 2026-11-20).
 23. **R23** "Similar parts nearby" waits for F4; "More from this seller" (6) and a seller listings screen instead.
 24. **R24** Seller card shows no rating, deals or reply time until those modules exist (not zeros).
 25. **R25** *(rev 2)* Rentals: rates per hour / day / week / month (≥ 1), M14 terms as fields **including overtime per

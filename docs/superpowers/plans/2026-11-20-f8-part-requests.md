@@ -5,7 +5,7 @@
 > its own git worktree on a local lane branch, one implementer per lane doing its tasks in order, an independent review
 > per lane, then the controller merges. Steps use checkbox (`- [ ]`) syntax.
 
-**Status:** draft, awaiting the owner's review.
+**Status:** **Built** (2026-11-20: C0, waves A and B and Batch I on `develop`; I-5 is the owner's, listed in `docs/PROJECT_STATUS.md` Open items). Push of the close-out: the controller's.
 
 **Goal:** A signed-in business posts a structured part or machine requirement; the 15 best-fitting eligible sellers are
 told, every eligible seller can answer with up to 3 real listings (or a new listing delivered when it goes live), every
@@ -346,14 +346,14 @@ part-request statuses); Create `apps/api/src/lib/f8-shared.test.ts`.
   `NotificationRow` + `partRequestId: string | null`; `AdminReportRow.target` + `'part_request'` (and
   `partRequestId?` / masked `partRequestName?` on such rows); `AdminBusinessDetail` + `partRequestCount: number`.
 
-- [ ] **Step 1: Failing tests** (`f8-shared.test.ts`): `partRequestTransition` — every row of §9.1 legal, a sample of
+- [x] **Step 1: Failing tests** (`f8-shared.test.ts`): `partRequestTransition` — every row of §9.1 legal, a sample of
   illegal ones null (`fulfil` from `expired`, `edit` from `closed`, `remove` from `removed`, `restore` from `active`),
   `restore` with `returnStatus: 'active'` and `pastExpiry: true` → `'expired'`, with `'fulfilled'` → `'fulfilled'`;
   `requestSideAccepts` full table (`left`×{left ✓, right ✗, pair ✓, null ✗, not_applicable ✗}, `right` mirror, `pair` ←
   pair only, `null` ← each ✓); `partRequestDaysLeft` (23 h → 1, 0 → 0, past → 0); `notificationCategory` for the 7 new
   types and `part_match` → `requests`; `validateSettings` refuses each of the five cross-checks and accepts the
   defaults.
-- [ ] **Step 2:** FAIL. **Step 3:** Implement; `pnpm --filter @mpm/shared-types build`; make every consumer compile
+- [x] **Step 2:** FAIL. **Step 3:** Implement; `pnpm --filter @mpm/shared-types build`; make every consumer compile
   (`toOwnerView` returns `partRequestId: null, pendingRequestReply: null` until C0-4a; badges route `requestsForYou: 0`
   until C0-4b; admin `lib/status.ts` tones: active brand, fulfilled green, closed / expired gray, removed red; app
   fixtures; placeholder en / hi / gu title and body for the 7 new types in `apps/api/src/services/notifications/text/
@@ -404,14 +404,14 @@ targeting those requests, work rows by subject id (the requests, the listings pa
 businesses passed**), push counts by business, feedback, matches, replies (also by listing id and seller business),
 targets, fitments, requests.
 
-- [ ] **Step 1: Failing tests** (`f8-schema.test.ts`): second unclaimed work row for the same `(kind, subject_id)`
+- [x] **Step 1: Failing tests** (`f8-schema.test.ts`): second unclaimed work row for the same `(kind, subject_id)`
   refused, allowed once the first has `claimed_at`; second reply for the same request + listing refused; second unread
   `part_match` row for the same user + request refused, allowed once the first is read, and a `part_request_reply` row
   alongside allowed; a machine request with a side refused; `closed` without `close_reason` refused; 4 photo keys
   refused; message of 301 chars refused; first `ref` ≥ 300001; `report_target` has `part_request` and
   `notification_category` has `requests`; `deleteF8Rows` leaves `countF8Rows` all 0 for a fixture with one of
   everything, and `deleteTestBusinesses` then succeeds.
-- [ ] **Step 2:** FAIL. **Step 3:** Implement; `db:generate`; `drizzle-kit generate --custom` for 0015; `db:migrate`;
+- [x] **Step 2:** FAIL. **Step 3:** Implement; `db:generate`; `drizzle-kit generate --custom` for 0015; `db:migrate`;
   `db:migrate:test`. **Step 4:** PASS; `f6-schema.test.ts` still passes. **Step 5: Stage.**
 
 ### C0-3a: Eligibility, categories, locks, status write, reply fit
@@ -457,7 +457,7 @@ targets, fitments, requests.
   `replyFitReasons(conn, request: PartRequestRow, listingIds: string[]): Promise<Map<string, ReplyFitReason | null>>`
   (adds `replied` for a pending / delivered / withdrawn reply on the request).
 
-- [ ] **Step 1: Failing tests** (`f8-eligibility.test.ts`, through `isEligibleSeller` on real rows; a baseline
+- [x] **Step 1: Failing tests** (`f8-eligibility.test.ts`, through `isEligibleSeller` on real rows; a baseline
   eligible seller, then one change per case): seller without pincode → false; seller owner suspended → false; own
   business → false; buyer owner suspended → false and back to true on reinstatement; block buyer → seller and seller →
   buyer → false; `verified_only` + unverified seller → false, `any_seller` → true; profile category with `buy` only
@@ -467,7 +467,7 @@ targets, fitments, requests.
   cases among the fixtures; `requestRoleFor` buyer / seller / null; `writeRequestStatus` refuses a second `close`
   (`PART_REQUEST_TRANSITION_NOT_ALLOWED`) and a stale row (status changed underneath); `replyFitReason` returns each of
   `kind`, `category`, `side`, `condition`, and null.
-- [ ] **Step 2:** FAIL. **Step 3:** Implement. **Step 4:** PASS. **Step 5: Stage.**
+- [x] **Step 2:** FAIL. **Step 3:** Implement. **Step 4:** PASS. **Step 5: Stage.**
 
 ### C0-3b: Queue insert, grouped rows, drops, photos, emits
 
@@ -509,7 +509,7 @@ targets, fitments, requests.
   per destination (chat `CHAT_LIMITS.photosPerMessage`, deal as today); `TOO_MANY_PHOTOS` details carry the max used.
 - `group-limit.ts`: `RateGroup` + `'part_request' | 'part_request_reply' | 'part_request_feedback'` (D10).
 
-- [ ] **Step 1: Failing tests** (`f8-seams.test.ts`): two `enqueuePartRequestWork` for one listing → one row; after
+- [x] **Step 1: Failing tests** (`f8-seams.test.ts`): two `enqueuePartRequestWork` for one listing → one row; after
   setting `claimed_at` on it, a third call inserts a new row and returns within 1 s while another transaction holds the
   claimed row `FOR UPDATE` (`SET LOCAL lock_timeout = '1s'`); `notify({ push: false })` → rows, zero deliveries;
   `upsertRequestNotification` — first event one row per member with `unread_count` 1, version 1, one delivery per
@@ -521,7 +521,7 @@ targets, fitments, requests.
   drops pending only (delivered untouched) and writes one `part_request_reply_dropped` per pending reply;
   `finalizePrivatePhotos` with 4 keys and `{ max: 3 }` → `TOO_MANY_PHOTOS` before any storage call (spy), chat with 5
   still passes the count check.
-- [ ] **Step 2:** FAIL. **Step 3:** Implement. **Step 4:** PASS; `f6-seams.test.ts`, `private-photo.test.ts` still pass.
+- [x] **Step 2:** FAIL. **Step 3:** Implement. **Step 4:** PASS; `f6-seams.test.ts`, `private-photo.test.ts` still pass.
   **Step 5: Stage.**
 
 ### C0-4a: Listing and F6 hooks (real bodies)
@@ -564,7 +564,7 @@ targets, fitments, requests.
   sellerBusinessId: offer.sellerBusinessId })` — stub (A3, `fulfil-prompt.ts`): `notifyFulfilPrompts(tx, d: { dealId:
   string; listingId: string; buyerBusinessId: string; sellerBusinessId: string }): Promise<void>`.
 
-- [ ] **Step 1: Failing tests** (`f8-listing-hooks.test.ts`; each case starts with no work row for the listing and
+- [x] **Step 1: Failing tests** (`f8-listing-hooks.test.ts`; each case starts with no work row for the listing and
   ends with exactly one unclaimed `listing_changed` row): publish that goes straight live; admin approve; resume;
   renew; relist; admin unhide; unreserve after an F6 deal cancel (`insertTestDeal` on the whole quantity, then the
   cancel path that releases the hold and calls `syncReservation`); seller remove; admin remove; moderation reject;
@@ -575,7 +575,7 @@ targets, fitments, requests.
   `setMyLocation` → one row per live listing of the business, none for its drafts; publish then resume before any claim
   → still one row; `deleteDraft` of a draft with a pending reply → reply row gone, draft gone; `toOwnerView` of that
   draft before deletion shows `pendingRequestReply` with the masked name.
-- [ ] **Step 2:** FAIL. **Step 3:** Implement. **Step 4:** PASS; `listings-*.test.ts`, `listings-holds.test.ts`,
+- [x] **Step 2:** FAIL. **Step 3:** Implement. **Step 4:** PASS; `listings-*.test.ts`, `listings-holds.test.ts`,
   `offers-accept.test.ts` still pass. **Step 5: Stage.**
 
 ### C0-4b: Stubs, route stubs, RBAC, jobs, Sentry, badges, admin business count
@@ -612,12 +612,12 @@ bodies of `/part-requests` routes, not through the global key list, so other eve
   `part-request-retention` 86 400 000 (`firstRunMs` 1 200 000) → `deletePartRequestHistory(app.db)`.
 - `routes/badges.ts`: `requestsForYou: await requestsForYouCount(conn, user)`.
 
-- [ ] **Step 1: Failing tests** (`f8-routes.test.ts`): table over every new route — 401 without a token (except the
+- [x] **Step 1: Failing tests** (`f8-routes.test.ts`): table over every new route — 401 without a token (except the
   public `GET /part-requests/options`, 200 for a guest); each admin route 403 for `operations` and `category_manager`,
   not 403 for `moderator`, `support`, `super_admin`; a viewer gets `403 VIEWER_READ_ONLY` on every user write except
   `POST /part-requests/:id/read`; `redact` drops `note`, `message`, `photoKeys`, and `name` only inside a
   `/part-requests` request body (a `name` elsewhere survives). (The settings cross-checks are tested once, in C0-1.)
-- [ ] **Step 2:** FAIL. **Step 3:** Implement. **Step 4:** PASS; `pnpm --filter @mpm/api typecheck`. **Step 5: Stage.**
+- [x] **Step 2:** FAIL. **Step 3:** Implement. **Step 4:** PASS; `pnpm --filter @mpm/api typecheck`. **Step 5: Stage.**
 
 ### C0-5: App contracts
 
@@ -662,11 +662,11 @@ partRequestId: string; tab?: 'replies' | 'matches' }`, `CompareResponses: { part
 `ReplyWithListing: { partRequestId: string }`, `BuyersLooking: { forListing?: string }`. Preview is a step inside
 `PostRequirement`, not a route.
 
-- [ ] **Step 1: Failing tests (pure):** `notificationLink` for the 8 types; `pendingToRun` returns `post_request` with
+- [x] **Step 1: Failing tests (pure):** `notificationLink` for the 8 types; `pendingToRun` returns `post_request` with
   its prefill only after sign-in + onboarding and `pendingRoute` sends it to `request`, never to save; `SIGN_IN_REASONS`
   has `request`; every `PART_REQUEST_ERROR_CODES` code has a key in en / hi / gu; `requestStatusTone` covers the five
   statuses; i18n parity and audit pass.
-- [ ] **Step 2:** FAIL. **Step 3:** Implement. **Step 4:** PASS; app typecheck; style audit. **Step 5: Stage.**
+- [x] **Step 2:** FAIL. **Step 3:** Implement. **Step 4:** PASS; app typecheck; style audit. **Step 5: Stage.**
 
 **C0 exit:** typecheck, lint; API, admin, app suites green one package at a time; **after the full API suite**
 `countF8Rows` on `mpm_test` is all zeros (work rows included); review (focus: schema matches §5 column for column, 0014 never uses the new enum values, every stub
@@ -717,7 +717,7 @@ marked, eligibility SQL against §6, hook coverage of §8.1, route RBAC table); 
   delivered-reply or match listing while `active`; `photoKeys` (buyer only); `renewableUntil = first_posted_at +
   max_days`).
 
-- [ ] **Step 1: Failing tests:** 4th active request for an unverified business → `PART_REQUEST_OPEN_LIMIT`, 16th for a
+- [x] **Step 1: Failing tests:** 4th active request for an unverified business → `PART_REQUEST_OPEN_LIMIT`, 16th for a
   verified one (settings lowered to 2 / 3 for speed and restored; assert the boundary, not the default); 6th post of the
   IST day → `PART_REQUEST_DAILY_LIMIT` (setting lowered); a part on a node with sides without side → `SIDE_REQUIRED`,
   with a side on a node without → `SIDE_NOT_ALLOWED`; a machine request with `partNumber` → 400; a spec left empty on a
@@ -728,7 +728,7 @@ marked, eligibility SQL against §6, hook coverage of §8.1, route RBAC table); 
   same `Idempotency-Key` twice → one row, same body, `finalizePrivatePhotos` called once (spy); a post refused by the
   open limit or by `SIDE_REQUIRED` never calls `finalizePrivatePhotos` (spy); a transaction failure after finalizing
   (forced) deletes the final keys (storage mock records the deletes); response `name` masks `+91 98765 43210`.
-- [ ] **Step 2:** FAIL. **Step 3:** Implement. **Step 4:** PASS. **Step 5: Stage.**
+- [x] **Step 2:** FAIL. **Step 3:** Implement. **Step 4:** PASS. **Step 5: Stage.**
 
 ### A1-2: Edit, renew, close, fulfil, read
 
@@ -753,7 +753,7 @@ then marks the notifications, replies and matches, then sets `buyer_seen_at`). A
 (`{ ok: true }`). Zod bodies: `{ days: z.number().int() }`, `{ reason: z.enum(PART_REQUEST_CLOSE_REASONS) }`,
 `{ dealId: z.string().uuid().optional() }`.
 
-- [ ] **Step 1: Failing tests:** each buyer row of §9.1 through the routes (edit, renew from `active` and from `expired`,
+- [x] **Step 1: Failing tests:** each buyer row of §9.1 through the routes (edit, renew from `active` and from `expired`,
   fulfil, close) and the refused ones (edit / close / fulfil on `closed`, renew on `fulfilled`) →
   `PART_REQUEST_TRANSITION_NOT_ALLOWED`; PATCH with an old `version` → `PART_REQUEST_STALE`; edit moving the category to
   another machine category → `CATEGORY_LOCKED`; renew past 90 days from `first_posted_at` (moved back 80 days, renew 15)
@@ -765,7 +765,7 @@ then marks the notifications, replies and matches, then sets `buyer_seen_at`). A
   (`request_closed`) and the seller has one `part_request_reply_dropped`, delivered untouched; `read` by a buyer
   member marks that user's grouped rows read, sets `buyer_seen_at`, `buyer_viewed_at` on delivered replies and `seen_at`
   on matches; `read` by a seller → 404.
-- [ ] **Step 2:** FAIL. **Step 3:** Implement. **Step 4:** PASS. **Step 5: Stage.**
+- [x] **Step 2:** FAIL. **Step 3:** Implement. **Step 4:** PASS. **Step 5: Stage.**
 
 ### A1-3: Buyer reads: mine, detail, replies, matches, compare, photos, home
 
@@ -789,14 +789,14 @@ strip: the active request with the most recent unseen item, tie newest request; 
 delivered replies created after `buyer_seen_at`; `nearestKm` the nearest of those; seller strip from A1-4's
 `listForSellers(…, 'matched')` top 3 and `requestsForYouCount`, null per D17).
 
-- [ ] **Step 1: Failing tests:** `GET /:id` for the buyer: `role: 'buyer'`, budget present, `name` / `note` with
+- [x] **Step 1: Failing tests:** `GET /:id` for the buyer: `role: 'buyer'`, budget present, `name` / `note` with
   `९८७६५४३२१०` and `૯૮૭૬૫૪૩૨૧૦` masked; `fulfilPrompt` set with an `agreed` deal on a delivered-reply listing, null
   after the deal is cancelled; replies list hides `pending`, `withdrawn`, `dropped` and a reply whose seller the buyer
   blocked, and masks the message; `fulfilPrompt` also set while that deal is `disputed`; compare dedupes a listing that is both reply and match, caps at 10 (12 fixtures),
   marks the lowest price; `mine` tabs and counts (`closed` tab includes `expired` and `removed`), cursor paging of 21
   rows; photos 404 for an ineligible business; home: two active requests, the one with the newer unseen match is
   chosen, `newCount` counts only items after `buyer_seen_at`, `nearestKm` is the stored snapped km.
-- [ ] **Step 2:** FAIL. **Step 3:** Implement. **Step 4:** PASS. **Step 5: Stage.**
+- [x] **Step 2:** FAIL. **Step 3:** Implement. **Step 4:** PASS. **Step 5: Stage.**
 
 ### A1-4: Seller reads, not relevant, report, badge count
 
@@ -823,7 +823,7 @@ PartRequestReportReason; details?: string })` → `{ reported: true }` (eligible
 rooms); `requestsForYouCount(conn, user)` (targeted, request active, `opened_at` null, no reply by the business, not
 dismissed).
 
-- [ ] **Step 1: Failing tests:** the seller view and every `for-sellers` row carry no `phone`, `pincode`, `point`,
+- [x] **Step 1: Failing tests:** the seller view and every `for-sellers` row carry no `phone`, `pincode`, `point`,
   `address`, `industrialAreaId` key (JSON key scan) and `budgetPerUnitPaise: null` when private, the value when
   visible; buyer trade name with a phone number masked; `GET /:id`, `/photos`, `not-relevant` and `report` answer 404
   for an ineligible business (a `verified_only` request read by an unverified seller, a blocked pair) and for a third
@@ -832,7 +832,7 @@ dismissed).
   `GET /:id` still answers with `notRelevant: true`, `DELETE` undoes; not relevant on a closed request the seller replied
   to → `PART_REQUEST_NOT_ACTIVE`; report twice → `REPORT_EXISTS`; `requestsForYouCount` drops after the seller opens
   the request, after a reply, after not relevant.
-- [ ] **Step 2:** FAIL. **Step 3:** Implement. **Step 4:** PASS. **Step 5: Stage.**
+- [x] **Step 2:** FAIL. **Step 3:** Implement. **Step 4:** PASS. **Step 5: Stage.**
 
 **A1 exit:** lane test files and `pnpm --filter @mpm/api typecheck` green; review (focus: every seller read through
 `eligibleSellerSql`, 404 for outsiders, masking on every text path, no business lock after a request lock); controller
@@ -861,7 +861,7 @@ the check) is caught and the row gets `done_at` instead; `attempts = 5` → `fai
 string): Promise<void> }`, defaults `processTargetRequest` (`targeting.ts`) and `processListingChanged`
 (`reply-delivery.ts`), created here as empty functions and filled by A2-2 and A2-4 (tests here inject handlers).
 
-- [ ] **Step 1: Failing tests** (handlers injected): three rows, the middle handler throws → rows 1 and 3 `done_at`,
+- [x] **Step 1: Failing tests** (handlers injected): three rows, the middle handler throws → rows 1 and 3 `done_at`,
   row 2 released with `next_attempt_at` ≈ now + 30 s and `last_error` set, and row 1's writes committed; a row failing
   for the 5th time → `failed_at`, and a new enqueue for the same subject inserts a fresh row; a failing row with a newer
   unclaimed row present → `done_at` instead of a retry; the same when the newer row is inserted between the check and
@@ -869,7 +869,7 @@ string): Promise<void> }`, defaults `processTargetRequest` (`targeting.ts`) and 
   a row claimed 11 minutes ago with no `done_at` is reclaimed, one
   claimed 2 minutes ago isn't; two `runPartRequestWork` calls at once process each row once (`SKIP LOCKED`); an enqueue
   for a subject while its row is being processed (handler waits on a promise) inserts a second row immediately.
-- [ ] **Step 2:** FAIL. **Step 3:** Implement. **Step 4:** PASS. **Step 5: Stage.**
+- [x] **Step 2:** FAIL. **Step 3:** Implement. **Step 4:** PASS. **Step 5: Stage.**
 
 ### A2-2: Targeting and seller push caps
 
@@ -894,7 +894,7 @@ rank order, capped at `2N − t` (t = target rows so far); insert them `ON CONFL
 Promise<Set<string>>` (cap 0 → empty set, no insert; else ids sorted, one `INSERT … ON CONFLICT (business_id, day) DO
 UPDATE SET pushes = pushes + 1 WHERE pushes < cap RETURNING business_id`, IST day).
 
-- [ ] **Step 1: Failing tests:** 20 eligible sellers, N = 15 → 15 targets ranked by score; a seller with an exact
+- [x] **Step 1: Failing tests:** 20 eligible sellers, N = 15 → 15 targets ranked by score; a seller with an exact
   part-number listing ranks above a profile-only seller nearer by; two sellers equal on every term → the older business
   first (determinism); a seller outside `radius_50` not targeted, inside it targeted; `state` reach targets only
   same-state sellers; running `processTargetRequest` twice → no new targets, one notification per target; an edit that
@@ -904,7 +904,7 @@ UPDATE SET pushes = pushes + 1 WHERE pushes < cap RETURNING business_id`, IST da
   rows); a request no longer `active` → nothing; a seller already at 10 pushes today gets the `part_request_new` row
   with no delivery; cap 0 → no delivery and no `part_request_push_counts` row; two concurrent passes for two requests
   targeting the same seller with cap 1 → exactly one delivery; feedback (not relevant) excludes the seller.
-- [ ] **Step 2:** FAIL. **Step 3:** Implement. **Step 4:** PASS. **Step 5: Stage.**
+- [x] **Step 2:** FAIL. **Step 3:** Implement. **Step 4:** PASS. **Step 5: Stage.**
 
 ### A2-3: Auto matches, buyer caps, at-post backfill, demand
 
@@ -935,7 +935,7 @@ sellerBusinessId): Promise<string[]>` and `listingDemand(conn, user, listingId):
 only, else `404 LISTING_NOT_FOUND`; any listing status, so `requireLive: false`; eligibility of this seller applied;
 ids ≤ 10).
 
-- [ ] **Step 1: Failing tests:** side table on real rows (Left request ← Left and Pair listings match, Right listing
+- [x] **Step 1: Failing tests:** side table on real rows (Left request ← Left and Pair listings match, Right listing
   doesn't; Pair request ← Pair only; request without side ← any); part-number match across separators (`AB-123/X` vs
   `ab 123 x`); a base match (a Left request `AB-123-L` matches a Pair listing numbered `AB123`, while a Right listing
   `AB123R` is refused by the side rule); a 2-character norm never matches; name ≥ 0.5
@@ -949,7 +949,7 @@ ids ≤ 10).
   version 2 is sent by `sendDuePushes` (not skipped as stale); total cap reached → no push the next day; 201 candidate
   requests → 200 checked, the oldest left out; demand counts the requests a draft and a `pending_review` listing would
   match (`requireLive: false`) and 404s a non-owner.
-- [ ] **Step 2:** FAIL. **Step 3:** Implement. **Step 4:** PASS. **Step 5: Stage.**
+- [x] **Step 2:** FAIL. **Step 3:** Implement. **Step 4:** PASS. **Step 5: Stage.**
 
 ### A2-4: Replies: options, send, withdraw, new listing, delivery, drops
 
@@ -992,7 +992,7 @@ ids ≤ 10).
   that got a new match or have a pending reply on L; then `processListingReplies` and `notifyNewMatch` for each new
   match under those locks. No second lock pass.
 
-- [ ] **Step 1: Failing tests:** send 2 listings → 2 delivered, buyer grouped row count 2; a 4th listing for the same
+- [x] **Step 1: Failing tests:** send 2 listings → 2 delivered, buyer grouped row count 2; a 4th listing for the same
   request → `REPLY_LIMIT` (cap 3); daily cap lowered to 2 → 3rd → `REPLY_DAILY_LIMIT`; a listing on another machine
   category → `REPLY_LISTING_INVALID` with reason `category`, a Right listing on a Left request → `side`; same listing
   twice → `REPLY_EXISTS`; ineligible seller → 404; viewer → 403; two concurrent sends at the cap (slots 1) → one 200,
@@ -1007,7 +1007,7 @@ ids ≤ 10).
   owner suspended → `not_eligible`; seller removes the listing → `listing_removed`, no seller notification; admin
   removes → `listing_removed_by_team` + seller notified; moderation reject → `listing_rejected` + notified; request
   closed before approval → `request_closed` (dropped by close, nothing delivered later).
-- [ ] **Step 2:** FAIL. **Step 3:** Implement. **Step 4:** PASS. **Step 5: Stage.**
+- [x] **Step 2:** FAIL. **Step 3:** Implement. **Step 4:** PASS. **Step 5: Stage.**
 
 **A2 exit:** lane test files and typecheck green; review (focus: one tx per work row, matching SQL against §7.4 line by
 line, caps atomic, lock order request → listing (KEY SHARE via FK) → child rows, prefill rollback); controller commits
@@ -1030,13 +1030,13 @@ part_request_expiring_notice_hours <= now()`, `expiring_notified_at IS NULL`; pe
 `part_request_expiring`, dedupe `part_request_expiring:<id>:<expires epoch>`; sets the column);
 `deletePartRequestHistory(db)` (done work rows and push-count rows older than 7 days, failed rows older than 30 days).
 
-- [ ] **Step 1: Failing tests:** an `active` request past `expires_at` → `expired`, its pending reply dropped
+- [x] **Step 1: Failing tests:** an `active` request past `expires_at` → `expired`, its pending reply dropped
   `request_expired` with the seller told, one buyer notification; running the job twice → still one notification; a
   request locked by another transaction is skipped, not waited on (the job returns while the lock is held); expiry and a
   renew at once (`Promise.all`) → either renewed and `active` or expired, never `expired` with the renewed
   `expires_at`; the reminder fires once inside 24 h and again after a renew (column reset); retention deletes an 8-day-old
   done row, keeps a 2-day-old one and a 10-day-old failed one.
-- [ ] **Step 2:** FAIL. **Step 3:** Implement. **Step 4:** PASS. **Step 5: Stage.**
+- [x] **Step 2:** FAIL. **Step 3:** Implement. **Step 4:** PASS. **Step 5: Stage.**
 
 ### A3-2: Notification texts and push tag
 
@@ -1048,11 +1048,11 @@ part_request_expiring_notice_hours <= now()`, `expiring_notified_at IS NULL`; pe
 **Texts:** English exactly §10.3; Hindi and Gujarati translations of the same lines (grouped variants with `{count}`).
 Params never include the note, message, budget, phone, pincode or address.
 
-- [ ] **Step 1: Failing tests:** each of the 8 types renders a non-empty title and body in en / hi / gu (grouped
+- [x] **Step 1: Failing tests:** each of the 8 types renders a non-empty title and body in en / hi / gu (grouped
   `part_match` with count 3 uses the grouped line); a `requestTitle` param containing `+91 98765 43210` and
   `૯૮૭૬૫૪૩૨૧૦` renders masked; `distanceKm` renders as the stored integer; the push built for a `part_match` row carries
   tag `part_request:<id>:part_match` and `data.partRequestId`.
-- [ ] **Step 2:** FAIL. **Step 3:** Implement. **Step 4:** PASS; `notifications.test.ts`, `push.test.ts` still pass.
+- [x] **Step 2:** FAIL. **Step 3:** Implement. **Step 4:** PASS; `notifications.test.ts`, `push.test.ts` still pass.
   **Step 5: Stage.**
 
 ### A3-3: Fulfilment prompt in F6 accept
@@ -1067,11 +1067,11 @@ reply or a match → `notify` `part_request_fulfil_prompt` to the
 buyer business (always, D5), dedupe `part_request_fulfil_prompt:<requestId>:<dealId>`, params `{ businessName (seller),
 requestTitle }`, destination `{ partRequestId, dealId }`.
 
-- [ ] **Step 1: Failing tests:** accept (through `POST /offers/:id/accept`) on a delivered-reply listing → one prompt
+- [x] **Step 1: Failing tests:** accept (through `POST /offers/:id/accept`) on a delivered-reply listing → one prompt
   row per buyer member; the same when a **buyer** member accepts the seller's counter; a match listing → prompt; an
   unrelated listing → none; a `closed` request → none; accepting while a job transaction holds the request
   `FOR NO KEY UPDATE` completes without waiting (`lock_timeout = '1s'`).
-- [ ] **Step 2:** FAIL. **Step 3:** Implement. **Step 4:** PASS; `offers-accept.test.ts` still passes. **Step 5: Stage.**
+- [x] **Step 2:** FAIL. **Step 3:** Implement. **Step 4:** PASS; `offers-accept.test.ts` still passes. **Step 5: Stage.**
 
 ### A3-4: Admin API and reports widening
 
@@ -1093,7 +1093,7 @@ epoch>`; audit `part_request.remove` before / after status); `restorePartRequest
 (`writeRequestStatus(…, 'restore')`; no notification, no open-limit check, no enqueue; audit `part_request.restore`).
 Reasons `ADMIN_REASON_MIN`–`ADMIN_REASON_MAX` (`lib/admin-text.ts`).
 
-- [ ] **Step 1: Failing tests:** list filters (status, reported, businessId) and active-first order; detail masks a
+- [x] **Step 1: Failing tests:** list filters (status, reported, businessId) and active-first order; detail masks a
   Devanagari phone in the note and a reply message, has no phone key, and `eligibleNow` matches the fixture; remove of
   an `active` request → `removed`, `return_status = 'active'`, its pending reply dropped `request_removed`, its open
   report `actioned`, one buyer notification, one audit row; remove of a `removed` one →
@@ -1101,17 +1101,17 @@ Reasons `ADMIN_REASON_MIN`–`ADMIN_REASON_MAX` (`lib/admin-text.ts`).
   `expires_at` has passed → `expired`; a short reason → 400; `GET /admin/reports?target=part_request` lists the
   request's report and `POST /admin/reports/:id/resolve` resolves it with an audit row; the conversation and review
   report suites still pass.
-- [ ] **Step 2:** FAIL. **Step 3:** Implement. **Step 4:** PASS. **Step 5: Stage.**
+- [x] **Step 2:** FAIL. **Step 3:** Implement. **Step 4:** PASS. **Step 5: Stage.**
 
 **A3 exit:** lane test files and typecheck green; review (focus: per-request job transactions with `SKIP LOCKED`, no
 `FOR UPDATE` on requests, every admin mutation audited, texts free of PII); controller commits on `lane/f8-a3`.
 
 ## Wave A merge (controller)
 
-- [ ] Merge `lane/f8-a1`, `a2`, `a3` into `develop` one at a time (`--no-ff`).
-- [ ] `grep -rn "F8-STUB" apps/api/src` is empty; `pnpm --filter @mpm/shared-types build`; `pnpm typecheck`;
+- [x] Merge `lane/f8-a1`, `a2`, `a3` into `develop` one at a time (`--no-ff`).
+- [x] `grep -rn "F8-STUB" apps/api/src` is empty; `pnpm --filter @mpm/shared-types build`; `pnpm typecheck`;
   `pnpm --filter @mpm/api test` once; `countF8Rows` on `mpm_test` all 0.
-- [ ] Fix wave on `develop`; commit; push (milestone: API). Lane cleanup (checklist step 6).
+- [x] Fix wave on `develop`; commit; push (milestone: API). Lane cleanup (checklist step 6).
 
 ---
 
@@ -1136,7 +1136,7 @@ audience; masked note; photos in `image-lightbox` (300 s URLs fetched on open); 
 matches (listing, seller, tier, km, pushed); reports; Remove (non-`removed`) / Restore (`removed`) with a reason dialog
 (danger submit).
 
-- [ ] **Step 1: Failing tests:** `adminPartRequestsQuery(filters)` builds the query string (status, kind,
+- [x] **Step 1: Failing tests:** `adminPartRequestsQuery(filters)` builds the query string (status, kind,
   machineCategoryId, reported, businessId, dates, q; empty ones dropped); the dialog won't submit a reason shorter than
   `ADMIN_REASON_MIN` and sends `{ reason }` to remove or restore by mode. **Step 2:** FAIL. **Step 3:** Implement.
   **Step 4:** PASS; lint; style audit. **Step 5: Stage.**
@@ -1148,7 +1148,7 @@ matches (listing, seller, tier, km, pushed); reports; Remove (non-`removed`) / R
 `part_request_*` keys, excluded from "listing rules"), `components/businesses/business-detail.tsx` ("Part requests (n)"
 → `/part-requests?businessId=`).
 
-- [ ] **Step 1:** none (display wiring; no tests per owner rule). **Step 3:** Implement (report rows show the masked
+- [x] **Step 1:** none (display wiring; no tests per owner rule). **Step 3:** Implement (report rows show the masked
   name and link to `/part-requests/[id]`; resolve uses the existing dialog). **Step 4:** typecheck, lint, style audit;
   `marketplace-settings-form.test.tsx` still passes. **Step 5: Stage.**
 
@@ -1173,7 +1173,7 @@ number **base**, `complementarySide(side)`, fits, `source: 'other_side'`); `reac
 `compareRows(columns: CompareColumn[]): CompareRow[]` (row order price, available, side, condition, distance, rating,
 verified; lowest price flagged).
 
-- [ ] **Step 1: Failing tests:** `prefillFromReading` for "left tie rod end toyota lwt710" with a reading carrying side
+- [x] **Step 1: Failing tests:** `prefillFromReading` for "left tie rod end toyota lwt710" with a reading carrying side
   Left, a brand + model chip and a part-group category → side `left`, one fit, category id, name = reading words; a
   reading with only a machine category → `categoryId` unset and the seed set; a query with a part number → first part
   number; `prefillFromOtherSide` of a Left listing with part number `AB-123-L` → side `right`, part number base,
@@ -1200,7 +1200,7 @@ the first work-job tick at 10 s has run). Edit mode
 (`editId`) loads the buyer view, sends `PATCH` with `version`; `409 PART_REQUEST_STALE` → reload sheet. Analytics
 `request_post_started`, `request_posted`, `request_post_failed`, `request_edited`.
 
-- [ ] **Step 1:** none (UI). **Step 3:** Implement. **Step 4:** app typecheck; parity / audit / style audit.
+- [x] **Step 1:** none (UI). **Step 3:** Implement. **Step 4:** app typecheck; parity / audit / style audit.
   **Step 5: Stage.**
 
 ### B2-3: My requirements, Requirement (buyer), Compare, sheets, Home buyer strip
@@ -1220,7 +1220,7 @@ columns scroll horizontally beyond 3, lowest price marked, button per column ope
 `contactAction`. Home buyer strip (mockup `.sidematch`). Analytics `request_renewed`, `request_closed`,
 `request_fulfilled`, `request_compare_opened`, `request_response_opened`.
 
-- [ ] **Step 1:** none (UI; logic in B2-1). **Step 3:** Implement. **Step 4:** app typecheck; parity / audit / style
+- [x] **Step 1:** none (UI; logic in B2-1). **Step 3:** Implement. **Step 4:** app typecheck; parity / audit / style
   audit. **Step 5: Stage.**
 
 ### B2-4: Entry points and guest pending action
@@ -1233,7 +1233,7 @@ columns scroll horizontally beyond 3, lowest price marked, button per column ope
 taps → sign-in sheet with reason `request` and `PendingAction { type: 'post_request', prefill }`; after sign-in and
 onboarding the form opens prefilled and never posts by itself; the Other side link builds `prefillFromOtherSide`.
 
-- [ ] **Step 1:** none (wiring; prefill logic tested in B2-1, pending dispatch in C0-5). **Step 3:** Implement.
+- [x] **Step 1:** none (wiring; prefill logic tested in B2-1, pending dispatch in C0-5). **Step 3:** Implement.
   **Step 4:** app typecheck; `pnpm --filter user-app test`; parity / audit / style audit. **Step 5: Stage.**
 
 **B2 exit:** app suite and typecheck green; review (focus: no text in analytics, prefill never posts, Idempotency-Key
@@ -1251,7 +1251,7 @@ rows (name, side token, quantity + unit, first fit, conditions, budget or "Priva
 city + km, buyer block, reply count, "Reply" button) infinite scroll; `forListing` param filters; empty state "No buyers
 looking right now" with the eligibility explainer (sell activity, categories, GST verification); refetch on focus.
 
-- [ ] **Step 1:** none (UI). **Step 3:** Implement. **Step 4:** typecheck; parity / audit / style audit. **Step 5: Stage.**
+- [x] **Step 1:** none (UI). **Step 3:** Implement. **Step 4:** typecheck; parity / audit / style audit. **Step 5: Stage.**
 
 ### B3-2: Requirement (seller), Reply with my listing, Not relevant, Report
 
@@ -1266,7 +1266,7 @@ buyer", dropped reason), Withdraw, **Reply with my listing**, **Not relevant** (
 **Create a new listing** → `createListing(kind, partRequestId)` → the sell wizard on the new draft. Analytics
 `request_reply_sent { listings, created }`, `request_reply_withdrawn`, `request_not_relevant`, `request_reported`.
 
-- [ ] **Step 1: Failing tests:** `pickerRows` orders fitting first, greys `side` / `replied` with their keys, refuses a
+- [x] **Step 1: Failing tests:** `pickerRows` orders fitting first, greys `side` / `replied` with their keys, refuses a
   4th selection and a selection beyond `slotsLeft`. **Step 2:** FAIL. **Step 3:** Implement. **Step 4:** PASS;
   typecheck; parity / audit / style audit. **Step 5: Stage.**
 
@@ -1280,7 +1280,7 @@ buyer when your listing is live" from `pendingRequestReply`; Published shows "{n
 from `GET /listings/:id/part-request-demand` ("We will tell them when it goes live" in review, "We've told them" when
 live) with "See their requirements" → `BuyersLooking { forListing }`, hidden at 0.
 
-- [ ] **Step 1: Failing tests:** `scopedPartGroups(tree, machineTypeId)` returns only that type's part groups and the
+- [x] **Step 1: Failing tests:** `scopedPartGroups(tree, machineTypeId)` returns only that type's part groups and the
   whole list when no type is given. **Step 2:** FAIL. **Step 3:** Implement. **Step 4:** PASS; typecheck; parity /
   audit / style audit. **Step 5: Stage.**
 
@@ -1289,7 +1289,7 @@ contact rendered, wizard scope); controller commits on `lane/f8-b3`.
 
 ## Wave B merge (controller)
 
-- [ ] Merge `lane/f8-b1`, `b2`, `b3` into `develop` one at a time; `grep -rn "F8-STUB" apps` is empty; `pnpm typecheck`;
+- [x] Merge `lane/f8-b1`, `b2`, `b3` into `develop` one at a time; `grep -rn "F8-STUB" apps` is empty; `pnpm typecheck`;
   `pnpm lint`; `pnpm --filter admin test`; `pnpm --filter user-app test`; allowlist merges resolved; fix wave; commit;
   push. Lane cleanup.
 
@@ -1301,7 +1301,7 @@ contact rendered, wizard scope); controller commits on `lane/f8-b3`.
 
 **Files:** Create `apps/api/__tests__/f8-core-loop.test.ts`.
 
-- [ ] **Step 1: Failing tests (cases no single lane could write):** buyer posts a Left part request → `runPartRequestWork`
+- [x] **Step 1: Failing tests (cases no single lane could write):** buyer posts a Left part request → `runPartRequestWork`
   → top-N targets notified (one seller over its push cap gets the row without delivery) and an at-post match for an
   already-live Pair listing (no notification) → a targeted seller replies with an existing listing (delivered, grouped
   row) and another creates a new listing with `partRequestId` → admin approves → job → delivered → a third seller
@@ -1312,19 +1312,19 @@ contact rendered, wizard scope); controller commits on `lane/f8-b3`.
   the job delivering a pending reply → same rule; two `runPartRequestWork` and one `expirePartRequests` concurrently
   over the same rows → no deadlock (`40P01`) and each row processed once; rendered texts of every notification created
   in the loop carry no phone number planted in the request note and name; `countF8Rows` all 0 after cleanup.
-- [ ] **Step 2:** run; fix in the owning lane's files on `develop`. **Step 3:** `grep -rn "F8-STUB\|NOT_IMPLEMENTED"
+- [x] **Step 2:** run; fix in the owning lane's files on `develop`. **Step 3:** `grep -rn "F8-STUB\|NOT_IMPLEMENTED"
   apps/api/src apps/user-app apps/admin` returns only F6's `OTP_NOT_IMPLEMENTED`. **Step 4:** PASS. **Step 5: Stage.**
 
 ### I-2: Full checks and builds
 
-- [ ] One package at a time: `pnpm typecheck`, `pnpm lint`, `pnpm --filter @mpm/api test`, `pnpm --filter admin test`,
+- [x] One package at a time: `pnpm typecheck`, `pnpm lint`, `pnpm --filter @mpm/api test`, `pnpm --filter admin test`,
   `pnpm --filter user-app test`; `countF8Rows` on `mpm_test` all 0; `pnpm --filter admin build`; in `apps/user-app`:
   `CI=1 npx expo export --platform android` and `npx expo install --check`.
-- [ ] Dev DB: `pnpm --filter @mpm/api db:migrate` (0014, 0015).
+- [x] Dev DB: `pnpm --filter @mpm/api db:migrate` (0014, 0015).
 
 ### I-3: Agent walk-through on the dev DB
 
-- [ ] Scripted API walk-through (three businesses by phone OTP: buyer, verified seller with a live Pair listing,
+- [x] Scripted API walk-through (three businesses by phone OTP: buyer, verified seller with a live Pair listing,
   unverified seller): post a Left part request (`verified_only`) → work job (or wait one tick) → the verified seller
   sees it under For you, the unverified one gets 404; at-post match listed; verified seller replies with a new listing
   → approve → delivered; a Left listing by the verified seller → match + push recorded `sent_dev`; compare; enquire →
@@ -1335,13 +1335,13 @@ contact rendered, wizard scope); controller commits on `lane/f8-b3`.
 
 ### I-4: Docs
 
-- [ ] `docs/PROJECT_STATUS.md`: What's built (F8 row: tables, routes, jobs, app and admin screens), How to run (0014 /
+- [x] `docs/PROJECT_STATUS.md`: What's built (F8 row: tables, routes, jobs, app and admin screens), How to run (0014 /
   0015, no new env), Open items (§23 list; queue backlog note §21), Suggested build order item 6 (F8 done; F9 push
   categories later), session log line.
-- [ ] `CLAUDE.md` (services list + `part-requests`, the work queue and `writeStatus` enqueue rule, `/part-requests/*`
+- [x] `CLAUDE.md` (services list + `part-requests`, the work queue and `writeStatus` enqueue rule, `/part-requests/*`
   route prefix), `apps/user-app/CLAUDE.md` (requirements screens, query keys, `part_request:` socket prefix, pending
   action `post_request`), `apps/admin/CLAUDE.md` (Part requests pages, Reports tab, Settings section).
-- [ ] `docs/product-scope.md` per §20 (M11 "matched" derived badge, quotes P2 / rental requests M14, who-can-reply
+- [x] `docs/product-scope.md` per §20 (M11 "matched" derived badge, quotes P2 / rental requests M14, who-can-reply
   default verified only, D5 = `part_request_reach_n`); F2 spec R22 note: the Other side "Post a requirement" link exists;
   spec and this plan marked built.
 - [ ] Controller commits and pushes `develop` (milestone).

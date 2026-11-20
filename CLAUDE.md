@@ -172,9 +172,31 @@ enforced server-side; clients only display them.
 `complementarySide()` in shared-types is the one definition of "the other side"; matching and "show complementary
 parts" use it.
 
-**Part requests (F8)** are matched against newly published listings by a background job (category, part name,
-side, brand/model compatibility, location), and the buyer is notified (F9). Matching never spams: cap the number of
-notifications per request.
+**Part requests (F8)** live in `services/part-requests/` (one folder: request CRUD and reads, eligibility, targeting,
+matching, replies, jobs, admin). Rules that hold for every new write:
+- **The work queue:** a listing writer never matches inline. `writeStatus` (`listing-lifecycle.service.ts`, the only
+  status write) inserts a `part_request_work` `listing_changed` row when a listing goes `live`, `removed` or `rejected`;
+  `patchListing` / `adminPatchListing` / `setMyLocation` do it for match-relevant changes of a live listing
+  (`matchRelevantChange`); post, material edits and renew from expired insert `target_request`. Use
+  `enqueuePartRequestWork` / `enqueueListingsChanged` (`work-queue.ts`) in the writer's own transaction: the insert
+  never waits on the job. A new path into `live` that skips `writeStatus` must enqueue itself. The `part-request-work`
+  job targets sellers, stores matches and delivers or drops pending replies, one transaction per row.
+- **Who sees a request:** the buyer business, else only a seller passing `eligibleSellerSql` (`eligibility.ts`, one
+  predicate for reads, replies, targeting and matching); anyone else gets `404 PART_REQUEST_NOT_FOUND`, never a 403.
+  Name, note and reply messages pass `maskContact` on every read and in notification params.
+- **Locks:** the actor's own business (`FOR NO KEY UPDATE`, only where a limit is counted) → the request
+  (`FOR NO KEY UPDATE` for buyer / admin / job writes, `FOR SHARE` for a reply) → replies, targets, matches; helpers in
+  `part-requests/locks.ts`. `part_requests` are never locked `FOR UPDATE`, so F6 accept's fulfil-prompt insert never
+  waits on a job.
+- **Notifications:** `notify(tx, { …, destination: { partRequestId }, push })` (`push: false` writes the row with no
+  delivery, for the push caps); replies and matches use the grouped rows of `upsertRequestNotification`
+  (`notifications/request-rows.ts`: one unread `part_request_reply` / `part_match` row per user and request with an
+  unread count). Notification types `part_*` fall in the `requests` category.
+- **Photos:** request photos go through `finalizePrivatePhotos` with destination `part_request` and `keepUploads: true`;
+  the route deletes the finals when its transaction fails and the `incoming-chat/` uploads only once the write settled,
+  so an idempotent retry can finalise them again.
+- **Seller actions:** the seller view and list carry `canAct` (false for a `viewer` member); clients show Reply only
+  when it is true, and the API refuses a viewer anyway.
 
 **Real-time:** emit to rooms from services via `fastify.io.of('/user' | '/admin').to(room)`, using the helpers in
 `socket/rooms.ts` (never hand-typed room strings). Event names are `<domain>:<event>` (`offer:received`,
@@ -196,7 +218,9 @@ listings writer such as `setMyLocation` would deadlock). The one exception is a 
 `FIREBASE_SERVICE_ACCOUNT_B64`; without it deliveries are `sent_dev` (dev) or `skipped` (production).
 
 **Background jobs:** add a `JobSpec` to `src/jobs/index.ts`. Jobs start only from `index.ts` (never `buildApp`, so tests
-don't run them) unless `JOBS_ENABLED=false`. Each job's queries use `FOR UPDATE SKIP LOCKED`.
+don't run them) unless `JOBS_ENABLED=false`. Each job's queries use `FOR UPDATE SKIP LOCKED`. The runner never overlaps
+a job with itself in one process; work that must not run twice at once across instances (F8's `part-request-work`)
+is an open item before a second API instance (`docs/PROJECT_STATUS.md`).
 
 **Observability:** Sentry is opt-in via `SENTRY_DSN` (API) / `EXPO_PUBLIC_SENTRY_DSN` (app); only unexpected 500s are
 reported, with PII keys redacted. Product analytics is PostHog in the app — see `apps/user-app/CLAUDE.md`.
@@ -230,7 +254,7 @@ machine type or listing field needs no schema change or app release.
 ```
 
 ### API route prefixes
-- `/auth/*` public · `/users/*` user JWT · `/listings/*` (incl. `/listings/:id/enquiry`, `/listings/:id/offers`), `/threads/*`, `/offers/*`, `/deals/*`, `/notifications/*`, `/part-requests/*`, `/rentals/*` user JWT (business writes refuse a `viewer` member, `403 VIEWER_READ_ONLY`) · `/admin/*` admin JWT + role
+- `/auth/*` public · `/users/*` user JWT · `/listings/*` (incl. `/listings/:id/enquiry`, `/listings/:id/offers`, `/listings/:id/part-request-demand`), `/threads/*`, `/offers/*`, `/deals/*`, `/notifications/*`, `/part-requests/*` (`GET /part-requests/options` is public), `/rentals/*` user JWT (business writes refuse a `viewer` member, `403 VIEWER_READ_ONLY`) · `/admin/*` admin JWT + role
 
 ### Errors
 - Services throw `AppError` subclasses (`ValidationError`, `NotFoundError`, `ConflictError`, `ForbiddenError(message, code)`…) with a stable `code`.

@@ -56,6 +56,13 @@ Scope: `apps/admin/` (Next.js 14 App Router, React 18, Tailwind 3, English only,
   the API allows it only from an open or recently resolved report or dispute (a dispute read: `support` only). Clients
   live in `lib/{enquiries,deals,disputes,conversations,reviews-admin}-api.ts`; dispute resolve and review hide dialogs in
   `components/disputes/` and `components/reviews/`.
+- **F8 Part requests** (`moderator`, `support`): `app/(dashboard)/part-requests/` list (server-paged 25 / 50 / 100,
+  filters and search in the URL, `?businessId=` from a business's "Part requests (n)" link) and `[id]` detail (facts,
+  photos fetched as 300 s links on each open, sellers told, replies, matches, reports); remove / restore with a reason
+  through `components/part-requests/` (audit-logged by the API). Reports & flags has a Part requests tab
+  (`AdminReportTarget` = `conversation` | `review` | `part_request`; `ReportResolveDialog` takes the `target`). The
+  Settings page has a "Part requests" section (`components/settings/marketplace-settings-form.tsx`). Client and label
+  maps in `lib/part-requests-api.ts`; names, notes and messages arrive masked from the API: never unmask them.
 
 ## Rules
 - Every page handles loading (`Skeleton`/`TableSkeleton`), empty (`EmptyState`) and error (`ErrorState` with retry) states.

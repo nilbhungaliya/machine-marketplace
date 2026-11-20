@@ -198,10 +198,12 @@ establishment on the listing), TSM M1 (built pattern). Avoid F2F's job title / j
 2. Search bar: "Part, machine, brand or part no."
 3. Root categories (admin-managed): Spare parts, Machinery, For rent, Electrical, Hydraulics, Bearings & transmission, Tools,
    Textile machinery (embroidery machines, water-jet looms: the seeded catalogue). Launch categories are the client's call (D9).
-4. **Side-match strip** when the user has an open requirement with matches ("2 right-side matches for your left tie rod end").
+4. **Side-match strip** when the user has an open requirement with matches ("2 right-side matches for your left tie rod end";
+   built in F8 from `GET /part-requests/home`, F8 spec §13.2).
 5. Near you: live listings sorted by a blend of distance and freshness, filtered to the user's machine categories when set.
 6. Machines for rent nearby.
-7. Buyers looking for your parts (sellers only; from M11).
+7. Buyers looking for your parts (sellers only; from M11; built in F8: up to 3 rows for a business with the `sell`
+   activity or a live listing).
 8. Recently viewed, saved searches with new results.
 
 **Browse tab.** The admin tree: machine category → machine type → part group (with live counts) → listings; or brand → model →
@@ -346,7 +348,7 @@ what condition, how many, how much, how far, can I trust the seller.
 4. **Fits** block: machine chips; "Check my machine" (a brand / model picker; P2: also My machines). MVP answers "Seller says
    it fits" or "Not listed by the seller"; a verified green "fits" answer needs catalogue / admin-verified fitment rows (P2).
 5. **Other side** block: "Right side also available, 8 pcs from Om Agro Spares, Gondal" (M8), or "Need the other side? Post a
-   requirement".
+   requirement" (the link exists since F8, prefilled with the other side).
 6. Specifications table (template fields, part number, part brand).
 7. Delivery and location (area, distance; exact address only after a deal).
 8. Seller block: name, area, verified badge, rating, deals done, usual reply time, years on platform; "View all listings", follow.
@@ -419,7 +421,8 @@ numbers in the catalogue link left and right numbers explicitly.
 - Complementary side screen: "You have the left side. These sellers have the right one."
 - Seller side: after publishing a single side, "3 buyers are looking for this part"; "Buyers looking for your parts" lists
   requirements for the side they hold.
-- Requirements (M11) and alerts (M12) match on side.
+- Requirements (M11) and alerts (M12) match on side (built in F8: a Left requirement takes Left or Pair, Right takes Right or
+  Pair, Pair takes Pair, no side takes any; `requestSideAccepts`).
 
 **Phase.** MVP (side field, filter, complement search, alerts). P2: mirror numbers, pair suggestions across two sellers, "either".
 
@@ -477,7 +480,8 @@ Capping how many sellers are told protects buyers from the call floods that Indi
 worth more to sellers. Fibre2Fashion's pre-owned machinery section shows the demand: about 21 pages of buyer requests against
 5 pages of seller offers.
 
-**Workflow.** Post a requirement → (optional) admin screen for spam (IM validates before going live) → **active** → matching
+**Workflow.** Post a requirement → **active** at once (settled in F8, R4: no pre-screen; spam is held back by open-request
+and daily limits, masking, reports and admin removal) → matching
 picks the top sellers → sellers see it in "Buyers looking for your parts" and reply → buyer compares replies and auto matches →
 enquire / make offer (M9) → deal (M13) → requirement **fulfilled** (or closed by buyer, or expired).
 
@@ -497,35 +501,39 @@ enquire / make offer (M9) → deal (M13) → requirement **fulfilled** (or close
 | Budget per unit | Optional; "show to sellers" or private |
 | Needed by | Date; "urgent" flag (machine down) raises distance weight |
 | Deliver to | Prefilled from profile; search radius 50 km / 200 km / state / all India |
-| Who can reply | Verified sellers only (default) / any seller (the default is settled in the F8 spec) |
+| Who can reply | Verified sellers only (default, settled in F8 R6) / any seller; the client still confirms the default against launch supply |
 | Reference photo or drawing | Optional (photo of the broken part, nameplate) |
 | Validity | 7 / 15 / 30 days; renewable |
 | Quick mode | Three fields (what, quantity, city) for speed, completed later (TI short RFQ); no-login capture with OTP at submit (F2F Express Posting, but with machinery fields) |
-| Rental requirement | Machine type, capacity, dates, site location, operator needed, hours per day |
+| Rental requirement | Machine type, capacity, dates, site location, operator needed, hours per day (waits for M14; F8 builds parts and machines to buy) |
 
 **Matching rules.**
 - Score = part number / mirror / cross-reference match + category and part name match + fitment overlap + **side
   complement** + spec match + condition accepted + quantity fit + distance + seller response rate + verification.
-- Notify the **top 15 sellers** (admin-configurable); others can still reply from "Buyers looking for your parts" (and
+- Notify the **top 15 sellers** (admin-configurable: the setting `part_request_reach_n`, D5); others can still reply from "Buyers looking for your parts" (and
   the Wanted tab, P2). Sellers on paid plans (P2) get early access, never more reach than the cap
   (details: F8 spec).
 - Sellers see a requirement card: what, side, quantity, fit, condition accepted, budget (if shown), area and distance,
   needed by, buyer verification and history (requirements posted, deals done); **not the buyer's phone**.
 - Seller actions: **Reply with my listing** (pick from live listings, or create one inline), **Send a quote** (price per unit,
-  quantity, condition, origin, delivery days, note), Ask a question (P2), Not relevant (improves matching; IM).
+  quantity, condition, origin, delivery days, note; **P2**, settled in F8 R2: MVP replies are listings only), Ask a question
+  (P2), Not relevant (improves matching; IM).
 - **Availability alert:** every listing that goes live is checked against active requirements; a match notifies the buyer
   ("Your right tie rod end is available, 6 km away") and appears under Auto matches.
 - Buyer sees **Replies** and **Auto matches** tabs and a compare table: price, quantity, condition, side, fit, distance, seller
   rating, photos, delivery; then Enquire or Make offer.
 
-**Status** (`PART_REQUEST_STATUSES`): active → matched (at least one reply or match) → fulfilled (deal made) / closed by buyer
-/ expired. Buyers can edit, extend, pause or close; sellers stop seeing closed requirements.
+**Status** (`PART_REQUEST_STATUSES`): active → fulfilled (deal made) / closed by buyer / expired / removed (admin). Settled in
+F8 (R3): "matched" (at least one reply or match) is a **derived badge**, never a stored status, and there is no pause.
+Buyers can edit, renew (up to 90 days from the first post), close or mark fulfilled (prompted after a deal on a reply or a
+match); sellers stop seeing closed requirements (except their own replies' outcome).
 
 **Public demand (P2).** Requirements can be shown in the Wanted tab of each category and on public web pages, contact hidden
 (F2F buy leads, SR wanteds), which brings sellers to the app.
 
-**Phase.** MVP: form, matching with cap, seller replies with listing or quote, auto matches, alerts, compare, statuses. P2:
-quick mode without login, public wanted pages, ask a question, early access for paid plans.
+**Phase.** MVP: form, matching with cap, seller replies with listing, auto matches, alerts, compare, statuses (**built in F8,
+2026-11-20**: `docs/superpowers/specs/2026-11-20-f8-part-requests-design.md`). P2: send a quote, quick mode without login,
+public wanted pages, ask a question, early access for paid plans, seller alert settings. Rental requirements come with M14.
 
 **Inspiration.** TSM M9 (reply with a lot, compare table, capped notifications), IM (BuyLead card, "not relevant"), AL (RFQ
 reviewed then up to 15 quotes), SR (Wanted with budget band and private note), MT (Want-To-Buy and Auto-Search Matches),
@@ -534,10 +542,12 @@ F2F (buy leads, Quote Now, Express Posting). New: matching on part number, fitme
 ## M12 · Alerts, saved searches and follow seller (MVP saved searches; P2 rest) — F8, F9
 
 - **Saved searches** with filters (including side and fit); new results by push or a daily digest; cancel any time (MS).
-- **Requirement alerts** (M11), the strongest alert.
+- **Requirement alerts** (M11), the strongest alert (built in F8: `part_match`, at most 3 pushes a day and 20 per
+  requirement; the in-app row is grouped per requirement).
 - **Price drop and back in stock** on saved listings (MT watch list).
 - **Follow a seller**: new listings from them (MA).
-- **Seller alert settings**: which categories, machines and radius they want requirements for (TI inquiry settings).
+- **Seller alert settings**: which categories, machines and radius they want requirements for (TI inquiry settings; P2,
+  F8 spec §22; until then a seller's categories, stock and "Not relevant" decide).
 - Limits: up to 20 saved searches per user (F2F allows 10 Trade Match alerts); digests respect quiet hours (M16).
 
 **Inspiration.** F2F (Trade Match), MS, MT, MA, TSM M10.
@@ -624,11 +634,12 @@ type). Avoid inconsistent terms on one page (BigRentz, TransRentals): one set of
 | Review received | ✓ | ✓ | — |
 
 Notification centre grouped by what the user must do; per-category switches; quiet hours (default 22:00–07:00, urgent
-requirement matches allowed); en / hi / gu text. **Inspiration.** IM (channel matrix), TSM M15 (built pattern).
+requirement matches allowed; not built yet: F8 left them to the digest work); en / hi / gu text. **Inspiration.** IM (channel matrix), TSM M15 (built pattern).
 
 ## M17 · Seller dashboard (MVP basic; P2 analytics) — U1, F1
 
-- **Needs you:** offers to answer, enquiries without a reply, requirements you can serve, bookings to confirm, listings expiring.
+- **Needs you:** offers to answer, enquiries without a reply, requirements you can serve (built in F8 as "Buyers looking
+  for your parts" with a For you count badge), bookings to confirm, listings expiring.
 - **Numbers:** live listings, views this week, enquiries, deals and value this month, reply rate and time.
 - **My listings** by status (Live, In review, Paused, Sold, Rented) with views, enquiries and offers per listing; quick actions
   (edit, update quantity, pause, mark sold, mark unavailable, remove).
@@ -698,7 +709,8 @@ reinstate with reason (sign-in refused while suspended). Reported users.
 Queue: every listing of an unverified seller, the first 3 of a verified seller, reported listings, flagged price / unit / duplicate photos. Review screen: photos, specs,
 fit, side, price, seller history; actions approve, ask for changes, reject with reason, edit (category, fit, side), hide,
 remove. All-listings table with filters (status, type, category, city, side, seller), bulk actions, sold / unavailable monitor.
-Requirements queue (M11) for spam screening.
+Requirements queue (M11) for spam screening: built in F8 as a post-hoc list (requirements go live at once), with detail,
+remove / restore with a reason and their reports.
 
 ### AD4 · Categories and machine configuration (MVP) — A4
 Category tree editor (drag, merge, rename, counts), brands and models (years, variants), fitment verification queue and
@@ -713,7 +725,7 @@ with timeline and decisions; reported conversations.
 ### AD6 · Reports and controls (MVP basic) — A6
 Reports and flags queue (users, listings, messages, reviews) with outcomes; fraud signals (many accounts per device, repeated
 phone in chats, payment-link messages); activity reports (exports). Featured / promotional listings and plans when M18 is on.
-Notifications broadcast (P2). Settings: requirement seller cap (15), listing expiry (60 days), offer validity options, quiet
+Notifications broadcast (P2). Settings: requirement seller cap (15; F8's "Part requests" section holds it with the other requirement limits), listing expiry (60 days), offer validity options, quiet
 hours, new-account limits.
 
 ### AD7 · Settings, roles and audit log (MVP)
@@ -746,7 +758,8 @@ No pay-per-lead and no paid trust badges.
    trades may use a different reference per machine type.
 4. **D4 First listing review.** Every listing from an unverified seller and the first 3 of a verified seller are reviewed by
    the team; after that, a verified seller's listings go live at once unless flagged (as built in F2).
-5. **D5 Requirement reach.** Each requirement goes to up to 15 matching sellers. Raise or lower?
+5. **D5 Requirement reach.** Each requirement goes to up to 15 matching sellers. Raise or lower? Since F8 it is the admin
+   setting `part_request_reach_n` (default 15), so the answer needs no release.
 6. **D6 Phone numbers.** Settled in F6 + F7 (R6): hidden until there is a deal and both sides tick "Share my number".
 7. **D7 Payments and rental money.** Off-app at launch (recorded only). When should advances, deposits and payments move in?
 8. **D8 Launch region.** Screens use Rajkot and Saurashtra examples. Confirm first cities and industrial areas.

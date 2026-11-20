@@ -1,6 +1,6 @@
 # F8 part requests, seller targeting and availability alerts — design
 
-Date: 2026-11-20. Status: **draft, independent review applied** (§26). Owner delegated every design decision; rulings R1–R14 are final in
+Date: 2026-11-20. Status: **built** (2026-11-20, on `develop`; plan Batch I done, the owner's device pass and the client's answers open). Independent review applied (§26). Owner delegated every design decision; rulings R1–R14 are final in
 substance, smaller calls are marked **(my call)** and listed in §25.
 
 Scope IDs: **F8** (part request and availability alerts) and the "new matching part" row of **F9**, flow **U3** in
