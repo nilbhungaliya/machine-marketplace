@@ -76,6 +76,8 @@ describe('expirePartRequests', () => {
     await expirePartRequests(jobApp);
     expect(await notesOf(req.id, 'part_request_expired')).toHaveLength(1);
     const [note] = await notesOf(req.id, 'part_request_expired');
+    // dueAt: the last renewable moment, first_posted_at + part_request_max_days (default 90).
+    expect((note!.params as { dueAt: string }).dueAt).toBe(new Date(req.firstPostedAt.getTime() + 90 * 24 * 3_600_000).toISOString());
     expect(note!.dedupeKey).toBe(`part_request_expired:${req.id}:${Math.floor(req.expiresAt.getTime() / 1000)}`);
   });
 
@@ -139,6 +141,8 @@ describe('notifyExpiringPartRequests', () => {
     expect(await notesOf(soon.id, 'part_request_expiring')).toHaveLength(1);
     expect(await notesOf(later.id, 'part_request_expiring')).toHaveLength(0);
     expect((await statusOf(soon.id)).expiringNotifiedAt).not.toBeNull();
+    const [first] = await notesOf(soon.id, 'part_request_expiring');
+    expect((first!.params as { dueAt: string }).dueAt).toBe(soon.expiresAt.toISOString());
 
     // A renew moves expires_at and resets the column: the new period gets its own reminder.
     await db
@@ -151,11 +155,14 @@ describe('notifyExpiringPartRequests', () => {
 });
 
 describe('deletePartRequestHistory', () => {
-  it('deletes done rows older than 7 days; keeps a 2-day-old done row and a 10-day-old failed row', async () => {
-    const [oldDone, youngDone, failed] = [randomUUID(), randomUUID(), randomUUID()];
+  it('deletes done rows older than 7 days in bounded batches; keeps a 2-day-old done row and a 10-day-old failed row', async () => {
+    const [oldDone, youngDone, failed, oldDone2, oldDone3] = [randomUUID(), randomUUID(), randomUUID(), randomUUID(), randomUUID()];
+    const all = [oldDone, youngDone, failed, oldDone2, oldDone3];
     const ago = (days: number) => new Date(Date.now() - days * 24 * 3_600_000);
     await db.insert(partRequestWork).values([
       { kind: 'listing_changed', subjectId: oldDone, claimedAt: ago(8), doneAt: ago(8), attempts: 1 },
+      { kind: 'listing_changed', subjectId: oldDone2, claimedAt: ago(9), doneAt: ago(9), attempts: 1 },
+      { kind: 'target_request', subjectId: oldDone3, claimedAt: ago(20), doneAt: ago(20), attempts: 2 },
       { kind: 'listing_changed', subjectId: youngDone, claimedAt: ago(2), doneAt: ago(2), attempts: 1 },
       { kind: 'listing_changed', subjectId: failed, claimedAt: ago(10), failedAt: ago(10), attempts: 5 },
     ]);
@@ -164,16 +171,17 @@ describe('deletePartRequestHistory', () => {
       { businessId: seller.businessId, day: sql`(now() AT TIME ZONE 'Asia/Kolkata')::date` as unknown as string, pushes: 1 },
     ]);
     try {
-      expect(await deletePartRequestHistory(db)).toBeGreaterThanOrEqual(2);
+      // Batches of 2: the three old done rows go in two statements (2, then 1 < 2 ends the loop).
+      expect(await deletePartRequestHistory(db, { batch: 2 })).toBeGreaterThanOrEqual(4);
       const left = await db
         .select({ subjectId: partRequestWork.subjectId })
         .from(partRequestWork)
-        .where(inArray(partRequestWork.subjectId, [oldDone, youngDone, failed]));
+        .where(inArray(partRequestWork.subjectId, all));
       expect(left.map((r) => r.subjectId).sort()).toEqual([youngDone, failed].sort());
       const counts = await db.select().from(partRequestPushCounts).where(eq(partRequestPushCounts.businessId, seller.businessId));
       expect(counts).toHaveLength(1);
     } finally {
-      await db.delete(partRequestWork).where(inArray(partRequestWork.subjectId, [oldDone, youngDone, failed]));
+      await db.delete(partRequestWork).where(inArray(partRequestWork.subjectId, all));
     }
   });
 });

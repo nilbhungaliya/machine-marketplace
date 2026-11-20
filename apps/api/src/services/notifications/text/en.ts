@@ -76,8 +76,17 @@ export const en: NotificationTexts = {
           title: `Your ${sideWord[p.side] ? `${sideWord[p.side]} ` : ''}${request(p)} is available`,
           body: `${listing(p)}${away(p)}. Open it to make an offer.`,
         },
-  part_request_expiring: (p) => ({ title: `${request(p)} expires tomorrow`, body: 'Renew it to keep getting replies.' }),
-  part_request_expired: (p) => ({ title: `${request(p)} has expired`, body: 'Renew it within 90 days of posting.' }),
+  part_request_expiring: (p) => ({
+    title: p.dueOn ? `${request(p)} expires on ${p.dueOn}` : `${request(p)} expires soon`,
+    body: 'Renew it to keep getting replies.',
+  }),
+  part_request_expired: (p) => ({
+    title: `${request(p)} has expired`,
+    body:
+      p.dueOn && !p.duePassed
+        ? `You can renew it until ${p.dueOn}.`
+        : 'It has reached its maximum time. Post a new requirement if you still need it.',
+  }),
   part_request_fulfil_prompt: (p) => ({
     title: p.businessName ? `Deal agreed with ${p.businessName}` : 'Deal agreed',
     body: `Mark ${request(p)} fulfilled?`,

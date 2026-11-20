@@ -33,14 +33,20 @@ async function holds(tx: Tx, id: string, rule: SQL): Promise<boolean> {
   return r?.ok === true;
 }
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+/** Retention deletes at most this many rows per statement (as `notifications/retention.ts`). */
+export const RETENTION_BATCH = 1000;
+
 const DUE = sql`${partRequests.status} = 'active' AND ${partRequests.expiresAt} <= now()`;
 
 /**
  * `part-request-expiry` (hourly): `active` requests past `expires_at` → `expired` (`writeRequestStatus`, which emits
  * `part_request:updated { reason: 'status' }`), their pending replies dropped `request_expired` (each seller told), and
- * `part_request_expired` to the buyer business (dedupe `part_request_expired:<id>:<expires epoch>`).
+ * `part_request_expired` to the buyer business (dedupe `part_request_expired:<id>:<expires epoch>`; `dueAt` = the last
+ * renewable moment, `first_posted_at + part_request_max_days`, so the text offers a renew only while one is possible).
  */
 export async function expirePartRequests(app: TxApp): Promise<{ expired: number }> {
+  const { part_request_max_days: maxDays } = await getSettings(app.db);
   let expired = 0;
   for (;;) {
     const candidates = await app.db
@@ -60,7 +66,10 @@ export async function expirePartRequests(app: TxApp): Promise<{ expired: number 
           await notify(tx, {
             type: 'part_request_expired',
             recipientBusinessId: updated.businessId,
-            params: { requestTitle: maskedRequestName(updated.name) },
+            params: {
+              requestTitle: maskedRequestName(updated.name),
+              dueAt: new Date(updated.firstPostedAt.getTime() + maxDays * DAY_MS).toISOString(),
+            },
             destination: { partRequestId: updated.id },
             dedupeKey: `part_request_expired:${expiresKey(updated)}`,
           });
@@ -112,7 +121,7 @@ export async function notifyExpiringPartRequests(app: TxApp): Promise<{ notified
         await notify(tx, {
           type: 'part_request_expiring',
           recipientBusinessId: row.businessId,
-          params: { requestTitle: maskedRequestName(row.name) },
+          params: { requestTitle: maskedRequestName(row.name), dueAt: row.expiresAt.toISOString() },
           destination: { partRequestId: row.id },
           dedupeKey: `part_request_expiring:${expiresKey(row)}`,
         });
@@ -133,15 +142,34 @@ export async function notifyExpiringPartRequests(app: TxApp): Promise<{ notified
 
 /**
  * `part-request-retention` (daily, §8.2): done work rows older than 7 days, failed (dead-letter) rows older than 30
- * days, and push-count rows for IST days more than 7 days back. Returns how many rows were deleted.
+ * days, and push-count rows for IST days more than 7 days back, in bounded batches (`RETENTION_BATCH` rows per
+ * statement, `FOR UPDATE SKIP LOCKED`, as `notifications/retention.ts`). Returns how many rows were deleted.
  */
-export async function deletePartRequestHistory(db: Db): Promise<number> {
-  const work = await db.execute(sql`
-    DELETE FROM part_request_work
-     WHERE (done_at IS NOT NULL AND done_at < now() - interval '7 days')
-        OR (failed_at IS NOT NULL AND failed_at < now() - interval '30 days')`);
-  const counts = await db.execute(sql`
-    DELETE FROM part_request_push_counts
-     WHERE day < (now() AT TIME ZONE 'Asia/Kolkata')::date - 7`);
-  return (work.rowCount ?? 0) + (counts.rowCount ?? 0);
+export async function deletePartRequestHistory(db: Db, opts: { batch?: number } = {}): Promise<number> {
+  const batch = opts.batch ?? RETENTION_BATCH;
+  let deleted = 0;
+  for (;;) {
+    const res = await db.execute(sql`
+      DELETE FROM part_request_work WHERE id IN (
+        SELECT id FROM part_request_work
+         WHERE (done_at IS NOT NULL AND done_at < now() - interval '7 days')
+            OR (failed_at IS NOT NULL AND failed_at < now() - interval '30 days')
+         LIMIT ${batch}
+           FOR UPDATE SKIP LOCKED)`);
+    const n = res.rowCount ?? 0;
+    deleted += n;
+    if (n < batch) break;
+  }
+  for (;;) {
+    const res = await db.execute(sql`
+      DELETE FROM part_request_push_counts WHERE (business_id, day) IN (
+        SELECT business_id, day FROM part_request_push_counts
+         WHERE day < (now() AT TIME ZONE 'Asia/Kolkata')::date - 7
+         LIMIT ${batch}
+           FOR UPDATE SKIP LOCKED)`);
+    const n = res.rowCount ?? 0;
+    deleted += n;
+    if (n < batch) break;
+  }
+  return deleted;
 }

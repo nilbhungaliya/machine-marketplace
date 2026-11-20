@@ -17,8 +17,10 @@ export interface TextParams {
   quantity: string;
   /** Deal ref `#500001`; '' when none. */
   dealRef: string;
-  /** A due date (`review_waiting`) as "3 Dec" in the reader's language; '' when none. */
+  /** A due date (`review_waiting`, F8 expiring / expired) as "3 Dec" in the reader's language; '' when none. */
   dueOn: string;
+  /** `dueAt` is at or before the time of rendering (F8 `part_request_expired`: no renew left); false when none. */
+  duePassed: boolean;
   /** Grouped rows (chat, F8 replies and matches): events since the row opened (≥ 1). */
   count: number;
   /** F8 (spec §10.3): the request name, masked; '' when unknown. */

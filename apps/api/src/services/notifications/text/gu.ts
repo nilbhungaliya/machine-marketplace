@@ -71,8 +71,17 @@ export const gu: NotificationTexts = {
           title: `તમારું ${sideWord[p.side] ? `${sideWord[p.side]} ` : ''}${request(p)} ઉપલબ્ધ છે`,
           body: `${listing(p)}${away(p)}. ઑફર આપવા માટે તેને ખોલો.`,
         },
-  part_request_expiring: (p) => ({ title: `${request(p)} કાલે પૂરી થશે`, body: 'જવાબ મેળવતા રહેવા માટે તેને રિન્યૂ કરો.' }),
-  part_request_expired: (p) => ({ title: `${request(p)} પૂરી થઈ ગઈ`, body: 'પોસ્ટ કર્યાના 90 દિવસમાં તેને રિન્યૂ કરો.' }),
+  part_request_expiring: (p) => ({
+    title: p.dueOn ? `${request(p)} ${p.dueOn} ના રોજ પૂરી થશે` : `${request(p)} જલ્દી પૂરી થશે`,
+    body: 'જવાબ મેળવતા રહેવા માટે તેને રિન્યૂ કરો.',
+  }),
+  part_request_expired: (p) => ({
+    title: `${request(p)} પૂરી થઈ ગઈ`,
+    body:
+      p.dueOn && !p.duePassed
+        ? `તમે તેને ${p.dueOn} સુધી રિન્યૂ કરી શકો છો.`
+        : 'તે તેના મહત્તમ સમય સુધી પહોંચી ગઈ છે. હજુ જરૂર હોય તો નવી જરૂરિયાત પોસ્ટ કરો.',
+  }),
   part_request_fulfil_prompt: (p) => ({
     title: p.businessName ? `${p.businessName} સાથે ડીલ નક્કી થઈ` : 'ડીલ નક્કી થઈ',
     body: `${request(p)} ને પૂરી થઈ તરીકે માર્ક કરશો?`,

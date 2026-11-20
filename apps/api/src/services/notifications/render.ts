@@ -16,7 +16,8 @@ import type { NotificationTexts, RenderedText, TextParams } from './text/types.j
  * - `pricePerUnitPaise` — a safe integer (or digit string);
  * - `quantity` (decimal string) and `unitLabel`;
  * - `dealRef` — the deal's number (500001…);
- * - `dueAt` — an ISO time (`review_waiting`);
+ * - `dueAt` — an ISO time (`review_waiting`; F8: `part_request_expiring` the expiry, `part_request_expired` the last
+ *   renewable moment);
  * - F8 (spec §10.3): `requestTitle` (the request name, masked again here), `side` (`left` / `right` / `pair`, localised
  *   by the template), `distanceKm` (the match's stored **snapped** whole km), `city`, `reason` (a drop reason code).
  *   Never the request note, a reply message, the budget, a phone, a pincode or an address.
@@ -86,6 +87,7 @@ export function textParams(params: Record<string, unknown>, language: Language, 
     quantity: quantityText(params),
     dealRef: dealRefText(params.dealRef),
     dueOn: dueOnText(params.dueAt, language),
+    duePassed: typeof params.dueAt === 'string' && !Number.isNaN(Date.parse(params.dueAt)) && Date.parse(params.dueAt) <= Date.now(),
     count: Number.isSafeInteger(count) && count > 1 ? count : 1,
     requestTitle: safeText(params.requestTitle, 100),
     side: typeof params.side === 'string' && SIDES.has(params.side) ? (params.side as TextParams['side']) : '',

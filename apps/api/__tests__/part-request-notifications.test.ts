@@ -60,6 +60,25 @@ describe('renderNotification for F8 types', () => {
       body: 'Mark Temple roller fulfilled?',
     });
     expect(renderNotification('part_request_reply_dropped', PARAMS, 'en').body).toBe('The requirement expired.');
+  });
+
+  it('dates the expiring and expired lines from dueAt (any notice setting, any max days)', () => {
+    const due = '2026-12-03T06:00:00.000Z'; // 3 Dec in IST
+    const future = '2099-12-03T06:00:00.000Z';
+    const past = '2020-12-03T06:00:00.000Z';
+    expect(renderNotification('part_request_expiring', { ...PARAMS, dueAt: due }, 'en').title).toBe('Temple roller expires on 3 Dec');
+    expect(renderNotification('part_request_expiring', PARAMS, 'en').title).toBe('Temple roller expires soon');
+    expect(renderNotification('part_request_expired', { ...PARAMS, dueAt: future }, 'en').body).toBe('You can renew it until 3 Dec.');
+    expect(renderNotification('part_request_expired', { ...PARAMS, dueAt: past }, 'en').body).toBe(
+      'It has reached its maximum time. Post a new requirement if you still need it.',
+    );
+    for (const language of ['hi', 'gu'] as const) {
+      const renewable = renderNotification('part_request_expired', { ...PARAMS, dueAt: future }, language).body;
+      const final = renderNotification('part_request_expired', { ...PARAMS, dueAt: past }, language).body;
+      expect(renewable).toMatch(/3/);
+      expect(final).not.toBe(renewable);
+      expect(renderNotification('part_request_expiring', { ...PARAMS, dueAt: due }, language).title).toMatch(/3/);
+    }
     for (const language of ['hi', 'gu'] as const) {
       expect(renderNotification('part_match', PARAMS, language, 3).title).toContain('3');
       expect(renderNotification('part_request_reply', PARAMS, language, 3).title).toContain('3');
