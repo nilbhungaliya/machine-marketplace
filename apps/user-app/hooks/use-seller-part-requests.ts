@@ -1,12 +1,13 @@
+import { useRef } from 'react';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
   PartRequestFeedbackReason, PartRequestKind, PartRequestReportReason, SellerPartRequestTab, SendRepliesRequest,
 } from '@mpm/shared-types';
-import { useIdempotencyKey } from '@/hooks/use-offers';
 import { useStoreOwnerView } from '@/hooks/use-listing';
 import { track } from '@/lib/analytics';
 import { LISTING_EVENTS, REQUEST_EVENTS } from '@/lib/analytics-events';
 import { createListing } from '@/lib/listing-api';
+import { keepIdempotencyKey, newIdempotencyKey } from '@/lib/offers-api';
 import {
   fetchDemand, fetchPartRequestPhotos, fetchPartRequestsForSellers, fetchReplyOptions, markNotRelevant,
   reportPartRequest, sendReplies, undoNotRelevant, withdrawReply,
@@ -26,6 +27,31 @@ function useRefreshRequest(partRequestId: string) {
     void qc.invalidateQueries({ queryKey: qk.badges() });
   };
 }
+
+/**
+ * Idempotency keys per write target: one key per `target` (a reply id, a send's listings + message), reused while a
+ * retry of that same write is possible (no response came back) and dropped once the server answered. A different
+ * target never reuses another's key, which the API would refuse (`422 IDEMPOTENCY_KEY_REUSED`).
+ */
+function useKeysByTarget() {
+  const keys = useRef(new Map<string, string>());
+  return {
+    take(target: string): string {
+      let key = keys.current.get(target);
+      if (!key) {
+        key = newIdempotencyKey();
+        keys.current.set(target, key);
+      }
+      return key;
+    },
+    settle(target: string, err?: unknown): void {
+      if (err === undefined || !keepIdempotencyKey(err)) keys.current.delete(target);
+    },
+  };
+}
+
+/** A send's target: its listings (in any order) and its message, so a changed selection gets a fresh key. */
+const sendTarget = (body: SendRepliesRequest): string => JSON.stringify([[...body.listingIds].sort(), body.message ?? null]);
 
 /** Buyers looking for your parts: one infinite list per tab (and `forListing`, a listing's demand). */
 export function useSellerPartRequests(tab: SellerPartRequestTab, forListing: string | null, kind: PartRequestKind | null = null) {
@@ -53,33 +79,33 @@ export function useRequestPhotos(partRequestId: string, enabled: boolean) {
   });
 }
 
-/** Send 1–3 listings as replies (`Idempotency-Key` per tap, reused on a retry). */
+/** Send 1–3 listings as replies (`Idempotency-Key` per selection + message, reused only on a retry of the same send). */
 export function useSendReplies(partRequestId: string) {
   const refresh = useRefreshRequest(partRequestId);
-  const key = useIdempotencyKey();
+  const keys = useKeysByTarget();
   return useMutation({
-    mutationFn: (body: SendRepliesRequest) => sendReplies(partRequestId, body, key.take()),
+    mutationFn: (body: SendRepliesRequest) => sendReplies(partRequestId, body, keys.take(sendTarget(body))),
     onSuccess: (_res, body) => {
-      key.settle();
+      keys.settle(sendTarget(body));
       refresh();
       track(REQUEST_EVENTS.requestReplySent, { partRequestId, listings: body.listingIds.length, created: false });
     },
-    onError: (err) => key.settle(err),
+    onError: (err, body) => keys.settle(sendTarget(body), err),
   });
 }
 
-/** Withdraw one of the seller's replies (pending or delivered). */
+/** Withdraw one of the seller's replies (pending or delivered); one `Idempotency-Key` per reply. */
 export function useWithdrawReply(partRequestId: string) {
   const refresh = useRefreshRequest(partRequestId);
-  const key = useIdempotencyKey();
+  const keys = useKeysByTarget();
   return useMutation({
-    mutationFn: (replyId: string) => withdrawReply(partRequestId, replyId, key.take()),
-    onSuccess: () => {
-      key.settle();
+    mutationFn: (replyId: string) => withdrawReply(partRequestId, replyId, keys.take(replyId)),
+    onSuccess: (_res, replyId) => {
+      keys.settle(replyId);
       refresh();
       track(REQUEST_EVENTS.requestReplyWithdrawn, { partRequestId });
     },
-    onError: (err) => key.settle(err),
+    onError: (err, replyId) => keys.settle(replyId, err),
   });
 }
 

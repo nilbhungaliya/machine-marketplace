@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useNavigation } from '@react-navigation/native';
@@ -42,6 +42,8 @@ export interface RequirementSellerProps {
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 const PHOTO_SIZE = 96;
+/** A signed URL that fails (expired after 300 s) refetches the photos at most this often (as chat and deals do). */
+const PHOTO_REFRESH_GAP_MS = 10_000;
 
 /**
  * A requirement as an eligible seller sees it (F8 spec §12.3, §13.1; mockup requirements · "Seller sees a
@@ -62,8 +64,18 @@ export default function RequirementSeller({ request }: RequirementSellerProps) {
   const [notRelevantOpen, setNotRelevantOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [photosOpen, setPhotosOpen] = useState(false);
-  const [zoom, setZoom] = useState<string | null>(null);
+  // The zoomed photo by index, so a refetch after an expired URL shows the fresh one.
+  const [zoom, setZoom] = useState<number | null>(null);
   const photos = useRequestPhotos(request.id, photosOpen && request.photoCount > 0);
+  const lastPhotoRefresh = useRef(0);
+  const refetchPhotos = photos.refetch;
+  const onPhotoExpired = useCallback(() => {
+    const now = Date.now();
+    if (now - lastPhotoRefresh.current < PHOTO_REFRESH_GAP_MS) return;
+    lastPhotoRefresh.current = now;
+    void refetchPhotos();
+  }, [refetchPhotos]);
+  const zoomUrl = zoom !== null ? photos.data?.photos[zoom]?.url ?? null : null;
   const actions = sellerActions(request);
   const active = request.status === 'active';
 
@@ -205,12 +217,12 @@ export default function RequirementSeller({ request }: RequirementSellerProps) {
                   <Pressable
                     key={p.url}
                     style={s.photo}
-                    onPress={() => setZoom(p.url)}
+                    onPress={() => setZoom(i)}
                     testID={`RequirementSeller-photo-${i}`}
                     accessibilityRole="imagebutton"
                     accessibilityLabel={t('buyers.request.photoA11y', { n: i + 1 })}
                   >
-                    <Image source={{ uri: p.url }} style={s.photoImg} contentFit="cover" accessibilityIgnoresInvertColors />
+                    <Image source={{ uri: p.url }} style={s.photoImg} contentFit="cover" cachePolicy="memory" onError={onPhotoExpired} accessibilityIgnoresInvertColors />
                   </Pressable>
                 ))}
               </View>
@@ -305,7 +317,7 @@ export default function RequirementSeller({ request }: RequirementSellerProps) {
       />
       <Modal visible={zoom !== null} transparent animationType="fade" onRequestClose={() => setZoom(null)}>
         <View style={s.zoomBox}>
-          {zoom ? <Image source={{ uri: zoom }} style={s.zoomImg} contentFit="contain" accessibilityIgnoresInvertColors /> : null}
+          {zoomUrl ? <Image source={{ uri: zoomUrl }} style={s.zoomImg} contentFit="contain" cachePolicy="memory" onError={onPhotoExpired} accessibilityIgnoresInvertColors /> : null}
           <IconButton icon={X} onPress={() => setZoom(null)} accessibilityLabel={t('buyers.request.closePhoto')} testID="RequirementSeller-photo-close" style={s.zoomClose} />
         </View>
       </Modal>

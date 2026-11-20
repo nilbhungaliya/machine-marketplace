@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { CategoryNode } from '@mpm/shared-types';
 import { CATEGORY_EDITABLE_STATUSES } from '@mpm/shared-types';
 import Card from '@/components/Card';
@@ -82,6 +82,14 @@ export default function StepCategory({ ctx }: StepProps) {
   const scopeId = requestScopeTypeId(tree, request.data);
   const scope = findNode(tree, scopeId);
   const scopeIds = useMemo(() => new Set(scopedPartGroups(tree, scopeId).map((n) => n.id)), [tree, scopeId]);
+  // The request can load after the seller started browsing: when the scope first resolves, bring the drill-down back
+  // into it (its children are part groups, so the only open node inside the scope is the machine type itself).
+  const scopeApplied = useRef(false);
+  useEffect(() => {
+    if (!scopeId || scopeApplied.current) return;
+    scopeApplied.current = true;
+    setOpenId((cur) => (cur !== null && cur !== scopeId ? null : cur));
+  }, [scopeId]);
 
   useEffect(() => { void readRecent(level).then(setRecent); }, [level]);
 
@@ -89,10 +97,21 @@ export default function StepCategory({ ctx }: StepProps) {
   // rather than leave it in Drafts and toward `DRAFT_LIMIT`. With a pick, the frame's autosave keeps it instead.
   const navigation = useNavigation();
   const deleteDraft = useDeleteDraft();
+  const qc = useQueryClient();
   const empty = useRef(false);
   empty.current = ctx.mode === 'create' && listing.status === 'draft' && !listing.categoryId && !picked;
+  // F8 §9.3: deleting a reply draft deletes its pending reply too; refresh the request so no "Pending" reply stays.
+  // The promise (not `mutate`'s callbacks) because the screen is unmounting.
+  const answersRequest = useRef(listing.partRequestId);
+  answersRequest.current = listing.partRequestId;
   useEffect(() => navigation.addListener('beforeRemove', () => {
-    if (empty.current) deleteDraft.mutate(listing.id);
+    if (!empty.current) return;
+    const partRequestId = answersRequest.current;
+    void deleteDraft.mutateAsync(listing.id).then(() => {
+      if (!partRequestId) return;
+      void qc.invalidateQueries({ queryKey: qk.partRequest(partRequestId) });
+      void qc.invalidateQueries({ queryKey: qk.allPartRequests });
+    }, () => undefined);
   }), [navigation, listing.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Scoped: the drill-down starts at the machine type and never goes above it.
