@@ -13,6 +13,7 @@ import {
   users,
 } from '../../src/db/schema.js';
 import { deleteF6Rows } from './test-deals.js';
+import { deleteF8Rows } from './test-part-requests.js';
 
 /**
  * Integration tests share one test database (TEST_DATABASE_URL), so every suite must delete what it
@@ -38,7 +39,9 @@ export async function deleteListingsOf(conn: Db | Tx, opts: { businessIds: strin
   const ids = businessIds.length
     ? (await conn.select({ id: listings.id }).from(listings).where(inArray(listings.businessId, businessIds))).map((r) => r.id)
     : [];
-  // F6 + F7 rows first (threads, offers, deals, holds… reference listings, businesses and users).
+  // F8 rows first (requests reference deals; replies, matches and targets reference listings), then F6 + F7 rows
+  // (threads, offers, deals, holds… reference listings, businesses and users).
+  await deleteF8Rows(conn, { businessIds, userIds, listingIds: ids });
   await deleteF6Rows(conn, { businessIds, userIds, listingIds: ids });
   const reportWhere = [
     ...(ids.length ? [and(eq(reports.targetType, 'listing'), inArray(reports.targetId, ids))] : []),
@@ -57,6 +60,7 @@ export async function deleteListingsOf(conn: Db | Tx, opts: { businessIds: strin
 /** Deletes the given listings and their children (reports on them, saved rows, history, media, fitments, rental, machine). */
 export async function deleteTestListings(conn: Db | Tx, ids: string[]): Promise<void> {
   if (ids.length === 0) return;
+  await deleteF8Rows(conn, { businessIds: [], listingIds: ids });
   await deleteF6Rows(conn, { businessIds: [], userIds: [], listingIds: ids });
   await conn.delete(reports).where(and(eq(reports.targetType, 'listing'), inArray(reports.targetId, ids)));
   await conn.delete(savedListings).where(inArray(savedListings.listingId, ids));

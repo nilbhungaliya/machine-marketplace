@@ -44,7 +44,8 @@ export async function createTestBusinessUser(
 
 /**
  * Deletes the businesses and everything that hangs off them, deepest foreign key first: their listings and every
- * listing child, reports on those listings or made by the businesses and their users (`deleteListingsOf`), then
+ * listing child, reports on those listings or made by the businesses and their users, F8 rows (`deleteF8Rows`) and
+ * F6 + F7 rows (`deleteF6Rows`), all through `deleteListingsOf`, then
  * verifications (they reference proofs), representative proofs (they reference checks), GST checks, then the
  * businesses' users, then the businesses. Extend as tables that reference businesses are added. No-op for an empty list.
  */

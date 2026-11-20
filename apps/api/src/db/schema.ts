@@ -12,6 +12,9 @@ import {
   CONSENT_KINDS, DEAL_ACTOR_SIDES, DEAL_CANCELLED_BY, DEAL_COMPLETED_HOW, DEAL_FULFILMENT, DEAL_PAYMENT_METHODS, DEAL_STATUSES,
   DELIVERY_STATES, DEVICE_PLATFORMS, DISPUTE_OUTCOMES, DISPUTE_STATUSES, HOLD_STATUSES, MESSAGE_KINDS, NOTIFICATION_CATEGORIES,
   OFFER_KINDS, OFFER_STATUSES, PARTY_SIDES,
+  PART_REQUEST_AUDIENCES, PART_REQUEST_CLOSE_REASONS, PART_REQUEST_DROP_REASONS, PART_REQUEST_FEEDBACK_REASONS,
+  PART_REQUEST_KINDS, PART_REQUEST_MATCH_SOURCES, PART_REQUEST_MATCH_TIERS, PART_REQUEST_REACHES,
+  PART_REQUEST_REPLY_STATUSES, PART_REQUEST_STATUSES, PART_REQUEST_WORK_KINDS,
   type BusinessActivity, type ConsentPhoneSource, type ConsentWithdrawReason, type DealEventCode, type DeliveryOption,
   type DisputeCategory, type EnquiryMachine, type NotificationType, type QuickEnquiry, type SystemLineCode,
   type GstDetails, type GstDocumentType, type GstEnteredDetails, type ListingFlag, type ReviewReason, type Specs,
@@ -1294,6 +1297,8 @@ export const notifications = pgTable(
     offerId: uuid('offer_id').references(() => offers.id),
     dealId: uuid('deal_id').references(() => deals.id),
     reviewId: uuid('review_id').references(() => dealReviews.id),
+    /** F8 §5.9: the part request a `part_*` row opens. */
+    partRequestId: uuid('part_request_id').references((): AnyPgColumn => partRequests.id),
     /** `<type>:<entityId>[:<qualifier>]`; unique per user, so a repeat is a no-op. */
     dedupeKey: text('dedupe_key').notNull(),
     /** Grouped chat rows: messages since the row opened. */
@@ -1313,6 +1318,10 @@ export const notifications = pgTable(
     openChatRow: uniqueIndex('notifications_open_chat_row')
       .on(t.userId, t.threadId)
       .where(sql`${t.type} = 'message_new' AND ${t.readAt} IS NULL`),
+    // F8 §10.2: one unread grouped row per request, type and user (`upsertRequestNotification`).
+    openRequestRow: uniqueIndex('notifications_open_request_row')
+      .on(t.userId, t.partRequestId, t.type)
+      .where(sql`${t.type} IN ('part_match', 'part_request_reply') AND ${t.readAt} IS NULL`),
   }),
 );
 
@@ -1360,4 +1369,289 @@ export const idempotencyKeys = pgTable(
     pk: primaryKey({ name: 'idempotency_keys_pk', columns: [t.scope, t.key] }),
     createdIdx: index('idempotency_keys_created_idx').on(t.createdAt),
   }),
+);
+
+// ─── F8: part requests, seller targeting and availability alerts (spec 2026-11-20-f8-part-requests §5) ───
+// Every index is declared here (partial ones with `.where`), so drizzle-kit emits them into the generated migration.
+// What drizzle-kit 0.22 can't emit is in the custom migration that follows it: the CHECKs and
+// `part_requests_ref_seq` restarted at 300001. No migration statement uses the enum values this migration adds to
+// existing enums (`notification_category` 'requests', `report_target` 'part_request', §5.10). No ON DELETE CASCADE:
+// test cleanup (`deleteF8Rows`) deletes in FK order.
+
+export const partRequestKind = pgEnum('part_request_kind', PART_REQUEST_KINDS);
+export const partRequestStatus = pgEnum('part_request_status', PART_REQUEST_STATUSES);
+export const partRequestReach = pgEnum('part_request_reach', PART_REQUEST_REACHES);
+export const partRequestAudience = pgEnum('part_request_audience', PART_REQUEST_AUDIENCES);
+export const partRequestCloseReason = pgEnum('part_request_close_reason', PART_REQUEST_CLOSE_REASONS);
+export const partRequestReplyStatus = pgEnum('part_request_reply_status', PART_REQUEST_REPLY_STATUSES);
+export const partRequestDropReason = pgEnum('part_request_drop_reason', PART_REQUEST_DROP_REASONS);
+export const partRequestMatchTier = pgEnum('part_request_match_tier', PART_REQUEST_MATCH_TIERS);
+export const partRequestMatchSource = pgEnum('part_request_match_source', PART_REQUEST_MATCH_SOURCES);
+export const partRequestFeedbackReason = pgEnum('part_request_feedback_reason', PART_REQUEST_FEEDBACK_REASONS);
+export const partRequestWorkKind = pgEnum('part_request_work_kind', PART_REQUEST_WORK_KINDS);
+
+/**
+ * A buyer business's requirement (§5.1). `status` is written only by `services/part-requests/lifecycle.ts`
+ * (`writeRequestStatus`); never locked `FOR UPDATE` (§9.5). Location columns are a snapshot of the business location,
+ * refreshed on every edit; never shown as coordinates or pincode.
+ */
+export const partRequests = pgTable(
+  'part_requests',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    /** Shown as "Requirement #300001" (the custom migration restarts the sequence at 300001). */
+    ref: bigserial('ref', { mode: 'number' }).notNull().unique(),
+    businessId: uuid('business_id')
+      .notNull()
+      .references(() => businesses.id),
+    createdByUserId: uuid('created_by_user_id')
+      .notNull()
+      .references(() => users.id),
+    kind: partRequestKind('kind').notNull(),
+    status: partRequestStatus('status').notNull().default('active'),
+    /** Where an admin restore goes (§9.1). */
+    returnStatus: partRequestStatus('return_status'),
+    /** Parts: a part group or a machine type; machines: a machine type. */
+    categoryId: uuid('category_id')
+      .notNull()
+      .references(() => categories.id),
+    name: text('name').notNull(),
+    /** `normalizePartName(name)` (side words dropped), for `pg_trgm`. */
+    nameNorm: text('name_norm').notNull(),
+    partNumber: text('part_number'),
+    partNumberNorm: text('part_number_norm'),
+    partNumberBase: text('part_number_base'),
+    /** Left / Right / Pair where the node has sides; null otherwise and for machines (CHECK). */
+    side: partSide('side'),
+    specs: jsonb('specs').$type<Specs>().notNull().default({}),
+    quantity: numeric('quantity', { precision: 14, scale: 3 }).notNull(),
+    unitId: uuid('unit_id')
+      .notNull()
+      .references(() => units.id),
+    /** Empty = any condition. */
+    conditionIds: uuid('condition_ids').array().notNull().default(sql`'{}'::uuid[]`),
+    budgetPerUnitPaise: bigint('budget_per_unit_paise', { mode: 'number' }),
+    budgetVisible: boolean('budget_visible').notNull().default(false),
+    neededBy: date('needed_by'),
+    urgent: boolean('urgent').notNull().default(false),
+    reach: partRequestReach('reach').notNull().default('radius_200'),
+    audience: partRequestAudience('audience').notNull().default('verified_only'),
+    point: geography('point'),
+    pincode: text('pincode'),
+    city: text('city'),
+    state: text('state'),
+    industrialAreaId: uuid('industrial_area_id').references(() => industrialAreas.id),
+    industrialAreaOther: text('industrial_area_other'),
+    /** Private `part-request/<id>/<uuid>.jpg` keys; CHECK at most 3. */
+    photoKeys: text('photo_keys').array().notNull().default(sql`'{}'::text[]`),
+    note: text('note'),
+    noteFlagged: boolean('note_flagged').notNull().default(false),
+    /** +1 on every edit; `PATCH` sends it back (`PART_REQUEST_STALE`). */
+    version: integer('version').notNull().default(1),
+    validityDays: smallint('validity_days').notNull(),
+    firstPostedAt: timestamp('first_posted_at', { withTimezone: true }).notNull().defaultNow(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    expiringNotifiedAt: timestamp('expiring_notified_at', { withTimezone: true }),
+    closeReason: partRequestCloseReason('close_reason'),
+    closedAt: timestamp('closed_at', { withTimezone: true }),
+    fulfilledAt: timestamp('fulfilled_at', { withTimezone: true }),
+    fulfilledDealId: uuid('fulfilled_deal_id').references(() => deals.id),
+    removedAt: timestamp('removed_at', { withTimezone: true }),
+    removedByAdminId: uuid('removed_by_admin_id').references(() => adminUsers.id),
+    removedReason: text('removed_reason'),
+    /** Targeting passes done (§7.3). */
+    targetPass: smallint('target_pass').notNull().default(0),
+    targetedAt: timestamp('targeted_at', { withTimezone: true }),
+    /** Auto-match push caps (§7.5), IST day. */
+    matchPushDay: date('match_push_day'),
+    matchPushDayCount: smallint('match_push_day_count').notNull().default(0),
+    matchPushTotal: smallint('match_push_total').notNull().default(0),
+    /** Last time a buyer member opened the request (`POST /part-requests/:id/read`): Home's "new" count (review Q6). */
+    buyerSeenAt: timestamp('buyer_seen_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    businessStatusCreatedIdx: index('part_requests_business_status_created_idx').on(
+      t.businessId,
+      t.status,
+      t.createdAt.desc(),
+    ),
+    activeKindCategoryIdx: index('part_requests_active_kind_category_idx')
+      .on(t.kind, t.categoryId)
+      .where(sql`${t.status} = 'active'`),
+    activeExpiresIdx: index('part_requests_active_expires_idx').on(t.expiresAt).where(sql`${t.status} = 'active'`),
+    activePointIdx: index('part_requests_active_point_idx').using('gist', t.point).where(sql`${t.status} = 'active'`),
+    statusCreatedIdx: index('part_requests_status_created_idx').on(t.status, t.createdAt.desc()),
+  }),
+);
+
+/** A request's "fits" rows (§5.2): brand, model, years; at most 5 (code). CHECK from <= to (custom migration). */
+export const partRequestFitments = pgTable(
+  'part_request_fitments',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    partRequestId: uuid('part_request_id')
+      .notNull()
+      .references(() => partRequests.id),
+    brandId: uuid('brand_id')
+      .notNull()
+      .references(() => brands.id),
+    modelId: uuid('model_id').references(() => machineModels.id),
+    yearFrom: smallint('year_from'),
+    yearTo: smallint('year_to'),
+    sortOrder: smallint('sort_order').notNull().default(0),
+  },
+  (t) => ({ requestIdx: index('part_request_fitments_request_idx').on(t.partRequestId) }),
+);
+
+/** The notified set (§5.3, R7): computed once per pass, never re-notified. */
+export const partRequestTargets = pgTable(
+  'part_request_targets',
+  {
+    partRequestId: uuid('part_request_id')
+      .notNull()
+      .references(() => partRequests.id),
+    businessId: uuid('business_id')
+      .notNull()
+      .references(() => businesses.id),
+    score: numeric('score', { precision: 6, scale: 2 }).notNull(),
+    rank: smallint('rank').notNull(),
+    pass: smallint('pass').notNull(),
+    bestListingId: uuid('best_listing_id').references(() => listings.id),
+    pushed: boolean('pushed').notNull().default(false),
+    notifiedAt: timestamp('notified_at', { withTimezone: true }).notNull().defaultNow(),
+    /** A member of the seller business opened the request (the badge). */
+    openedAt: timestamp('opened_at', { withTimezone: true }),
+  },
+  (t) => ({
+    pk: primaryKey({ name: 'part_request_targets_pk', columns: [t.partRequestId, t.businessId] }),
+    businessNotifiedIdx: index('part_request_targets_business_notified_idx').on(t.businessId, t.notifiedAt.desc()),
+  }),
+);
+
+/** A seller's reply: always one of its listings (§5.4, R2). Message at most 300 (CHECK), masked on read. */
+export const partRequestReplies = pgTable(
+  'part_request_replies',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    partRequestId: uuid('part_request_id')
+      .notNull()
+      .references(() => partRequests.id),
+    sellerBusinessId: uuid('seller_business_id')
+      .notNull()
+      .references(() => businesses.id),
+    listingId: uuid('listing_id')
+      .notNull()
+      .references(() => listings.id),
+    createdByUserId: uuid('created_by_user_id')
+      .notNull()
+      .references(() => users.id),
+    message: text('message'),
+    messageFlagged: boolean('message_flagged').notNull().default(false),
+    status: partRequestReplyStatus('status').notNull(),
+    dropReason: partRequestDropReason('drop_reason'),
+    deliveredAt: timestamp('delivered_at', { withTimezone: true }),
+    withdrawnAt: timestamp('withdrawn_at', { withTimezone: true }),
+    droppedAt: timestamp('dropped_at', { withTimezone: true }),
+    buyerViewedAt: timestamp('buyer_viewed_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    requestListingUq: uniqueIndex('part_request_replies_request_listing_uq').on(t.partRequestId, t.listingId),
+    requestStatusIdx: index('part_request_replies_request_status_idx').on(t.partRequestId, t.status),
+    pendingListingIdx: index('part_request_replies_pending_listing_idx')
+      .on(t.listingId)
+      .where(sql`${t.status} = 'pending'`),
+    sellerCreatedIdx: index('part_request_replies_seller_created_idx').on(t.sellerBusinessId, t.createdAt),
+  }),
+);
+
+/** Auto matches (§5.5, R8): one per request and listing; `distance_km` snapped whole km. */
+export const partRequestMatches = pgTable(
+  'part_request_matches',
+  {
+    partRequestId: uuid('part_request_id')
+      .notNull()
+      .references(() => partRequests.id),
+    listingId: uuid('listing_id')
+      .notNull()
+      .references(() => listings.id),
+    sellerBusinessId: uuid('seller_business_id')
+      .notNull()
+      .references(() => businesses.id),
+    tier: partRequestMatchTier('tier').notNull(),
+    distanceKm: integer('distance_km'),
+    source: partRequestMatchSource('source').notNull(),
+    pushed: boolean('pushed').notNull().default(false),
+    seenAt: timestamp('seen_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    pk: primaryKey({ name: 'part_request_matches_pk', columns: [t.partRequestId, t.listingId] }),
+    listingIdx: index('part_request_matches_listing_idx').on(t.listingId),
+  }),
+);
+
+/** "Not relevant" (§5.6): hides the request from that business's lists; kept as feedback. */
+export const partRequestFeedback = pgTable(
+  'part_request_feedback',
+  {
+    partRequestId: uuid('part_request_id')
+      .notNull()
+      .references(() => partRequests.id),
+    businessId: uuid('business_id')
+      .notNull()
+      .references(() => businesses.id),
+    reason: partRequestFeedbackReason('reason'),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({ pk: primaryKey({ name: 'part_request_feedback_pk', columns: [t.partRequestId, t.businessId] }) }),
+);
+
+/**
+ * The F8 work queue (§5.7, §8): writers `INSERT ... ON CONFLICT DO NOTHING` on the unclaimed-row unique index (never
+ * waiting on the job); the `part-request-work` job claims, processes each row in its own transaction, retries, and
+ * dead-letters (`failed_at`) after 5 attempts. `last_error` holds an error code, never data.
+ */
+export const partRequestWork = pgTable(
+  'part_request_work',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    kind: partRequestWorkKind('kind').notNull(),
+    /** The request (`target_request`) or the listing (`listing_changed`). */
+    subjectId: uuid('subject_id').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    nextAttemptAt: timestamp('next_attempt_at', { withTimezone: true }).notNull().defaultNow(),
+    attempts: smallint('attempts').notNull().default(0),
+    lastError: text('last_error'),
+    claimedAt: timestamp('claimed_at', { withTimezone: true }),
+    doneAt: timestamp('done_at', { withTimezone: true }),
+    failedAt: timestamp('failed_at', { withTimezone: true }),
+  },
+  (t) => ({
+    unclaimedUq: uniqueIndex('part_request_work_unclaimed_uq')
+      .on(t.kind, t.subjectId)
+      .where(sql`${t.claimedAt} IS NULL`),
+    dueIdx: index('part_request_work_due_idx').on(t.nextAttemptAt).where(sql`${t.claimedAt} IS NULL`),
+    claimedIdx: index('part_request_work_claimed_idx')
+      .on(t.claimedAt)
+      .where(sql`${t.doneAt} IS NULL AND ${t.failedAt} IS NULL AND ${t.claimedAt} IS NOT NULL`),
+  }),
+);
+
+/** The per-seller daily push cap (§5.8, §7.5): one atomic upsert per pass; IST day. */
+export const partRequestPushCounts = pgTable(
+  'part_request_push_counts',
+  {
+    businessId: uuid('business_id')
+      .notNull()
+      .references(() => businesses.id),
+    day: date('day').notNull(),
+    pushes: smallint('pushes').notNull().default(0),
+  },
+  (t) => ({ pk: primaryKey({ name: 'part_request_push_counts_pk', columns: [t.businessId, t.day] }) }),
 );

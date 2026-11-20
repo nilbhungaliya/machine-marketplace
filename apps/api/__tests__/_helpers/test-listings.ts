@@ -2,6 +2,7 @@ import { eq, inArray, sql } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
 import {
   normalizePartName,
+  type BusinessActivity,
   normalizePartNumber,
   partNumberBase,
   type DeliveryOption,
@@ -75,11 +76,15 @@ export async function createTestSeller(
     onboarded?: boolean;
     machineCategoryId?: string;
     industrialAreaId?: string;
+    /** F8 (plan C0-2): the business's state (default Gujarat). */
+    state?: string;
+    /** F8 (plan C0-2): the business's activities (default buy + sell). */
+    activities?: BusinessActivity[];
   } = {},
 ): Promise<TestSeller> {
   const pincode = opts.pincode ?? DEFAULT_PINCODE;
   const cleanup: TestSeller['cleanup'] = { pincodeOfficeIds: [], categoryIds: [] };
-  const user = await createTestBusinessUser({ activities: ['buy', 'sell'] });
+  const user = await createTestBusinessUser({ activities: opts.activities ?? ['buy', 'sell'] });
 
   let categoryId = opts.machineCategoryId;
   if (!categoryId) {
@@ -101,7 +106,7 @@ export async function createTestSeller(
         ? {
             pincode,
             city: 'Surat',
-            state: 'Gujarat',
+            state: opts.state ?? 'Gujarat',
             industrialAreaId: opts.industrialAreaId ?? null,
             industrialAreaOther: opts.industrialAreaId ? null : 'Test Estate',
             location: opts.point ? sql`ST_SetSRID(ST_MakePoint(${opts.point.lng}, ${opts.point.lat}), 4326)::geography` : null,
