@@ -2,14 +2,14 @@ import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { REPORT_STATUSES } from '@mpm/shared-types';
 import { runTx } from '../../lib/tx-effects.js';
-import { listAdminReports, resolveAdminReport } from '../../services/reports/admin-reports.service.js';
+import { ADMIN_REPORT_TARGETS, listAdminReports, resolveAdminReport } from '../../services/reports/admin-reports.service.js';
 
-// Admin Reports & flags for conversations and reviews (F6 + F7 spec §16.1–§16.2, P9). Roles: moderator, support. The
-// resolve writes `audit_log` (`report.resolve`).
+// Admin Reports & flags for conversations, reviews and part requests (F6 + F7 spec §16.1–§16.2, P9; F8 §14). Roles:
+// moderator, support. The resolve writes `audit_log` (`report.resolve`).
 
 const tags = ['Admin reports'];
 const listQuery = z.object({
-  target: z.enum(['conversation', 'review']).optional(),
+  target: z.enum(ADMIN_REPORT_TARGETS).optional(),
   status: z.enum(REPORT_STATUSES).optional(),
   cursor: z.string().max(300).optional(),
 });
