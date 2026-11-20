@@ -1,6 +1,5 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
-import { PART_REQUEST_KINDS, PART_REQUEST_STATUSES } from '@mpm/shared-types';
 import { reasonBody } from '../../lib/admin-text.js';
 import {
   ADMIN_PART_REQUEST_PAGE_SIZES,
@@ -10,30 +9,21 @@ import {
   removePartRequest,
   restorePartRequest,
 } from '../../services/part-requests/admin.service.js';
+import { paged, partRequestListFilters } from './list-filters.js';
 
 // Admin part requests (F8 spec §14; lane A3): list, detail, photos, remove / restore with a reason (audit-logged).
 // Moderators and support (super_admin passes every role check). Thin: Zod-parse → service → `{ data }`.
 
 const tags = ['Admin: part requests'];
 
-const listQuery = z.object({
-  status: z.enum(PART_REQUEST_STATUSES).optional(),
-  kind: z.enum(PART_REQUEST_KINDS).optional(),
-  machineCategoryId: z.string().uuid().optional(),
-  reported: z
-    .enum(['true', 'false'])
-    .optional()
-    .transform((v) => (v === undefined ? undefined : v === 'true')),
-  businessId: z.string().uuid().optional(),
-  from: z.string().datetime({ offset: true }).optional(),
-  to: z.string().datetime({ offset: true }).optional(),
-  q: z.string().trim().max(100).optional().transform((v) => (v ? v : undefined)),
-  page: z.coerce.number().int().min(1).max(10_000).default(1),
-  pageSize: z.coerce
+const listQuery = paged(
+  partRequestListFilters,
+  z.coerce.number().int().min(1).max(10_000).default(1),
+  z.coerce
     .number()
     .refine((n) => (ADMIN_PART_REQUEST_PAGE_SIZES as readonly number[]).includes(n), 'must be 25, 50 or 100')
     .default(25),
-});
+);
 const params = z.object({ id: z.string().uuid() });
 
 const adminPartRequestRoutes: FastifyPluginAsync = async (fastify) => {

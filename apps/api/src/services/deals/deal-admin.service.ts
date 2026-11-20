@@ -41,8 +41,9 @@ export interface AdminDealQuery {
   pageSize: number;
 }
 
-const buyerBiz = alias(businesses, 'buyer_biz');
-const sellerBiz = alias(businesses, 'seller_biz');
+/** The list's business aliases: the deals export joins them the same way (`adminDealWhere` reads them). */
+export const buyerBiz = alias(businesses, 'buyer_biz');
+export const sellerBiz = alias(businesses, 'seller_biz');
 
 const iso = (d: Date | null): string | null => (d ? d.toISOString() : null);
 const trimQty = (q: string): string => milliToQuantity(quantityToMilli(q));
@@ -98,16 +99,32 @@ function searchWhere(search: string): SQL | null {
   return ref ? or(eq(deals.ref, Number(ref[1])), text)! : text;
 }
 
-/** `GET /admin/deals?status=&search=&from=&to=&page=&pageSize=`: newest change first; counts by status for the tabs. */
-export async function listAdminDeals(conn: Conn, q: AdminDealQuery): Promise<AdminDealList> {
-  const pageSize = Math.min(Math.max(1, Math.floor(q.pageSize)), ADMIN_DEALS_PAGE_SIZE_MAX);
-  const page = Math.max(1, Math.floor(q.page));
+type AdminDealFilters = Omit<AdminDealQuery, 'page' | 'pageSize'>;
+
+/** Every filter but the status (the tab counts group by status over these). */
+function baseConditions(q: AdminDealFilters): SQL[] {
   const base: SQL[] = [];
   const search = q.search ? searchWhere(q.search) : null;
   if (search) base.push(search);
   if (q.from) base.push(gte(deals.acceptedAt, sql`${q.from}::date`));
   if (q.to) base.push(lt(deals.acceptedAt, sql`${q.to}::date + 1`));
-  const where = q.status ? [...base, eq(deals.status, q.status)] : base;
+  return base;
+}
+
+/**
+ * The list's condition over `deals` joined to `listings`, `buyerBiz` and `sellerBiz` (admin close-out plan A4-3: the
+ * deals export joins and filters the same way); undefined without a filter.
+ */
+export function adminDealWhere(q: AdminDealFilters): SQL | undefined {
+  const where = q.status ? [...baseConditions(q), eq(deals.status, q.status)] : baseConditions(q);
+  return where.length ? and(...where) : undefined;
+}
+
+/** `GET /admin/deals?status=&search=&from=&to=&page=&pageSize=`: newest change first; counts by status for the tabs. */
+export async function listAdminDeals(conn: Conn, q: AdminDealQuery): Promise<AdminDealList> {
+  const pageSize = Math.min(Math.max(1, Math.floor(q.pageSize)), ADMIN_DEALS_PAGE_SIZE_MAX);
+  const page = Math.max(1, Math.floor(q.page));
+  const base = baseConditions(q);
 
   const rows = await conn
     .select(dealRowSelect)
@@ -115,7 +132,7 @@ export async function listAdminDeals(conn: Conn, q: AdminDealQuery): Promise<Adm
     .innerJoin(listings, eq(listings.id, deals.listingId))
     .innerJoin(buyerBiz, eq(buyerBiz.id, deals.buyerBusinessId))
     .innerJoin(sellerBiz, eq(sellerBiz.id, deals.sellerBusinessId))
-    .where(where.length ? and(...where) : undefined)
+    .where(adminDealWhere(q))
     .orderBy(desc(deals.updatedAt), desc(deals.id))
     .limit(pageSize)
     .offset((page - 1) * pageSize);

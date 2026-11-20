@@ -6,9 +6,6 @@ import {
   ADMIN_LISTING_PAGE_SIZES,
   ADMIN_REASON_MAX,
   LISTING_FITMENTS_MAX,
-  LISTING_FLAGS,
-  LISTING_KINDS,
-  LISTING_STATUSES,
   PART_SIDES,
   REPORT_RESOLUTIONS,
   type AdminListingAction,
@@ -27,6 +24,7 @@ import {
   listAdminListings,
   resolveListingReports,
 } from '../../services/listings/listing-admin.service.js';
+import { listingListFilters, paged } from './list-filters.js';
 
 const tags = ['Admin Listings'];
 
@@ -34,32 +32,14 @@ const uuid = z.string().uuid();
 const idParams = z.object({ id: uuid });
 const version = z.number().int().min(1);
 
-/** A comma-separated list of enum values (`?status=live,paused`). */
-const commaList = <T extends readonly [string, ...string[]]>(values: T) =>
-  z
-    .string()
-    .max(500)
-    .transform((v) => v.split(',').map((s) => s.trim()).filter((s) => s !== ''))
-    .pipe(z.array(z.enum(values)).min(1));
-
-const listQuery = z
-  .object({
-    status: commaList(LISTING_STATUSES).optional(),
-    kind: z.enum(LISTING_KINDS).optional(),
-    machineCategoryId: uuid.optional(),
-    city: z.string().max(80).optional(),
-    side: z.enum(PART_SIDES).optional(),
-    flags: commaList(LISTING_FLAGS).optional(),
-    reported: z.enum(['1', '0', 'true', 'false']).transform((v) => v === '1' || v === 'true').optional(),
-    businessId: uuid.optional(),
-    q: z.string().max(100).optional(),
-    page: z.coerce.number().int().min(1).max(10_000).default(1),
-    pageSize: z.coerce
-      .number()
-      .refine((n): n is AdminListingPageSize => (ADMIN_LISTING_PAGE_SIZES as readonly number[]).includes(n), 'must be 25, 50 or 100')
-      .default(25),
-  })
-  .strict();
+const listQuery = paged(
+  listingListFilters,
+  z.coerce.number().int().min(1).max(10_000).default(1),
+  z.coerce
+    .number()
+    .refine((n): n is AdminListingPageSize => (ADMIN_LISTING_PAGE_SIZES as readonly number[]).includes(n), 'must be 25, 50 or 100')
+    .default(25),
+);
 
 const optText = (max: number) =>
   z

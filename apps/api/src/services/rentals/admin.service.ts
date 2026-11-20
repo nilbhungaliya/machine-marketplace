@@ -46,8 +46,11 @@ function searchWhere(q: string): SQL | null {
   return or(ilike(renterBiz.tradeName, like), ilike(ownerBiz.tradeName, like), ilike(rentalBookings.listingTitle, like))!;
 }
 
-/** `GET /admin/rental-bookings` (§15): newest change first, paged 25 / 50 / 100. */
-export async function listAdminRentalBookings(conn: Conn, q: AdminRentalQuery): Promise<AdminRentalBookingList> {
+/**
+ * The list's condition over `rental_bookings` joined to `renterBiz` and `ownerBiz` (`admin-view.ts`; admin close-out
+ * plan A4-3: the rental bookings export joins and filters the same way); undefined without a filter.
+ */
+export function adminRentalWhere(q: Omit<AdminRentalQuery, 'page' | 'pageSize'>): SQL | undefined {
   const where: SQL[] = [];
   if (q.status) where.push(eq(rentalBookings.status, q.status));
   if (q.from) where.push(gte(rentalBookings.startDate, q.from));
@@ -56,8 +59,12 @@ export async function listAdminRentalBookings(conn: Conn, q: AdminRentalQuery): 
   if (q.listingId) where.push(eq(rentalBookings.listingId, q.listingId));
   const search = q.q ? searchWhere(q.q) : null;
   if (search) where.push(search);
-  const cond = where.length ? and(...where) : undefined;
+  return where.length ? and(...where) : undefined;
+}
 
+/** `GET /admin/rental-bookings` (§15): newest change first, paged 25 / 50 / 100. */
+export async function listAdminRentalBookings(conn: Conn, q: AdminRentalQuery): Promise<AdminRentalBookingList> {
+  const cond = adminRentalWhere(q);
   const page = Math.max(1, Math.floor(q.page));
   const rows = await adminRowsQuery(conn)
     .where(cond)

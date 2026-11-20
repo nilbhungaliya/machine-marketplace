@@ -1,8 +1,8 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
-import { ACCOUNT_STATUSES, VERIFICATION_STATUSES } from '@mpm/shared-types';
 import { reasonBody } from '../../lib/admin-text.js';
 import { runTx } from '../../lib/tx-effects.js';
+import { businessListFilters, paged } from './list-filters.js';
 import {
   PAGE_SIZE_MAX,
   getBusinessDetail,
@@ -14,17 +14,11 @@ import {
 const tags = ['Admin Businesses'];
 
 const idParams = z.object({ id: z.string().uuid() });
-const listQuery = z
-  .object({
-    search: z.string().max(100).optional(),
-    city: z.string().max(80).optional(),
-    industrialAreaId: z.string().uuid().optional(),
-    verification: z.enum(VERIFICATION_STATUSES).optional(),
-    status: z.enum(ACCOUNT_STATUSES).optional(),
-    page: z.coerce.number().int().min(1).default(1),
-    pageSize: z.coerce.number().int().min(1).max(PAGE_SIZE_MAX).default(25),
-  })
-  .strict();
+const listQuery = paged(
+  businessListFilters,
+  z.coerce.number().int().min(1).default(1),
+  z.coerce.number().int().min(1).max(PAGE_SIZE_MAX).default(25),
+);
 
 // Users & businesses (F1 + A2 spec §8.2, §10). Thin: validate → service → `{ data }`. Reads: support, verification
 // officers, moderators; Revoke GST and Release GSTIN: verification officers (super_admin passes every role check).
