@@ -87,6 +87,19 @@ export const SYSTEM_LINE_LABELS: Record<SystemLineCode, string> = {
   deal_dispute_resolved: 'Dispute resolved by support',
   contact_shared: 'Contact number shared',
   blocked: 'A business blocked the other',
+  // M14 rental bookings.
+  booking_requested: 'Booking requested',
+  booking_changed: 'Booking changed',
+  booking_confirmed: 'Booking confirmed',
+  booking_declined: 'Booking declined',
+  booking_withdrawn: 'Booking withdrawn',
+  booking_expired: 'Booking expired',
+  booking_on_site: 'Machine on site',
+  booking_returned: 'Machine returned',
+  booking_completed: 'Booking completed',
+  booking_cancelled: 'Booking cancelled',
+  booking_problem: 'Problem reported on a booking',
+  booking_dispute_resolved: 'Booking dispute resolved by support',
 };
 
 const READ_ERROR_WORDS: Record<string, string> = {

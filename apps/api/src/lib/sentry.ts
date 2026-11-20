@@ -32,9 +32,11 @@ export function initSentry(): boolean {
 
 /**
  * Header and body keys that must never leave the server. F6 + F7 §19 adds message / note / review text, numbers, FCM
- * tokens and photo keys; F8 §17 adds a reply's `message`.
+ * tokens and photo keys; F8 §17 adds a reply's `message`. M14 (plan C0-4, spec §18) adds a booking's `siteAddress`,
+ * `damageNote`, `cancelNote` and `finalAmountNote`, and (C0 review M4) `sitePincode` and the `onSite` / `return` /
+ * `problem` `PhotoKeys` (anchored: `photokeys` alone misses them); its `message`, `note` and `notesText` are already here.
  */
-const SECRET_KEYS = /^(authorization|cookie|x-api-key|token|refreshtoken|password|otp|phone|firebase_token|phone_token|razorpay_signature|gstin|pan|account_number|ifsc|text|note|notestext|description|replytext|messagetoparties|contactphone|number|fcmtoken|photokeys|message)$/i;
+const SECRET_KEYS = /^(authorization|cookie|x-api-key|token|refreshtoken|password|otp|phone|firebase_token|phone_token|razorpay_signature|gstin|pan|account_number|ifsc|text|note|notestext|description|replytext|messagetoparties|contactphone|number|fcmtoken|photokeys|message|siteaddress|sitepincode|onsitephotokeys|returnphotokeys|problemphotokeys|damagenote|cancelnote|finalamountnote)$/i;
 
 /**
  * F8 §17: a request's `name` is the buyer's free text, so it goes from **request bodies of `/part-requests` routes**

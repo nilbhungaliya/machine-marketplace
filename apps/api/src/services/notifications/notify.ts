@@ -23,7 +23,15 @@ export interface NotifyInput {
   type: NotificationType;
   recipientBusinessId: string;
   params: Record<string, string | number | null>;
-  destination: { threadId?: string; offerId?: string; dealId?: string; reviewId?: string; partRequestId?: string };
+  destination: {
+    threadId?: string;
+    offerId?: string;
+    dealId?: string;
+    reviewId?: string;
+    partRequestId?: string;
+    /** M14 §11: the rental booking a `rental_booking_*` row (or a rental review row) opens. */
+    rentalBookingId?: string;
+  };
   dedupeKey: string;
   /** F8 (plan D6): false writes the rows without deliveries (in-app only, e.g. over the daily push cap). Default true. */
   push?: boolean;
@@ -48,6 +56,7 @@ export async function notify(tx: Tx, input: NotifyInput): Promise<string[]> {
         dealId: input.destination.dealId ?? null,
         reviewId: input.destination.reviewId ?? null,
         partRequestId: input.destination.partRequestId ?? null,
+        rentalBookingId: input.destination.rentalBookingId ?? null,
         dedupeKey: input.dedupeKey,
       })),
     )

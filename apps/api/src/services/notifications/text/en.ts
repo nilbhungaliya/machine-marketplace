@@ -31,6 +31,8 @@ const dropReason: Record<TextParams['reason'], string> = {
 };
 const line = (...parts: string[]) => parts.filter(Boolean).join(' · ');
 
+const rental = () => ({ title: 'Rental booking update', body: 'A rental booking changed. Open it to see the details.' });
+
 export const en: NotificationTexts = {
   enquiry_new: (p) => ({ title: 'New enquiry', body: listing(p) }),
   message_new: (p) => ({
@@ -57,8 +59,24 @@ export const en: NotificationTexts = {
     title: 'Review the deal',
     body: `${who(p)} reviewed ${deal(p)}. Add yours${p.dueOn ? ` by ${p.dueOn}` : ''}; both publish together.`,
   }),
-  // Later modules (M14, F2 notices): generic text until they bring their own.
-  booking_update: () => ({ title: 'Booking update', body: 'A booking changed. Open it to see the details.' }),
+  // M14 rental bookings: placeholder text until A3-3 writes each type's own (spec §10.3).
+  rental_booking_requested: rental,
+  rental_booking_changed: rental,
+  rental_booking_confirmed: rental,
+  rental_booking_declined: rental,
+  rental_booking_withdrawn: rental,
+  rental_booking_expired: rental,
+  rental_booking_cancelled: rental,
+  rental_booking_on_site: rental,
+  rental_booking_returned: rental,
+  rental_booking_completed: rental,
+  rental_booking_starts_tomorrow: rental,
+  rental_booking_due_back: rental,
+  rental_booking_overdue: rental,
+  rental_booking_not_started: rental,
+  rental_booking_clash: rental,
+  rental_booking_problem: rental,
+  rental_booking_dispute_resolved: rental,
   listing_status: (p) => ({ title: 'Listing update', body: p.listingTitle ? `${p.listingTitle} changed status.` : 'Your listing changed status.' }),
   // F8 part requests (spec §10.3).
   part_request_new: (p) => ({

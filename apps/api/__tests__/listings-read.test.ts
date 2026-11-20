@@ -328,8 +328,10 @@ describe('My listings cost and agreement with the owner view', () => {
     for (const card of view.items) {
       const [row] = await db.select().from(listings).where(eq(listings.id, card.id));
       const owner = await toOwnerView(db, row!, settings);
-      const { scoreMissing, ...rest } = card;
+      const { scoreMissing, rentalLine, ...rest } = card;
       expect(scoreMissing).toEqual(owner.score.missing);
+      // M14 plan D14: My listings' own rental line (the owner view has `bookingSummary` instead).
+      expect(rentalLine).toEqual(card.kind === 'machine_rental' ? { quantity: 1, outToday: 0, activeBookings: 0 } : null);
       for (const [key, value] of Object.entries(rest)) {
         expect(value, `${card.kind} ${key}`).toEqual((owner as unknown as Record<string, unknown>)[key]);
       }

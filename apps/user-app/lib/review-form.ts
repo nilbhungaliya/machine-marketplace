@@ -5,7 +5,7 @@ import { DEAL_LIMITS, REVIEW_FACETS, type PartySide, type ReviewFacet, type Sell
 
 /** The facets the reviewer rates, by the reviewer's side: the buyer rates the seller (3 facets) and back. */
 export function reviewFacets(side: PartySide): readonly ReviewFacet[] {
-  return REVIEW_FACETS[side];
+  return REVIEW_FACETS.deal[side]; // M14: A3/B-lanes pass the subject (rental seller rates care, not pickup)
 }
 
 /** Only the buyer's review of the seller has text (public, ≤ 1 000); the seller's review of the buyer is stars only. */

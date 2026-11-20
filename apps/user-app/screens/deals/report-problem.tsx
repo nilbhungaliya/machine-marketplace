@@ -31,7 +31,8 @@ type Picked = { uri: string; width: number; height: number };
  * and its timers stop. Uploaded photo keys are kept per photo, so a retried tap sends the same request.
  */
 export default function ReportProblemScreen({ navigation, route }: RootStackScreenProps<'ReportProblem'>) {
-  const { dealId } = route.params;
+  // M14-STUB(B2): `subject: 'rental'` reports through the booking's problem route with rental categories (B2-4).
+  const { id: dealId } = route.params;
   const { t } = useTranslation();
   const { colors } = useTheme();
   const type = useType();

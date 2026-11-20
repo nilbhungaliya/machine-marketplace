@@ -2,7 +2,8 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { CompositeScreenProps, NavigatorScreenParams } from '@react-navigation/native';
 import type {
-  DiscoveryOrigin, DiscoveryRadiusKm, ListingKind, ListingStatus, MyListingsGroup, PartRequestPrefill, SearchFacets,
+  DiscoveryOrigin, DiscoveryRadiusKm, ListingKind, ListingStatus, MyListingsGroup, PartRequestPrefill, RequestBookingParams,
+  SearchFacets,
 } from '@mpm/shared-types';
 import type { FormMode } from '@/lib/onboarding-step';
 import type { SellStep } from '@/lib/sell-steps';
@@ -94,10 +95,13 @@ export type RootStackParamList = {
   BlockedBusinesses: undefined;
   /** The deal record (L7). */
   DealRecord: { dealId: string };
-  /** Report a problem with a handed-over deal (L7). */
-  ReportProblem: { dealId: string };
-  /** Rate a completed deal (L8). */
-  ReviewDeal: { dealId: string };
+  /**
+   * Report a problem with a handed-over deal (L7) or, since M14, a rental booking on rent / returned (B2-4):
+   * `id` is the deal's or the booking's id, by `subject`.
+   */
+  ReportProblem: ReviewSubjectParams;
+  /** Rate a completed deal (L8) or, since M14, a completed rental booking (B2-4). */
+  ReviewDeal: ReviewSubjectParams;
   /** A seller's public reviews (L8). */
   SellerReviews: { businessId: string };
   /** Profile › Reviews: my seller score and the reviews I received (L8). */
@@ -125,7 +129,25 @@ export type RootStackParamList = {
   ReplyWithListing: { partRequestId: string };
   /** Buyers looking: requests for this seller, optionally for one listing (B3). */
   BuyersLooking: { forListing?: string };
+
+  // M14 rental bookings (spec §14.1, plan C0-5). Signed-in only. C0-5 registers placeholders (B2 renter and the
+  // Booking record, B3 the owner calendar).
+  /**
+   * Request booking (B2): `prefill` from the listing page or a Booking record; `change` mode answers that booking's
+   * open version (`POST /rental-bookings/:id/change` with `versionSeq`) instead of sending a new request.
+   */
+  RequestBooking: RequestBookingParams;
+  /** One rental booking, for either side (B2). */
+  BookingRecord: { bookingId: string };
+  /** The owner's calendar of one rental listing: bookings and blocks (B3). */
+  RentalCalendar: { listingId: string };
 };
+
+/** What a review or a problem report is about (M14 plan C0-5): a deal (F6 + F7) or a rental booking. */
+export type ReviewSubjectParams = { subject: 'deal' | 'rental'; id: string };
+
+/** The Deals tab's top switch (plan D15) and an optional listing filter for Rentals (My listings › Bookings (n)). */
+export type DealsTabParams = { segment?: 'deals' | 'rentals'; listingId?: string };
 
 export type AuthStackParamList = {
   Phone: undefined;
@@ -140,7 +162,7 @@ export type TabParamList = {
   Search: SearchTabParams | undefined;
   Post: undefined;
   Chats: undefined;
-  Deals: undefined;
+  Deals: DealsTabParams | undefined;
 };
 
 export type RootStackScreenProps<T extends keyof RootStackParamList> = NativeStackScreenProps<RootStackParamList, T>;

@@ -546,7 +546,7 @@ Group `rental_booking` (request + change: 20 / 10 min per user), `rental_booking
 | `GET /listings/:id/availability?from&to` | public | §10 |
 | `POST /rentals/estimate` | public | `{ listingId, startDate, period, count, machines, withOperator?, ownerDelivers?, sitePincode? }` → `RentalEstimateResult` (end date, days, parts, total, `free`, `beyondServiceRadius`, minimum met). **No distance:** probing pincodes would reveal the machine's point (review change); the owner sees the distance (floored km) on the request instead |
 | `POST /listings/:id/bookings` **I** | user, non-viewer | request (§6.2) → `RentalBookingView` |
-| `GET /rental-bookings?tab=active\|completed\|cancelled&side=all\|renting\|renting_out&cursor=` | user | keyset `(updated_at, id)`, 20; tabs: active = open + active statuses, completed, cancelled = declined / withdrawn / expired / cancelled |
+| `GET /rental-bookings?tab=active\|completed\|cancelled&side=all\|renter\|owner&cursor=` | user | keyset `(updated_at, id)`, 20; tabs: active = open + active statuses, completed, cancelled = declined / withdrawn / expired / cancelled |
 | `GET /rental-bookings/:id` | party members | reader's view, actions, versions, timeline, contact block, review state |
 | `POST /rental-bookings/:id/{confirm,decline,change,accept,withdraw,on-site,returned,confirm-return,cancel,problem}` **I** | per §6.1 | bodies per action; proposal actions carry `versionSeq` |
 | `POST /rental-bookings/:id/photos/presign` | party, non-viewer | the deal presign, limit 3 |

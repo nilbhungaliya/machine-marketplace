@@ -164,6 +164,8 @@ export async function businessDealHistory(conn: Conn, businessId: string): Promi
     byStatus,
     disputes: disputes.map((d) => ({
       ...d,
+      subject: { kind: 'deal' as const, dealId: d.dealId! }, // M14: A3 generalises (booking disputes join the history)
+      rentalBookingRef: null,
       createdAt: d.createdAt.toISOString(),
       resolvedAt: d.resolvedAt ? d.resolvedAt.toISOString() : null,
     })),

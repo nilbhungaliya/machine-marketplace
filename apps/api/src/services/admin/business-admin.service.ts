@@ -25,6 +25,7 @@ import { adminText } from '../../lib/admin-text.js';
 import { writeAudit } from '../audit.service.js';
 import { businessProfile } from '../business/profile.service.js';
 import { businessDealHistory } from '../deals/deal-read.service.js';
+import { exitBookingsForGstLoss, lockOwnRentalListings } from '../rentals/system-exits.js';
 import { sellerScore } from '../reviews/review-scores.js';
 import { lockGstin } from '../verification/gst-grant.service.js';
 import { gstHistory } from '../verification/gst-history.service.js';
@@ -226,6 +227,8 @@ export async function getBusinessDetail(conn: Db | Tx, id: string): Promise<Admi
     dealHistory: await businessDealHistory(conn, id),
     sellerScore: await sellerScore(conn, id),
     partRequestCount: Number(requestTotal?.n ?? 0),
+    // M14: A3 counts the business's bookings as owner and as renter (`rentalBookingCount`).
+    rentalBookingCount: { asOwner: 0, asRenter: 0 },
   };
 }
 
@@ -267,6 +270,11 @@ export async function revokeGst(tx: Tx, adminId: string, businessId: string, rea
     )
     .returning({ id: businessVerifications.id });
   if (!revoked) throw new ConflictError("This business's GST isn't verified", 'GST_NOT_VERIFIED');
+  // M14 (spec §6.1): a rental owner without GST can't confirm, so its open booking requests end (`owner_gst`). Its rental
+  // listings are locked first, in id order after the business row (C0 review I2), so a concurrent request or confirm
+  // either commits first (and is ended here) or waits and then sees the GST gone.
+  await lockOwnRentalListings(tx, businessId);
+  await exitBookingsForGstLoss(tx, businessId);
 
   const levels = business.verificationLevels.filter((l) => l !== 'gst');
   await tx

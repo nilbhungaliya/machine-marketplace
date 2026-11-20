@@ -107,7 +107,8 @@ export function DisputeDetail({ dispute, onChanged }: { dispute: AdminDisputeDet
 
       {read && <ConversationView read={read} basis={basis} onClose={() => setRead(null)} />}
 
-      <DealDetail deal={dispute.deal} canOpenDisputes />
+      {/* M14: B1 shows a booking dispute's booking here (no deal). */}
+      {dispute.deal && <DealDetail deal={dispute.deal} canOpenDisputes />}
 
       {resolving && (
         <ResolveDialog

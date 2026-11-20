@@ -70,6 +70,8 @@ export async function toThreadMessages(conn: Conn, rows: MessageRow[], reader: C
             : null,
         offer: row.offerId ? (offerViews.get(row.offerId) ?? null) : null,
         deal: deal ? { id: deal.id, ref: deal.ref, status: deal.status, totalPaise: deal.totalPaise.toString() } : null,
+        // M14: A1 builds the `booking` card view (`RentalBookingCardView`).
+        booking: null,
         createdAt: row.createdAt.toISOString(),
       };
     }),

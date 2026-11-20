@@ -118,7 +118,19 @@
       "mine": "आपने इस बिज़नेस को ब्लॉक किया।",
       "theirs": "यह बातचीत बंद है।"
     },
-    "supportMessage": "सपोर्ट: {{message}}"
+    "supportMessage": "सपोर्ट: {{message}}",
+    "booking_requested": "बुकिंग #{{ref}} का अनुरोध भेजा गया।",
+    "booking_changed": "बुकिंग #{{ref}} बदली गई।",
+    "booking_confirmed": "बुकिंग #{{ref}} पक्की हो गई।",
+    "booking_declined": "बुकिंग #{{ref}} अस्वीकार की गई।",
+    "booking_withdrawn": "बुकिंग #{{ref}} वापस ली गई।",
+    "booking_expired": "बुकिंग #{{ref}} बिना जवाब के समाप्त हो गई।",
+    "booking_on_site": "बुकिंग #{{ref}} की मशीन साइट पर है।",
+    "booking_returned": "बुकिंग #{{ref}} की मशीन वापस आ गई।",
+    "booking_completed": "बुकिंग #{{ref}} पूरी हो गई।",
+    "booking_cancelled": "बुकिंग #{{ref}} रद्द की गई।",
+    "booking_problem": "बुकिंग #{{ref}} पर एक समस्या बताई गई।",
+    "booking_dispute_resolved": "हमारी टीम ने बुकिंग #{{ref}} की समस्या बंद कर दी।"
   },
   "noteField": {
     "payment_method": "भुगतान",

@@ -32,6 +32,7 @@ import {
 } from './listing-view.service.js';
 import { listingNotFound, type ListingRow } from './locks.js';
 import { publicListingWhere } from './public-where.service.js';
+import { rentalCardLine } from '../rentals/owner-summary.js';
 
 // Listing reads (F2 spec §7.1, §8.1, §10, §14; plan Task 10): the public listing page, the owner view, My listings and a
 // seller's public listings. A listing that isn't public is `404 LISTING_NOT_FOUND` to anyone but its owner, so ids
@@ -195,6 +196,11 @@ async function myCards(conn: Conn, rows: ListingRow[], settings: AppSettingsValu
   const machines = new Map(machineRows.map((m) => [m.listingId, m]));
   const rentals = new Map(rentalRows.map(({ listingId, ...terms }) => [listingId, terms as RentalTerms]));
 
+  const rentalLines = await rentalCardLine(
+    conn,
+    rows.filter((r) => r.kind === 'machine_rental').map((r) => r.id),
+  );
+
   return rows.map((row, i) => {
     const info = row.categoryId ? categories.get(`${row.categoryId}:${row.kind === 'part' ? 'part' : 'machine'}`) : undefined;
     const photoCount = photos.get(row.id) ?? 0;
@@ -227,6 +233,8 @@ async function myCards(conn: Conn, rows: ListingRow[], settings: AppSettingsValu
         photoCount,
         detail: { rental: rentals.get(row.id) ?? null },
       }),
+      // M14 plan D14: a rental's machines and what is out.
+      rentalLine: rentalLines.get(row.id) ?? null,
     };
   });
 }

@@ -88,6 +88,7 @@ export function detailFixture(over: Partial<DetailListing> = {}, rest: Partial<O
     score: { score: 65, missing: ['video'] },
     partRequestId: null,
     pendingRequestReply: null,
+    bookingSummary: null,
     location: {
       source: 'godown', pincode: '360003', city: 'Rajkot', state: 'Gujarat', industrialAreaId: 'ia1',
       industrialAreaName: 'Aji GIDC', industrialAreaOther: null, addressLine: 'Shed 14, Road B', lat: 22.29, lng: 70.8,
@@ -113,6 +114,7 @@ export function detailFixture(over: Partial<DetailListing> = {}, rest: Partial<O
         reason: null, createdAt: '2026-11-18T05:00:00.000Z',
       },
     ],
+    rental: null,
     ...rest,
   };
 }

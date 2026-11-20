@@ -44,6 +44,7 @@ export function toNotificationRow(n: Row, language: Language): NotificationRow {
     dealId: n.dealId,
     reviewId: n.reviewId,
     partRequestId: n.partRequestId,
+    rentalBookingId: n.rentalBookingId,
     unreadCount: n.unreadCount,
     read: n.readAt !== null,
     createdAt: n.createdAt.toISOString(),

@@ -39,7 +39,7 @@ export async function publishDueReviews(app: TxApp): Promise<number> {
             const [deal] = await sp
               .select({ id: deals.id, ref: deals.ref, listingTitle: deals.listingTitle })
               .from(deals)
-              .where(eq(deals.id, done[0]!.dealId));
+              .where(eq(deals.id, done[0]!.dealId!)); // M14: A3 generalises (no rental review is written before A3)
             if (deal) await notifyPublished(sp, done, deal);
             return done.length;
           });

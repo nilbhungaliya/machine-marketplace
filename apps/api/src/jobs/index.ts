@@ -11,6 +11,12 @@ import { expireOffers, notifyExpiringOffers } from '../services/offers/offer-job
 import { publishDueReviews } from '../services/reviews/review-jobs.js';
 import { deletePartRequestHistory, expirePartRequests, notifyExpiringPartRequests } from '../services/part-requests/request-jobs.js';
 import { runPartRequestWork } from '../services/part-requests/work-job.js';
+import {
+  runRentalAutoComplete,
+  runRentalBookingExpiry,
+  runRentalReminders,
+  runRentalStatusSync,
+} from '../services/rentals/rental-jobs.js';
 import type { JobSpec } from './runner.js';
 
 /**
@@ -88,5 +94,11 @@ export function allJobs(app: FastifyInstance): JobSpec[] {
         if (deleted > 0) app.log.info({ job: 'part-request-retention', deleted }, 'old part request history deleted');
       },
     },
+    // M14 rental bookings (spec §9; lane A2): expiry and auto-complete every 5 min, reminders hourly, the listing
+    // status sync every 15 min.
+    { name: 'rental-booking-expiry', everyMs: 300_000, run: () => runRentalBookingExpiry(app) },
+    { name: 'rental-booking-auto-complete', everyMs: 300_000, run: () => runRentalAutoComplete(app) },
+    { name: 'rental-booking-reminders', everyMs: 3_600_000, firstRunMs: 300_000, run: () => runRentalReminders(app) },
+    { name: 'rental-status-sync', everyMs: 900_000, run: () => runRentalStatusSync(app) },
   ];
 }

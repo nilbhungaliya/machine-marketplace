@@ -79,7 +79,7 @@ describe('roles (§16.1)', () => {
     expect(list.rows.map((r: { id: string }) => r.id)).toContain(disputeId);
     const detail = (await as('support', 'GET', `/admin/disputes/${disputeId}`)).json().data as AdminDisputeDetail;
     expect(detail.description).toBe('Housing cracked on arrival');
-    expect(detail.deal.id).toBe(dealId);
+    expect(detail.deal?.id).toBe(dealId);
   });
 });
 

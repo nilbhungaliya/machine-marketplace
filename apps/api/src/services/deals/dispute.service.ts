@@ -129,7 +129,7 @@ export async function resolveDispute(tx: Tx, adminId: string, disputeId: string,
     .where(eq(dealDisputes.id, disputeId));
   if (!unlocked) throw disputeNotFound();
   await lockListingOnly(tx, unlocked.listingId);
-  const deal = await lockDeal(tx, unlocked.dealId);
+  const deal = await lockDeal(tx, unlocked.dealId!); // M14: A3 generalises (the inner join reaches deal disputes only)
   const [dispute] = await tx.select().from(dealDisputes).where(eq(dealDisputes.id, disputeId)).for('update');
   if (!dispute || dispute.status !== 'open') throw new ConflictError('This dispute is already resolved', 'DISPUTE_NOT_OPEN');
   if (deal.status !== 'disputed') throw transitionNotAllowed(deal, 'resolve');

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { NOTIFICATION_TYPES, type NotificationType } from '@mpm/shared-types';
 import { badgeText, isPushForOpenThread, notificationLink, parsePushData, tabBadgeCount } from './notification-links';
 
-type Ids = Partial<{ threadId: string; dealId: string; reviewId: string; offerId: string; partRequestId: string }>;
+type Ids = Partial<{ threadId: string; dealId: string; reviewId: string; offerId: string; partRequestId: string; rentalBookingId: string }>;
 const row = (type: NotificationType, ids: Ids = {}) => ({
   type,
   threadId: ids.threadId ?? null,
@@ -10,6 +10,7 @@ const row = (type: NotificationType, ids: Ids = {}) => ({
   reviewId: ids.reviewId ?? null,
   offerId: ids.offerId ?? null,
   partRequestId: ids.partRequestId ?? null,
+  rentalBookingId: ids.rentalBookingId ?? null,
 });
 
 describe('notificationLink (§11.3)', () => {
@@ -31,8 +32,19 @@ describe('notificationLink (§11.3)', () => {
 
   it('review_received opens Profile › Reviews; review_waiting the review form', () => {
     expect(notificationLink(row('review_received', ids))).toEqual({ name: 'MyReviews', params: undefined });
-    expect(notificationLink(row('review_waiting', ids))).toEqual({ name: 'ReviewDeal', params: { dealId: 'd1' } });
+    expect(notificationLink(row('review_waiting', ids))).toEqual({ name: 'ReviewDeal', params: { subject: 'deal', id: 'd1' } });
+    expect(notificationLink(row('review_waiting', { rentalBookingId: 'b1' }))).toEqual({
+      name: 'ReviewDeal', params: { subject: 'rental', id: 'b1' },
+    });
     expect(notificationLink(row('review_waiting'))).toBeNull();
+  });
+
+  // M14 §11 (plan C0-5): every rental booking type opens the Booking record, else its thread.
+  it('rental_booking_* opens the Booking record', () => {
+    expect(notificationLink(row('rental_booking_confirmed', { rentalBookingId: 'b1', threadId: 't1' }))).toEqual({
+      name: 'BookingRecord', params: { bookingId: 'b1' },
+    });
+    expect(notificationLink(row('rental_booking_clash', { threadId: 't1' }))).toEqual({ name: 'Thread', params: { threadId: 't1' } });
   });
 
   it.each([
@@ -61,7 +73,7 @@ describe('parsePushData (§11.5)', () => {
   it('reads id-only data', () => {
     expect(parsePushData({ notificationId: 'n1', type: 'message_new', deliveryKey: 'n1:2', threadId: 't1', tag: 'thread:t1' })).toEqual({
       notificationId: 'n1', type: 'message_new', deliveryKey: 'n1:2', threadId: 't1', dealId: null, reviewId: null, offerId: null,
-      partRequestId: null,
+      partRequestId: null, rentalBookingId: null,
     });
     expect(parsePushData({ notificationId: 'n2', type: 'part_match', deliveryKey: 'n2:1', partRequestId: 'p1' })?.partRequestId).toBe('p1');
   });
@@ -81,11 +93,11 @@ describe('parsePushData (§11.5)', () => {
 });
 
 describe('badges (§15.2)', () => {
-  const badges = { unreadThreads: 3, dealsYourTurn: 120, notificationsUnread: 5, requestsForYou: 0 };
+  const badges = { unreadThreads: 3, dealsYourTurn: 120, notificationsUnread: 5, requestsForYou: 0, rentalsYourTurn: 4 };
 
-  it('Chats shows unread threads, Deals the deals waiting on you', () => {
+  it('Chats shows unread threads, Deals the deals and rental bookings waiting on you', () => {
     expect(tabBadgeCount('Chats', badges)).toBe(3);
-    expect(tabBadgeCount('Deals', badges)).toBe(120);
+    expect(tabBadgeCount('Deals', badges)).toBe(124);
     expect(tabBadgeCount('Home', badges)).toBe(0);
     expect(tabBadgeCount('Chats', null)).toBe(0);
   });

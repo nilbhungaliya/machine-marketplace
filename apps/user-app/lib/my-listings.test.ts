@@ -18,6 +18,7 @@ const mine = (over: Partial<MyListingCard> = {}): MyListingCard => ({
   statusReason: null,
   scoreMissing: [],
   needsAttention: [],
+  rentalLine: null,
   ...over,
 });
 
@@ -71,9 +72,13 @@ describe('manageItems (§10)', () => {
       'edit', 'quantity', 'resume', 'mark_sold', 'mark_unavailable', 'remove',
     ]);
   });
-  it('a machine for rent: mark rented when live, end rental when rented', () => {
-    expect(manageItems({ status: 'rented', kind: 'machine_rental', side: null })).toContain('end_rental');
-    expect(manageItems({ status: 'live', kind: 'machine_rental', side: null })).toContain('mark_rented');
+  it('a machine for rent: no Mark sold and no rental-only action (M14 §7.1: its bookings set rented)', () => {
+    expect(manageItems({ status: 'live', kind: 'machine_rental', side: null })).toEqual([
+      'edit', 'quantity', 'pause', 'renew', 'mark_unavailable', 'remove',
+    ]);
+    const rented = manageItems({ status: 'rented', kind: 'machine_rental', side: null });
+    expect(rented).toEqual(expect.arrayContaining(['pause', 'renew', 'mark_unavailable', 'remove']));
+    expect(rented).not.toContain('mark_sold');
   });
   it('hidden: only remove (not editable)', () => {
     expect(manageItems({ status: 'hidden', kind: 'part', side: 'right' })).toEqual(['other_side', 'remove']);
@@ -98,7 +103,7 @@ describe('needsConfirm and the result toast', () => {
   it("a go-live action sent to review says so; else the action's line", () => {
     expect(actionToastKey('resume', 'pending_review')).toBe('listing.manage.sentForReview');
     expect(actionToastKey('resume', 'live')).toBe('listing.manage.done.resume');
-    for (const a of ['pause', 'resume', 'renew', 'mark_sold', 'mark_unavailable', 'relist', 'mark_rented', 'end_rental', 'remove'] as const) {
+    for (const a of ['pause', 'resume', 'renew', 'mark_sold', 'mark_unavailable', 'relist', 'remove'] as const) {
       expect(i18n.exists(actionToastKey(a, 'live')), a).toBe(true);
     }
   });

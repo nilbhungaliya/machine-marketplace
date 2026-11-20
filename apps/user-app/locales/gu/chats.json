@@ -118,7 +118,19 @@
       "mine": "તમે આ બિઝનેસને બ્લૉક કર્યો.",
       "theirs": "આ વાતચીત બંધ છે."
     },
-    "supportMessage": "સપોર્ટ: {{message}}"
+    "supportMessage": "સપોર્ટ: {{message}}",
+    "booking_requested": "બુકિંગ #{{ref}} ની વિનંતી મોકલાઈ.",
+    "booking_changed": "બુકિંગ #{{ref}} બદલાયું.",
+    "booking_confirmed": "બુકિંગ #{{ref}} પાકું થયું.",
+    "booking_declined": "બુકિંગ #{{ref}} નકારાયું.",
+    "booking_withdrawn": "બુકિંગ #{{ref}} પાછું ખેંચાયું.",
+    "booking_expired": "બુકિંગ #{{ref}} જવાબ વિના સમાપ્ત થયું.",
+    "booking_on_site": "બુકિંગ #{{ref}} નું મશીન સાઇટ પર છે.",
+    "booking_returned": "બુકિંગ #{{ref}} નું મશીન પાછું આવ્યું.",
+    "booking_completed": "બુકિંગ #{{ref}} પૂર્ણ થયું.",
+    "booking_cancelled": "બુકિંગ #{{ref}} રદ થયું.",
+    "booking_problem": "બુકિંગ #{{ref}} પર સમસ્યા જણાવાઈ.",
+    "booking_dispute_resolved": "અમારી ટીમે બુકિંગ #{{ref}} ની સમસ્યા બંધ કરી."
   },
   "noteField": {
     "payment_method": "ચુકવણી",

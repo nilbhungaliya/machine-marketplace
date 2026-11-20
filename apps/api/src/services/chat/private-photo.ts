@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import sharp from 'sharp';
-import { CHAT_LIMITS, PART_REQUEST_LIMITS } from '@mpm/shared-types';
+import { CHAT_LIMITS, PART_REQUEST_LIMITS, RENTAL_LIMITS } from '@mpm/shared-types';
 import { ValidationError } from '../../lib/errors.js';
 import { sniffDocument } from '../../lib/sniff-document.js';
 import { deleteObject, getObjectBytes, presignPrivateGet, presignSignedPut, putPrivateObject } from '../../lib/storage.js';
@@ -24,10 +24,19 @@ export type PhotoDestination =
   | { kind: 'chat'; threadId: string }
   | { kind: 'deal'; dealId: string }
   /** F8 reference photos (spec R1): `part-request/<id>/<uuid>.jpg`, at most `PART_REQUEST_LIMITS.photosMax`. */
-  | { kind: 'part_request'; partRequestId: string };
+  | { kind: 'part_request'; partRequestId: string }
+  /**
+   * M14 (plan D8) booking step photos: `rental/<bookingId>/<uuid>.jpg`; at most `RENTAL_LIMITS.photosMax` (3) on site
+   * and on return, 5 with a problem report (as a deal problem).
+   */
+  | { kind: 'rental'; bookingId: string; step: 'on_site' | 'return' | 'problem' };
+
+/** A rental problem report's photos (plan C0-3a: problem 5, as a deal problem). */
+const RENTAL_PROBLEM_PHOTOS_MAX = 5;
 
 /** The default photo count per destination; `finalizePrivatePhotos(…, { max })` overrides it. */
 function defaultMax(dest: PhotoDestination): number {
+  if (dest.kind === 'rental') return dest.step === 'problem' ? RENTAL_PROBLEM_PHOTOS_MAX : RENTAL_LIMITS.photosMax;
   return dest.kind === 'part_request' ? PART_REQUEST_LIMITS.photosMax : CHAT_LIMITS.photosPerMessage;
 }
 
@@ -77,6 +86,7 @@ export async function reencodeToJpeg(bytes: Uint8Array): Promise<Buffer> {
 function finalKey(dest: PhotoDestination): string {
   if (dest.kind === 'chat') return `chat/${dest.threadId}/${randomUUID()}.jpg`;
   if (dest.kind === 'deal') return `deal/${dest.dealId}/${randomUUID()}.jpg`;
+  if (dest.kind === 'rental') return `rental/${dest.bookingId}/${randomUUID()}.jpg`;
   return `part-request/${dest.partRequestId}/${randomUUID()}.jpg`;
 }
 

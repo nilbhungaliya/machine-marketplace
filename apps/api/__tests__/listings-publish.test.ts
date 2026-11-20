@@ -393,7 +393,7 @@ describe('amendment 5: an edit after a report, off view', () => {
     expect(renewed.json().data).toMatchObject({ outcome: 'pending_review', listing: { reviewReasons: ['edited_after_report'] } });
   });
 
-  it('sends relist and end of rental to review while it is set', async () => {
+  it("sends relist and a rented listing's renew to review while it is set", async () => {
     const s = await seller({ gst: true });
     const sold = await partOf(s, { status: 'sold', reviewReasons: ['edited_after_report'] });
     expect((await action(s, sold, { action: 'relist' })).json().data).toMatchObject({ outcome: 'pending_review' });
@@ -401,7 +401,7 @@ describe('amendment 5: an edit after a report, off view', () => {
       businessId: s.businessId, userId: s.userId, kind: 'machine_rental', status: 'rented', categoryId: catalog.machineTypeId,
       unitId: machineUnit.id, machine: { brandOther: 'Local make' }, reviewReasons: ['edited_after_report'],
     });
-    const ended = await action(s, rented, { action: 'end_rental' });
+    const ended = await action(s, rented, { action: 'renew' });
     expect(ended.json().data).toMatchObject({ outcome: 'pending_review', listing: { reviewReasons: ['edited_after_report'] } });
   });
 

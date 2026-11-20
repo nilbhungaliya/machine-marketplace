@@ -97,7 +97,7 @@ export async function currentFlags(conn: Conn, listing: ListingRow): Promise<Lis
 }
 
 /** What the gate is asked for: `publish` from a draft, `resubmit` = publish from `rejected`. */
-export type GateAction = 'publish' | 'resubmit' | 'relist' | 'resume' | 'renew' | 'end_rental';
+export type GateAction = 'publish' | 'resubmit' | 'relist' | 'resume' | 'renew';
 
 export interface GateResult {
   to: 'live' | 'pending_review';
@@ -107,12 +107,12 @@ export interface GateResult {
 }
 
 /** Go-live actions of a listing that was already approved: a reason remembered while off view sends them to review. */
-const BACK_ON_VIEW: readonly GateAction[] = ['resume', 'renew', 'relist', 'end_rental'];
+const BACK_ON_VIEW: readonly GateAction[] = ['resume', 'renew', 'relist'];
 
 /**
  * The go-live gate, exactly the §5.5 table (run under the business → listing locks):
  *
- * | Check | publish | resubmit | relist | resume, renew, end_rental |
+ * | Check | publish | resubmit | relist | resume, renew |
  * |---|---|---|---|---|
  * | rental from a business without GST → `403 RENTAL_NEEDS_GST` | ✓ | ✓ | ✓ | ✓ |
  * | unverified business at the open-listing cap (other open listings) → `409 UNVERIFIED_LISTING_CAP` | ✓ | — | ✓ | — |

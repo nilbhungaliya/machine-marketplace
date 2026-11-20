@@ -94,7 +94,7 @@ describe('timeline and review card', () => {
   });
   it('review card: rate while offered, then waiting / published', () => {
     const review = (over: Partial<NonNullable<DealView['review']>> = {}): NonNullable<DealView['review']> => ({
-      dealId: 'd', mySide: 'buyer', eligible: true, reason: null, windowEndsAt: null, mine: null, theirsSubmitted: false,
+      subject: { kind: 'deal', id: 'd' }, dealId: 'd', mySide: 'buyer', eligible: true, reason: null, windowEndsAt: null, mine: null, theirsSubmitted: false,
       publishDueAt: null, ...over,
     });
     expect(reviewCardState({ status: 'completed', actions: ['review'], review: review() })).toEqual({ kind: 'rate' });

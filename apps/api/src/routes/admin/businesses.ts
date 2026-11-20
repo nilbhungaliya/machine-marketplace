@@ -2,6 +2,7 @@ import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { ACCOUNT_STATUSES, VERIFICATION_STATUSES } from '@mpm/shared-types';
 import { reasonBody } from '../../lib/admin-text.js';
+import { runTx } from '../../lib/tx-effects.js';
 import {
   PAGE_SIZE_MAX,
   getBusinessDetail,
@@ -45,7 +46,8 @@ const adminBusinessRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post('/admin/businesses/:id/gst/revoke', officer, async (request) => {
     const { id } = idParams.parse(request.params);
     const { reason } = reasonBody.parse(request.body ?? {});
-    return { data: await fastify.db.transaction((tx) => revokeGst(tx, request.admin!.adminId, id, reason)) };
+    // runTx: M14's rental exits queue `rental:updated` emits (after commit).
+    return { data: await runTx(fastify, (tx) => revokeGst(tx, request.admin!.adminId, id, reason)) };
   });
 
   fastify.post('/admin/businesses/:id/gst/release', officer, async (request) => {

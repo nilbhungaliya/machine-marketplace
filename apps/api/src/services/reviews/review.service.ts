@@ -56,7 +56,7 @@ export function validateReviewInput(
   side: PartySide,
   input: { ratings: Record<string, unknown>; text?: string | null },
 ): { ratings: Record<ReviewFacet, number>; text: string | null } {
-  const expected = REVIEW_FACETS[side] as readonly string[];
+  const expected = REVIEW_FACETS.deal[side] as readonly string[];
   const given = Object.keys(input.ratings);
   const extra = given.filter((k) => !expected.includes(k));
   if (extra.length) throw answersInvalid({ notApplicable: extra });
@@ -314,7 +314,7 @@ export async function postReply(tx: Tx, user: UserTokenPayload, reviewId: string
   );
   const [seen] = await tx.select({ dealId: dealReviews.dealId }).from(dealReviews).where(ofMine);
   if (!seen) throw reviewNotFound();
-  await lockDeal(tx, seen.dealId);
+  await lockDeal(tx, seen.dealId!); // M14: A3 generalises (the subject's lock)
   const [row] = await tx.select().from(dealReviews).where(ofMine).for('update');
   if (!row) throw reviewNotFound();
   if (row.publishedAt === null) throw new ConflictError('This review is not published yet', 'REVIEW_NOT_PUBLISHED');

@@ -117,4 +117,10 @@ describe('F6 + F7 menu entries (spec §16.1, the API roles)', () => {
     expect(findActiveNav('/deals/abc/')?.item.href).toBe('/deals');
     expect(findActiveNav('/enquiries/abc/')?.item.href).toBe('/enquiries');
   });
+
+  it('M14 Rental bookings: operations and support (spec §15), a booking record lights it', () => {
+    expect(canSee(item('/rentals')!, 'super_admin')).toBe(true);
+    for (const role of OTHERS) expect(canSee(item('/rentals')!, role), role).toBe(role === 'operations' || role === 'support');
+    expect(findActiveNav('/rentals/abc/')?.item.href).toBe('/rentals');
+  });
 });

@@ -64,7 +64,7 @@ const optionCls =
  * Danger submit. Mount it only while open.
  */
 export function ResolveDialog({ dispute, onClose, onResolved }: {
-  dispute: { id: string; dealRef: number; buyer: AdminPartyRef; seller: AdminPartyRef };
+  dispute: { id: string; dealRef: number | null; buyer: AdminPartyRef; seller: AdminPartyRef };
   onClose: () => void;
   /** After a resolve, or a refusal that means the record is stale: reload. */
   onResolved: () => Promise<void> | void;

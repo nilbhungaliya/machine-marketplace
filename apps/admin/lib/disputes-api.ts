@@ -1,5 +1,5 @@
 import type {
-  AdminDisputeDetail, AdminDisputeList, DisputeCategory, DisputeOutcome, DisputeStatus,
+  AdminDisputeDetail, AdminDisputeList, DisputeCategory, DisputeOutcome, DisputeStatus, RentalDisputeCategory,
 } from '@mpm/shared-types';
 import { api, ApiError } from './api';
 import type { StatusTone } from './status';
@@ -40,12 +40,17 @@ export const resolveDispute = (id: string, body: ResolveDisputeBody) =>
 
 // ─── wording ───
 
-export const DISPUTE_CATEGORY_LABELS: Record<DisputeCategory, string> = {
+/** Deal and rental-booking problem categories (M14 §9: a booking's dispute shares the queue). */
+export const DISPUTE_CATEGORY_LABELS: Record<DisputeCategory | RentalDisputeCategory, string> = {
   not_as_described: 'Not as described',
   damaged: 'Damaged',
   short_quantity: 'Short quantity',
   not_received: 'Not received',
   payment_not_received: 'Payment not received',
+  breakdown: 'Machine broke down',
+  damage: 'Machine damaged',
+  hours_or_amount: 'Hours or amount',
+  no_show: 'Machine not delivered',
   other: 'Something else',
 };
 

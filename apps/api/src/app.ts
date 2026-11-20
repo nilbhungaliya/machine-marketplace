@@ -52,6 +52,9 @@ import adminReviewRoutes from './routes/admin/reviews.js';
 import partRequestRoutes from './routes/part-requests.js';
 import partRequestReplyRoutes from './routes/part-request-replies.js';
 import adminPartRequestRoutes from './routes/admin/part-requests.js';
+import rentalRoutes from './routes/rentals.js';
+import rentalCalendarRoutes from './routes/rental-calendar.js';
+import adminRentalRoutes from './routes/admin/rentals.js';
 
 export interface BuildAppOptions {
   /** false in unit tests that must not touch Postgres/Redis. */
@@ -142,6 +145,10 @@ export async function buildApp({ infra = true, logger = true }: BuildAppOptions 
     await app.register(partRequestRoutes);
     await app.register(partRequestReplyRoutes);
     await app.register(adminPartRequestRoutes);
+    // M14 rental bookings (plan C0-4: A1, A2, A3 route files).
+    await app.register(rentalRoutes);
+    await app.register(rentalCalendarRoutes);
+    await app.register(adminRentalRoutes);
   }
 
   return app;

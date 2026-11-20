@@ -9,6 +9,7 @@ import { adminText } from '../../lib/admin-text.js';
 import { writeAudit } from '../audit.service.js';
 import { lockListingsInOrder } from '../deals/locks.js';
 import { closeChainsForInactiveOwner, openOfferListingIds, reconcileOffersForListing } from '../offers/reconcile.js';
+import { exitBookingsForSuspendedBusiness, ownRentalListingIds } from '../rentals/system-exits.js';
 
 // Account status actions (F1 + A2 spec §8.2, §10; scope A2). One state machine:
 //   suspend   active            → suspended   (verification_officer, moderator, super_admin)
@@ -24,6 +25,10 @@ import { closeChainsForInactiveOwner, openOfferListingIds, reconcileOffersForLis
 // is the buyer close (`account_inactive`). The affected listings are locked in id order before any offer. Other members
 // change no offer; reinstating reopens nothing; deals continue. The route runs the action in `runTx` so the queued
 // emits flush after commit.
+//
+// M14 (spec §6.1, plan C0-3a): the same suspension or block ends the business's open rental requests (owner side
+// declined `owner_inactive`, renter side withdrawn `renter_inactive`), after the listing and offer locks (the owner's
+// rental listings are in the same id-ordered pass); confirmed bookings continue.
 
 export interface StatusActor {
   id: string;
@@ -81,11 +86,18 @@ async function closeOffersForInactiveOwner(tx: Tx, businessId: string): Promise<
     .select({ id: listings.id })
     .from(listings)
     .where(and(eq(listings.businessId, businessId), inArray(listings.status, ['live', 'reserved'])));
-  const locked = await lockListingsInOrder(tx, [...own.map((l) => l.id), ...(await openOfferListingIds(tx, businessId))]);
+  // M14 (C0 review I2): the business's rental listings join the same single pass, so a concurrent booking request or
+  // confirm on them is serialised before `exitBookingsForSuspendedBusiness` reads the open requests.
+  const locked = await lockListingsInOrder(tx, [
+    ...own.map((l) => l.id),
+    ...(await openOfferListingIds(tx, businessId)),
+    ...(await ownRentalListingIds(tx, businessId)),
+  ]);
   for (const listing of locked) {
     if (listing.businessId === businessId) await reconcileOffersForListing(tx, listing.id);
   }
   await closeChainsForInactiveOwner(tx, businessId);
+  await exitBookingsForSuspendedBusiness(tx, businessId);
 }
 
 function superAdminOnly(admin: StatusActor): void {

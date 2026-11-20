@@ -1,0 +1,17 @@
+{
+  "calendar": {
+    "title": "Calendar"
+  },
+  "change": {
+    "title": "Propose a change"
+  },
+  "decline": {
+    "title": "Decline the request"
+  },
+  "onSite": {
+    "title": "Machine on site"
+  },
+  "return": {
+    "title": "Machine returned"
+  }
+}

@@ -13,7 +13,7 @@ import { track } from '@/lib/analytics';
 import { LISTING_EVENTS } from '@/lib/analytics-events';
 import { gstScreen } from '@/lib/gst-flow';
 import {
-  ArrowLeftRight, Ban, Check, CircleX, Eye, Package, Pause, Pencil, Play, RefreshCw, RotateCcw, Tag, Trash, type LucideIcon,
+  ArrowLeftRight, Ban, Check, Eye, Package, Pause, Pencil, Play, RefreshCw, RotateCcw, Trash, type LucideIcon,
 } from '@/lib/icons';
 import { deleteDraft, fetchOwnerListing } from '@/lib/listing-api';
 import { listingWriteErrorMessage } from '@/lib/f6-errors';
@@ -48,8 +48,6 @@ const ICONS: Record<ManageItem, LucideIcon> = {
   mark_sold: Check,
   mark_unavailable: Ban,
   relist: RotateCcw,
-  mark_rented: Tag,
-  end_rental: CircleX,
   remove: Trash,
 };
 

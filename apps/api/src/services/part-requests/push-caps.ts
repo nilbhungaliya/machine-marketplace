@@ -1,11 +1,12 @@
 import { sql } from 'drizzle-orm';
 import type { Tx } from '../../db/index.js';
+import { IST_TODAY } from '../../lib/ist.js';
 
 // The per-seller daily push cap for `part_request_new` (spec §7.5, §5.8): one atomic upsert per targeting pass, never a
 // business row lock.
 
-/** Today in India (IST), as a SQL date. */
-export const IST_TODAY = sql`(now() AT TIME ZONE 'Asia/Kolkata')::date`;
+/** Today in India (IST), as a SQL date: the shared helper (M14 plan D11), re-exported for F8's callers. */
+export { IST_TODAY };
 
 /**
  * Counts one push for each business still under `cap` today (IST) and returns those businesses: they get a push, the

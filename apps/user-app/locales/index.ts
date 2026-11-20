@@ -69,6 +69,13 @@ import guRequirements from './gu/requirements.json';
 import enBuyers from './en/buyers.json';
 import hiBuyers from './hi/buyers.json';
 import guBuyers from './gu/buyers.json';
+// M14 (C0-5)
+import enRentals from './en/rentals.json';
+import hiRentals from './hi/rentals.json';
+import guRentals from './gu/rentals.json';
+import enRentalsOwner from './en/rentals-owner.json';
+import hiRentalsOwner from './hi/rentals-owner.json';
+import guRentalsOwner from './gu/rentals-owner.json';
 
 // One import per language per area. A new area: add its JSON in en/, hi/ and gu/, then register it here.
 export const resources = {
@@ -97,6 +104,8 @@ export const resources = {
       holds: enHolds,
       requirements: enRequirements,
       buyers: enBuyers,
+      rentals: enRentals,
+      rentalsOwner: enRentalsOwner,
     },
   },
   hi: {
@@ -124,6 +133,8 @@ export const resources = {
       holds: hiHolds,
       requirements: hiRequirements,
       buyers: hiBuyers,
+      rentals: hiRentals,
+      rentalsOwner: hiRentalsOwner,
     },
   },
   gu: {
@@ -151,6 +162,8 @@ export const resources = {
       holds: guHolds,
       requirements: guRequirements,
       buyers: guBuyers,
+      rentals: guRentals,
+      rentalsOwner: guRentalsOwner,
     },
   },
 } as const;

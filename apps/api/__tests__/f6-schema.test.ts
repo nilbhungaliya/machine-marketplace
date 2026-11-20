@@ -87,7 +87,7 @@ describe('F6 schema', () => {
         INSERT INTO deal_disputes (deal_id, opened_by_side, opened_by_user_id, category, description)
         VALUES (${deal.dealId}, 'buyer', ${buyer.userId}, 'damaged', 'Arrived with a cracked housing')`);
     await insert();
-    await expect(insert()).rejects.toMatchObject({ code: '23505', constraint: 'deal_disputes_one_open' });
+    await expect(insert()).rejects.toMatchObject({ code: '23505', constraint: 'deal_disputes_one_open_deal' });
   });
 
   it('numbers deals from 500001 and refuses an advance above the total', async () => {

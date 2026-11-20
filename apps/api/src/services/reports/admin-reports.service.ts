@@ -90,7 +90,7 @@ const COLUMN_OF: Record<string, keyof RawReport> = {
 
 function ratingsOf(r: RawReport): ReviewRatings {
   const out: ReviewRatings = {};
-  for (const facet of REVIEW_FACETS[r.r_side ?? 'buyer']) {
+  for (const facet of REVIEW_FACETS.deal[r.r_side ?? 'buyer']) {
     const v = r[COLUMN_OF[facet]!] as number | null;
     if (v !== null) out[facet] = Number(v);
   }

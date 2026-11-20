@@ -168,9 +168,11 @@ function toAdminDisputeRow(r: DisputeRowSelect): AdminDisputeRow {
   const d = r.dispute;
   return {
     id: d.id,
+    subject: { kind: 'deal', dealId: d.dealId! }, // M14: A3 generalises (the queue joins deals: deal disputes only today)
     dealId: d.dealId,
     dealRef: r.dealRef,
-    category: d.category,
+    rentalBookingRef: null,
+    category: d.category as AdminDisputeRow['category'], // M14: A3 generalises
     status: d.status,
     outcome: d.outcome,
     openedBySide: d.openedBySide,
@@ -279,7 +281,7 @@ export async function getDispute(conn: Conn, disputeId: string): Promise<AdminDi
     const [a] = await conn.select({ name: adminUsers.name }).from(adminUsers).where(eq(adminUsers.id, d.resolvedByAdminId));
     resolvedByAdminName = a?.name ?? null;
   }
-  const deal = await getAdminDeal(conn, d.dealId);
+  const deal = await getAdminDeal(conn, d.dealId!); // M14: A3 generalises
   return {
     ...toAdminDisputeRow(r),
     description: d.description,

@@ -194,5 +194,7 @@ export async function getThreadDetail(conn: Conn, user: UserTokenPayload, thread
     lastReadSeq: String(lastReadSeq),
     unread: unread?.n ?? 0,
     machineTip: thread.listingKind !== 'part',
+    // M14: A1 lists the thread's rental bookings.
+    bookings: [],
   };
 }

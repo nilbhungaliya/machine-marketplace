@@ -12,7 +12,7 @@ import { useType } from '@/hooks/use-type';
 import { track } from '@/lib/analytics';
 import { NOTIFICATION_EVENTS } from '@/lib/analytics-events';
 import { formatDayMonth, formatTime } from '@/lib/format-date';
-import { BellRing, Star, TAB_ICONS, Tag, TriangleAlert, type LucideIcon } from '@/lib/icons';
+import { BellRing, CalendarClock, Star, TAB_ICONS, Tag, TriangleAlert, type LucideIcon } from '@/lib/icons';
 import { istDateKey } from '@/lib/ist-date';
 import { notificationLink } from '@/lib/notification-links';
 import { radius, spacing, useTheme } from '@/lib/theme';
@@ -24,6 +24,7 @@ const CATEGORY_ICONS: Record<NotificationCategory, LucideIcon> = {
   deals: TAB_ICONS.deals,
   reviews: Star,
   requests: BellRing,
+  rentals: CalendarClock,
 };
 
 /** Today: the time; earlier: the day and month (IST). */

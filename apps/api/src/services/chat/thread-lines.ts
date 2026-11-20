@@ -1,7 +1,17 @@
 import { and, eq, inArray, isNotNull, or, sql } from 'drizzle-orm';
 import { enquiryStatus, threadTurns, type PartySide, type SystemLineCode } from '@mpm/shared-types';
 import type { Tx } from '../../db/index.js';
-import { businessBlocks, chatMessages, chatThreadUserState, chatThreads, deals, listings, offers, users } from '../../db/schema.js';
+import {
+  businessBlocks,
+  chatMessages,
+  chatThreadUserState,
+  chatThreads,
+  deals,
+  listings,
+  offers,
+  rentalBookings,
+  users,
+} from '../../db/schema.js';
 import { lockThread } from '../deals/locks.js';
 import { publicListingWhere } from '../listings/public-where.service.js';
 import type { ThreadRow } from './members.js';
@@ -78,11 +88,22 @@ export async function insertSystemLine(
   return insertMessage(tx, thread, { kind: 'system', systemCode: code, systemValues: values }, opts);
 }
 
-/** An offer or deal card; its contents are read live from the offer / deal each time a reader loads it. */
+/**
+ * An offer, deal or (M14 §8, plan D9) rental booking card; its contents are read live from the offer / deal / booking
+ * each time a reader loads it. A booking card is the renter's (`senderSide: 'buyer'`) and is the first message of a
+ * thread a request opened (no enquiry card then).
+ */
 export async function insertCardMessage(
   tx: Tx,
   threadId: string,
-  card: { kind: 'offer' | 'deal'; offerId?: string; dealId?: string; senderSide: PartySide; senderUserId: string | null },
+  card: {
+    kind: 'offer' | 'deal' | 'booking';
+    offerId?: string;
+    dealId?: string;
+    rentalBookingId?: string;
+    senderSide: PartySide;
+    senderUserId: string | null;
+  },
 ): Promise<MessageRow> {
   const thread = await lockThread(tx, threadId);
   return insertMessage(tx, thread, {
@@ -91,12 +112,18 @@ export async function insertCardMessage(
     senderUserId: card.senderUserId,
     offerId: card.kind === 'offer' ? card.offerId ?? null : null,
     dealId: card.kind === 'deal' ? card.dealId ?? null : null,
+    rentalBookingId: card.kind === 'booking' ? card.rentalBookingId ?? null : null,
   });
 }
 
 /**
  * Writes `buyer_turn` / `seller_turn` from `threadTurns` (§6.10): the pending offer's turn, an `open` enquiry (derived
  * status) for the seller, and the thread's deals waiting on a side. Called by every transaction that changes an input.
+ *
+ * M14 (plan D10): the thread's **open** rental bookings add their turn (`requested` → the owner = seller, `countered`
+ * → the renter = buyer) and count as an open negotiation. The date-dependent rental turns (mark on site, mark returned)
+ * are never stored here (they would go stale at midnight): they live in the Deals tab badge, computed on read. A thread
+ * with any booking has no "unanswered enquiry" turn: the booking card replaces the enquiry card (D9).
  */
 export async function recomputeTurns(tx: Tx, threadId: string): Promise<{ buyer: boolean; seller: boolean }> {
   const [thread] = await tx.select().from(chatThreads).where(eq(chatThreads.id, threadId));
@@ -125,14 +152,29 @@ export async function recomputeTurns(tx: Tx, threadId: string): Promise<{ buyer:
       ),
     )
     .limit(1);
+  const bookings = await tx
+    .select({ status: rentalBookings.status, turn: rentalBookings.turn })
+    .from(rentalBookings)
+    .where(eq(rentalBookings.threadId, threadId));
+  const openBookings = bookings.filter((b) => b.status === 'requested' || b.status === 'countered');
   const status = enquiryStatus({
     dealCount: thread.dealCount,
     firstSellerReplyAt: thread.firstSellerReplyAt,
-    hasOpenNegotiation: live.length > 0,
+    hasOpenNegotiation: live.length > 0 || openBookings.length > 0,
     listingPublic: pub !== undefined,
     blocked: block !== undefined,
   });
-  const turns = threadTurns({ openTurn: open?.turn ?? null, enquiryOpen: status === 'open', deals: threadDeals });
+  const offerTurns = threadTurns({
+    openTurn: open?.turn ?? null,
+    // Only an OPEN booking (requested / countered) suppresses the enquiry's owner turn (C0 review M6): a past booking
+    // on the thread doesn't stop a later enquiry message from being the seller's turn.
+    enquiryOpen: status === 'open' && openBookings.length === 0,
+    deals: threadDeals,
+  });
+  const turns = {
+    buyer: offerTurns.buyer || openBookings.some((b) => b.turn === 'renter'),
+    seller: offerTurns.seller || openBookings.some((b) => b.turn === 'owner'),
+  };
   if (turns.buyer !== thread.buyerTurn || turns.seller !== thread.sellerTurn) {
     await tx.update(chatThreads).set({ buyerTurn: turns.buyer, sellerTurn: turns.seller }).where(eq(chatThreads.id, threadId));
   }

@@ -113,6 +113,20 @@
       "when": 1795158018930,
       "tag": "0015_f8_checks",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1795188219884,
+      "tag": "0016_m14_rental_bookings",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1795188234264,
+      "tag": "0017_m14_checks",
+      "breakpoints": true
     }
   ]
 }

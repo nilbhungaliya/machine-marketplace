@@ -1,4 +1,4 @@
-import type { ListingStatus, PartRequestStatus } from '@mpm/shared-types';
+import type { ListingStatus, PartRequestStatus, RentalBookingStatus } from '@mpm/shared-types';
 
 export type StatusTone = 'green' | 'blue' | 'amber' | 'red' | 'gray';
 
@@ -38,6 +38,27 @@ export const PART_REQUEST_STATUS_TONES: Record<PartRequestStatus, StatusTone> = 
 
 export function partRequestStatusTone(status: PartRequestStatus): StatusTone {
   return PART_REQUEST_STATUS_TONES[status];
+}
+
+/**
+ * Rental booking statuses (M14 §6.1): an open request amber, a booking under way (confirmed, on rent, returned) brand
+ * lavender, completed green, ended without a rental grey, disputed red. Typed like the part-request map; the shared
+ * `statusTone` keeps its deal / offer tones for the same words (`cancelled` red), so booking pages use
+ * `rentalBookingStatusTone`.
+ */
+export const RENTAL_BOOKING_STATUS_TONES: Record<RentalBookingStatus, StatusTone> = {
+  requested: 'amber', countered: 'amber', confirmed: 'blue', on_rent: 'blue', returned: 'blue', completed: 'green',
+  declined: 'gray', withdrawn: 'gray', expired: 'gray', cancelled: 'gray', disputed: 'red',
+};
+
+export const RENTAL_BOOKING_STATUS_LABELS: Record<RentalBookingStatus, string> = {
+  requested: 'Requested', countered: 'Change proposed', confirmed: 'Confirmed', on_rent: 'On rent', returned: 'Returned',
+  completed: 'Completed', declined: 'Declined', withdrawn: 'Withdrawn', expired: 'Expired', cancelled: 'Cancelled',
+  disputed: 'Disputed',
+};
+
+export function rentalBookingStatusTone(status: RentalBookingStatus): StatusTone {
+  return RENTAL_BOOKING_STATUS_TONES[status];
 }
 
 // Listing statuses (above), enquiry and offer (F6), deal and rental booking (F7), part request (F8), verification and GST

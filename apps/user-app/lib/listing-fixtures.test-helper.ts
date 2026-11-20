@@ -73,6 +73,7 @@ export function ownerFixture(over: Partial<ListingOwnerView> = {}): ListingOwner
     score: { score: 0, missing: [] },
     partRequestId: null,
     pendingRequestReply: null,
+    bookingSummary: null,
     location: {
       source: 'business', pincode: '360003', city: 'rajkot', state: 'gujarat', industrialAreaId: 'a1',
       industrialAreaName: 'aji-gidc', industrialAreaOther: null, addressLine: null, lat: null, lng: null,

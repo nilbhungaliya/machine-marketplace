@@ -5,7 +5,7 @@ import { and, asc, eq } from 'drizzle-orm';
 import type { AdminListingDetail, AdminModerationQueue, ListingKind, ListingStatus, ModerationCounts } from '@mpm/shared-types';
 import { buildApp } from '../src/app.js';
 import { db } from '../src/db/index.js';
-import { auditLog, listingFitments, listings, reports } from '../src/db/schema.js';
+import { auditLog, listingFitments, listingStatusHistory, listings, reports } from '../src/db/schema.js';
 import { createTestAdmin, deleteTestAdmins } from './_helpers/test-admins.js';
 import { createTestBrand, createTestCatalog, deleteTestBrands, deleteTestCatalog, type TestBrand, type TestCatalog } from './_helpers/test-catalog.js';
 import { deleteTestBusinesses } from './_helpers/test-businesses.js';
@@ -178,11 +178,23 @@ describe('approve, ask for changes, reject', () => {
     expect(audit[0]).toMatchObject({ adminId: moderator.id, entityType: 'listing', before: { status: 'pending_review' }, after: { status: 'live' } });
   });
 
-  it('approves back into the stored return_status (rented)', async () => {
+  it('approves back into the stored return_status (rented), then the calendar decides', async () => {
     const s = await seller({ gst: true });
     const id = await listingOf(s, 'pending_review', 'machine_rental', { returnStatus: 'rented', reviewReasons: ['edit_flagged'] });
     const res = await post(`/admin/listings/${id}/approve`, { version: 1 });
-    expect(res.json().data.listing).toMatchObject({ status: 'rented', returnStatus: null });
+    // M14 R7: approve lands `rented`; with no booking out today `afterListingStatusWrite` moves it back to `live`.
+    expect(res.json().data.listing).toMatchObject({ status: 'live', returnStatus: null });
+    const history = await db
+      .select({ action: listingStatusHistory.action, to: listingStatusHistory.toStatus })
+      .from(listingStatusHistory)
+      .where(eq(listingStatusHistory.listingId, id));
+    // One transaction: both rows share now(), so compare as a set.
+    expect(history).toEqual(
+      expect.arrayContaining([
+        { action: 'approve', to: 'rented' },
+        { action: 'rent_back', to: 'live' },
+      ]),
+    );
   });
 
   it("refuses approve after the seller's edit (409 LISTING_CHANGED): status unchanged, no audit row", async () => {

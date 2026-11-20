@@ -15,6 +15,9 @@ import {
   PART_REQUEST_AUDIENCES, PART_REQUEST_CLOSE_REASONS, PART_REQUEST_DROP_REASONS, PART_REQUEST_FEEDBACK_REASONS,
   PART_REQUEST_KINDS, PART_REQUEST_MATCH_SOURCES, PART_REQUEST_MATCH_TIERS, PART_REQUEST_REACHES,
   PART_REQUEST_REPLY_STATUSES, PART_REQUEST_STATUSES, PART_REQUEST_WORK_KINDS,
+  RENTAL_ACTOR_SIDES, RENTAL_BLOCK_REASONS, RENTAL_BOOKING_STATUSES, RENTAL_BOOKING_TURNS, RENTAL_COMPLETED_HOW,
+  type RentalCancelReason, type RentalDeclineReason, type RentalDisputeCategory, type RentalEventCode, type RentalFinalReason,
+  type RentalSystemReason, type RentalTermsSnapshot,
   type BusinessActivity, type ConsentPhoneSource, type ConsentWithdrawReason, type DealEventCode, type DeliveryOption,
   type DisputeCategory, type EnquiryMachine, type NotificationType, type QuickEnquiry, type SystemLineCode,
   type GstDetails, type GstDocumentType, type GstEnteredDetails, type ListingFlag, type ReviewReason, type Specs,
@@ -1046,6 +1049,8 @@ export const chatMessages = pgTable(
     photoKeys: text('photo_keys').array().$type<string[]>(),
     offerId: uuid('offer_id').references(() => offers.id),
     dealId: uuid('deal_id').references(() => deals.id),
+    /** M14 §8: a `booking` card's booking (CHECK `chat_messages_shape`, 0017). */
+    rentalBookingId: uuid('rental_booking_id').references((): AnyPgColumn => rentalBookings.id),
     systemCode: text('system_code').$type<SystemLineCode>(),
     systemValues: jsonb('system_values').$type<Record<string, string | number>>(),
     /** R7, decided at insert. */
@@ -1172,20 +1177,22 @@ export const dealEvents = pgTable(
   (t) => ({ dealCreatedIdx: index('deal_events_deal_created_idx').on(t.dealId, t.createdAt) }),
 );
 
-/** Problems reported on a deal (§5.10, §9.6): the businesses' dispute history. One open per deal. */
+/**
+ * Problems reported on a deal (§5.10, §9.6) or, since M14 (R12), on a rental booking: exactly one of `deal_id` /
+ * `rental_booking_id` (CHECK `deal_disputes_subject_one`, 0017). One open per deal and one per booking.
+ */
 export const dealDisputes = pgTable(
   'deal_disputes',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    dealId: uuid('deal_id')
-      .notNull()
-      .references(() => deals.id),
+    dealId: uuid('deal_id').references(() => deals.id),
+    rentalBookingId: uuid('rental_booking_id').references((): AnyPgColumn => rentalBookings.id),
     openedBySide: partySide('opened_by_side').notNull(),
     openedByUserId: uuid('opened_by_user_id')
       .notNull()
       .references(() => users.id),
-    /** `DISPUTE_CATEGORIES`. */
-    category: text('category').$type<DisputeCategory>().notNull(),
+    /** `DISPUTE_CATEGORIES`; `RENTAL_DISPUTE_CATEGORIES` on a booking. */
+    category: text('category').$type<DisputeCategory | RentalDisputeCategory>().notNull(),
     /** 10–1 000, masked to the other party. */
     description: text('description').notNull(),
     /** ≤ 5 final private keys (CHECK `deal_disputes_photos_max`). */
@@ -1203,22 +1210,27 @@ export const dealDisputes = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({
-    oneOpen: uniqueIndex('deal_disputes_one_open').on(t.dealId).where(sql`${t.status} = 'open'`),
+    oneOpenDeal: uniqueIndex('deal_disputes_one_open_deal')
+      .on(t.dealId)
+      .where(sql`${t.status} = 'open' AND ${t.dealId} IS NOT NULL`),
+    oneOpenRental: uniqueIndex('deal_disputes_one_open_rental')
+      .on(t.rentalBookingId)
+      .where(sql`${t.status} = 'open' AND ${t.rentalBookingId} IS NOT NULL`),
     queueIdx: index('deal_disputes_status_created_idx').on(t.status, t.createdAt),
   }),
 );
 
 /**
- * Reviews (§5.11, §10): one per side of a completed deal, published blind. CHECK `deal_reviews_shape` (facets per side,
- * 1–5, seller-side text null) in the custom migration.
+ * Reviews (§5.11, §10): one per side of a completed deal or (M14 R11) rental booking, published blind; exactly one of
+ * `deal_id` / `rental_booking_id` (CHECK `deal_reviews_subject_one`, 0017). CHECK `deal_reviews_shape` (facets per
+ * subject and side, 1–5, seller-side text null) in the custom migrations.
  */
 export const dealReviews = pgTable(
   'deal_reviews',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    dealId: uuid('deal_id')
-      .notNull()
-      .references(() => deals.id),
+    dealId: uuid('deal_id').references(() => deals.id),
+    rentalBookingId: uuid('rental_booking_id').references((): AnyPgColumn => rentalBookings.id),
     /** `buyer` reviews the seller; `seller` reviews the buyer. */
     reviewerSide: partySide('reviewer_side').notNull(),
     reviewerBusinessId: uuid('reviewer_business_id')
@@ -1235,6 +1247,8 @@ export const dealReviews = pgTable(
     rOnTime: smallint('r_on_time'),
     rPayment: smallint('r_payment'),
     rPickup: smallint('r_pickup'),
+    /** M14 R11: the owner rates the renter's care of the machine (rental seller side only). */
+    rCare: smallint('r_care'),
     /** ≤ 1 000; buyer side only. */
     text: text('text'),
     submittedAt: timestamp('submitted_at', { withTimezone: true }).notNull().defaultNow(),
@@ -1251,6 +1265,9 @@ export const dealReviews = pgTable(
   },
   (t) => ({
     dealSideUq: uniqueIndex('deal_reviews_deal_side_uq').on(t.dealId, t.reviewerSide),
+    rentalSideUq: uniqueIndex('deal_reviews_rental_side_uq')
+      .on(t.rentalBookingId, t.reviewerSide)
+      .where(sql`${t.rentalBookingId} IS NOT NULL`),
     publishedVisibleIdx: index('deal_reviews_published_visible_idx')
       .on(t.reviewedBusinessId, t.reviewerSide)
       .where(sql`${t.publishedAt} IS NOT NULL AND ${t.hiddenAt} IS NULL`),
@@ -1299,6 +1316,8 @@ export const notifications = pgTable(
     reviewId: uuid('review_id').references(() => dealReviews.id),
     /** F8 §5.9: the part request a `part_*` row opens. */
     partRequestId: uuid('part_request_id').references((): AnyPgColumn => partRequests.id),
+    /** M14 §11: the rental booking a `rental_booking_*` (or a rental review) row opens. */
+    rentalBookingId: uuid('rental_booking_id').references((): AnyPgColumn => rentalBookings.id),
     /** `<type>:<entityId>[:<qualifier>]`; unique per user, so a repeat is a no-op. */
     dedupeKey: text('dedupe_key').notNull(),
     /** Grouped chat rows: messages since the row opened. */
@@ -1654,4 +1673,214 @@ export const partRequestPushCounts = pgTable(
     pushes: smallint('pushes').notNull().default(0),
   },
   (t) => ({ pk: primaryKey({ name: 'part_request_push_counts_pk', columns: [t.businessId, t.day] }) }),
+);
+
+// ─── M14 rental bookings (spec 2026-11-20-m14-rental-bookings §5) ───
+// CHECKs, the reference sequence (#700001) and the text-cast `chat_messages_shape` are in 0017 (custom). Nothing in
+// 0016 / 0017 compares `message_kind` 'booking' or `notification_category` 'rentals' as enum literals (the migrator
+// runs every pending migration in one transaction; a new value of an existing enum can't be used there).
+
+export const rentalBookingStatus = pgEnum('rental_booking_status', RENTAL_BOOKING_STATUSES);
+export const rentalBookingTurn = pgEnum('rental_booking_turn', RENTAL_BOOKING_TURNS);
+export const rentalCompletedHow = pgEnum('rental_completed_how', RENTAL_COMPLETED_HOW);
+export const rentalActorSide = pgEnum('rental_actor_side', RENTAL_ACTOR_SIDES);
+export const rentalBlockReason = pgEnum('rental_block_reason', RENTAL_BLOCK_REASONS);
+
+/**
+ * A rental booking (§5.1): the renter's request → the owner's answer → on site → returned → completed. `status` is
+ * written only by `services/rentals/booking-write.ts` (`writeBookingStatus`). The booking is inserted first, then
+ * version 1, then `current_version_id` is set (the two tables reference each other). Capacity reads `start_date` /
+ * `end_date` / `machines`, copied from the open or agreed version.
+ */
+export const rentalBookings = pgTable(
+  'rental_bookings',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    /** Shown as #700001… (0017 restarts the sequence). */
+    ref: bigserial('ref', { mode: 'number' }).notNull().unique(),
+    listingId: uuid('listing_id')
+      .notNull()
+      .references(() => listings.id),
+    /** The listing's F6 thread with the renter business (opened by the request if none). */
+    threadId: uuid('thread_id')
+      .notNull()
+      .references(() => chatThreads.id),
+    renterBusinessId: uuid('renter_business_id')
+      .notNull()
+      .references(() => businesses.id),
+    /** The listing's business at request time. */
+    ownerBusinessId: uuid('owner_business_id')
+      .notNull()
+      .references(() => businesses.id),
+    createdByUserId: uuid('created_by_user_id')
+      .notNull()
+      .references(() => users.id),
+    status: rentalBookingStatus('status').notNull().default('requested'),
+    /** Whose answer the open proposal waits for; set iff `requested` / `countered` (CHECK). */
+    turn: rentalBookingTurn('turn'),
+    currentVersionId: uuid('current_version_id').references((): AnyPgColumn => rentalBookingVersions.id),
+    /** Proposals after the first (R3 cap `rental_max_changes`). */
+    changeCount: smallint('change_count').notNull().default(0),
+    startDate: date('start_date').notNull(),
+    endDate: date('end_date').notNull(),
+    period: rentalPeriod('period').notNull(),
+    periodCount: smallint('period_count').notNull(),
+    machines: smallint('machines').notNull(),
+    withOperator: boolean('with_operator').notNull(),
+    ownerDelivers: boolean('owner_delivers').notNull(),
+    /** Set at confirm / accept-change. */
+    agreedTotalPaise: bigint('agreed_total_paise', { mode: 'number' }),
+    /** Set at return (R6). */
+    finalAmountPaise: bigint('final_amount_paise', { mode: 'number' }),
+    finalAmountReason: text('final_amount_reason').$type<RentalFinalReason>(),
+    /** ≤ 300, masked per reader. */
+    finalAmountNote: text('final_amount_note'),
+    sitePincode: text('site_pincode').notNull(),
+    siteCity: text('site_city').notNull(),
+    siteState: text('site_state').notNull(),
+    /** ≤ 200; renter always, owner only from `confirmed` on and masked until the reveal (§8). */
+    siteAddress: text('site_address'),
+    /** The pincode's centroid; for distance only, never served. */
+    sitePoint: geography('site_point'),
+    listingTitle: text('listing_title').notNull(),
+    /** The listing's rates and terms at request. */
+    termsSnapshot: jsonb('terms_snapshot').$type<RentalTermsSnapshot>().notNull(),
+    replyDueAt: timestamp('reply_due_at', { withTimezone: true }),
+    confirmedAt: timestamp('confirmed_at', { withTimezone: true }),
+    onSiteAt: timestamp('on_site_at', { withTimezone: true }),
+    returnedAt: timestamp('returned_at', { withTimezone: true }),
+    completedAt: timestamp('completed_at', { withTimezone: true }),
+    cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
+    /** `renter` / `owner` only (CHECK). */
+    onSiteBySide: rentalActorSide('on_site_by_side'),
+    hourMeterStart: integer('hour_meter_start'),
+    hourMeterEnd: integer('hour_meter_end'),
+    /** ≤ 3 private keys each (`rental/<id>/…`, CHECK). */
+    onSitePhotoKeys: text('on_site_photo_keys').array().$type<string[]>().notNull().default(sql`'{}'::text[]`),
+    returnPhotoKeys: text('return_photo_keys').array().$type<string[]>().notNull().default(sql`'{}'::text[]`),
+    /** ≤ 500, masked per reader. */
+    damageNote: text('damage_note'),
+    /** `returned_at + rental_complete_days`. */
+    autoCompleteAt: timestamp('auto_complete_at', { withTimezone: true }),
+    completedHow: rentalCompletedHow('completed_how'),
+    cancelledBySide: rentalActorSide('cancelled_by_side'),
+    cancelReason: text('cancel_reason').$type<RentalCancelReason>(),
+    /** ≤ 300, masked per reader. */
+    cancelNote: text('cancel_note'),
+    /** The owner's (or the renter's, of a change) reason, or a system exit's. */
+    declineReason: text('decline_reason').$type<RentalDeclineReason | RentalSystemReason>(),
+    /** `on_rent` or `returned` while `disputed` (capacity and resume; CHECK). */
+    disputedFrom: rentalBookingStatus('disputed_from'),
+    /** Notes (R10): recorded, paid outside the app. */
+    paymentMethod: dealPaymentMethod('payment_method'),
+    /** CHECK ≤ agreed total. */
+    advancePaise: bigint('advance_paise', { mode: 'number' }),
+    depositPaise: bigint('deposit_paise', { mode: 'number' }),
+    depositReturned: boolean('deposit_returned'),
+    /** `HH:MM`. */
+    expectedOnSiteTime: text('expected_on_site_time'),
+    /** ≤ 500, masked per reader. */
+    notesText: text('notes_text'),
+    notesScamFlag: boolean('notes_scam_flag').notNull().default(false),
+    notesUpdatedAt: timestamp('notes_updated_at', { withTimezone: true }),
+    notesUpdatedByUserId: uuid('notes_updated_by_user_id').references(() => users.id),
+    /** Each reminder once (§9). */
+    startRemindedAt: timestamp('start_reminded_at', { withTimezone: true }),
+    dueRemindedAt: timestamp('due_reminded_at', { withTimezone: true }),
+    overdueRemindedAt: timestamp('overdue_reminded_at', { withTimezone: true }),
+    notStartedRemindedAt: timestamp('not_started_reminded_at', { withTimezone: true }),
+    /** +1 on every change; only a notes edit sends it back (`409 RENTAL_BOOKING_STALE`). */
+    version: integer('version').notNull().default(1),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    capacityIdx: index('rental_bookings_capacity_idx')
+      .on(t.listingId, t.status, t.startDate, t.endDate)
+      .where(sql`${t.status} IN ('confirmed', 'on_rent', 'disputed')`),
+    renterStatusIdx: index('rental_bookings_renter_status_updated_idx').on(t.renterBusinessId, t.status, t.updatedAt.desc()),
+    ownerStatusIdx: index('rental_bookings_owner_status_updated_idx').on(t.ownerBusinessId, t.status, t.updatedAt.desc()),
+    replyDueIdx: index('rental_bookings_reply_due_idx')
+      .on(t.status, t.replyDueAt)
+      .where(sql`${t.status} IN ('requested', 'countered')`),
+    autoCompleteIdx: index('rental_bookings_auto_complete_idx')
+      .on(t.status, t.autoCompleteAt)
+      .where(sql`${t.status} = 'returned'`),
+    threadIdx: index('rental_bookings_thread_idx').on(t.threadId),
+    listingIdx: index('rental_bookings_listing_idx').on(t.listingId),
+  }),
+);
+
+/** Every proposal of a booking (§5.2, R3): `seq` 1 = the request. Never updated. */
+export const rentalBookingVersions = pgTable(
+  'rental_booking_versions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    bookingId: uuid('booking_id')
+      .notNull()
+      .references(() => rentalBookings.id),
+    seq: smallint('seq').notNull(),
+    proposedBySide: rentalBookingTurn('proposed_by_side').notNull(),
+    startDate: date('start_date').notNull(),
+    endDate: date('end_date').notNull(),
+    period: rentalPeriod('period').notNull(),
+    periodCount: smallint('period_count').notNull(),
+    machines: smallint('machines').notNull(),
+    withOperator: boolean('with_operator').notNull(),
+    ownerDelivers: boolean('owner_delivers').notNull(),
+    /** The server's estimate for these terms (R2). */
+    estimatePaise: bigint('estimate_paise', { mode: 'number' }).notNull(),
+    /** = estimate for a renter version; the owner's own total for an owner version (§6.3). */
+    totalPaise: bigint('total_paise', { mode: 'number' }).notNull(),
+    /** ≤ 500 on the request, ≤ 300 after; masked per reader. */
+    message: text('message'),
+    /** §6.7: the message carries a payment phrase or handle (decided at write time). */
+    messageScamFlag: boolean('message_scam_flag').notNull().default(false),
+    createdByUserId: uuid('created_by_user_id')
+      .notNull()
+      .references(() => users.id),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({ bookingSeqUq: uniqueIndex('rental_booking_versions_booking_seq_uq').on(t.bookingId, t.seq) }),
+);
+
+/** The booking timeline (§5.3, the `deal_events` pattern); `values` never carry text a user typed. */
+export const rentalBookingEvents = pgTable(
+  'rental_booking_events',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    bookingId: uuid('booking_id')
+      .notNull()
+      .references(() => rentalBookings.id),
+    code: text('code').$type<RentalEventCode>().notNull(),
+    actorSide: rentalActorSide('actor_side').notNull(),
+    actorUserId: uuid('actor_user_id').references(() => users.id),
+    actorAdminId: uuid('actor_admin_id').references(() => adminUsers.id),
+    values: jsonb('values').$type<Record<string, string | number | boolean | null>>().notNull().default({}),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({ bookingCreatedIdx: index('rental_booking_events_booking_created_idx').on(t.bookingId, t.createdAt) }),
+);
+
+/** An owner's calendar block (§5.4, R5): machines out of service or booked outside the app. Hard-deleted. */
+export const rentalBlocks = pgTable(
+  'rental_blocks',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    listingId: uuid('listing_id')
+      .notNull()
+      .references(() => listings.id),
+    startDate: date('start_date').notNull(),
+    endDate: date('end_date').notNull(),
+    machines: smallint('machines').notNull(),
+    reason: rentalBlockReason('reason').notNull(),
+    /** ≤ 200; owner and admins only. */
+    note: text('note'),
+    createdByUserId: uuid('created_by_user_id')
+      .notNull()
+      .references(() => users.id),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({ listingRangeIdx: index('rental_blocks_listing_range_idx').on(t.listingId, t.startDate, t.endDate) }),
 );

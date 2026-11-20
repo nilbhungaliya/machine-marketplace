@@ -3,6 +3,7 @@ import type { AppSettingsValues, ReplyOption, ReplyOptionsResponse } from '@mpm/
 import type { Db, Tx } from '../../db/index.js';
 import { listings, partRequestReplies, partRequests, users } from '../../db/schema.js';
 import { ConflictError, TooManyRequestsError } from '../../lib/errors.js';
+import { IST_MIDNIGHT } from '../../lib/ist.js';
 import type { UserTokenPayload } from '../../plugins/auth.js';
 import { onboardingForUser } from '../business/profile.service.js';
 import { loadCards } from '../listings/listing-view.service.js';
@@ -17,8 +18,6 @@ import { replyFitReasons } from './reply-fit.js';
 
 type Conn = Db | Tx;
 
-/** IST midnight today as a timestamptz. */
-const IST_MIDNIGHT = sql`(date_trunc('day', now() AT TIME ZONE 'Asia/Kolkata') AT TIME ZONE 'Asia/Kolkata')`;
 /** The picker lists at most this many of the seller's live listings (fitting first). */
 export const REPLY_OPTIONS_MAX = 100;
 

@@ -2,6 +2,7 @@ import { and, count, eq, gte, or, sql } from 'drizzle-orm';
 import type { Tx } from '../../db/index.js';
 import { businessBlocks, chatThreads, listings, users } from '../../db/schema.js';
 import { ConflictError, ForbiddenError, TooManyRequestsError } from '../../lib/errors.js';
+import { IST_MIDNIGHT } from '../../lib/ist.js';
 import type { UserTokenPayload } from '../../plugins/auth.js';
 import { listingNotFound } from '../listings/locks.js';
 import { publicListingWhere } from '../listings/public-where.service.js';
@@ -18,11 +19,15 @@ import type { ChatReader, ThreadRow } from './members.js';
  * business created since midnight IST vs `enquiry_new_per_day_{unverified,verified}` → `429 ENQUIRY_LIMIT`). The insert
  * is `ON CONFLICT (listing_id, buyer_business_id) DO NOTHING`, so two first taps make one thread. The thread is not
  * locked here: a caller that needs it locks the listing first (§8.5), then the thread.
+ *
+ * M14 (spec §6.2, plan D9): a rental booking request opens its thread with `skipDailyCap: true` (the enquiry cap
+ * doesn't apply; the rental limits do).
  */
 export async function openOrGetThread(
   tx: Tx,
   user: UserTokenPayload,
   listingId: string,
+  opts: { skipDailyCap?: boolean } = {},
 ): Promise<{ thread: ThreadRow; reader: ChatReader; created: boolean }> {
   const [listing] = await tx
     .select({ id: listings.id, businessId: listings.businessId, kind: listings.kind })
@@ -54,19 +59,7 @@ export async function openOrGetThread(
   const existing = await findThread(tx, listingId, buyerBusinessId);
   if (existing) return { thread: existing, reader, created: false };
 
-  const settings = await getSettings(tx);
-  const verified = business.verificationLevels.includes('gst');
-  const max = verified ? settings.enquiry_new_per_day_verified : settings.enquiry_new_per_day_unverified;
-  const istMidnight = sql`(date_trunc('day', now() AT TIME ZONE 'Asia/Kolkata') AT TIME ZONE 'Asia/Kolkata')`;
-  const [today] = await tx
-    .select({ n: count() })
-    .from(chatThreads)
-    .where(and(eq(chatThreads.buyerBusinessId, buyerBusinessId), gte(chatThreads.createdAt, istMidnight)));
-  if ((today?.n ?? 0) >= max) {
-    const { rows } = await tx.execute(sql`SELECT (${istMidnight} + interval '1 day') AS retry_at`);
-    const retryAt = new Date((rows[0] as { retry_at: string | Date }).retry_at).toISOString();
-    throw new TooManyRequestsError('You have started many new enquiries today. Try again tomorrow.', 'ENQUIRY_LIMIT', { retryAt, limit: max });
-  }
+  if (!opts.skipDailyCap) await assertDailyThreadCap(tx, buyerBusinessId, business.verificationLevels.includes('gst'));
 
   const inserted = await tx
     .insert(chatThreads)
@@ -83,6 +76,22 @@ export async function openOrGetThread(
   // Another transaction inserted it first (the buyer business lock makes this rare: a different business user's tap).
   const thread = await findThread(tx, listingId, buyerBusinessId);
   return { thread: thread!, reader, created: false };
+}
+
+/** F6's enquiry cap (§6.1): threads the buyer business created since midnight IST → `429 ENQUIRY_LIMIT`. */
+async function assertDailyThreadCap(tx: Tx, buyerBusinessId: string, verified: boolean): Promise<void> {
+  const settings = await getSettings(tx);
+  const max = verified ? settings.enquiry_new_per_day_verified : settings.enquiry_new_per_day_unverified;
+  const istMidnight = IST_MIDNIGHT;
+  const [today] = await tx
+    .select({ n: count() })
+    .from(chatThreads)
+    .where(and(eq(chatThreads.buyerBusinessId, buyerBusinessId), gte(chatThreads.createdAt, istMidnight)));
+  if ((today?.n ?? 0) >= max) {
+    const { rows } = await tx.execute(sql`SELECT (${istMidnight} + interval '1 day') AS retry_at`);
+    const retryAt = new Date((rows[0] as { retry_at: string | Date }).retry_at).toISOString();
+    throw new TooManyRequestsError('You have started many new enquiries today. Try again tomorrow.', 'ENQUIRY_LIMIT', { retryAt, limit: max });
+  }
 }
 
 async function findThread(tx: Tx, listingId: string, buyerBusinessId: string): Promise<ThreadRow | undefined> {

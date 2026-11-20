@@ -118,7 +118,7 @@ export async function moderateReview(tx: Tx, adminId: string, reviewId: string, 
   const reason = adminText(rawReason);
   const [seen] = await tx.select({ dealId: dealReviews.dealId }).from(dealReviews).where(eq(dealReviews.id, reviewId));
   if (!seen) throw reviewNotFound();
-  await lockDeal(tx, seen.dealId);
+  await lockDeal(tx, seen.dealId!); // M14: A3 generalises (the subject's lock)
   const [row] = await tx.select().from(dealReviews).where(eq(dealReviews.id, reviewId)).for('update');
   if (!row) throw reviewNotFound();
 

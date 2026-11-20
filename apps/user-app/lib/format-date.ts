@@ -1,4 +1,4 @@
-import { i18n, isLanguage } from '@/lib/i18n';
+import { i18n, isLanguage, type Language } from '@/lib/i18n';
 import { IST_OFFSET_MIN, istDateKey } from '@/lib/ist-date';
 
 // Explicit names, not Intl: Hermes ships different locale data on Android and iOS.
@@ -25,6 +25,8 @@ const names = () => NAMES[isLanguage(i18n.language) ? i18n.language : 'en'];
 const ist = (ms: number) => new Date(ms + IST_OFFSET_MIN * 60 * 1000);
 
 export const monthShortNames = (): readonly string[] => names().monthsShort;
+/** A given language's short month names (pure callers that take the language as a parameter). */
+export const monthShortNamesFor = (lang: Language): readonly string[] => NAMES[lang].monthsShort;
 export const weekdayShortNames = (): readonly string[] => names().daysShort;
 
 export function formatDayMonth(ms: number): string {

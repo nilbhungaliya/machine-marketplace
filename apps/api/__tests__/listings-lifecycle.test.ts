@@ -46,9 +46,7 @@ async function seller(opts: Parameters<typeof createTestSeller>[0] = {}): Promis
   return s;
 }
 
-const RENTAL_ONLY: readonly SellerListingAction[] = ['mark_rented', 'end_rental'];
-
-/** A complete listing of the kind an action needs (rentals for mark_rented / end_rental), in `status`. */
+/** A complete listing of the kind an action needs (a rental for `rented`: M14 retired mark_rented / end_rental), in `status`. */
 const listingOf = (s: TestSeller, status: ListingStatus, kind: ListingKind = 'part', extra: Partial<TestListingOptions> = {}) =>
   insertTestListing(db, {
     businessId: s.businessId,
@@ -88,7 +86,7 @@ describe('seller rows of §7.2', () => {
     let checked = 0;
     for (const t of rows) {
       for (const from of t.from) {
-        const kind: ListingKind = RENTAL_ONLY.includes(t.action as SellerListingAction) ? 'machine_rental' : 'part';
+        const kind: ListingKind = from === 'rented' ? 'machine_rental' : 'part';
         const id = await listingOf(s, from, kind);
         const res = await act(s, id, t.action);
         expect(res.statusCode, `${t.action} from ${from}: ${res.body}`).toBe(200);
@@ -115,12 +113,10 @@ describe('seller rows of §7.2', () => {
       ['mark_sold', 'sold'],
       ['mark_unavailable', 'sold'],
       ['relist', 'live'],
-      ['mark_rented', 'paused'],
-      ['end_rental', 'live'],
       ['remove', 'removed'],
     ];
     for (const [action, from] of refused) {
-      const id = await listingOf(s, from, RENTAL_ONLY.includes(action) ? 'machine_rental' : 'part');
+      const id = await listingOf(s, from, 'part');
       const res = await act(s, id, action);
       expect(res.statusCode, `${action} from ${from}`).toBe(409);
       expect(res.json()).toMatchObject({ code: 'LISTING_TRANSITION_NOT_ALLOWED', details: { from, action } });
@@ -128,12 +124,15 @@ describe('seller rows of §7.2', () => {
     }
   });
 
-  it('refuses mark_rented on a part, and an unknown action', async () => {
-    const s = await seller();
+  it('refuses the retired rental actions (M14 §7.1), mark_sold on a rental, and an unknown action', async () => {
+    const s = await seller({ gst: true });
+    const rental = await listingOf(s, 'live', 'machine_rental');
+    expect((await act(s, rental, 'mark_rented')).statusCode).toBe(400);
+    expect((await act(s, rental, 'end_rental')).statusCode).toBe(400);
+    const sold = await act(s, rental, 'mark_sold');
+    expect(sold.statusCode).toBe(409);
+    expect(sold.json().details).toEqual({ from: 'live', action: 'mark_sold' });
     const id = await listingOf(s, 'live');
-    const res = await act(s, id, 'mark_rented');
-    expect(res.statusCode).toBe(409);
-    expect(res.json().details).toEqual({ from: 'live', action: 'mark_rented' });
     expect((await act(s, id, 'duplicate')).statusCode).toBe(400);
     expect((await act(s, id, 'approve')).statusCode).toBe(400);
   });
@@ -182,10 +181,10 @@ describe('the gate on go-live actions', () => {
     expect(res.json().data).toMatchObject({ outcome: 'pending_review', listing: { reviewReasons: ['price_check'] } });
   });
 
-  it('sends end of rental to review for a flag stored while it was rented', async () => {
+  it('sends a renew of a rented listing to review for a flag stored while it was rented', async () => {
     const s = await seller({ gst: true });
     const id = await listingOf(s, 'rented', 'machine_rental', { flags: ['price_check'] });
-    const res = await act(s, id, 'end_rental');
+    const res = await act(s, id, 'renew');
     expect(res.json().data).toMatchObject({ outcome: 'pending_review', listing: { reviewReasons: ['price_check'] } });
     expect((await rowOf(id)).returnStatus).toBe('live');
   });

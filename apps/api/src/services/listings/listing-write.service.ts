@@ -37,6 +37,7 @@ import { loadTemplate } from '../catalog/read.service.js';
 import { validateSpecs } from '../catalog/validate-specs.js';
 import { getSettings } from '../settings.service.js';
 import { afterListingStatusWrite } from '../deals/holds.js';
+import { assertQuantityCoversBookings } from '../rentals/listing-hooks.js';
 import { applySystemTransition, recordCreated, transitionNotAllowed } from './listing-lifecycle.service.js';
 import {
   businessLocation,
@@ -311,6 +312,10 @@ export async function patchListing(tx: Tx, user: UserTokenPayload, id: string, p
   // F6 + F7 §8.3: stock held in deals can't be edited away, and a unit can't change under open deals or offers.
   if (patch.quantity !== undefined && Number(patch.quantity) < Number(listing.heldQuantity)) {
     throw new ConflictError('Part of this stock is on hold in open deals', 'QUANTITY_BELOW_HELD', { heldQuantity: listing.heldQuantity });
+  }
+  // M14 §7.2: a rental can't drop below the machines booked on any day from today on (`409 RENTAL_QUANTITY_BOOKED`).
+  if (listing.kind === 'machine_rental' && patch.quantity !== undefined && Number(patch.quantity) < Number(listing.quantity ?? 0)) {
+    await assertQuantityCoversBookings(tx, listing.id, Math.floor(Number(patch.quantity)));
   }
   if (patch.unitId !== undefined && patch.unitId !== listing.unitId && (await unitLocked(tx, listing.id))) {
     throw new ConflictError("The unit can't change while deals or offers are open on this listing", 'UNIT_LOCKED');

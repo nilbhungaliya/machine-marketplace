@@ -33,6 +33,10 @@ export interface TextParams {
   city: string;
   /** F8 `part_request_reply_dropped`: the drop reason code, localised by the template; '' when unknown. */
   reason: '' | PartRequestDropReason;
+  /** M14 §11: the booking ref `#700001`; '' when none. */
+  bookingRef: string;
+  /** M14 §11: the booking's dates as a short IST range in the reader's language ("21–23 Nov"); '' when none. */
+  dates: string;
 }
 
 export interface RenderedText {

@@ -77,6 +77,7 @@ function business({ userStatus = 'active', verified = true, reviewOpen = false, 
     dealHistory: { byStatus: { agreed: 0, handed_over: 0, completed: 0, cancelled: 0, disputed: 0 }, disputes: [] },
     sellerScore: null,
     partRequestCount: 0,
+    rentalBookingCount: { asOwner: 0, asRenter: 0 },
   };
 }
 

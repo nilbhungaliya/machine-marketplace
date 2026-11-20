@@ -7,6 +7,7 @@ import { handleChatEvent } from '@/lib/socket-chat';
 import { handleDealEvent } from '@/lib/socket-deals';
 import { handleNotificationEvent } from '@/lib/socket-notifications';
 import { handlePartRequestEvent } from '@/lib/socket-part-requests';
+import { handleRentalEvent } from '@/lib/socket-rentals';
 import { socketDomain } from '@/lib/socket-route';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
@@ -22,6 +23,8 @@ export function routeSocketEvent(queryClient: QueryClient, event: string, data: 
       return handleNotificationEvent(queryClient, event, data);
     case 'part_requests':
       return handlePartRequestEvent(queryClient, event, data);
+    case 'rentals':
+      return handleRentalEvent(queryClient, event, data);
     default:
       return;
   }

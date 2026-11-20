@@ -6,6 +6,7 @@ import { ValidationError } from '../../lib/errors.js';
 import type { UserTokenPayload } from '../../plugins/auth.js';
 import { lockListingsInOrder } from '../deals/locks.js';
 import { closeChainsBetween } from '../offers/reconcile.js';
+import { exitBookingsForBlock } from '../rentals/system-exits.js';
 import { publicText } from './chat-view.js';
 import { assertCanWrite, getThreadForParty } from './members.js';
 import { insertSystemLine, recomputeTurns } from './thread-lines.js';
@@ -53,6 +54,8 @@ export async function blockFromThread(tx: Tx, user: UserTokenPayload, threadId: 
   if (inserted.length === 0) return { blocked: true };
 
   await closeChainsBetween(tx, mine, other);
+  // M14 (spec §6.1): open rental requests between the two end (`blocked`); confirmed bookings continue.
+  await exitBookingsForBlock(tx, mine, other);
   for (const t of threads) {
     await recomputeTurns(tx, t.id);
     const side = t.buyerBusinessId === mine ? 'buyer' : 'seller';

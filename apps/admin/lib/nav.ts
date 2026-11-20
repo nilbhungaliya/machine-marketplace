@@ -42,7 +42,8 @@ export const NAV_GROUPS: NavGroup[] = [
     { href: '/part-requests', label: 'Part requests', icon: BellRing, roles: ['moderator', 'support'] },
     { href: '/enquiries', label: 'Enquiries & offers', icon: MessageSquareQuote, roles: ['support', 'operations'] },
     { href: '/deals', label: 'Deals', icon: Handshake, roles: ['support', 'operations'] },
-    { href: '/rentals', label: 'Rental bookings', icon: CalendarClock, roles: ['operations'] },
+    // M14 §15: the API's `requireAdminRole('operations', 'support')`.
+    { href: '/rentals', label: 'Rental bookings', icon: CalendarClock, roles: ['operations', 'support'] },
     { href: '/chats', label: 'Conversations', icon: MessagesSquare, roles: ['moderator', 'support'] },
   ] },
   { id: 'configuration', label: 'Machine configuration', items: [

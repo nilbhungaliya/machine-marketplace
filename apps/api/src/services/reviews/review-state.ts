@@ -60,18 +60,22 @@ export async function dealForParty(
   return { deal, side, memberRole: member.memberRole };
 }
 
-const COLUMN: Record<ReviewFacet, keyof Pick<ReviewRow, 'rMatchedListing' | 'rCommunication' | 'rOnTime' | 'rPayment' | 'rPickup'>> = {
+const COLUMN: Record<
+  ReviewFacet,
+  keyof Pick<ReviewRow, 'rMatchedListing' | 'rCommunication' | 'rOnTime' | 'rPayment' | 'rPickup' | 'rCare'>
+> = {
   matched_listing: 'rMatchedListing',
   communication: 'rCommunication',
   on_time: 'rOnTime',
   payment: 'rPayment',
   pickup: 'rPickup',
+  care: 'rCare',
 };
 
 /** The row's ratings for its side's facets (§10.2). */
 export function ratingsOf(row: ReviewRow): ReviewRatings {
   const out: ReviewRatings = {};
-  for (const facet of REVIEW_FACETS[row.reviewerSide]) {
+  for (const facet of REVIEW_FACETS.deal[row.reviewerSide]) { // M14: A3 generalises (REVIEW_FACETS[subject][side])
     const value = row[COLUMN[facet]];
     if (value !== null) out[facet] = value;
   }
@@ -80,11 +84,11 @@ export function ratingsOf(row: ReviewRow): ReviewRatings {
 
 /** The facet columns for an insert: the side's facets set, the others null. */
 export function ratingColumns(side: PartySide, ratings: Record<ReviewFacet, number>): Pick<ReviewRow, (typeof COLUMN)[ReviewFacet]> {
-  const out = { rMatchedListing: null, rCommunication: null, rOnTime: null, rPayment: null, rPickup: null } as Pick<
+  const out = { rMatchedListing: null, rCommunication: null, rOnTime: null, rPayment: null, rPickup: null, rCare: null } as Pick<
     ReviewRow,
     (typeof COLUMN)[ReviewFacet]
   >;
-  for (const facet of REVIEW_FACETS[side]) out[COLUMN[facet]] = ratings[facet];
+  for (const facet of REVIEW_FACETS.deal[side]) out[COLUMN[facet]] = ratings[facet]; // M14: A3 generalises
   return out;
 }
 
@@ -117,6 +121,7 @@ export async function reviewStateFor(
 
   const unpublished = rows.find((r) => r.publishedAt === null) ?? null;
   return {
+    subject: { kind: 'deal', id: deal.id },
     dealId: deal.id,
     mySide: side,
     eligible: reason === null,

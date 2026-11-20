@@ -198,6 +198,11 @@ export default function ListingScreen({ navigation, route }: RootStackScreenProp
     }
     // Login at the moment of intent (R24): the pending action reopens this page with the sheet after sign-in.
     if (!requireSignIn({ reason: signInReasonOf(action), pending: pendingContactOf(action, listingId) })) return;
+    // M14 (C0-5): Request booking opens its own screen; B2-2 builds the rental block and footer around it.
+    if (action === 'request_booking') {
+      navigation.navigate('RequestBooking', { listingId });
+      return;
+    }
     setSheet(sheetOf(action));
   };
   const toThread = (threadId: string) => {

@@ -42,6 +42,7 @@ const msg = (seq: number, over: Partial<ThreadMessage> = {}): ThreadMessage => (
   enquiry: null,
   offer: null,
   deal: null,
+  booking: null,
   createdAt: '2026-11-19T10:00:00Z',
   ...over,
 });

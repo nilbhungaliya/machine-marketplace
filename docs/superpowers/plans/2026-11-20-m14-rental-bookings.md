@@ -713,7 +713,7 @@ finalises its upload keys with step `problem` (≤ 5) **in the route**, as F6's 
 `countRentalsYourTurn`; Test `apps/api/__tests__/rental-reads.test.ts`.
 
 **Interfaces:** `listRentalBookings(conn, user, q: { tab: 'active' | 'completed' | 'cancelled'; side: 'all' |
-'renting' | 'renting_out'; cursor? }): Promise<RentalBookingsPage>` (keyset `(updated_at, id)`, sealed cursor, counts,
+'renter' | 'owner'; cursor? }): Promise<RentalBookingsPage>` (keyset `(updated_at, id)`, sealed cursor, counts,
 `yourTurn` via `rentalYourTurn` in SQL); `getRentalBooking(conn, user, id): Promise<RentalBookingView>` (404 for
 non-parties; D4 builder; site address rules §8; owner `distanceKm` floored; photos as counts, URLs via `GET
 /rental-bookings/:id/photos` (300 s signed, party only); `clashWith` from C0-3b's `clashWithFor`);

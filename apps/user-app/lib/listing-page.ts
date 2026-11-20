@@ -4,21 +4,23 @@ import {
   type PartSide, type PriceModel,
 } from '@mpm/shared-types';
 import type { ListingSheet } from '@/navigation/types';
-import type { PendingContactAction } from './pending-action';
+import type { PendingBookingAction, PendingContactAction } from './pending-action';
 import { errorCode } from './api-error';
 import { toAsciiDigits } from './digits';
 
 // The listing page's decisions (F2 spec §8, §9; plan Task 26; F6 + F7 §7.1, §8.4, §15.2): which contact buttons a
 // buyer sees, the Other side block, the report form's checks and the remembered "Check my machine" choice. Pure.
 
-export type ContactAction = 'enquire' | 'make_offer' | 'buy' | 'ask_price';
+export type ContactAction = 'enquire' | 'make_offer' | 'buy' | 'ask_price' | 'request_booking';
+/** The contact actions that open a sheet on the listing page (Request booking opens its own screen, M14). */
+export type SheetContactAction = Exclude<ContactAction, 'request_booking'>;
 
 /**
- * F6 + F7 §7.1: rentals → Enquire (no offers, R2); negotiable → Enquire + Make offer; fixed → Enquire + Buy at this
- * price; on request → Ask price; a listing without a price model → Enquire.
+ * F6 + F7 §7.1: rentals → Request booking + Enquire (M14 §14.1; no offers, R2); negotiable → Enquire + Make offer;
+ * fixed → Enquire + Buy at this price; on request → Ask price; a listing without a price model → Enquire.
  */
 export function contactActions(l: { kind: ListingKind; priceModel: PriceModel | null }): ContactAction[] {
-  if (l.kind === 'machine_rental') return ['enquire'];
+  if (l.kind === 'machine_rental') return ['request_booking', 'enquire'];
   if (l.priceModel === 'negotiable') return ['enquire', 'make_offer'];
   if (l.priceModel === 'fixed') return ['enquire', 'buy'];
   if (l.priceModel === 'on_request') return ['ask_price'];
@@ -77,6 +79,11 @@ export function contactButtons(l: {
   const base = contactActions(l);
   const buttons: ContactButton[] = [];
   for (const action of base) {
+    // M14: Request booking always shows (an open request is changed on its Booking record, not here).
+    if (action === 'request_booking') {
+      buttons.push({ action, disabled: false });
+      continue;
+    }
     if (action === 'enquire' || action === 'ask_price') {
       buttons.push({ action: l.myThreadId ? 'open_chat' : action, disabled: false });
       continue;
@@ -91,17 +98,25 @@ export function contactButtons(l: {
 }
 
 /** The sheet a contact action opens (and the guest's pending action type, §15.2). */
-export function sheetOf(action: ContactAction): ListingSheet {
+export function sheetOf(action: SheetContactAction): ListingSheet {
   return action === 'make_offer' ? 'offer' : action;
 }
 
-/** Why a guest is asked to sign in for it (`auth.signInSheet.*.<reason>`): Enquire / Ask price → `enquire`, offers → `offer`. */
-export function signInReasonOf(action: ContactAction): 'enquire' | 'offer' {
+/**
+ * Why a guest is asked to sign in for it (`auth.signInSheet.*.<reason>`): Enquire / Ask price → `enquire`, offers →
+ * `offer`, Request booking → `request_booking`.
+ */
+export function signInReasonOf(action: ContactAction): 'enquire' | 'offer' | 'request_booking' {
+  if (action === 'request_booking') return 'request_booking';
   return action === 'make_offer' || action === 'buy' ? 'offer' : 'enquire';
 }
 
-/** The guest's pending action for a contact tap: reopens the listing with this sheet after sign-in (never sends). */
-export function pendingContactOf(action: ContactAction, listingId: string): PendingContactAction {
+/**
+ * The guest's pending action for a contact tap: reopens the listing with this sheet after sign-in, or (M14) opens
+ * Request booking for it; never sends.
+ */
+export function pendingContactOf(action: ContactAction, listingId: string): PendingContactAction | PendingBookingAction {
+  if (action === 'request_booking') return { type: 'request_booking', listingId };
   return { type: sheetOf(action), listingId };
 }
 
@@ -112,7 +127,9 @@ export function pendingContactOf(action: ContactAction, listingId: string): Pend
  */
 export function arrivalAction(sheet: ListingSheet | undefined, c: ContactButtons): { type: 'sheet'; sheet: ListingSheet } | { type: 'thread' } | null {
   if (!sheet) return null;
-  const match = c.buttons.find((b) => b.action !== 'open_chat' && sheetOf(b.action) === sheet);
+  const match = c.buttons.find(
+    (b) => b.action !== 'open_chat' && b.action !== 'request_booking' && sheetOf(b.action) === sheet,
+  );
   if (match) return match.disabled ? null : { type: 'sheet', sheet };
   if ((sheet === 'enquire' || sheet === 'ask_price') && c.buttons.some((b) => b.action === 'open_chat')) return { type: 'thread' };
   return null;

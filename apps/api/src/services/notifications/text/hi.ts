@@ -27,6 +27,8 @@ const dropReason: Record<TextParams['reason'], string> = {
 };
 const line = (...parts: string[]) => parts.filter(Boolean).join(' · ');
 
+const rental = () => ({ title: 'किराये की बुकिंग अपडेट', body: 'एक किराये की बुकिंग बदली है। विवरण देखने के लिए खोलें।' });
+
 export const hi: NotificationTexts = {
   enquiry_new: (p) => ({ title: 'नई पूछताछ', body: listing(p) }),
   message_new: (p) => ({
@@ -53,7 +55,24 @@ export const hi: NotificationTexts = {
     title: 'डील की समीक्षा करें',
     body: `${who(p)} ने ${deal(p)} की समीक्षा की है। ${p.dueOn ? `${p.dueOn} तक ` : ''}अपनी समीक्षा जोड़ें; दोनों साथ में प्रकाशित होंगी।`,
   }),
-  booking_update: () => ({ title: 'बुकिंग अपडेट', body: 'एक बुकिंग बदली है। विवरण देखने के लिए खोलें।' }),
+  // M14 rental bookings: placeholder text until A3-3 writes each type's own (spec §10.3).
+  rental_booking_requested: rental,
+  rental_booking_changed: rental,
+  rental_booking_confirmed: rental,
+  rental_booking_declined: rental,
+  rental_booking_withdrawn: rental,
+  rental_booking_expired: rental,
+  rental_booking_cancelled: rental,
+  rental_booking_on_site: rental,
+  rental_booking_returned: rental,
+  rental_booking_completed: rental,
+  rental_booking_starts_tomorrow: rental,
+  rental_booking_due_back: rental,
+  rental_booking_overdue: rental,
+  rental_booking_not_started: rental,
+  rental_booking_clash: rental,
+  rental_booking_problem: rental,
+  rental_booking_dispute_resolved: rental,
   listing_status: (p) => ({ title: 'लिस्टिंग अपडेट', body: `${listing(p)} की स्थिति बदली है।` }),
   // F8 part requests (spec §10.3). Needs a native speaker's check.
   part_request_new: (p) => ({

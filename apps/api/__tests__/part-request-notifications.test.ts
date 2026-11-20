@@ -119,6 +119,7 @@ describe('pushMessageFor (F8)', () => {
     dealId: null,
     reviewId: null,
     partRequestId,
+    rentalBookingId: null,
     dedupeKey: `${type}:${randomUUID()}`,
     unreadCount: 2,
     lastSeq: null,

@@ -279,6 +279,8 @@ export async function adminListingDetail(conn: Conn, id: string): Promise<AdminL
         createdAt: h.createdAt.toISOString(),
       }),
     ),
+    // M14 C0-3b / A3 fill a rental's bookings and blocks.
+    rental: null,
   };
 }
 

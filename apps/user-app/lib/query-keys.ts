@@ -1,10 +1,15 @@
-import type { InboxFilter, MyPartRequestTab, PartRequestKind, SellerPartRequestTab } from '@mpm/shared-types';
+import type {
+  InboxFilter, MyPartRequestTab, PartRequestKind, RentalBookingSideFilter, RentalBookingTab, SellerPartRequestTab,
+} from '@mpm/shared-types';
 
 /**
  * React Query keys for F6 + F7 (spec §15.3), in one place so the socket handlers (`lib/socket-*.ts`) and every screen
  * patch and invalidate the same entries. Prefixes: `['threads', …]` lists, `['thread', id]` one thread and its messages,
  * `['deals', …]`, `['deal', id]`. F8 (spec §13.3): lists under `['part-requests', …]`, one request and its parts under
- * `['part-request', id]`; the `part_request:` socket prefix invalidates both.
+ * `['part-request', id]`; the `part_request:` socket prefix invalidates both. M14 (plan C0-5): lists under
+ * `['rentals', …]`, one booking and its parts under `['rental-booking', id]`, a listing's availability and calendar
+ * under `['rental-listing', listingId, …]`; the `rental:` socket prefix invalidates the booking, the lists and the
+ * badges.
  */
 
 export type DealsTab = 'active' | 'completed' | 'cancelled';
@@ -42,4 +47,22 @@ export const qk = {
   replyOptions: (id: string) => ['part-request', id, 'reply-options'] as const,
   /** The owner's listing demand line; under `['part-requests', …]` so a request event refreshes it. */
   partRequestDemand: (listingId: string) => ['part-requests', 'demand', listingId] as const,
+  // M14 rental bookings.
+  rentals: {
+    /** Every Rentals list (all tabs, sides and listing filters). */
+    all: ['rentals'] as const,
+    list: (tab: RentalBookingTab, side: RentalBookingSideFilter, listingId: string | null) =>
+      ['rentals', 'list', tab, side, listingId] as const,
+    /** The Request booking screen's live estimate (`input`: the request serialised by the caller). */
+    estimate: (listingId: string, input: string) => ['rentals', 'estimate', listingId, input] as const,
+    booking: (id: string) => ['rental-booking', id] as const,
+    bookingReview: (id: string) => ['rental-booking', id, 'review'] as const,
+    bookingPhotos: (id: string) => ['rental-booking', id, 'photos'] as const,
+    /** Everything cached for one rental listing (availability strip, owner calendar). */
+    listing: (listingId: string) => ['rental-listing', listingId] as const,
+    availability: (listingId: string, from: string | null, to: string | null) =>
+      ['rental-listing', listingId, 'availability', from, to] as const,
+    calendar: (listingId: string, from: string | null, to: string | null) =>
+      ['rental-listing', listingId, 'calendar', from, to] as const,
+  },
 };

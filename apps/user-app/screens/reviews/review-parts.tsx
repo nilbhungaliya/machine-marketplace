@@ -115,7 +115,7 @@ export function ScoreCard({ page, title, style }: { page: SellerReviewsPage; tit
               <Text style={s.count}>{t('reviews.count', { count: score.count })}</Text>
             </View>
           </View>
-          {REVIEW_FACETS.buyer.map((facet) => {
+          {REVIEW_FACETS.deal.buyer.map((facet) => {
             const pct = page.score!.facetsPercent[facet];
             return (
               <View key={facet} style={s.bar}>

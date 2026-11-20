@@ -296,6 +296,7 @@
     "ask_price": "Ask price",
     "buy": "Buy at this price",
     "open_chat": "Open chat",
+    "request_booking": "Request booking",
     "allOnHold": "All on hold in deals"
   },
   "owner": {
@@ -410,8 +411,6 @@
       "mark_sold": "Mark sold",
       "mark_unavailable": "Mark unavailable",
       "relist": "Relist",
-      "mark_rented": "Mark rented out",
-      "end_rental": "Available again",
       "remove": "Remove listing"
     },
     "confirm": {
@@ -430,8 +429,6 @@
       "mark_sold": "Marked sold.",
       "mark_unavailable": "Marked unavailable.",
       "relist": "Live again.",
-      "mark_rented": "Marked rented out.",
-      "end_rental": "Available again.",
       "remove": "Listing removed.",
       "delete_draft": "Draft deleted."
     },

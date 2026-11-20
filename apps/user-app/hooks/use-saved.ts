@@ -6,7 +6,7 @@ import type { SavedListingsPage } from '@mpm/shared-types';
 import { useBusiness } from '@/hooks/use-business';
 import { discoverKeys } from '@/hooks/use-discover';
 import { listingKeys } from '@/hooks/use-listing';
-import { openPendingContact } from '@/hooks/use-pending-contact';
+import { openPendingBooking, openPendingContact } from '@/hooks/use-pending-contact';
 import { openPendingRequest } from '@/hooks/use-pending-request';
 import { useRequireSignIn } from '@/hooks/use-require-sign-in';
 import { track } from '@/lib/analytics';
@@ -121,6 +121,12 @@ export async function runPendingAction(
   if (pending.type === 'post_request') {
     track(AUTH_EVENTS.pendingActionCompleted, { type: pending.type });
     openPendingRequest(pending.prefill);
+    return;
+  }
+  // M14 §14.2: a pending Request booking opens the Request booking screen; nothing is sent until the user taps Send.
+  if (pending.type === 'request_booking') {
+    track(AUTH_EVENTS.pendingActionCompleted, { type: pending.type });
+    openPendingBooking(pending);
     return;
   }
   // F6 + F7 §15.2: a pending Enquire / Offer / Buy / Ask price reopens its sheet; it is never saved.

@@ -24,6 +24,7 @@ export const REVIEW_FACET_LABELS: Record<ReviewFacet, string> = {
   on_time: 'On time',
   payment: 'Payment',
   pickup: 'Pickup',
+  care: 'Care of the machine',
 };
 
 const ERROR_WORDS: Record<string, string> = {

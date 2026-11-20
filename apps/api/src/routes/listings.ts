@@ -241,7 +241,8 @@ const listingRoutes: FastifyPluginAsync = async (fastify) => {
     return { data: await runTx(fastify, (tx) => publishListing(tx, request.user!, id)) };
   });
 
-  // Seller actions of §7.2 (pause, resume, renew, mark sold / unavailable / rented, relist, end rental, remove).
+  // Seller actions of §7.2 (pause, resume, renew, mark sold / unavailable, relist, remove). M14 §7.1 retired mark rented
+  // and end rental: a rental's `rented` follows its booking calendar.
   fastify.post('/listings/:id/actions', { ...user, config: perUser(60) }, async (request) => {
     const { id } = idParams.parse(request.params);
     const { action, note } = actionBody.parse(request.body);

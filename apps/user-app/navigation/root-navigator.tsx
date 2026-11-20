@@ -51,6 +51,10 @@ import RequirementScreen from '@/screens/requirements/requirement';
 import CompareResponsesScreen from '@/screens/requirements/compare-responses';
 import ReplyWithListingScreen from '@/screens/requirements/reply-with-listing';
 import BuyersLookingScreen from '@/screens/requirements/buyers-looking';
+// M14 rental bookings (C0-5 placeholders; B2 and B3 replace them)
+import RequestBookingScreen from '@/screens/rentals/request-booking';
+import BookingRecordScreen from '@/screens/rentals/booking-record';
+import RentalCalendarScreen from '@/screens/rentals/rental-calendar';
 import SocketProvider from '@/components/SocketProvider';
 import { usePendingActionRunner } from '@/hooks/use-saved';
 import AuthStack from './auth-stack';
@@ -203,6 +207,10 @@ export default function RootNavigator() {
           <Stack.Screen name="CompareResponses" component={CompareResponsesScreen} />
           <Stack.Screen name="ReplyWithListing" component={ReplyWithListingScreen} />
           <Stack.Screen name="BuyersLooking" component={BuyersLookingScreen} />
+          {/* M14 rental bookings (spec §14.1). */}
+          <Stack.Screen name="RequestBooking" component={RequestBookingScreen} />
+          <Stack.Screen name="BookingRecord" component={BookingRecordScreen} />
+          <Stack.Screen name="RentalCalendar" component={RentalCalendarScreen} />
         </Stack.Group>
       )}
     </Stack.Navigator>

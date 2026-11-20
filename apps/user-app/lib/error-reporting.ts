@@ -25,6 +25,9 @@ const SECRET_KEYS = new RegExp(
       // F8 (spec §17): a reply's message. A request's `name` and `note` travel only in request bodies (dropped whole by
       // scrubEvent) and `note` is above; plain `name` stays allowed for Sentry's own contexts.
       'message',
+      // M14 (spec §18): a booking's site address and pincode, notes, damage, final-amount and cancel notes. (`note`,
+      // `message` and `notestext` are above.)
+      'siteaddress', 'sitepincode', 'damagenote', 'finalnote', 'finalamountnote', 'cancelnote',
     ].join('|') +
     ')$',
   'i',

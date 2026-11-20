@@ -4,6 +4,7 @@ import type { CatalogLevel, Fitment, ListingKind, PriceModel, RentalTerms } from
 import type { Db, Tx } from '../../db/index.js';
 import { brands, conditions, industrialAreas, listingRentals, machineModels, units } from '../../db/schema.js';
 import { ValidationError } from '../../lib/errors.js';
+import { istToday } from '../../lib/ist.js';
 import { resolveSides, type EffectiveSides } from '../catalog/side-settings.js';
 import { areasForPincode } from '../locations/industrial-areas.service.js';
 import { pincodeDistrict } from '../locations/pincode.service.js';
@@ -334,7 +335,7 @@ export type RentalPatch = Partial<RentalTerms>;
 
 /** Today in India, `YYYY-MM-DD`. */
 export function todayInIndia(): string {
-  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
+  return istToday();
 }
 
 /**

@@ -37,7 +37,8 @@ import { Stars, StarInput } from './review-parts';
  * `review_waiting` notification.
  */
 export default function ReviewDealScreen({ navigation, route }: RootStackScreenProps<'ReviewDeal'>) {
-  const { dealId } = route.params;
+  // M14-STUB(B2): `subject: 'rental'` reads the booking's review routes (B2-4); C0-5 reads the deal subject only.
+  const { id: dealId } = route.params;
   const { t } = useTranslation();
   const { colors } = useTheme();
   const type = useType();

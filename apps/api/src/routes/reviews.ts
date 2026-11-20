@@ -40,6 +40,17 @@ const reviewRoutes: FastifyPluginAsync = async (fastify) => {
     }));
   });
 
+  // M14 (spec R11, plan C0-4): a rental booking's review, F6's rules with the rental facets. Lane A3 builds them
+  // (`services/reviews/rental-review.service.ts`); reply / report / hide use the routes by review id below.
+  fastify.get('/rental-bookings/:id/review', read, async (_request, reply) =>
+    // M14-STUB(A3)
+    reply.code(501).send({ error: 'Not implemented yet', code: 'NOT_IMPLEMENTED' }),
+  );
+  fastify.post('/rental-bookings/:id/review', idempotentWrite, async (_request, reply) =>
+    // M14-STUB(A3)
+    reply.code(501).send({ error: 'Not implemented yet', code: 'NOT_IMPLEMENTED' }),
+  );
+
   fastify.post('/reviews/:id/reply', idempotentWrite, async (request, reply) => {
     const { id } = idParams.parse(request.params);
     const { text } = replyBody.parse(request.body ?? {});

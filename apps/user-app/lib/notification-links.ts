@@ -6,12 +6,16 @@ import { NOTIFICATION_TYPES, type Badges, type NotificationRow, type Notificatio
 export type NotificationRoute =
   | { name: 'Thread'; params: { threadId: string } }
   | { name: 'DealRecord'; params: { dealId: string } }
-  | { name: 'ReviewDeal'; params: { dealId: string } }
+  | { name: 'ReviewDeal'; params: { subject: 'deal' | 'rental'; id: string } }
+  | { name: 'BookingRecord'; params: { bookingId: string } }
   | { name: 'MyReviews'; params: undefined }
   | { name: 'MyListings'; params: undefined }
   | { name: 'Requirement'; params: { partRequestId: string; tab?: 'replies' | 'matches' } };
 
-export type NotificationTarget = Pick<NotificationRow, 'type' | 'threadId' | 'dealId' | 'reviewId' | 'offerId' | 'partRequestId'>;
+export type NotificationTarget = Pick<
+  NotificationRow,
+  'type' | 'threadId' | 'dealId' | 'reviewId' | 'offerId' | 'partRequestId' | 'rentalBookingId'
+>;
 
 /** F8 §10: every `part_*` type opens the request (its page picks the buyer or the seller view). */
 const REQUEST_TYPES: readonly NotificationType[] = [
@@ -37,6 +41,14 @@ const DEAL_TYPES: readonly NotificationType[] = [
 
 const thread = (id: string | null): NotificationRoute | null => (id ? { name: 'Thread', params: { threadId: id } } : null);
 const deal = (id: string | null): NotificationRoute | null => (id ? { name: 'DealRecord', params: { dealId: id } } : null);
+const booking = (id: string | null): NotificationRoute | null => (id ? { name: 'BookingRecord', params: { bookingId: id } } : null);
+
+/** A `review_waiting` row opens the review form of its deal or (M14) its rental booking. */
+function reviewForm(n: NotificationTarget): NotificationRoute | null {
+  if (n.dealId) return { name: 'ReviewDeal', params: { subject: 'deal', id: n.dealId } };
+  if (n.rentalBookingId) return { name: 'ReviewDeal', params: { subject: 'rental', id: n.rentalBookingId } };
+  return null;
+}
 
 /**
  * The screen a notification opens (§11.3): chat and offer events → the thread; an accepted offer and every deal event →
@@ -47,10 +59,11 @@ export function notificationLink(n: NotificationTarget): NotificationRoute | nul
   if (THREAD_TYPES.includes(n.type)) return thread(n.threadId) ?? deal(n.dealId);
   if (DEAL_TYPES.includes(n.type)) return deal(n.dealId) ?? thread(n.threadId);
   if (n.type === 'review_received') return { name: 'MyReviews', params: undefined };
-  if (n.type === 'review_waiting') return n.dealId ? { name: 'ReviewDeal', params: { dealId: n.dealId } } : null;
+  if (n.type === 'review_waiting') return reviewForm(n);
   if (n.type === 'listing_status') return { name: 'MyListings', params: undefined };
   if (REQUEST_TYPES.includes(n.type)) return requirement(n.type, n.partRequestId) ?? deal(n.dealId) ?? thread(n.threadId);
-  // `booking_update`: a later module (M14).
+  // M14 §11: every `rental_booking_*` type opens the Booking record (its thread when the row has no booking id).
+  if (n.type.startsWith('rental_booking_')) return booking(n.rentalBookingId) ?? thread(n.threadId);
   return deal(n.dealId) ?? thread(n.threadId);
 }
 
@@ -79,6 +92,7 @@ export function parsePushData(data: unknown): PushData | null {
     dealId: str(d.dealId),
     reviewId: str(d.reviewId),
     partRequestId: str(d.partRequestId),
+    rentalBookingId: str(d.rentalBookingId),
   };
 }
 
@@ -91,11 +105,14 @@ export function isPushForOpenThread(push: PushData, route: { name: string; param
 
 // ─── Badges (§15.2) ───
 
-/** The count a tab shows: Chats = unread threads, Deals = deals waiting on you; other tabs none. */
+/**
+ * The count a tab shows: Chats = unread threads, Deals = deals and rental bookings waiting on you (M14 plan D15); other
+ * tabs none.
+ */
 export function tabBadgeCount(tab: string, badges: Badges | null | undefined): number {
   if (!badges) return 0;
   if (tab === 'Chats') return badges.unreadThreads;
-  if (tab === 'Deals') return badges.dealsYourTurn;
+  if (tab === 'Deals') return badges.dealsYourTurn + (badges.rentalsYourTurn ?? 0);
   return 0;
 }
 

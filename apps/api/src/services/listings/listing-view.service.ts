@@ -46,6 +46,7 @@ import { distancesKm, snappedDistancesKm, type LatLng } from '../discovery/dista
 import { loadNode, type ListingNode } from './listing-validate.service.js';
 import type { ListingRow } from './locks.js';
 import { publicListingWhere } from './public-where.service.js';
+import { rentalOwnerSummary } from '../rentals/owner-summary.js';
 
 // Listing payloads (F2 spec §7.3–§7.5, §8.1, §13.4). The owner view is built here (plan Task 6); Task 10 builds the
 // public detail from the same loader and strips the private fields (serial number, address line, pincode, point).
@@ -537,6 +538,8 @@ export async function toOwnerView(conn: Conn, row: ListingRow, settings: AppSett
       description: row.description,
     }),
     location: loaded.location,
+    // M14 plan D14: a rental's open requests, active bookings, machines out today and next booking.
+    bookingSummary: row.kind === 'machine_rental' ? await rentalOwnerSummary(conn, row.id) : null,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };

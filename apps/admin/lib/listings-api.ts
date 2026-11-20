@@ -275,6 +275,8 @@ export function historyActionLabel(action: string): string {
     relist: 'Relisted', mark_rented: 'Marked on rent', end_rental: 'Rental ended', remove: 'Removed', expire: 'Expired',
     back_to_review: 'Back to review after an edit', hide: 'Hidden', unhide: 'Unhidden',
     photos_removed: 'Last photo deleted by a moderator', reserve: 'Reserved', unreserve: 'Unreserved',
+    // M14 §7.1: a rental's status follows its bookings (the retired mark_rented / end_rental labels stay for history).
+    rent_out: 'On rent (booking)', rent_back: 'Back from rent (booking)',
   };
   return known[action] ?? action.replace(/_/g, ' ');
 }

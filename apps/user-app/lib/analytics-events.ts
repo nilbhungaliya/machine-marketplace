@@ -195,11 +195,37 @@ export const REQUEST_EVENTS = {
 } as const;
 
 /**
+ * M14 rental bookings (spec §14.2). Properties are ids, statuses, periods, counts and error codes only: never a site
+ * address, pincode, note, message or amount typed by a user.
+ */
+export const RENTAL_EVENTS = {
+  /** Request booking opened `{ listingId, change: boolean }`. */
+  requestStarted: 'rental_request_started',
+  /** `{ listingId, bookingId, period, count, machines }`. */
+  requestSent: 'rental_request_sent',
+  /** `{ listingId, reason }` (an error code). */
+  requestFailed: 'rental_request_failed',
+  /** Any Booking record action `{ bookingId, action, status }` (`action`: a `RentalBookingActionKey`). */
+  bookingAction: 'rental_booking_action',
+  /** `{ bookingId, action, reason }` (an error code). */
+  bookingActionFailed: 'rental_booking_action_failed',
+  /** The owner saved a calendar block `{ listingId, reason, created: boolean }`. */
+  blockSaved: 'rental_block_saved',
+  blockDeleted: 'rental_block_deleted',
+  /** Search's "Free on" dates set `{ days }`. */
+  datesFilterSet: 'rental_dates_filter_set',
+} as const;
+
+/**
  * Route params allowed onto screen events. Everything else is dropped, so a param
  * carrying a phone or a price never reaches analytics by accident. Ids only (plus `mode` and `category`): never the
  * listing routes' `step`, `group`, `from`, `outcome` or `index`.
  */
-export const SCREEN_PARAM_ALLOWLIST = ['listingId', 'businessId', 'partRequestId', 'dealId', 'threadId', 'category', 'mode'] as const;
+export const SCREEN_PARAM_ALLOWLIST = [
+  'listingId', 'businessId', 'partRequestId', 'dealId', 'threadId', 'category', 'mode',
+  // M14: the Booking record, and the review / problem subject (`{ subject, id }`, an id).
+  'bookingId', 'subject', 'id', 'segment',
+] as const;
 
 export function pickAllowedParams(params: unknown): Record<string, string | number> {
   if (!params || typeof params !== 'object') return {};

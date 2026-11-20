@@ -21,6 +21,7 @@ import { refreshListingSearch } from '../discovery/search-text.js';
 import { afterListingStatusWrite } from '../deals/holds.js';
 import { toOwnerView } from './listing-view.service.js';
 import { enqueuePartRequestWork } from '../part-requests/work-queue.js';
+import { assertNoActiveBookings, cancelBookingsForListingOff } from '../rentals/listing-hooks.js';
 import { listingNotFound, lockBusinessThenListing, lockListingOnly, type BusinessRow, type ListingRow } from './locks.js';
 
 // The listing state machine (F2 spec §7.2). **This file is the only writer of `listings.status`**: every change goes
@@ -100,6 +101,13 @@ async function writeStatus(tx: Tx, listing: ListingRow, to: ListingStatus, o: Wr
   if ((to === 'live' || to === 'removed' || to === 'rejected') && row.kind !== 'machine_rental') {
     await enqueuePartRequestWork(tx, 'listing_changed', row.id);
   }
+  // M14 §7.2: a rental off the market for good ends its bookings in this transaction (the listing is locked). A
+  // seller's remove / mark unavailable (refused earlier while a booking is active) cancels the open requests; an
+  // admin's or the system's remove / reject (ask for changes, photos removed) also cancels `confirmed` ones. Bookings
+  // on rent, returned or disputed continue. Hide, pause and expire never get here.
+  if (row.kind === 'machine_rental' && (to === 'removed' || to === 'rejected' || to === 'unavailable')) {
+    await cancelBookingsForListingOff(tx, row.id, o.actor === 'seller' ? 'open' : 'open_and_confirmed');
+  }
   return row;
 }
 
@@ -115,14 +123,23 @@ export async function recordCreated(tx: Tx, listingId: string, userId: string): 
   });
 }
 
-export type SystemTransitionAction = 'back_to_review' | 'expire' | 'photos_removed' | 'reserve' | 'unreserve' | 'sell_out';
+export type SystemTransitionAction =
+  | 'back_to_review'
+  | 'expire'
+  | 'photos_removed'
+  | 'reserve'
+  | 'unreserve'
+  | 'sell_out'
+  // M14 §7.1: `syncRentalStatus` only.
+  | 'rent_out'
+  | 'rent_back';
 
 /**
  * System moves that lock only the listing and refuse `lockBusiness: true`: the expiry job (amendment 1) and F6 + F7's
  * stock moves (`syncReservation`, plan review C1). They run inside transactions that already hold a listing lock, so
  * asking for the seller's business lock afterwards would invert the business → listing order (§8.5).
  */
-const LISTING_ONLY_ACTIONS: readonly SystemTransitionAction[] = ['expire', 'reserve', 'unreserve', 'sell_out'];
+const LISTING_ONLY_ACTIONS: readonly SystemTransitionAction[] = ['expire', 'reserve', 'unreserve', 'sell_out', 'rent_out', 'rent_back'];
 
 /** F6 + F7 §8.3: leaving `reserved` always stores `return_status = 'live'`, never `reserved` (`syncReservation` puts it back). */
 export function returnStatusLeaving(from: ListingStatus): ListingStatus {
@@ -187,6 +204,9 @@ export async function applySystemTransition(
     case 'expire':
     case 'reserve':
     case 'unreserve':
+    // M14 §7.1: a rental's calendar (no gate on the way back; `refreshed_at` untouched).
+    case 'rent_out':
+    case 'rent_back':
       return writeStatus(tx, listing, to, base);
     case 'sell_out':
       return writeStatus(tx, listing, to, { ...base, returnStatus: null });
@@ -246,7 +266,7 @@ async function writeGateResult(
   o: { action: ListingAction; userId: string; reason?: string | null; returnStatus: ListingStatus | null; set?: TransitionColumns },
 ): Promise<ListingRow> {
   const gate = await goLiveGate(tx, business, listing, gateAction);
-  // F4 + F5 §5.2: publish, resume, renew, relist and end of rental rebuild the search columns (a listing going on view
+  // F4 + F5 §5.2: publish, resume, renew and relist rebuild the search columns (a listing going on view
   // always carries current search text).
   await refreshListingSearch(tx, [listing.id]);
   return writeStatus(tx, listing, gate.to, {
@@ -305,13 +325,12 @@ const GATED_ACTIONS: Partial<Record<SellerListingAction, GateAction>> = {
   resume: 'resume',
   renew: 'renew',
   relist: 'relist',
-  end_rental: 'end_rental',
 };
 
 /**
  * `POST /listings/:id/actions` (§7.2), under the business → listing locks. The action must be a seller row of
  * `LISTING_TRANSITIONS` for the listing's status and kind (`409 LISTING_TRANSITION_NOT_ALLOWED` with
- * `details: { from, action }`). Resume, renew, relist and end of rental run the gate and refresh the listing; a
+ * `details: { from, action }`). Resume, renew and relist run the gate and refresh the listing; a
  * `pending_review` answer stores `return_status = 'live'`. The note goes to the history row; `mark_unavailable` stores
  * it as the status reason, `remove` too (and keeps the stored reason without one); other actions clear it.
  *
@@ -338,6 +357,11 @@ export async function applySellerAction(
       .where(and(eq(deals.listingId, listing.id), inArray(deals.status, ['agreed', 'handed_over', 'disputed'])))
       .orderBy(deals.createdAt, deals.id);
     throw new ConflictError('Cancel the open deals on this listing first', 'LISTING_HAS_OPEN_DEALS', { dealIds: open.map((d) => d.id) });
+  }
+  // M14 §7.2: a rental with a confirmed / on rent / returned / disputed booking can't be removed or made unavailable
+  // (`409 LISTING_HAS_OPEN_BOOKINGS`); its open requests are cancelled by `writeStatus`.
+  if (listing.kind === 'machine_rental' && (action === 'remove' || action === 'mark_unavailable')) {
+    await assertNoActiveBookings(tx, listing.id);
   }
   const transition = listingTransition(listing.status, action, listing.kind, 'seller');
   if (!transition) throw transitionNotAllowed(listing.status, action);

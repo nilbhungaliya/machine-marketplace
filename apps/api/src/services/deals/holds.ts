@@ -6,6 +6,7 @@ import { ConflictError } from '../../lib/errors.js';
 import { applySystemTransition, markSoldOnReturn, unmarkSoldOnReturn } from '../listings/listing-lifecycle.service.js';
 import { lockListingOnly, type ListingRow } from '../listings/locks.js';
 import { reconcileOffersForListing } from '../offers/reconcile.js';
+import { syncRentalStatus } from '../rentals/status-sync.js';
 
 /**
  * Stock holds and the listing's reserved state (F6 + F7 spec §8.1, §8.2, R16; plan C1-1).
@@ -61,12 +62,15 @@ export async function syncReservation(tx: Tx, listingId: string): Promise<Listin
 
 /**
  * The hook every listing writer's **caller** runs after a status write or a stock-relevant edit (§8.3, §22; plan
- * review C1): `syncReservation`, then `reconcileOffersForListing`. Never called from inside `applySystemTransition`.
+ * review C1): `syncReservation`, then `reconcileOffersForListing`, then for a rental M14's `syncRentalStatus`. Never called from inside `applySystemTransition`.
  * Returns the listing as it is after both.
  */
 export async function afterListingStatusWrite(tx: Tx, listingId: string): Promise<ListingRow> {
-  await syncReservation(tx, listingId);
+  const synced = await syncReservation(tx, listingId);
   await reconcileOffersForListing(tx, listingId);
+  // M14 §7.1 (review change): publish, approve, unhide, resume, renew, relist, `back_to_review` and quantity edits of a
+  // rental land on the status today's calendar says (`live` ↔ `rented`).
+  if (synced.kind === 'machine_rental') await syncRentalStatus(tx, synced);
   return lockListingOnly(tx, listingId);
 }
 

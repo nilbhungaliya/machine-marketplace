@@ -1,0 +1,62 @@
+{
+  "request": {
+    "title": "Request booking"
+  },
+  "record": {
+    "title": "Booking"
+  },
+  "dates": {
+    "pickStart": "Choose a start date",
+    "pickRange": "Choose your dates"
+  },
+  "status": {
+    "yourAnswer": "Your answer",
+    "waitingOwner": "Waiting for the owner",
+    "waitingRenter": "Waiting for the renter",
+    "requested": "Requested",
+    "countered": "Change proposed",
+    "confirmed": "Confirmed",
+    "on_rent": "On rent",
+    "returned": "Returned",
+    "completed": "Completed",
+    "disputed": "With support",
+    "declined": "Declined",
+    "withdrawn": "Withdrawn",
+    "expired": "Expired",
+    "cancelled": "Cancelled"
+  },
+  "period": {
+    "hour": "Hour",
+    "day": "Day",
+    "week": "Week",
+    "month": "Month"
+  },
+  "money": {
+    "rent": "Rent",
+    "operator": "Operator",
+    "transport": "Transport",
+    "estimate": "Estimate",
+    "total": "Total"
+  },
+  "errors": {
+    "rentalPeriodNotOffered": "This machine isn't rented out by that period. Choose another.",
+    "rentalCountInvalid": "Choose a valid length for the booking.",
+    "rentalMachinesInvalid": "Choose how many machines, up to the number the owner has.",
+    "rentalDatesInvalid": "That start date can't be booked. Choose another date.",
+    "belowMinimum": "This is shorter than the owner's minimum booking.",
+    "rentalDatesTaken": "Those dates are already taken. Choose other dates.",
+    "rentalQuantityBooked": "Machines are booked on those dates, so the quantity can't go lower.",
+    "rentalOpenLimit": "You have reached the limit of open booking requests. Wait for an answer or withdraw one.",
+    "rentalDailyLimit": "You've sent the most booking requests for today. Try again tomorrow.",
+    "rentalRequestOpen": "You already have an open request for this machine. Change that one instead.",
+    "rentalChangeLimit": "This booking can't be changed any more. Confirm or decline it.",
+    "rentalTransitionNotAllowed": "This booking can't be changed that way any more.",
+    "rentalBookingStale": "This booking changed while you were looking. Check it and try again.",
+    "rentalTooEarly": "You can mark it on site from the day before the booking starts.",
+    "hourMeterInvalid": "The closing hour meter can't be lower than the opening one.",
+    "finalReasonRequired": "Choose why the final amount differs from the agreed total.",
+    "listingHasOpenBookings": "This listing has bookings in progress. Finish or cancel them first.",
+    "listingNotBookable": "This machine can't be booked right now.",
+    "rentalBookingNotFound": "This booking is no longer available."
+  }
+}

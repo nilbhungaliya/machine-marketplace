@@ -69,6 +69,18 @@ function dueOnText(v: unknown, language: Language): string {
   return new Date(v).toLocaleDateString(LOCALE[language], { day: 'numeric', month: 'short', timeZone: 'Asia/Kolkata' });
 }
 
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** M14: an IST calendar range `YYYY-MM-DD` … `YYYY-MM-DD` as "21 Nov" or "21 Nov – 23 Nov"; '' for anything else. */
+function datesText(start: unknown, end: unknown, language: Language): string {
+  if (typeof start !== 'string' || !ISO_DATE.test(start)) return '';
+  const fmt = (d: string) =>
+    new Date(`${d}T00:00:00Z`).toLocaleDateString(LOCALE[language], { day: 'numeric', month: 'short', timeZone: 'UTC' });
+  const from = fmt(start);
+  if (typeof end !== 'string' || !ISO_DATE.test(end) || end === start) return from;
+  return `${from} – ${fmt(end)}`;
+}
+
 const SIDES = new Set(['left', 'right', 'pair']);
 const DROP_REASONS = new Set<string>(PART_REQUEST_DROP_REASONS);
 
@@ -94,6 +106,9 @@ export function textParams(params: Record<string, unknown>, language: Language, 
     distanceKm: distanceText(params.distanceKm),
     city: safeText(params.city, 60),
     reason: typeof params.reason === 'string' && DROP_REASONS.has(params.reason) ? (params.reason as TextParams['reason']) : '',
+    // M14 (plan C0-3a): `notifyBooking` stores `bookingRef`, `startDate`, `endDate`; A3-3 owns the wording.
+    bookingRef: dealRefText(params.bookingRef),
+    dates: datesText(params.startDate, params.endDate, language),
   };
 }
 

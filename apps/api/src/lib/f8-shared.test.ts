@@ -89,9 +89,9 @@ describe('notificationCategory (F8 §5.11)', () => {
     expect(notificationCategory(type)).toBe('requests');
   });
 
-  it('booking_update and listing_status stay deals', () => {
-    expect(notificationCategory('booking_update')).toBe('deals');
+  it('listing_status stays deals; rental bookings have their own category (M14 §11)', () => {
     expect(notificationCategory('listing_status')).toBe('deals');
+    expect(notificationCategory('rental_booking_requested')).toBe('rentals');
   });
 });
 

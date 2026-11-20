@@ -242,8 +242,12 @@ describe('LISTING_TRANSITIONS (§7.2)', () => {
     ['expired', 'mark_unavailable', 'part', 'unavailable'],
     ['sold', 'relist', 'part', 'gate'],
     ['unavailable', 'relist', 'part', 'gate'],
-    ['live', 'mark_rented', 'machine_rental', 'rented'],
-    ['rented', 'end_rental', 'machine_rental', 'gate'],
+    // M14 §7.1: `rented` follows the booking calendar (system `rent_out` / `rent_back`).
+    ['live', 'rent_out', 'machine_rental', 'rented'],
+    ['rented', 'rent_back', 'machine_rental', 'live'],
+    ['rented', 'pause', 'machine_rental', 'paused'],
+    ['rented', 'renew', 'machine_rental', 'gate'],
+    ['rented', 'mark_unavailable', 'machine_rental', 'unavailable'],
     ['live', 'remove', 'part', 'removed'],
     ['hidden', 'remove', 'part', 'removed'],
     ['pending_review', 'remove', 'part', 'removed'],
@@ -278,9 +282,9 @@ describe('LISTING_TRANSITIONS (§7.2)', () => {
 
   it('refuses what the table does not allow', () => {
     expect(listingTransition('hidden', 'resume', 'part')).toBeNull();
-    expect(listingTransition('rented', 'mark_rented', 'machine_rental')).toBeNull();
-    expect(listingTransition('live', 'mark_rented', 'part')).toBeNull();
-    expect(listingTransition('live', 'mark_rented', 'machine')).toBeNull();
+    expect(listingTransition('live', 'rent_out', 'part')).toBeNull();
+    expect(listingTransition('live', 'rent_out', 'machine')).toBeNull();
+    expect(listingTransition('rented', 'mark_sold', 'machine_rental')).toBeNull();
     expect(listingTransition('draft', 'remove', 'part')).toBeNull();
     expect(listingTransition('removed', 'remove', 'part')).toBeNull();
     expect(listingTransition('draft', 'hide', 'part')).toBeNull();
@@ -303,9 +307,9 @@ describe('LISTING_TRANSITIONS (§7.2)', () => {
     expect(sellerActions('hidden', 'part')).toEqual(['remove']);
   });
 
-  it('offers mark_rented on a live rental only', () => {
-    expect(sellerActions('live', 'machine_rental')).toContain('mark_rented');
-    expect(sellerActions('live', 'machine')).not.toContain('mark_rented');
+  it('offers a live rental no "sold" and nothing rental-only (M14 §7.1)', () => {
+    expect(sellerActions('live', 'machine_rental')).toEqual(['pause', 'renew', 'mark_unavailable', 'remove']);
+    expect(sellerActions('rented', 'machine_rental')).toEqual(['pause', 'renew', 'mark_unavailable', 'remove']);
     expect(sellerActions('live', 'part')).toEqual(['pause', 'renew', 'mark_sold', 'mark_unavailable', 'remove']);
     expect(sellerActions('draft', 'part')).toEqual([]);
   });
@@ -335,9 +339,11 @@ describe('APP_SETTINGS / validateSettings (§12)', () => {
       listing_review_first_n: 3,
       unverified_listing_cap: 3,
     });
-    // + the 15 F6 + F7 settings (spec §17) + the 14 F8 part-request settings (F8 spec §16).
-    expect(APP_SETTINGS.map((s) => s.key)).toHaveLength(33);
+    // + the 15 F6 + F7 settings (spec §17) + the 14 F8 part-request settings (F8 spec §16) + the 7 M14 rental
+    // settings (M14 spec §16).
+    expect(APP_SETTINGS.map((s) => s.key)).toHaveLength(40);
     expect(APP_SETTINGS.filter((s) => s.key.startsWith('part_request_'))).toHaveLength(14);
+    expect(APP_SETTINGS.filter((s) => s.key.startsWith('rental_'))).toHaveLength(7);
   });
 
   it('accepts the defaults', () => {

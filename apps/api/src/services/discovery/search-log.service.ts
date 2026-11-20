@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm';
 import { DISCOVERY_LIMITS, type ListingKind } from '@mpm/shared-types';
 import type { Db, Tx } from '../../db/index.js';
+import { IST_TODAY } from '../../lib/ist.js';
 
 // The anonymous search log (F4 + F5 spec §5.13, R14): normalised query, how many words, result total, kind, the IST day.
 // No user, device, IP or location. Written once per search (first page, words or part numbers only; never count-only
@@ -9,7 +10,7 @@ import type { Db, Tx } from '../../db/index.js';
 
 type Conn = Db | Tx;
 
-const INDIA_TODAY = sql`(now() AT TIME ZONE 'Asia/Kolkata')::date`;
+const INDIA_TODAY = IST_TODAY;
 const GSTIN_RE = /\d{2}[a-z]{5}\d{4}[a-z][a-z\d]z[a-z\d]/;
 const PAN_RE = /[a-z]{5}\d{4}[a-z]/;
 /** Maximal digit runs: digits not touching another digit. */

@@ -23,7 +23,7 @@ describe('contactActions (F6 + F7 §7.1)', () => {
     expect(contactActions({ kind: 'part', priceModel: 'on_request' })).toEqual(['ask_price']);
     expect(contactActions({ kind: 'machine', priceModel: 'on_request' })).toEqual(['ask_price']);
     for (const priceModel of ['fixed', 'negotiable', 'on_request', null] as const) {
-      expect(contactActions({ kind: 'machine_rental', priceModel })).toEqual(['enquire']);
+      expect(contactActions({ kind: 'machine_rental', priceModel })).toEqual(['request_booking', 'enquire']);
     }
     expect(contactActions({ kind: 'part', priceModel: null })).toEqual(['enquire']);
   });
@@ -41,6 +41,7 @@ describe('contactSheets (§7.1, §15.2)', () => {
     for (const priceModel of ['negotiable', 'fixed', 'on_request'] as const) {
       const sheets = contactSheets({ isOwner: false, kind: 'part', priceModel });
       for (const a of contactActions({ kind: 'part', priceModel })) {
+        if (a === 'request_booking') continue;
         const sheet = sheetOf(a);
         expect(sheet === 'enquire' || sheet === 'ask_price' ? sheets.enquire : sheets.offer).toBe(true);
       }

@@ -118,7 +118,19 @@
       "mine": "You blocked this business.",
       "theirs": "This conversation is closed."
     },
-    "supportMessage": "Support: {{message}}"
+    "supportMessage": "Support: {{message}}",
+    "booking_requested": "Booking #{{ref}} requested.",
+    "booking_changed": "Booking #{{ref}} changed.",
+    "booking_confirmed": "Booking #{{ref}} confirmed.",
+    "booking_declined": "Booking #{{ref}} declined.",
+    "booking_withdrawn": "Booking #{{ref}} withdrawn.",
+    "booking_expired": "Booking #{{ref}} expired without an answer.",
+    "booking_on_site": "The machine for booking #{{ref}} is on site.",
+    "booking_returned": "The machine for booking #{{ref}} is back.",
+    "booking_completed": "Booking #{{ref}} is complete.",
+    "booking_cancelled": "Booking #{{ref}} cancelled.",
+    "booking_problem": "A problem was reported on booking #{{ref}}.",
+    "booking_dispute_resolved": "Our team closed the problem on booking #{{ref}}."
   },
   "noteField": {
     "payment_method": "payment",

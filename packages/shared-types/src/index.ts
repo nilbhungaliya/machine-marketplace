@@ -148,7 +148,8 @@ export type PartySide = (typeof PARTY_SIDES)[number];
 export const MAX_COUNTER_ROUNDS = 5;
 
 // ─── chat (§5.2, §6) ───
-export const MESSAGE_KINDS = ['text', 'photos', 'enquiry', 'offer', 'deal', 'system'] as const;
+/** `booking` added by M14 (a rental booking card, spec §5.5); no migration statement compares it as an enum literal. */
+export const MESSAGE_KINDS = ['text', 'photos', 'enquiry', 'offer', 'deal', 'system', 'booking'] as const;
 export type MessageKind = (typeof MESSAGE_KINDS)[number];
 
 /** System lines (§6.9): stored as code + values, rendered in the reader's language (`chat.system.<code>`). */
@@ -157,6 +158,10 @@ export const SYSTEM_LINE_CODES = [
   'offers_closed', 'deal_agreed', 'deal_notes_changed', 'deal_handed_over', 'deal_completed', 'deal_auto_completed',
   'deal_cancel_requested', 'deal_cancel_request_withdrawn', 'deal_cancelled', 'deal_problem_reported',
   'deal_dispute_resolved', 'contact_shared', 'blocked',
+  // M14 rental bookings (spec §5.8).
+  'booking_requested', 'booking_changed', 'booking_confirmed', 'booking_declined', 'booking_withdrawn',
+  'booking_expired', 'booking_on_site', 'booking_returned', 'booking_completed', 'booking_cancelled',
+  'booking_problem', 'booking_dispute_resolved',
 ] as const;
 export type SystemLineCode = (typeof SYSTEM_LINE_CODES)[number];
 
@@ -252,17 +257,36 @@ export type DisputeStatus = (typeof DISPUTE_STATUSES)[number];
 export const DISPUTE_OUTCOMES = ['completed', 'cancelled', 'resumed'] as const;
 export type DisputeOutcome = (typeof DISPUTE_OUTCOMES)[number];
 
-/** Rental booking lifecycle (scope F7 "Mark machinery as rented", F9 "Booking updates"). */
-export const RENTAL_BOOKING_STATUSES = ['requested', 'confirmed', 'active', 'returned', 'cancelled'] as const;
+/**
+ * Rental booking lifecycle (M14 spec §6.1): `requested` <-> `countered` -> `confirmed` -> `on_rent` -> `returned` ->
+ * `completed`; exits `declined`, `withdrawn`, `expired`, `cancelled`, `disputed`. The rest of M14's contracts are in
+ * the "M14: rental bookings" section at the end of this file.
+ */
+export const RENTAL_BOOKING_STATUSES = [
+  'requested', 'countered', 'confirmed', 'on_rent', 'returned', 'completed', 'declined', 'withdrawn', 'expired',
+  'cancelled', 'disputed',
+] as const;
 export type RentalBookingStatus = (typeof RENTAL_BOOKING_STATUSES)[number];
 
 // ─── reviews (§5.11, §10) ───
-/** The three facets each side rates (§10.2), keyed by the reviewer's side: the buyer rates the seller and back. */
+/** What a review (or a dispute) is about (M14 R11, R12): an F6 deal or an M14 rental booking. Exactly one per row. */
+export const REVIEW_SUBJECTS = ['deal', 'rental'] as const;
+export type ReviewSubjectKind = (typeof REVIEW_SUBJECTS)[number];
+/**
+ * The three facets each side rates (§10.2), keyed by subject, then the reviewer's side: the buyer (renter) rates the
+ * seller (owner) and back. A rental's owner rates `care` of the machine in place of `pickup` (M14 R11).
+ */
 export const REVIEW_FACETS = {
-  buyer: ['matched_listing', 'communication', 'on_time'],
-  seller: ['communication', 'payment', 'pickup'],
+  deal: {
+    buyer: ['matched_listing', 'communication', 'on_time'],
+    seller: ['communication', 'payment', 'pickup'],
+  },
+  rental: {
+    buyer: ['matched_listing', 'communication', 'on_time'],
+    seller: ['communication', 'payment', 'care'],
+  },
 } as const;
-export type ReviewFacet = (typeof REVIEW_FACETS)[PartySide][number];
+export type ReviewFacet = (typeof REVIEW_FACETS)[ReviewSubjectKind][PartySide][number];
 export const REVIEW_REPORT_REASONS = ['abusive', 'false', 'personal_information', 'other'] as const;
 export type ReviewReportReason = (typeof REVIEW_REPORT_REASONS)[number];
 export const CONVERSATION_REPORT_REASONS = ['spam', 'scam_or_advance_payment', 'abusive', 'fake_listing', 'other'] as const;
@@ -291,7 +315,7 @@ export type ReportStatus = (typeof REPORT_STATUSES)[number];
 /** Notification types (scope F9; F6 + F7 §5.16, §11.3). */
 export const NOTIFICATION_TYPES = [
   'enquiry_new', 'message_new', 'offer_new', 'offer_countered', 'offer_accepted', 'offer_rejected',
-  'part_match', 'booking_update', 'listing_status', 'deal_completed',
+  'part_match', 'listing_status', 'deal_completed',
   'offer_quote', 'offer_expiring', 'offer_backup', 'offer_revived', 'deal_handed_over', 'deal_cancel_requested',
   'deal_cancelled', 'deal_problem', 'deal_dispute_resolved', 'deal_agreed_reminder', 'review_received',
   // §10.3: the other side is told it has until `publish_due_at` to review (plan review I6).
@@ -299,19 +323,27 @@ export const NOTIFICATION_TYPES = [
   // F8 part requests (F8 spec §10.1); `part_match` above is F8's grouped auto-match row.
   'part_request_new', 'part_request_reply', 'part_request_expiring', 'part_request_expired',
   'part_request_fulfil_prompt', 'part_request_removed', 'part_request_reply_dropped',
+  // M14 rental bookings (spec §11); every `rental_booking_*` type is in the `rentals` category.
+  'rental_booking_requested', 'rental_booking_changed', 'rental_booking_confirmed', 'rental_booking_declined',
+  'rental_booking_withdrawn', 'rental_booking_expired', 'rental_booking_cancelled', 'rental_booking_on_site',
+  'rental_booking_returned', 'rental_booking_completed', 'rental_booking_starts_tomorrow', 'rental_booking_due_back',
+  'rental_booking_overdue', 'rental_booking_not_started', 'rental_booking_clash', 'rental_booking_problem',
+  'rental_booking_dispute_resolved',
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 
-export const NOTIFICATION_CATEGORIES = ['chat', 'offers', 'deals', 'reviews', 'requests'] as const;
+/** `rentals` added by M14 (§11); no migration statement compares it as an enum literal. */
+export const NOTIFICATION_CATEGORIES = ['chat', 'offers', 'deals', 'reviews', 'requests', 'rentals'] as const;
 export type NotificationCategory = (typeof NOTIFICATION_CATEGORIES)[number];
 
 /**
- * The category of a type (§11.3). Every `part_request_*` type and `part_match` are `requests` (F8 §5.11);
- * `booking_update` and `listing_status` belong to later modules (M14, F2 notices) and fall under `deals` until those
- * modules give them one of their own.
+ * The category of a type (§11.3). Every `part_request_*` type and `part_match` are `requests` (F8 §5.11); every
+ * `rental_booking_*` type is `rentals` (M14 §11); `listing_status` belongs to a later module (F2 notices) and falls
+ * under `deals` until it gets one of its own.
  */
 export function notificationCategory(type: NotificationType): NotificationCategory {
   if (type === 'part_match' || type.startsWith('part_request_')) return 'requests';
+  if (type.startsWith('rental_booking_')) return 'rentals';
   if (type === 'enquiry_new' || type === 'message_new') return 'chat';
   if (type.startsWith('offer_')) return 'offers';
   if (type === 'review_received' || type === 'review_waiting') return 'reviews';
@@ -858,6 +890,8 @@ export interface AdminBusinessDetail {
   sellerScore: SellerScore | null;
   /** F8 §14: the business's part requests in any status; the page links "Part requests (n)" to the filtered list. */
   partRequestCount: number;
+  /** M14 §15: the business's rental bookings in any status, as the owner and as the renter. */
+  rentalBookingCount: { asOwner: number; asRenter: number };
 }
 
 // ─── Listings (F2 + F3 + A3; spec 2026-11-18-f2-f3-listings-design) ───
@@ -950,10 +984,11 @@ export type FitmentSource = (typeof FITMENT_SOURCES)[number];
 
 /**
  * What `POST /listings/:id/actions` takes and the manage sheet offers (§7.2, §10). Publish has its own endpoint.
- * There is no `duplicate` (owner decision 8).
+ * There is no `duplicate` (owner decision 8). M14 §7.1 retired the seller's `mark_rented` / `end_rental`: a rental's
+ * `rented` status follows its booking calendar (system `rent_out` / `rent_back`).
  */
 export const SELLER_LISTING_ACTIONS = [
-  'pause', 'resume', 'renew', 'mark_sold', 'mark_unavailable', 'relist', 'mark_rented', 'end_rental', 'remove',
+  'pause', 'resume', 'renew', 'mark_sold', 'mark_unavailable', 'relist', 'remove',
 ] as const;
 export type SellerListingAction = (typeof SELLER_LISTING_ACTIONS)[number];
 
@@ -965,7 +1000,11 @@ export type AdminListingAction = (typeof ADMIN_LISTING_ACTIONS)[number];
  * Transitions the system makes (§7.2): the expiry job, edits back to review, admin's last-photo delete, and F6 + F7's
  * stock moves (`reserve`, `unreserve`, `sell_out`; `syncReservation` in `services/deals/holds.ts`, §8.2).
  */
-export const SYSTEM_LISTING_ACTIONS = ['expire', 'back_to_review', 'photos_removed', 'reserve', 'unreserve', 'sell_out'] as const;
+export const SYSTEM_LISTING_ACTIONS = [
+  'expire', 'back_to_review', 'photos_removed', 'reserve', 'unreserve', 'sell_out',
+  // M14 §7.1: `syncRentalStatus` (today's free capacity reached 0 / came back).
+  'rent_out', 'rent_back',
+] as const;
 export type SystemListingAction = (typeof SYSTEM_LISTING_ACTIONS)[number];
 
 export type ListingAction = 'publish' | SellerListingAction | AdminListingAction | SystemListingAction;
@@ -996,14 +1035,20 @@ export const LISTING_TRANSITIONS: readonly ListingTransition[] = [
   { action: 'approve', actor: 'admin', from: ['pending_review'], to: 'return_status' },
   { action: 'ask_for_changes', actor: 'admin', from: ['pending_review'], to: 'rejected' },
   { action: 'reject', actor: 'admin', from: ['pending_review'], to: 'rejected' },
-  { action: 'pause', actor: 'seller', from: ['live', 'reserved'], to: 'paused' },
+  // M14 §7.1: an owner whose machines are all out (`rented`) can still pause, renew or make the listing unavailable;
+  // a rental is never "sold" (removed or made unavailable instead).
+  { action: 'pause', actor: 'seller', from: ['live', 'reserved', 'rented'], to: 'paused' },
   { action: 'resume', actor: 'seller', from: ['paused'], to: 'gate' },
-  { action: 'renew', actor: 'seller', from: ['live', 'expired'], to: 'gate' },
-  { action: 'mark_sold', actor: 'seller', from: ['live', 'paused', 'expired', 'unavailable'], to: 'sold' },
-  { action: 'mark_unavailable', actor: 'seller', from: ['live', 'paused', 'expired', 'reserved'], to: 'unavailable' },
+  { action: 'renew', actor: 'seller', from: ['live', 'expired', 'rented'], to: 'gate' },
+  {
+    action: 'mark_sold', actor: 'seller', from: ['live', 'paused', 'expired', 'unavailable'], to: 'sold',
+    kinds: ['part', 'machine'],
+  },
+  {
+    action: 'mark_unavailable', actor: 'seller', from: ['live', 'paused', 'expired', 'reserved', 'rented'],
+    to: 'unavailable',
+  },
   { action: 'relist', actor: 'seller', from: ['sold', 'unavailable'], to: 'gate' },
-  { action: 'mark_rented', actor: 'seller', from: ['live'], to: 'rented', kinds: ['machine_rental'] },
-  { action: 'end_rental', actor: 'seller', from: ['rented'], to: 'gate', kinds: ['machine_rental'] },
   { action: 'remove', actor: 'seller', from: ALL_BUT_DRAFT_REMOVED, to: 'removed' },
   { action: 'expire', actor: 'system', from: ['live', 'rented'], to: 'expired' },
   { action: 'back_to_review', actor: 'system', from: ['live', 'rented', 'reserved'], to: 'pending_review' },
@@ -1016,6 +1061,9 @@ export const LISTING_TRANSITIONS: readonly ListingTransition[] = [
   // F6 + F7 §8.3: the quantity reached 0 (a deal completed). On `hidden` / `pending_review` / `rejected` only
   // `return_status = 'sold'` is set (§8.2), so this row doesn't list them.
   { action: 'sell_out', actor: 'system', from: ['live', 'reserved', 'paused', 'unavailable', 'expired'], to: 'sold' },
+  // M14 §7.1: `syncRentalStatus` only (no gate on the way back, as `unreserve`).
+  { action: 'rent_out', actor: 'system', from: ['live'], to: 'rented', kinds: ['machine_rental'] },
+  { action: 'rent_back', actor: 'system', from: ['rented'], to: 'live', kinds: ['machine_rental'] },
 ];
 
 /**
@@ -1476,6 +1524,42 @@ export const APP_SETTINGS = [
     label: 'Requirement replies a seller sends a day',
     help: 'Replies a seller business may send in a day (IST).',
   },
+  // ─── Rental bookings (M14 spec §16) ───
+  {
+    key: 'rental_reply_hours', type: 'int', default: 24, min: 1, max: 168,
+    label: 'Booking reply window (hours)',
+    help: 'A booking request or change expires when it is not answered within this time.',
+  },
+  {
+    key: 'rental_max_changes', type: 'int', default: 5, min: 0, max: 20,
+    label: 'Booking changes',
+    help: 'Proposals after the first request; then the booking can only be confirmed, accepted or declined.',
+  },
+  {
+    key: 'rental_open_limit_unverified', type: 'int', default: 3, min: 1, max: 50,
+    label: 'Open booking requests, unverified renter',
+    help: 'Requested or countered bookings a business without GST verification may have at a time. At most the verified limit.',
+  },
+  {
+    key: 'rental_open_limit_verified', type: 'int', default: 15, min: 1, max: 200,
+    label: 'Open booking requests, verified renter',
+    help: 'Requested or countered bookings a GST-verified business may have at a time.',
+  },
+  {
+    key: 'rental_requests_per_day', type: 'int', default: 5, min: 1, max: 100,
+    label: 'Booking requests a day',
+    help: 'New booking requests a renter business may send in a day (IST).',
+  },
+  {
+    key: 'rental_complete_days', type: 'int', default: 2, min: 1, max: 14,
+    label: 'Auto-complete after return (days)',
+    help: 'A returned booking completes by itself this long after the owner marks it returned.',
+  },
+  {
+    key: 'rental_advance_days', type: 'int', default: 180, min: 7, max: 365,
+    label: 'Book ahead at most (days)',
+    help: 'How far ahead a booking may start.',
+  },
 ] as const satisfies readonly AppSettingDef[];
 
 export type AppSettingKey = (typeof APP_SETTINGS)[number]['key'];
@@ -1533,6 +1617,13 @@ export function validateSettings(values: AppSettingsValues): { key: AppSettingKe
   }
   if (values.part_request_match_push_daily_cap > values.part_request_match_push_total_cap) {
     return { key: 'part_request_match_push_daily_cap', message: 'The daily match pushes must not exceed the total' };
+  }
+  // M14 §16 cross-check.
+  if (values.rental_open_limit_unverified > values.rental_open_limit_verified) {
+    return {
+      key: 'rental_open_limit_unverified',
+      message: 'The unverified open-request limit must not exceed the verified one',
+    };
   }
   return null;
 }
@@ -1689,6 +1780,8 @@ export interface ListingOwnerView extends ListingDetail {
   partRequestId: string | null;
   /** F8 §9.3: "Goes to the buyer when your listing is live" (name masked); null without a pending reply. */
   pendingRequestReply: { partRequestId: string; name: string } | null;
+  /** M14 plan D14: the owner's booking summary of a rental listing; null for parts and machines. */
+  bookingSummary: RentalBookingSummary | null;
   location: {
     source: ListingLocationSource;
     pincode: string | null;
@@ -1768,6 +1861,8 @@ export interface MyListingCard extends ListingCard {
   statusReason: string | null;
   scoreMissing: ListingScoreItem[];
   needsAttention: ListingProblem[];
+  /** M14 plan D14: a rental's machines out today and active bookings; null for parts and machines. */
+  rentalLine: { quantity: number; outToday: number; activeBookings: number } | null;
 }
 
 /** `GET /listings/mine?group=`: counts per group plus one page of the group. */
@@ -1862,6 +1957,8 @@ export interface AdminListingDetail {
   };
   reports: AdminListingReport[];
   history: ListingHistoryEntry[];
+  /** M14 §15: a rental listing's bookings and owner blocks; null for parts and machines. */
+  rental: { bookings: AdminRentalBookingRow[]; blocks: RentalBlockView[] } | null;
 }
 
 // ─── Listing contracts shared by the F2 lanes (C0): request / response shapes of the routes still to be built ───
@@ -2286,6 +2383,11 @@ export interface SearchFilters {
   hasVideo?: boolean;
   /** Filterable select (option keys) or number (range) fields of the category in play (`400 FILTER_NOT_AVAILABLE` otherwise). */
   specs?: Record<string, string[] | SpecRange>;
+  /**
+   * M14 R13 "Free on": rentals with at least one machine free on every day of `from` … `to` (IST `YYYY-MM-DD`, at
+   * most `RENTAL_LIMITS.freeOnMaxDays` days).
+   */
+  rentalDates?: { from: string; to: string };
 }
 
 /** `POST /discover/search` body (§7). Chips the reader found apply as filters unless listed in `removedChips`. */
@@ -2862,6 +2964,8 @@ export interface ThreadMessage {
   enquiry: { quick: QuickEnquiry[]; quantity: string | null; note: string | null; machine: EnquiryMachine | null } | null;
   offer: OfferView | null;
   deal: { id: string; ref: number; status: DealStatus; totalPaise: string } | null;
+  /** M14 §8: a `booking` card. */
+  booking: RentalBookingCardView | null;
   createdAt: string;
 }
 
@@ -2941,6 +3045,8 @@ export interface ThreadDetail {
   unread: number;
   /** Machine listings: the "never pay before inspecting a used machine" tip (§6.7, M19). */
   machineTip: boolean;
+  /** M14 §8: the thread's rental bookings, newest first. */
+  bookings: { id: string; status: RentalBookingStatus; confirmedAt: string | null }[];
 }
 
 export interface DealNotes {
@@ -3020,9 +3126,12 @@ export interface DealsPage {
 /** A facet → stars map (1–5); the facets are `REVIEW_FACETS[reviewerSide]`. */
 export type ReviewRatings = Partial<Record<ReviewFacet, number>>;
 
-/** `GET /deals/:id/review` (§10). */
+/** `GET /deals/:id/review` (§10), `GET /rental-bookings/:id/review` (M14 R11). */
 export interface ReviewState {
-  dealId: string;
+  /** M14: what the review is about. */
+  subject: { kind: ReviewSubjectKind; id: string };
+  /** The deal's id for a deal review (kept for F6 readers); null for a rental review. */
+  dealId: string | null;
   mySide: PartySide;
   /** The reader may submit now. */
   eligible: boolean;
@@ -3086,6 +3195,8 @@ export interface NotificationRow {
   reviewId: string | null;
   /** F8 §10: the part request a `part_*` row opens. */
   partRequestId: string | null;
+  /** M14 §11: the rental booking a `rental_booking_*` (or a rental review) row opens. */
+  rentalBookingId: string | null;
   /** Grouped chat rows: messages since the row opened. */
   unreadCount: number;
   read: boolean;
@@ -3106,6 +3217,8 @@ export interface Badges {
   notificationsUnread: number;
   /** F8 §12.2: requests this business was targeted for that are active, unopened, unreplied and not dismissed. */
   requestsForYou: number;
+  /** M14 §6.6: rental bookings whose next step is this business's (`rentalYourTurn`). */
+  rentalsYourTurn: number;
 }
 
 /** `GET /offers/options` (§12.2). */
@@ -3205,11 +3318,19 @@ export interface AdminDealList {
   counts: Record<DealStatus, number>;
 }
 
+/** What a dispute is about (M14 R12): exactly one of a deal or a rental booking. */
+export type DisputeSubject = { kind: 'deal'; dealId: string } | { kind: 'rental'; rentalBookingId: string };
+
 /** `GET /admin/disputes`. */
 export interface AdminDisputeRow {
   id: string;
-  dealId: string;
-  dealRef: number;
+  /** M14: the deal or the rental booking. */
+  subject: DisputeSubject;
+  /** Deal disputes only. */
+  dealId: string | null;
+  dealRef: number | null;
+  /** Rental booking disputes only (`#700001…`). */
+  rentalBookingRef: number | null;
   category: DisputeCategory;
   status: DisputeStatus;
   outcome: DisputeOutcome | null;
@@ -3261,8 +3382,21 @@ export interface AdminDisputeDetail extends AdminDisputeRow {
   internalNote: string | null;
   stockReturned: boolean | null;
   resolvedByAdminName: string | null;
-  deal: AdminDealDetail;
+  /** Deal disputes only; a rental dispute's booking is read from `/admin/rental-bookings/:id` (M14). */
+  deal: AdminDealDetail | null;
   threadId: string;
+}
+
+/**
+ * `POST /admin/disputes/:id/resolve` body. `stockReturned` is required for a deal dispute resolved `cancelled` and
+ * ignored for a rental one (M14 R12: a booking resolve never touches stock).
+ */
+export interface AdminDisputeResolveInput {
+  outcome: DisputeOutcome;
+  stockReturned?: boolean;
+  /** Staff only, 3–500 characters. */
+  internalNote: string;
+  messageToParties?: string | null;
 }
 
 /** A message as stored (§16.3: the reader is staff, so unmasked), photos signed. Never revealed contact numbers. */
@@ -3326,9 +3460,13 @@ export interface AdminBusinessDealHistory {
   byStatus: Record<DealStatus, number>;
   disputes: Array<{
     id: string;
-    dealId: string;
-    dealRef: number;
-    category: DisputeCategory;
+    /** M14: deal disputes and rental booking disputes. */
+    subject: DisputeSubject;
+    dealId: string | null;
+    dealRef: number | null;
+    rentalBookingRef: number | null;
+    /** A rental dispute's category is a `RentalDisputeCategory`. */
+    category: DisputeCategory | RentalDisputeCategory;
     status: DisputeStatus;
     outcome: DisputeOutcome | null;
     createdAt: string;
@@ -3870,4 +4008,674 @@ export interface AdminPartRequestDetail extends Omit<PartRequestBuyerView, 'role
   removedAt: string | null;
   removedReason: string | null;
   returnStatus: PartRequestStatus | null;
+}
+
+// ─── M14: rental bookings (spec 2026-11-20-m14-rental-bookings-design) ───
+// `RENTAL_BOOKING_STATUSES` is in the "deal" section above. Dates are IST calendar dates `YYYY-MM-DD`; money is
+// integer paise as JSON numbers.
+
+/** Waiting for an answer (§5.8): they hold no capacity. */
+export const OPEN_RENTAL_STATUSES = ['requested', 'countered'] as const satisfies readonly RentalBookingStatus[];
+/** Agreed and not finished (§7.2 "active"); `disputed` counts only while from `on_rent` for capacity (§5.7). */
+export const ACTIVE_RENTAL_STATUSES = ['confirmed', 'on_rent', 'returned', 'disputed'] as const satisfies readonly RentalBookingStatus[];
+/** No way out (§6.1). */
+export const FINAL_RENTAL_STATUSES = [
+  'completed', 'declined', 'withdrawn', 'expired', 'cancelled',
+] as const satisfies readonly RentalBookingStatus[];
+
+/** Whose answer an open booking waits for (`rental_bookings.turn`, null outside `requested` / `countered`). */
+export const RENTAL_BOOKING_TURNS = ['owner', 'renter'] as const;
+export type RentalTurn = (typeof RENTAL_BOOKING_TURNS)[number];
+
+/** Who wrote a booking event or cancelled (`rental_actor_side`). Support acts as `admin`. */
+export const RENTAL_ACTOR_SIDES = ['renter', 'owner', 'system', 'admin'] as const;
+export type RentalActorSide = (typeof RENTAL_ACTOR_SIDES)[number];
+
+export const RENTAL_COMPLETED_HOW = ['renter_confirmed', 'auto', 'support'] as const;
+export type RentalCompletedHow = (typeof RENTAL_COMPLETED_HOW)[number];
+
+/** Every status change of a booking (§6.1); `writeBookingStatus` checks each with `rentalBookingTransition`. */
+export const RENTAL_BOOKING_ACTIONS = [
+  'request', 'confirm', 'change', 'accept', 'decline', 'withdraw', 'expire', 'on_site', 'return', 'confirm_return',
+  'auto_complete', 'cancel', 'problem', 'resolve_completed', 'resolve_cancelled', 'resume', 'admin_cancel',
+  'system_decline', 'system_withdraw', 'system_cancel',
+] as const;
+export type RentalBookingAction = (typeof RENTAL_BOOKING_ACTIONS)[number];
+
+/** Who takes an action: a party, the system (jobs, exits), an admin (cancel) or support (dispute resolve). */
+export type RentalTransitionSide = 'renter' | 'owner' | 'system' | 'admin' | 'support';
+
+const RENTAL_TRANSITIONS: Record<
+  Exclude<RentalBookingAction, 'request' | 'change' | 'decline' | 'resume'>,
+  { from: readonly RentalBookingStatus[]; sides: readonly RentalTransitionSide[]; to: RentalBookingStatus }
+> = {
+  confirm: { from: ['requested'], sides: ['owner'], to: 'confirmed' },
+  accept: { from: ['countered'], sides: ['renter'], to: 'confirmed' },
+  withdraw: { from: ['requested', 'countered'], sides: ['renter'], to: 'withdrawn' },
+  expire: { from: ['requested', 'countered'], sides: ['system'], to: 'expired' },
+  system_decline: { from: ['requested', 'countered'], sides: ['system'], to: 'declined' },
+  system_withdraw: { from: ['requested', 'countered'], sides: ['system'], to: 'withdrawn' },
+  system_cancel: { from: ['requested', 'countered', 'confirmed'], sides: ['system'], to: 'cancelled' },
+  on_site: { from: ['confirmed'], sides: ['renter', 'owner'], to: 'on_rent' },
+  cancel: { from: ['confirmed'], sides: ['renter', 'owner'], to: 'cancelled' },
+  return: { from: ['on_rent'], sides: ['owner'], to: 'returned' },
+  confirm_return: { from: ['returned'], sides: ['renter'], to: 'completed' },
+  auto_complete: { from: ['returned'], sides: ['system'], to: 'completed' },
+  problem: { from: ['on_rent', 'returned'], sides: ['renter', 'owner'], to: 'disputed' },
+  resolve_completed: { from: ['disputed'], sides: ['support'], to: 'completed' },
+  resolve_cancelled: { from: ['disputed'], sides: ['support'], to: 'cancelled' },
+  admin_cancel: { from: ['requested', 'countered', 'confirmed'], sides: ['admin'], to: 'cancelled' },
+};
+
+/**
+ * Where `action` by `side` takes a booking in `from` (§6.1), or null when it isn't allowed (`409
+ * RENTAL_TRANSITION_NOT_ALLOWED`). `request` starts from null; `change` and `decline` are the answer of whoever's turn
+ * it is (owner on `requested`, renter on `countered`); `resume` goes back to `opts.disputedFrom` (`on_rent` or
+ * `returned`). Role (`viewer`), dates and limits are the service's checks.
+ */
+export function rentalBookingTransition(
+  from: RentalBookingStatus | null,
+  action: RentalBookingAction,
+  side: RentalTransitionSide,
+  opts?: { disputedFrom?: RentalBookingStatus | null },
+): RentalBookingStatus | null {
+  if (action === 'request') return from === null && side === 'renter' ? 'requested' : null;
+  if (from === null) return null;
+  if (action === 'change') {
+    if (from === 'requested' && side === 'owner') return 'countered';
+    if (from === 'countered' && side === 'renter') return 'requested';
+    return null;
+  }
+  if (action === 'decline') {
+    return (from === 'requested' && side === 'owner') || (from === 'countered' && side === 'renter') ? 'declined' : null;
+  }
+  if (action === 'resume') {
+    const back = opts?.disputedFrom ?? null;
+    return from === 'disputed' && side === 'support' && (back === 'on_rent' || back === 'returned') ? back : null;
+  }
+  const t = RENTAL_TRANSITIONS[action];
+  return t.from.includes(from) && t.sides.includes(side) ? t.to : null;
+}
+
+/** IST date arithmetic on `YYYY-MM-DD` (no time zone involved: the calendar date is read as UTC midnight). */
+function addIsoDays(date: string, n: number): string {
+  const [y, m, d] = date.split('-').map(Number) as [number, number, number];
+  return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10);
+}
+
+/**
+ * Whose step it is (§6.6, the Deals tab badge): the owner on `requested`, on `confirmed` from the start date (mark on
+ * site) and on `on_rent` from the end date (mark returned); the renter on `countered` and `returned` (confirm or
+ * report). `today` is the IST date.
+ */
+export function rentalYourTurn(
+  b: { status: RentalBookingStatus; startDate: string; endDate: string; turn: RentalTurn | null },
+  side: 'renter' | 'owner',
+  today: string,
+): boolean {
+  switch (b.status) {
+    case 'requested':
+    case 'countered':
+      return b.turn === side;
+    case 'confirmed':
+      return side === 'owner' && today >= b.startDate;
+    case 'on_rent':
+      return side === 'owner' && today >= b.endDate;
+    case 'returned':
+      return side === 'renter';
+    default:
+      return false;
+  }
+}
+
+/** The buttons a client shows on a Booking record (the server checks each again). */
+export type RentalBookingActionKey =
+  | 'confirm'
+  | 'change'
+  | 'decline'
+  | 'accept'
+  | 'withdraw'
+  | 'on_site'
+  | 'return'
+  | 'confirm_return'
+  | 'cancel'
+  | 'report_problem'
+  | 'edit_notes'
+  | 'share_contact'
+  | 'review';
+
+/**
+ * What the reader of `v` may do now (§6.1, §6.4): nothing for a `viewer`; proposal answers by turn (a change only
+ * while `changesLeft > 0`); on site from `startDate − 1`; notes while `confirmed` / `on_rent` / `returned`.
+ */
+export function rentalBookingActions(v: RentalBookingView, today: string): RentalBookingActionKey[] {
+  if (v.role === 'viewer') return [];
+  const out: RentalBookingActionKey[] = [];
+  const owner = v.side === 'owner';
+  switch (v.status) {
+    case 'requested':
+      if (owner) {
+        out.push('confirm');
+        if (v.changesLeft > 0) out.push('change');
+        out.push('decline');
+      } else out.push('withdraw');
+      break;
+    case 'countered':
+      if (!owner) {
+        out.push('accept');
+        if (v.changesLeft > 0) out.push('change');
+        out.push('decline', 'withdraw');
+      }
+      break;
+    case 'confirmed':
+      if (today >= addIsoDays(v.current.startDate, -1)) out.push('on_site');
+      out.push('cancel', 'edit_notes');
+      break;
+    case 'on_rent':
+      if (owner) out.push('return');
+      out.push('report_problem', 'edit_notes');
+      break;
+    case 'returned':
+      if (!owner) out.push('confirm_return');
+      out.push('report_problem', 'edit_notes');
+      break;
+    case 'completed':
+      if (v.review?.eligible) out.push('review');
+      break;
+    default:
+      break;
+  }
+  if (v.contact.canTick && !v.contact.mine) out.push('share_contact');
+  return out;
+}
+
+/** Counts a request may ask for, per period (R1): hours on one day, days, weeks, months. */
+export const rentalCountLimits: Record<RentalPeriod, { min: 1; max: number }> = {
+  hour: { min: 1, max: 24 },
+  day: { min: 1, max: 90 },
+  week: { min: 1, max: 26 },
+  month: { min: 1, max: 6 },
+};
+
+/** Calendar days one period covers (R1: a month is 30 days on the calendar; an hour booking is its start day). */
+const PERIOD_CALENDAR_DAYS: Record<RentalPeriod, number> = { hour: 0, day: 1, week: 7, month: 30 };
+
+/** The last day of a booking (R1): hour → the start date; day → start + n − 1; week → + 7n − 1; month → + 30n − 1. */
+export function rentalEndDate(start: string, period: RentalPeriod, count: number): string {
+  if (period === 'hour') return start;
+  return addIsoDays(start, PERIOD_CALENDAR_DAYS[period] * count - 1);
+}
+
+/** Days an operator is paid for (R2, as `rentalDayEquivalent`): hour 1; day n; week 6n; month n × `monthDays`. */
+export function operatorDays(period: RentalPeriod, count: number, monthDays: number): number {
+  switch (period) {
+    case 'hour':
+      return 1;
+    case 'day':
+      return count;
+    case 'week':
+      return count * 6;
+    case 'month':
+      return count * monthDays;
+  }
+}
+
+/**
+ * Whether a request meets the listing's minimum duration (§6.2): an hour minimum is met by any day / week / month
+ * request or by enough hours; a day / week / month minimum is never met by hours and otherwise compares calendar
+ * days (day 1, week 7, month 30).
+ */
+export function meetsRentalMinimum(
+  terms: { minDuration: number | null; minDurationPeriod: RentalPeriod | null },
+  period: RentalPeriod,
+  count: number,
+): boolean {
+  const min = terms.minDuration;
+  const minPeriod = terms.minDurationPeriod;
+  if (min == null || minPeriod == null) return true;
+  if (minPeriod === 'hour') return period !== 'hour' || count >= min;
+  if (period === 'hour') return false;
+  return PERIOD_CALENDAR_DAYS[period] * count >= PERIOD_CALENDAR_DAYS[minPeriod] * min;
+}
+
+/** The listing's rental terms as a booking stores them at request (`rental_bookings.terms_snapshot`). */
+export type RentalTermsSnapshot = Pick<
+  RentalTerms,
+  | 'rateHourPaise'
+  | 'rateDayPaise'
+  | 'rateWeekPaise'
+  | 'rateMonthPaise'
+  | 'shiftHours'
+  | 'monthDays'
+  | 'operator'
+  | 'operatorRateDayPaise'
+  | 'fuel'
+  | 'transport'
+  | 'transportChargePaise'
+  | 'depositPaise'
+  | 'minDuration'
+  | 'minDurationPeriod'
+  | 'serviceRadiusKm'
+>;
+
+const RATE_OF: Record<RentalPeriod, keyof RentalRates> = {
+  hour: 'rateHourPaise',
+  day: 'rateDayPaise',
+  week: 'rateWeekPaise',
+  month: 'rateMonthPaise',
+};
+
+/**
+ * The choices the listing leaves to the renter (R1): operator `included` / `mandatory` → with, `not_available` /
+ * unset → without, `optional` → the request's; transport `owner_delivers` → delivered, `renter_picks_up` / unset →
+ * picked up, `either` → the request's.
+ */
+export function resolveRentalChoices(
+  terms: Pick<RentalTermsSnapshot, 'operator' | 'transport'>,
+  req: { withOperator?: boolean; ownerDelivers?: boolean },
+): { withOperator: boolean; ownerDelivers: boolean } {
+  const withOperator =
+    terms.operator === 'included' || terms.operator === 'mandatory'
+      ? true
+      : terms.operator === 'optional'
+        ? req.withOperator === true
+        : false;
+  const ownerDelivers =
+    terms.transport === 'owner_delivers' ? true : terms.transport === 'either' ? req.ownerDelivers === true : false;
+  return { withOperator, ownerDelivers };
+}
+
+/**
+ * The server's estimate (R2), integer paise; null when the listing doesn't price `period`. Rent = rate × count ×
+ * machines; operator money only for an `optional` operator chosen (operator day rate × `operatorDays` × machines);
+ * transport only when the owner delivers and a charge is set (× 2 each way × machines). Fuel, overtime, deposit and
+ * GST are terms, never added. `days` = the operator days.
+ */
+export function rentalEstimate(
+  terms: RentalTermsSnapshot,
+  req: { period: RentalPeriod; count: number; machines: number; withOperator: boolean; ownerDelivers: boolean },
+): { days: number; rentPaise: number; operatorPaise: number; transportPaise: number; totalPaise: number } | null {
+  const rate = terms[RATE_OF[req.period]];
+  if (rate == null) return null;
+  const days = operatorDays(req.period, req.count, terms.monthDays);
+  const rentPaise = rate * req.count * req.machines;
+  const operatorPaise =
+    terms.operator === 'optional' && req.withOperator ? (terms.operatorRateDayPaise ?? 0) * days * req.machines : 0;
+  const transportPaise =
+    req.ownerDelivers && terms.transportChargePaise != null ? terms.transportChargePaise * 2 * req.machines : 0;
+  return { days, rentPaise, operatorPaise, transportPaise, totalPaise: rentPaise + operatorPaise + transportPaise };
+}
+
+// Reasons (§5.8).
+export const RENTAL_DECLINE_REASONS = ['dates_unavailable', 'site_too_far', 'terms', 'other'] as const;
+export type RentalDeclineReason = (typeof RENTAL_DECLINE_REASONS)[number];
+export const RENTAL_CANCEL_REASONS_RENTER = ['plans_changed', 'found_another', 'owner_not_responding', 'other'] as const;
+export const RENTAL_CANCEL_REASONS_OWNER = ['machine_unavailable', 'breakdown', 'renter_not_responding', 'other'] as const;
+/** System and staff exits: listing removed, block, suspended owner / renter, GST lost, support, admin cancel. */
+export const RENTAL_CANCEL_REASONS_SYSTEM = [
+  'listing_removed', 'blocked', 'owner_inactive', 'owner_gst', 'renter_inactive', 'support_closed', 'admin',
+] as const;
+export type RentalSystemReason = (typeof RENTAL_CANCEL_REASONS_SYSTEM)[number];
+export type RentalCancelReason =
+  | (typeof RENTAL_CANCEL_REASONS_RENTER)[number]
+  | (typeof RENTAL_CANCEL_REASONS_OWNER)[number]
+  | RentalSystemReason;
+/** Why the owner's final amount differs from the agreed total (§6.4). */
+export const RENTAL_FINAL_REASONS = ['extra_time', 'overtime', 'fuel', 'transport', 'damage', 'discount', 'other'] as const;
+export type RentalFinalReason = (typeof RENTAL_FINAL_REASONS)[number];
+/** An owner's calendar block (R5); `booked_outside` replaces the retired "Mark rented". */
+export const RENTAL_BLOCK_REASONS = ['maintenance', 'booked_outside', 'other'] as const;
+export type RentalBlockReason = (typeof RENTAL_BLOCK_REASONS)[number];
+export const RENTAL_DISPUTE_CATEGORIES = [
+  'not_as_described', 'breakdown', 'damage', 'hours_or_amount', 'no_show', 'other',
+] as const;
+export type RentalDisputeCategory = (typeof RENTAL_DISPUTE_CATEGORIES)[number];
+/** Timeline events (§5.3); `values` never carry text a user typed. */
+export const RENTAL_EVENT_CODES = [
+  'requested', 'changed_by_owner', 'changed_by_renter', 'confirmed', 'change_accepted', 'declined', 'withdrawn',
+  'expired', 'on_site', 'returned', 'return_confirmed', 'auto_completed', 'cancelled', 'problem_reported',
+  'dispute_resolved', 'notes_changed', 'contact_shared',
+] as const;
+export type RentalEventCode = (typeof RENTAL_EVENT_CODES)[number];
+
+/** Bounds (plan Global constraints "Exact numbers"). */
+export const RENTAL_LIMITS = {
+  /** A change's message (seq > 1). */
+  messageMax: 300,
+  /** The request's note (version 1's message). */
+  requestNoteMax: 500,
+  notesMax: 500,
+  damageNoteMax: 500,
+  /** Cancel and final-amount notes. */
+  shortNoteMax: 300,
+  siteAddressMax: 200,
+  blockNoteMax: 200,
+  blockRangeMaxDays: 366,
+  photosMax: 3,
+  hourMeterMax: 1_000_000,
+  machinesMax: 1000,
+  availabilityMaxDays: 92,
+  availabilityDefaultDays: 30,
+  freeOnMaxDays: 90,
+  pageSize: 20,
+  refStart: 700001,
+} as const;
+
+/** §17: the new error codes (`RENTAL_NEEDS_GST`, `OFFERS_NOT_FOR_RENTALS` and `PINCODE_UNKNOWN` exist already). */
+export const RENTAL_ERROR_CODES = [
+  'RENTAL_PERIOD_NOT_OFFERED',
+  'RENTAL_COUNT_INVALID',
+  'RENTAL_MACHINES_INVALID',
+  'RENTAL_DATES_INVALID',
+  'BELOW_MINIMUM',
+  'RENTAL_DATES_TAKEN',
+  'RENTAL_QUANTITY_BOOKED',
+  'RENTAL_OPEN_LIMIT',
+  'RENTAL_DAILY_LIMIT',
+  'RENTAL_REQUEST_OPEN',
+  'RENTAL_CHANGE_LIMIT',
+  'RENTAL_TRANSITION_NOT_ALLOWED',
+  'RENTAL_BOOKING_STALE',
+  'RENTAL_TOO_EARLY',
+  'HOUR_METER_INVALID',
+  'FINAL_REASON_REQUIRED',
+  'LISTING_HAS_OPEN_BOOKINGS',
+  'LISTING_NOT_BOOKABLE',
+  'RENTAL_BOOKING_NOT_FOUND',
+] as const;
+export type RentalErrorCode = (typeof RENTAL_ERROR_CODES)[number];
+
+// ─── M14 payloads and views (§13.2). Key names fixed by plan C0-1. ───
+
+/** `POST /listings/:id/bookings` body (§6.2). Operator / transport only where the listing offers a choice. */
+export interface RentalRequestInput {
+  startDate: string;
+  period: RentalPeriod;
+  count: number;
+  machines: number;
+  withOperator?: boolean;
+  ownerDelivers?: boolean;
+  sitePincode: string;
+  /** ≤ 200, private until confirmed, masked until the reveal (§8). */
+  siteAddress?: string;
+  /** ≤ 500, masked, scam-checked. */
+  note?: string;
+}
+
+/** `POST /rental-bookings/:id/change` body: answers version `versionSeq` (`409 RENTAL_BOOKING_STALE` otherwise). */
+export interface RentalChangeInput {
+  versionSeq: number;
+  startDate: string;
+  period: RentalPeriod;
+  count: number;
+  machines: number;
+  withOperator?: boolean;
+  ownerDelivers?: boolean;
+  /** Owner only (§6.3): its own total, 0 … 10¹⁰. */
+  totalPaise?: number;
+  /** ≤ 300. */
+  message?: string;
+}
+
+/** `POST /rentals/estimate` body: a request's terms for one listing, without the site address and note. */
+export interface RentalEstimateRequest {
+  listingId: string;
+  startDate: string;
+  period: RentalPeriod;
+  count: number;
+  machines: number;
+  withOperator?: boolean;
+  ownerDelivers?: boolean;
+  /** For `beyondServiceRadius`; the distance itself is never returned. */
+  sitePincode?: string;
+}
+
+export interface RentalEstimateResult {
+  endDate: string;
+  days: number;
+  rentPaise: number;
+  operatorPaise: number;
+  transportPaise: number;
+  totalPaise: number;
+  /** The asked machines are free on every day (indicative until the owner confirms). */
+  free: boolean;
+  minimumMet: boolean;
+  /** Null without a site pincode or a service radius. */
+  beyondServiceRadius: boolean | null;
+  withOperator: boolean;
+  ownerDelivers: boolean;
+}
+
+/** One proposal (`rental_booking_versions`, §5.2). `message` masked per reader. */
+export interface RentalVersionView {
+  seq: number;
+  proposedBy: 'renter' | 'owner';
+  startDate: string;
+  endDate: string;
+  period: RentalPeriod;
+  count: number;
+  machines: number;
+  withOperator: boolean;
+  ownerDelivers: boolean;
+  estimatePaise: number;
+  totalPaise: number;
+  message: string | null;
+  messageFlagged: boolean;
+  createdAt: string;
+}
+
+/** The Booking record (`GET /rental-bookings/:id`), per reader (plan D4). Text masked; site address per §8. */
+export interface RentalBookingView {
+  id: string;
+  ref: number;
+  side: 'renter' | 'owner';
+  role: MemberRole;
+  status: RentalBookingStatus;
+  turn: RentalTurn | null;
+  listing: { id: string; title: string; thumbUrl: string | null; kind: 'machine_rental' };
+  counterpart: { businessId: string; tradeName: string; verified: boolean; city: string | null };
+  current: RentalVersionView;
+  versions: RentalVersionView[];
+  changeCount: number;
+  changesLeft: number;
+  replyDueAt: string | null;
+  agreedTotalPaise: number | null;
+  finalAmountPaise: number | null;
+  finalAmountReason: RentalFinalReason | null;
+  finalAmountNote: string | null;
+  terms: RentalTermsSnapshot;
+  site: {
+    pincode: string;
+    city: string;
+    state: string;
+    /** Renter always; owner from `confirmed` on, masked until the reveal; null for a viewer before it. */
+    address: string | null;
+    /** Owner only (whole km from the machine's base); null for the renter. */
+    distanceKm: number | null;
+    beyondServiceRadius: boolean | null;
+  };
+  onSite: { at: string; bySide: 'renter' | 'owner'; hourMeter: number | null; photoCount: number } | null;
+  returned: { at: string; hourMeter: number | null; damageNote: string | null; photoCount: number } | null;
+  autoCompleteAt: string | null;
+  completedAt: string | null;
+  completedHow: RentalCompletedHow | null;
+  cancelled: { at: string; bySide: RentalActorSide; reason: RentalCancelReason | null; note: string | null } | null;
+  declineReason: RentalDeclineReason | RentalSystemReason | null;
+  notes: {
+    paymentMethod: DealPaymentMethod | null;
+    advancePaise: number | null;
+    depositPaise: number | null;
+    depositReturned: boolean | null;
+    /** `HH:MM`. */
+    expectedOnSiteTime: string | null;
+    text: string | null;
+    textFlagged: boolean;
+    updatedAt: string | null;
+    version: number;
+  };
+  timeline: { code: RentalEventCode; actorSide: RentalActorSide; at: string; values: Record<string, string | number | boolean | null> }[];
+  contact: ContactState;
+  review: ReviewState | null;
+  dispute: { id: string; status: DisputeStatus; outcome: DisputeOutcome | null } | null;
+  threadId: string;
+  /** §6.4: a booking still out on this listing that collides with this one. */
+  clashWith: { id: string; ref: number } | null;
+  actions: RentalBookingActionKey[];
+}
+
+/** A `booking` card in the thread (§8). */
+export interface RentalBookingCardView {
+  id: string;
+  ref: number;
+  status: RentalBookingStatus;
+  turn: RentalTurn | null;
+  current: RentalVersionView;
+  listingTitle: string;
+}
+
+/** A row of the Deals tab's Rentals list. */
+export interface RentalBookingListRow {
+  id: string;
+  ref: number;
+  side: 'renter' | 'owner';
+  status: RentalBookingStatus;
+  yourTurn: boolean;
+  listingTitle: string;
+  thumbUrl: string | null;
+  counterpartName: string;
+  startDate: string;
+  endDate: string;
+  machines: number;
+  /** The agreed total, else the open version's total. */
+  totalPaise: number | null;
+  updatedAt: string;
+}
+
+export const RENTAL_BOOKING_TABS = ['active', 'completed', 'cancelled'] as const;
+export type RentalBookingTab = (typeof RENTAL_BOOKING_TABS)[number];
+export const RENTAL_BOOKING_SIDE_FILTERS = ['all', 'renter', 'owner'] as const;
+export type RentalBookingSideFilter = (typeof RENTAL_BOOKING_SIDE_FILTERS)[number];
+
+/** `GET /rental-bookings?tab=&side=&listingId=&cursor=`. */
+export interface RentalBookingsQuery {
+  tab: RentalBookingTab;
+  side: RentalBookingSideFilter;
+  listingId?: string;
+  cursor?: string;
+}
+
+export interface RentalBookingsPage {
+  items: RentalBookingListRow[];
+  nextCursor: string | null;
+  counts: { active: number; completed: number; cancelled: number };
+  yourTurn: number;
+}
+
+/** The public availability strip (R13): never who or how many. */
+export interface RentalAvailabilityDay {
+  date: string;
+  state: 'free' | 'partial' | 'full';
+}
+
+/** The owner's calendar day: machines out and free. */
+export interface RentalCalendarDay {
+  date: string;
+  out: number;
+  free: number;
+}
+
+export interface RentalBlockView {
+  id: string;
+  startDate: string;
+  endDate: string;
+  machines: number;
+  reason: RentalBlockReason;
+  /** Owner and admins only. */
+  note: string | null;
+}
+
+/** `POST /listings/:id/rental-blocks`, `PATCH /rental-blocks/:id`. */
+export interface RentalBlockInput {
+  startDate: string;
+  endDate: string;
+  machines: number;
+  reason: RentalBlockReason;
+  note?: string;
+}
+
+/** `GET /listings/:id/calendar` (owner, §7.3). */
+export interface RentalCalendar {
+  listingId: string;
+  quantity: number;
+  days: RentalCalendarDay[];
+  bookings: { id: string; ref: number; status: RentalBookingStatus; startDate: string; endDate: string; machines: number; renterName: string }[];
+  blocks: RentalBlockView[];
+}
+
+/**
+ * `GET /rental-bookings/:id/photos` (party only, plan A1-4): the booking's private photos as signed URLs (300 s). `problem`
+ * only when a problem with photos was reported.
+ */
+export interface RentalBookingPhotos {
+  onSite: string[];
+  returned: string[];
+  problem?: string[];
+}
+
+/** `ListingOwnerView.bookingSummary` (plan D14). */
+export interface RentalBookingSummary {
+  openRequests: number;
+  activeBookings: number;
+  outToday: number;
+  nextBooking: { id: string; ref: number; startDate: string; endDate: string; machines: number } | null;
+}
+
+/** `GET /admin/rental-bookings` row (§15). */
+export interface AdminRentalBookingRow {
+  id: string;
+  ref: number;
+  listing: { id: string; title: string };
+  renter: { businessId: string; name: string };
+  owner: { businessId: string; name: string };
+  startDate: string;
+  endDate: string;
+  machines: number;
+  status: RentalBookingStatus;
+  agreedTotalPaise: number | null;
+  updatedAt: string;
+}
+
+/** `GET /admin/rental-bookings` page. */
+export interface AdminRentalBookingList {
+  rows: AdminRentalBookingRow[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+/**
+ * `GET /admin/rental-bookings/:id` (§15): the owner view's fields with the site address unmasked to staff (my call
+ * 11), every version, events with admin actors, the photo keys, the dispute and the reviews' state.
+ */
+export interface AdminRentalBookingDetail
+  extends Omit<RentalBookingView, 'side' | 'role' | 'counterpart' | 'contact' | 'review' | 'actions' | 'timeline'> {
+  renter: { businessId: string; name: string };
+  owner: { businessId: string; name: string };
+  events: {
+    code: RentalEventCode;
+    actorSide: RentalActorSide;
+    actorAdminName: string | null;
+    at: string;
+    values: Record<string, string | number | boolean | null>;
+  }[];
+  /** Private keys; the admin page signs them on demand. */
+  photos: { onSite: string[]; returned: string[] };
+  reviews: { renterSubmitted: boolean; ownerSubmitted: boolean; published: boolean };
+}
+
+/** App route `RequestBooking` (plan C0-5): `change` mode sends `POST /rental-bookings/:id/change`. */
+export interface RequestBookingParams {
+  listingId: string;
+  prefill?: Partial<RentalRequestInput>;
+  change?: { bookingId: string; versionSeq: number };
 }

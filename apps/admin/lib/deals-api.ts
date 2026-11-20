@@ -50,7 +50,8 @@ export function formatPaiseString(paise: string): string {
 }
 
 /** `#100123`, the deal reference both parties quote. */
-export const formatDealRef = (ref: number) => `#${ref}`;
+/** `#500001`; a dispute without a deal (M14: a rental booking's, B1 shows its booking ref) reads "—". */
+export const formatDealRef = (ref: number | null) => (ref === null ? '—' : `#${ref}`);
 
 // ─── wording ───
 

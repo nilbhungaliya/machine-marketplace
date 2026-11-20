@@ -13,8 +13,20 @@ import { TooManyRequestsError } from './errors.js';
  * skipped (dev without `REDIS_URL`).
  */
 
-/** F8 (plan D10) adds the request writes, the reply sends and the seller's "not relevant" feedback. */
-export type RateGroup = 'message' | 'offer' | 'deal' | 'part_request' | 'part_request_reply' | 'part_request_feedback';
+/**
+ * F8 (plan D10) adds the request writes, the reply sends and the seller's "not relevant" feedback. M14 (plan D6):
+ * `rental_booking` (request, change: 20 / 10 min) and `rental_booking_action` (every other booking write and the
+ * owner's block writes: 60 / 10 min).
+ */
+export type RateGroup =
+  | 'message'
+  | 'offer'
+  | 'deal'
+  | 'part_request'
+  | 'part_request_reply'
+  | 'part_request_feedback'
+  | 'rental_booking'
+  | 'rental_booking_action';
 
 export function groupRateLimitKey(group: RateGroup, userId: string): string {
   return `${discoveryRedisPrefix()}rl:${group}:${userId}`;

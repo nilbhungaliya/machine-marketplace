@@ -187,7 +187,7 @@ export default function DealRecordScreen({ navigation, route }: RootStackScreenP
     hand_over: () => setSheet('handover'),
     confirm_received: () => void confirmReceived(),
     cancel: () => setSheet('cancel'),
-    report_problem: () => navigation.navigate('ReportProblem', { dealId }),
+    report_problem: () => navigation.navigate('ReportProblem', { subject: 'deal', id: dealId }),
   };
 
   const termRows = [
@@ -320,7 +320,7 @@ export default function DealRecordScreen({ navigation, route }: RootStackScreenP
             {review.kind === 'rate' ? (
               <Button
                 title={t('deals.review.rate')}
-                onPress={() => navigation.navigate('ReviewDeal', { dealId })}
+                onPress={() => navigation.navigate('ReviewDeal', { subject: 'deal', id: dealId })}
                 size="md"
                 phLabel="Deal-review-rate"
               />

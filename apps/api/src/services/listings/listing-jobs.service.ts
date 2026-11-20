@@ -46,6 +46,11 @@ export async function runListingExpiry(app: TxApp, opts: ListingExpiryOptions = 
           and(
             inArray(listings.status, ['live', 'rented']),
             lt(listings.refreshedAt, sql`now() - make_interval(days => ${days}::int)`),
+            // M14 §7.1: a booked machine is an active listing; a rental with an active booking never expires.
+            sql`NOT EXISTS (
+              SELECT 1 FROM rental_bookings rb
+              WHERE rb.listing_id = ${listings.id} AND rb.status IN ('confirmed', 'on_rent', 'returned', 'disputed')
+            )`,
             scope,
             failed.length > 0 ? notInArray(listings.id, failed) : undefined,
           ),
