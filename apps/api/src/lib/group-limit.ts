@@ -13,7 +13,8 @@ import { TooManyRequestsError } from './errors.js';
  * skipped (dev without `REDIS_URL`).
  */
 
-export type RateGroup = 'message' | 'offer' | 'deal';
+/** F8 (plan D10) adds the request writes, the reply sends and the seller's "not relevant" feedback. */
+export type RateGroup = 'message' | 'offer' | 'deal' | 'part_request' | 'part_request_reply' | 'part_request_feedback';
 
 export function groupRateLimitKey(group: RateGroup, userId: string): string {
   return `${discoveryRedisPrefix()}rl:${group}:${userId}`;

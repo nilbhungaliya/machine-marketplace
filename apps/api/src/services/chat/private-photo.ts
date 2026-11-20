@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import sharp from 'sharp';
-import { CHAT_LIMITS } from '@mpm/shared-types';
+import { CHAT_LIMITS, PART_REQUEST_LIMITS } from '@mpm/shared-types';
 import { ValidationError } from '../../lib/errors.js';
 import { sniffDocument } from '../../lib/sniff-document.js';
 import { deleteObject, getObjectBytes, presignPrivateGet, presignSignedPut, putPrivateObject } from '../../lib/storage.js';
@@ -19,7 +19,16 @@ import { deleteObject, getObjectBytes, presignPrivateGet, presignSignedPut, putP
  *    deletes the upload, so a second finalize of the same key is `PHOTO_KEY_INVALID`.
  */
 
-export type PhotoDestination = { kind: 'chat'; threadId: string } | { kind: 'deal'; dealId: string };
+export type PhotoDestination =
+  | { kind: 'chat'; threadId: string }
+  | { kind: 'deal'; dealId: string }
+  /** F8 reference photos (spec R1): `part-request/<id>/<uuid>.jpg`, at most `PART_REQUEST_LIMITS.photosMax`. */
+  | { kind: 'part_request'; partRequestId: string };
+
+/** The default photo count per destination; `finalizePrivatePhotos(…, { max })` overrides it. */
+function defaultMax(dest: PhotoDestination): number {
+  return dest.kind === 'part_request' ? PART_REQUEST_LIMITS.photosMax : CHAT_LIMITS.photosPerMessage;
+}
 
 const TYPES: ReadonlySet<string> = new Set(['image/jpeg', 'image/png', 'image/webp']);
 /** The upload is read while no row lock is held, but it still holds a request open. */
@@ -28,8 +37,7 @@ const UPLOAD_TAIL = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{1
 
 const photoInvalid = (details?: Record<string, unknown>) =>
   new ValidationError('This photo can’t be used', details, 'PHOTO_INVALID');
-const tooMany = () =>
-  new ValidationError('Too many photos', { max: CHAT_LIMITS.photosPerMessage }, 'TOO_MANY_PHOTOS');
+const tooMany = (max: number) => new ValidationError('Too many photos', { max }, 'TOO_MANY_PHOTOS');
 const keyInvalid = () => new ValidationError('This photo upload is not valid here', undefined, 'PHOTO_KEY_INVALID');
 
 const uploadPrefix = (businessId: string) => `incoming-chat/${businessId}/`;
@@ -66,7 +74,9 @@ export async function reencodeToJpeg(bytes: Uint8Array): Promise<Buffer> {
 }
 
 function finalKey(dest: PhotoDestination): string {
-  return dest.kind === 'chat' ? `chat/${dest.threadId}/${randomUUID()}.jpg` : `deal/${dest.dealId}/${randomUUID()}.jpg`;
+  if (dest.kind === 'chat') return `chat/${dest.threadId}/${randomUUID()}.jpg`;
+  if (dest.kind === 'deal') return `deal/${dest.dealId}/${randomUUID()}.jpg`;
+  return `part-request/${dest.partRequestId}/${randomUUID()}.jpg`;
 }
 
 async function finalizeOne(key: string, dest: PhotoDestination): Promise<string> {
@@ -87,13 +97,20 @@ async function finalizeOne(key: string, dest: PhotoDestination): Promise<string>
 }
 
 /**
- * Turns uploads into stored photos and returns their final keys, in order. More than `photosPerMessage` keys answer
- * `400 TOO_MANY_PHOTOS`; every key's shape is checked before any storage call (`400 PHOTO_KEY_INVALID`). Any later
+ * Turns uploads into stored photos and returns their final keys, in order. More than `opts.max` keys (default per
+ * destination: `photosPerMessage` for chat and deals, `PART_REQUEST_LIMITS.photosMax` for a request) answer
+ * `400 TOO_MANY_PHOTOS { max }`; every key's shape is checked before any storage call (`400 PHOTO_KEY_INVALID`). Any later
  * failure deletes the finals already written and answers `400 PHOTO_INVALID` (a missing upload: `PHOTO_KEY_INVALID`); storage being down stays `503 STORAGE_UNAVAILABLE`.
  * Uploads are deleted only once every photo is stored.
  */
-export async function finalizePrivatePhotos(businessId: string, keys: string[], dest: PhotoDestination): Promise<string[]> {
-  if (keys.length > CHAT_LIMITS.photosPerMessage) throw tooMany();
+export async function finalizePrivatePhotos(
+  businessId: string,
+  keys: string[],
+  dest: PhotoDestination,
+  opts: { max?: number } = {},
+): Promise<string[]> {
+  const max = opts.max ?? defaultMax(dest);
+  if (keys.length > max) throw tooMany(max);
   if (new Set(keys).size !== keys.length) throw keyInvalid();
   for (const key of keys) if (!isOwnPhotoUpload(businessId, key)) throw keyInvalid();
 

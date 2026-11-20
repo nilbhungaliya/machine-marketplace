@@ -23,8 +23,10 @@ export interface NotifyInput {
   type: NotificationType;
   recipientBusinessId: string;
   params: Record<string, string | number | null>;
-  destination: { threadId?: string; offerId?: string; dealId?: string; reviewId?: string };
+  destination: { threadId?: string; offerId?: string; dealId?: string; reviewId?: string; partRequestId?: string };
   dedupeKey: string;
+  /** F8 (plan D6): false writes the rows without deliveries (in-app only, e.g. over the daily push cap). Default true. */
+  push?: boolean;
 }
 
 /** Returns the ids of the rows it created (empty for a repeat). */
@@ -45,6 +47,7 @@ export async function notify(tx: Tx, input: NotifyInput): Promise<string[]> {
         offerId: input.destination.offerId ?? null,
         dealId: input.destination.dealId ?? null,
         reviewId: input.destination.reviewId ?? null,
+        partRequestId: input.destination.partRequestId ?? null,
         dedupeKey: input.dedupeKey,
       })),
     )
@@ -52,7 +55,7 @@ export async function notify(tx: Tx, input: NotifyInput): Promise<string[]> {
     .returning({ id: notifications.id, userId: notifications.userId, version: notifications.version });
   if (created.length === 0) return [];
 
-  await queueDeliveries(tx, created);
+  if (input.push !== false) await queueDeliveries(tx, created);
   for (const userId of new Set(created.map((r) => r.userId))) {
     queueUserEmit(tx, userId, 'notification:new', { unreadCount: await unreadCountOf(tx, userId) });
   }
