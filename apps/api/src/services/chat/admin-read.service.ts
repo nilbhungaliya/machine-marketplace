@@ -12,7 +12,8 @@ import { signPhotos } from './message.service.js';
  * Reading a conversation as staff (F6 + F7 spec §16.3, R23): `POST /admin/threads/:id/read { reason }`. Allowed only
  * while the thread has a `conversation` report that is `open` / `reviewing` or was resolved within the last 30 days,
  * or (for `support` and `super_admin`) a deal or a rental booking in it (M14 R12) has an `open` dispute or one resolved
- * within the last 30 days;
+ * within the last 30 days, or (admin close-out R11; `moderator`, `support`, `super_admin`) an `open` fraud signal's
+ * evidence cites the thread (`refs.threadId`; the audit row's `after` names `signalId`);
  * otherwise `403 ADMIN_READ_NOT_ALLOWED`. Every read writes `audit_log` `thread.read` (admin, thread, reason, the report
  * or dispute it rests on) in the same transaction. Messages as stored (the reader is staff), photos as 300 s signed
  * URLs, never the revealed contact numbers.
@@ -47,8 +48,17 @@ export async function adminReadThread(
       ORDER BY dd.created_at DESC LIMIT 1`);
     disputeId = rows[0]?.id ?? null;
   }
-  if (!reportId && !disputeId) {
-    throw new ForbiddenError('This conversation can be read only for a report or a dispute', 'ADMIN_READ_NOT_ALLOWED');
+  let signalId: string | null = null;
+  if (!reportId && !disputeId && (admin.role === 'moderator' || admin.role === 'support' || admin.role === 'super_admin')) {
+    // Admin close-out R11: an open fraud signal whose evidence cites this thread.
+    const { rows } = await tx.execute<{ id: string }>(sql`
+      SELECT fs.id FROM fraud_signals fs
+      WHERE fs.status = 'open' AND fs.evidence @> ${JSON.stringify([{ refs: { threadId } }])}::jsonb
+      ORDER BY fs.last_seen_at DESC LIMIT 1`);
+    signalId = rows[0]?.id ?? null;
+  }
+  if (!reportId && !disputeId && !signalId) {
+    throw new ForbiddenError('This conversation can be read only for a report, a dispute or a fraud signal', 'ADMIN_READ_NOT_ALLOWED');
   }
 
   await writeAudit(tx, {
@@ -57,7 +67,7 @@ export async function adminReadThread(
     entityType: 'thread',
     entityId: threadId,
     before: null,
-    after: { reason, reportId, disputeId },
+    after: { reason, reportId, disputeId, ...(signalId ? { signalId } : {}) },
   });
 
   const [listing] = await tx.select({ id: listings.id, ref: listings.ref, title: listings.title }).from(listings).where(eq(listings.id, thread.listingId));
