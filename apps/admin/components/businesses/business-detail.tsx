@@ -2,7 +2,7 @@
 
 import { useState, type ReactNode } from 'react';
 import Link from 'next/link';
-import { BellRing, ExternalLink, MapPin, Package } from 'lucide-react';
+import { BellRing, CalendarClock, ExternalLink, MapPin, Package } from 'lucide-react';
 import { DEAL_STATUSES, type AdminAuditEntry, type AdminBusinessDetail, type GstState } from '@mpm/shared-types';
 import StatusBadge from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,7 @@ import {
 import { DEAL_STATUS_LABELS, formatDealRef } from '@/lib/deals-api';
 import { DISPUTE_CATEGORY_LABELS, DISPUTE_OUTCOME_SHORT, DISPUTE_STATUS_LABELS, DISPUTE_STATUS_TONES } from '@/lib/disputes-api';
 import { REVIEW_FACET_LABELS } from '@/lib/reviews-admin-api';
+import { formatBookingRef } from '@/lib/rentals-api';
 import { constitutionLabel } from '@/lib/verification-api';
 import { formatDate, formatDateTime, formatPhone } from '@/lib/utils';
 import { StatusActionDialog, type StatusAction } from './status-action-dialog';
@@ -141,11 +142,21 @@ function DealsPanel({ business, canOpenDeals, canOpenDisputes }: {
                   ) : (
                     <span className="font-semibold text-gray-900">{DISPUTE_CATEGORY_LABELS[d.category]}</span>
                   )}
-                  <span className="font-mono text-[13px] text-gray-500">
-                    {canOpenDeals
-                      ? <Link href={`/deals/${d.dealId}/`} className="hover:underline">{formatDealRef(d.dealRef)}</Link>
-                      : formatDealRef(d.dealRef)}
-                  </span>
+                  {d.subject.kind === 'rental' ? (
+                    // M14 R12: a rental booking dispute links to its booking (Rental bookings has the Deals roles).
+                    <span className="font-mono text-[13px] text-gray-500">
+                      <span className="font-sans">Booking </span>
+                      {canOpenDeals
+                        ? <Link href={`/rentals/${d.subject.rentalBookingId}/`} className="hover:underline">{formatBookingRef(d.rentalBookingRef)}</Link>
+                        : formatBookingRef(d.rentalBookingRef)}
+                    </span>
+                  ) : (
+                    <span className="font-mono text-[13px] text-gray-500">
+                      {canOpenDeals
+                        ? <Link href={`/deals/${d.dealId}/`} className="hover:underline">{formatDealRef(d.dealRef)}</Link>
+                        : formatDealRef(d.dealRef)}
+                    </span>
+                  )}
                   <StatusBadge status={d.status} label={DISPUTE_STATUS_LABELS[d.status]} tone={DISPUTE_STATUS_TONES[d.status]} />
                   {d.outcome && <span className="text-gray-700">Outcome: {DISPUTE_OUTCOME_SHORT[d.outcome].toLowerCase()}</span>}
                   <span className="ml-auto text-xs text-gray-500 tnum">{formatDate(d.createdAt)}</span>
@@ -180,6 +191,9 @@ export function BusinessDetail({ business, categoryNames, onChanged }: {
   const canGst = hasRole('verification_officer');
   // The same roles as Parts & machinery in the nav (F2 spec §11.6).
   const canSeeListings = hasRole('moderator', 'support');
+  // The same roles as Rental bookings in the nav (M14 spec §15).
+  const canSeeRentals = hasRole('operations', 'support');
+  const rentals = business.rentalBookingCount;
   const verified = gst.state === 'verified';
   const showRevoke = canGst && verified;
   const showRelease = canGst && !verified && p.gstin !== null;
@@ -193,21 +207,36 @@ export function BusinessDetail({ business, categoryNames, onChanged }: {
       <div className="grid items-start gap-4 lg:grid-cols-2">
         <Panel
           title="Business"
-          action={canSeeListings && (
+          action={(canSeeListings || canSeeRentals) && (
             <span className="flex flex-wrap items-center gap-3">
-              <Link
-                href={`/listings/?businessId=${p.id}`}
-                className="inline-flex items-center gap-1 text-sm font-bold text-brand-700 hover:underline"
-              >
-                <Package size={13} aria-hidden /> Listings ({business.listingsCount})
-              </Link>
-              {/* Part requests has the same roles as Parts & machinery (F8 spec §14). */}
-              <Link
-                href={`/part-requests/?businessId=${p.id}`}
-                className="inline-flex items-center gap-1 text-sm font-bold text-brand-700 hover:underline"
-              >
-                <BellRing size={13} aria-hidden /> Part requests ({business.partRequestCount})
-              </Link>
+              {canSeeListings && (
+                <>
+                  <Link
+                    href={`/listings/?businessId=${p.id}`}
+                    className="inline-flex items-center gap-1 text-sm font-bold text-brand-700 hover:underline"
+                  >
+                    <Package size={13} aria-hidden /> Listings ({business.listingsCount})
+                  </Link>
+                  {/* Part requests has the same roles as Parts & machinery (F8 spec §14). */}
+                  <Link
+                    href={`/part-requests/?businessId=${p.id}`}
+                    className="inline-flex items-center gap-1 text-sm font-bold text-brand-700 hover:underline"
+                  >
+                    <BellRing size={13} aria-hidden /> Part requests ({business.partRequestCount})
+                  </Link>
+                </>
+              )}
+              {/* M14 §15: as the owner and as the renter; the list's business filter matches either side. */}
+              {canSeeRentals && (
+                <Link
+                  href={`/rentals/?businessId=${p.id}`}
+                  className="inline-flex items-center gap-1 text-sm font-bold text-brand-700 hover:underline"
+                  title={`${rentals.asOwner} as the owner, ${rentals.asRenter} as the renter`}
+                >
+                  <CalendarClock size={13} aria-hidden /> Rental bookings ({rentals.asOwner + rentals.asRenter})
+                  <span className="font-normal text-gray-500">· {rentals.asOwner} owner, {rentals.asRenter} renter</span>
+                </Link>
+              )}
             </span>
           )}
         >

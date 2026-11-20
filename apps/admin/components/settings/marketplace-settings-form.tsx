@@ -30,11 +30,14 @@ export const NEGOTIATION_KEYS: readonly string[] = [
 /** The F8 keys (spec §16): every `part_request_*` registry key, in its own section. */
 export const isPartRequestKey = (key: string) => key.startsWith('part_request_');
 
+/** The M14 keys (spec §16): every `rental_*` registry key, in its own section "Rentals". */
+export const isRentalKey = (key: string) => key.startsWith('rental_');
+
 const SECTIONS: Array<{ title: string; note: string; keys: (def: AppSettingDef) => boolean }> = [
   {
     title: 'Listings',
     note: 'The next expiry run and the next listing published use them.',
-    keys: (d) => !NEGOTIATION_KEYS.includes(d.key) && !isPartRequestKey(d.key),
+    keys: (d) => !NEGOTIATION_KEYS.includes(d.key) && !isPartRequestKey(d.key) && !isRentalKey(d.key),
   },
   {
     title: 'Negotiation, deals and reviews',
@@ -46,14 +49,19 @@ const SECTIONS: Array<{ title: string; note: string; keys: (def: AppSettingDef) 
     note: 'New requirements, renewals, replies and the next matching run use them; a requirement keeps the expiry it has.',
     keys: (d) => isPartRequestKey(d.key),
   },
+  {
+    title: 'Rentals',
+    note: 'New booking requests and changes use them; a booking already waiting keeps the reply time it was given.',
+    keys: (d) => isRentalKey(d.key),
+  },
 ];
 
 /**
  * The form's schema from the registry: whole numbers in each range, then the registry's cross-checks with the API's own
  * messages (`validateSettings`: reminder < expiry, the offer validities increasing, notice < short validity, problem
  * window < auto-complete, blind wait ≤ review window, backup life ≥ long validity; F8: the requirement validities
- * increasing and within the maximum open time, notice < short validity, daily match pushes ≤ total) on the setting
- * they name.
+ * increasing and within the maximum open time, notice < short validity, daily match pushes ≤ total; M14: unverified
+ * open booking limit ≤ verified) on the setting they name.
  */
 export function settingsSchema(registry: readonly AppSettingDef[]) {
   const shape = Object.fromEntries(registry.map((def) => [

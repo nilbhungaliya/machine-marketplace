@@ -9,9 +9,9 @@ import { StaleWarning } from '@/components/ui/stale-warning';
 import { ErrorState } from '@/components/ui/states';
 import { Tabs } from '@/components/ui/tabs';
 import { backLinkQuery } from '@/lib/back-link';
-import { PARTY_SIDE_LABELS, formatDealRef } from '@/lib/deals-api';
 import {
-  DISPUTE_CATEGORY_LABELS, DISPUTE_OUTCOME_SHORT, DISPUTE_STATUS_LABELS, DISPUTE_STATUS_TONES, fetchDisputes,
+  DISPUTE_CATEGORY_LABELS, DISPUTE_OUTCOME_SHORT, DISPUTE_STATUS_LABELS, DISPUTE_STATUS_TONES, disputePartyLabels,
+  disputeSubject, fetchDisputes,
 } from '@/lib/disputes-api';
 import { refreshNavBadges } from '@/lib/nav-badges';
 import { getAdminSocket } from '@/lib/socket';
@@ -31,7 +31,7 @@ export function openFor(createdAt: string, now = Date.now()): string {
 }
 
 /**
- * Disputes (F6 + F7 spec §9.6, §16.1): support's queue, open first and oldest first (the API orders), then resolved,
+ * Disputes (F6 + F7 spec §9.6, §16.1; M14 R12: deal and rental booking disputes, the subject in the first column): support's queue, open first and oldest first (the API orders), then resolved,
  * newest first. A row opens the dispute. A new dispute (`dispute:new`, ids only) reloads the list.
  */
 export function DisputesTable() {
@@ -77,11 +77,23 @@ export function DisputesTable() {
   };
 
   const columns: Column<AdminDisputeRow>[] = [
-    { key: 'deal', header: 'Deal', render: (r) => <span className="font-mono font-semibold text-gray-900">{formatDealRef(r.dealRef)}</span> },
+    {
+      key: 'subject',
+      header: 'About',
+      render: (r) => {
+        const s = disputeSubject(r);
+        return (
+          <span className="whitespace-nowrap">
+            <span className="text-[12.5px] text-gray-600">{s.kind === 'rental' ? 'Booking ' : 'Deal '}</span>
+            <span className="font-mono font-semibold text-gray-900">{s.ref}</span>
+          </span>
+        );
+      },
+    },
     { key: 'category', header: 'Problem', render: (r) => <span className="font-semibold text-gray-900">{DISPUTE_CATEGORY_LABELS[r.category]}</span> },
-    { key: 'by', header: 'Reported by', render: (r) => PARTY_SIDE_LABELS[r.openedBySide] },
-    { key: 'buyer', header: 'Buyer', render: (r) => <span className="block max-w-[11rem] truncate">{r.buyer.name}</span> },
-    { key: 'seller', header: 'Seller', render: (r) => <span className="block max-w-[11rem] truncate">{r.seller.name}</span> },
+    { key: 'by', header: 'Reported by', render: (r) => disputePartyLabels(disputeSubject(r).kind)[r.openedBySide] },
+    { key: 'buyer', header: 'Buyer / renter', render: (r) => <span className="block max-w-[11rem] truncate">{r.buyer.name}</span> },
+    { key: 'seller', header: 'Seller / owner', render: (r) => <span className="block max-w-[11rem] truncate">{r.seller.name}</span> },
     {
       key: 'status',
       header: 'Status',

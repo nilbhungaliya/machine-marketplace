@@ -1,14 +1,17 @@
-import ModulePlaceholder from '@/components/module-placeholder';
+'use client';
 
-export default function Page() {
+import { RentalsTable } from '@/components/rentals/rentals-table';
+import { PageHeader } from '@/components/ui/page-header';
+
+/** Rental bookings (M14 spec §15, R15): every machinery booking; open one for its terms, timeline and Cancel booking. */
+export default function RentalsPage() {
   return (
-    <ModulePlaceholder
-      title="Rental bookings"
-      description="Machinery rental requests and bookings (scope A1, A5)"
-      scope={[
-        "Requested, confirmed, active and returned bookings",
-        "Machinery available for rental by region",
-      ]}
-    />
+    <div>
+      <PageHeader
+        title="Rental bookings"
+        description="Machinery booking requests and bookings, newest change first. Search by booking #ref, business or machine; open one to see its terms and timeline."
+      />
+      <RentalsTable />
+    </div>
   );
 }
