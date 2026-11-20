@@ -56,3 +56,34 @@ export function maskEmails(text: string): string {
 export function maskContact(text: string): string {
   return maskPhones(maskEmails(text));
 }
+
+/** Devanagari (U+0966–096F) and Gujarati (U+0AE6–0AEF) digits as ASCII; everything else untouched. */
+export function asciiDigits(text: string): string {
+  return text.replace(/[०-९૦-૯]/g, (d) => {
+    const code = d.charCodeAt(0);
+    return String(code >= 0x0ae6 ? code - 0x0ae6 : code - 0x0966);
+  });
+}
+
+/**
+ * The last 10 ASCII digits of a phone in any form (E.164, spaced, Devanagari or Gujarati digits), or null when it has
+ * fewer than 10 digits. The key the fraud rules compare and HMAC (admin close-out §8.1).
+ */
+export function phoneKey(e164OrDigits: string): string | null {
+  const digits = asciiDigits(e164OrDigits).replace(/[^0-9]/g, '');
+  return digits.length >= 10 ? digits.slice(-10) : null;
+}
+
+/**
+ * The phone numbers in a text (admin close-out §8.1), found with the same `PHONE` pattern masking uses, so the masking
+ * detector and the fraud signal never disagree: each match as its last 10 ASCII digits (the +91 / 91 / 0 prefix
+ * dropped), deduplicated, in order of first appearance.
+ */
+export function findPhones(text: string): string[] {
+  const found = new Set<string>();
+  for (const match of text.matchAll(PHONE)) {
+    const key = phoneKey(match[0]);
+    if (key) found.add(key);
+  }
+  return [...found];
+}
