@@ -21,6 +21,7 @@ describe('F8 errors', () => {
     const apiError = (code: string) => ({ response: { status: 409, data: { error: 'English', code } } });
     expect(f8ErrorKey(apiError('PART_REQUEST_OPEN_LIMIT'))).toBe('errors.requests.partRequestOpenLimit');
     expect(f8ErrorKey(apiError('REPLY_EXISTS'))).toBe('errors.requests.replyExists');
+    expect(f8ErrorKey(apiError('REPORT_EXISTS'))).toBe('errors.requests.reportExists');
     expect(f8ErrorKey(apiError('VIEWER_READ_ONLY'))).toBe('errors.trade.viewerReadOnly');
     expect(f8ErrorKey(apiError('SOMETHING_ELSE'))).toBe('errors.genericRetry');
   });

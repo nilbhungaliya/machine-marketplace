@@ -1,8 +1,8 @@
 import { asc, eq } from 'drizzle-orm';
 import { normalizePartName, normalizePartNumber, partNumberBase, type ListingKind, type PartSide } from '@mpm/shared-types';
 import type { Tx } from '../../db/index.js';
-import { categories, listingFitments, listingMachines, partRequestFitments, partRequestReplies } from '../../db/schema.js';
-import { ConflictError, ValidationError } from '../../lib/errors.js';
+import { categories, listingFitments, listingMachines, partRequestFitments, partRequestReplies, users } from '../../db/schema.js';
+import { ConflictError, ForbiddenError, ValidationError } from '../../lib/errors.js';
 import type { ListingRow } from '../listings/locks.js';
 import { getSettings } from '../settings.service.js';
 import { isEligibleSeller } from './eligibility.js';
@@ -46,6 +46,9 @@ export async function preparePendingReply(
   kind: ListingKind,
 ): Promise<PendingReplyPrep | null> {
   if (!partRequestId) return null;
+  // A pending reply is a business write (R2): a viewer member reads only.
+  const [member] = await tx.select({ memberRole: users.memberRole }).from(users).where(eq(users.id, seller.userId));
+  if (member?.memberRole === 'viewer') throw new ForbiddenError('Viewers can read but not write', 'VIEWER_READ_ONLY');
   const request = await lockPartRequest(tx, partRequestId, 'share');
   if (!request) throw partRequestNotFound();
   if (request.businessId === seller.businessId) throw ownPartRequest();

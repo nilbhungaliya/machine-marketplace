@@ -128,6 +128,11 @@ const postBody = (o: Record<string, unknown> = {}) => ({
 /** Runs the work job until the queue is empty. */
 async function drain(): Promise<void> {
   for (let i = 0; i < 20; i++) {
+    // Rows queued a moment ago can read as not yet due when the clocks of the inserts and the claim differ slightly:
+    // make unclaimed rows due within a second due now, so a run never skips them.
+    await db.execute(sql`
+      UPDATE part_request_work SET next_attempt_at = now() - interval '1 second'
+      WHERE claimed_at IS NULL AND next_attempt_at <= now() + interval '1 second'`);
     const { processed, failed } = await runPartRequestWork(jobApp);
     expect(failed).toBe(0);
     if (processed === 0) return;

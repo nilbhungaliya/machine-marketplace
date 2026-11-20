@@ -39,3 +39,12 @@ export function sideAcceptKeys(side: PartSide | null): string[] {
   if (side === null || side === 'not_applicable') return [];
   return SIDES.filter((s) => requestSideAccepts(side, s)).map((s) => `listing.side.${s}`);
 }
+
+/**
+ * Whether the buyer's page sends `POST …/read` (F8 §13.1): on open (`prev` null), and whenever a live update brings a
+ * non-zero new count that differs from the last one seen. `read` zeroes the cached counts, so the last seen count
+ * follows down to 0 and any later count > 0 reads again.
+ */
+export function shouldMarkRequestRead(prev: number | null, newTotal: number): boolean {
+  return prev === null || (newTotal > 0 && newTotal !== prev);
+}

@@ -5,7 +5,8 @@ import { F6_ERROR_KEYS } from './f6-errors';
 
 // The F8 error codes (spec §15) → translated copy (`errors.requests.*`). Server messages are English and never shown.
 // Codes F8 shares with F2 / F6 (`VIEWER_READ_ONLY`, `TOO_MANY_PHOTOS`, `PHOTO_INVALID`, `RATE_LIMITED`, …) keep their
-// copy (`F6_ERROR_KEYS`); F8's own `REPLY_EXISTS` (a reply on that listing already) overrides F6's (a review reply).
+// copy (`F6_ERROR_KEYS`); F8's own `REPLY_EXISTS` (a reply on that listing already) overrides F6's (a review reply), and
+// `REPORT_EXISTS` (a second report of a requirement) says "requirement", not F2's "listing".
 
 /** `PART_REQUEST_OPEN_LIMIT` → `errors.requests.partRequestOpenLimit`. */
 const keyOf = (code: string): string =>
@@ -14,6 +15,7 @@ const keyOf = (code: string): string =>
 export const F8_ERROR_KEYS: Record<string, string> = {
   ...F6_ERROR_KEYS,
   ...Object.fromEntries(PART_REQUEST_ERROR_CODES.map((code) => [code, keyOf(code)])),
+  REPORT_EXISTS: 'errors.requests.reportExists',
 };
 
 /** The translation key for a failed part-request call (network and suspension lines from `errorKey`). */

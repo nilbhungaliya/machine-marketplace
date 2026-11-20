@@ -103,4 +103,8 @@ describe('scopedPartGroups (F8 §9.3)', () => {
     expect(requestScopeTypeId(tree, { kind: 'machine', categoryId: 'rapier' })).toBeNull();
     expect(requestScopeTypeId(tree, null)).toBeNull();
   });
+
+  it('gives no scope for a machine type without part groups (the full picker, not an empty one)', () => {
+    expect(requestScopeTypeId(tree, { kind: 'part', categoryId: 'airjet' })).toBeNull();
+  });
 });

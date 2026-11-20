@@ -43,10 +43,13 @@ const DUE = sql`${partRequests.status} = 'active' AND ${partRequests.expiresAt} 
  * `part-request-expiry` (hourly): `active` requests past `expires_at` → `expired` (`writeRequestStatus`, which emits
  * `part_request:updated { reason: 'status' }`), their pending replies dropped `request_expired` (each seller told), and
  * `part_request_expired` to the buyer business (dedupe `part_request_expired:<id>:<expires epoch>`; `dueAt` = the last
- * renewable moment, `first_posted_at + part_request_max_days`, so the text offers a renew only while one is possible).
+ * renewable moment, so the text offers a renew only while one is possible). From `expired` a renew sets `now + days`
+ * and must stay within `first_posted_at + part_request_max_days` (`renewPartRequest`), so the last moment it can
+ * succeed is `first_posted_at + part_request_max_days − the shortest validity setting` (days).
  */
 export async function expirePartRequests(app: TxApp): Promise<{ expired: number }> {
-  const { part_request_max_days: maxDays } = await getSettings(app.db);
+  const s = await getSettings(app.db);
+  const renewDays = s.part_request_max_days - Math.min(s.part_request_validity_days_1, s.part_request_validity_days_2, s.part_request_validity_days_3);
   let expired = 0;
   for (;;) {
     const candidates = await app.db
@@ -68,7 +71,7 @@ export async function expirePartRequests(app: TxApp): Promise<{ expired: number 
             recipientBusinessId: updated.businessId,
             params: {
               requestTitle: maskedRequestName(updated.name),
-              dueAt: new Date(updated.firstPostedAt.getTime() + maxDays * DAY_MS).toISOString(),
+              dueAt: new Date(updated.firstPostedAt.getTime() + renewDays * DAY_MS).toISOString(),
             },
             destination: { partRequestId: updated.id },
             dedupeKey: `part_request_expired:${expiresKey(updated)}`,

@@ -1,10 +1,11 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import Toast from 'react-native-toast-message';
+import { useQueryClient } from '@tanstack/react-query';
 import type { PartRequestSellerView, SellerReplyView } from '@mpm/shared-types';
 import Button from '@/components/Button';
 import Card from '@/components/Card';
@@ -29,6 +30,7 @@ import { f8ErrorMessage } from '@/lib/f8-errors';
 import { Ban, Flag, Images, Info, Send, ShieldAlert, X } from '@/lib/icons';
 import { quantityText, refText, yearRange } from '@/lib/listing-format';
 import { daysLeftKey, requestStatusKey, requestStatusTone, sideAcceptKeys } from '@/lib/part-request-display';
+import { qk } from '@/lib/query-keys';
 import { canWithdraw, replyStatusLine, sellerActions } from '@/lib/reply-picker';
 import { radius, spacing, useTheme } from '@/lib/theme';
 import type { RootStackParamList } from '@/navigation/types';
@@ -59,6 +61,13 @@ export default function RequirementSeller({ request }: RequirementSellerProps) {
   const navigation = useNavigation<Nav>();
   const confirm = useConfirm();
   const master = useMasterData();
+  const qc = useQueryClient();
+  // The GET that loaded this view marked the request opened for this business (`opened_at`), which lowers
+  // "Requests for you": refetch the badges and Home's strip once per request.
+  useEffect(() => {
+    void qc.invalidateQueries({ queryKey: qk.badges() });
+    void qc.invalidateQueries({ queryKey: qk.partRequestHome() });
+  }, [qc, request.id]);
   const withdraw = useWithdrawReply(request.id);
   const { undo } = useNotRelevant(request.id);
   const [notRelevantOpen, setNotRelevantOpen] = useState(false);

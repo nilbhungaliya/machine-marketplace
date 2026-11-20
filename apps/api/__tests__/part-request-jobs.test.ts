@@ -76,8 +76,9 @@ describe('expirePartRequests', () => {
     await expirePartRequests(jobApp);
     expect(await notesOf(req.id, 'part_request_expired')).toHaveLength(1);
     const [note] = await notesOf(req.id, 'part_request_expired');
-    // dueAt: the last renewable moment, first_posted_at + part_request_max_days (default 90).
-    expect((note!.params as { dueAt: string }).dueAt).toBe(new Date(req.firstPostedAt.getTime() + 90 * 24 * 3_600_000).toISOString());
+    // dueAt: the last moment a renew can succeed, first_posted_at + part_request_max_days (default 90) − the shortest
+    // validity (default 7): a renew from expired sets now + days and must stay within first_posted_at + max days.
+    expect((note!.params as { dueAt: string }).dueAt).toBe(new Date(req.firstPostedAt.getTime() + (90 - 7) * 24 * 3_600_000).toISOString());
     expect(note!.dedupeKey).toBe(`part_request_expired:${req.id}:${Math.floor(req.expiresAt.getTime() / 1000)}`);
   });
 

@@ -31,7 +31,7 @@ import { f8ErrorMessage } from '@/lib/f8-errors';
 import { formatDayMonth } from '@/lib/format-date';
 import { ArrowLeftRight, BellRing, EllipsisVertical, Inbox, Info, Package, RefreshCw } from '@/lib/icons';
 import { formatRupees } from '@/lib/money';
-import { daysLeftKey, requestStatusKey, requestStatusTone } from '@/lib/part-request-display';
+import { daysLeftKey, requestStatusKey, requestStatusTone, shouldMarkRequestRead } from '@/lib/part-request-display';
 import { copyOf } from '@/lib/part-request-form';
 import { formatQuantity } from '@/lib/quantity';
 import { radius, spacing, useTheme } from '@/lib/theme';
@@ -70,11 +70,11 @@ export default function RequirementBuyer({ request, tab: initialTab }: Requireme
   const newTotal = request.counts.newReplies + request.counts.newMatches;
   const lastRead = useRef<number | null>(null);
   useEffect(() => {
-    // The view isn't refetched by `read`, so after it the server's count restarts from 0 while ours still shows the
-    // opening count: any change to a non-zero count is something new.
+    // `read` zeroes the cached counts (`useMarkRequestRead`), so the last seen count follows down to 0 and any later
+    // non-zero count is something new.
     const prev = lastRead.current;
     lastRead.current = newTotal;
-    if (prev === null || (newTotal > 0 && newTotal !== prev)) read.mutate(request.id);
+    if (shouldMarkRequestRead(prev, newTotal)) read.mutate(request.id);
   }, [request.id, newTotal]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const active = request.status === 'active';

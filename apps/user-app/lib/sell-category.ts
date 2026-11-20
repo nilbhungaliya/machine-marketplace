@@ -104,12 +104,14 @@ export function scopedPartGroups(tree: readonly CategoryNode[], machineTypeId: s
 
 /**
  * The machine type a part request scopes the draft's picker to (§9.3): the request's category when it is a machine
- * type and the kind is `part`; null otherwise (a part group is copied onto the draft, a machine request's type too).
+ * type with part groups and the kind is `part`; null otherwise (a part group is copied onto the draft, a machine
+ * request's type too), and null for a type with no part groups, so the wizard shows the full picker, not an empty one.
  */
 export function requestScopeTypeId(
   tree: readonly CategoryNode[], request: { kind: string; categoryId: string } | null | undefined,
 ): string | null {
   if (!request || request.kind !== 'part') return null;
   const n = findNode(tree, request.categoryId);
-  return n?.level === 'machine_type' ? n.id : null;
+  if (n?.level !== 'machine_type') return null;
+  return scopedPartGroups(tree, n.id).length > 0 ? n.id : null;
 }

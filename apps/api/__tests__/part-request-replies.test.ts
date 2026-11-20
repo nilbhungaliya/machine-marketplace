@@ -349,6 +349,17 @@ describe('POST /listings { kind, partRequestId } (§9.3)', () => {
     await expectRefused(d, { kind: 'part', partRequestId: open.id }, 409, 'DRAFT_LIMIT');
     expect(await pendingCount(open.id)).toBe(0);
   });
+
+  it('a viewer member gets VIEWER_READ_ONLY: no draft, no pending reply (R2)', async () => {
+    const s = await newSeller();
+    const r = await request();
+    const viewer = await addTestMember(s.businessId, 'viewer');
+    const before = await listingsOf(s.businessId);
+    const res = await app.inject({ method: 'POST', url: '/listings', headers: auth(viewer.token), payload: { kind: 'part', partRequestId: r.id } });
+    expect([res.statusCode, res.json().code]).toEqual([403, 'VIEWER_READ_ONLY']);
+    expect(await listingsOf(s.businessId)).toBe(before);
+    expect(await repliesOn(r.id)).toHaveLength(0);
+  });
 });
 
 describe('pending replies through the work job (§9.3)', () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { PART_REQUEST_STATUSES } from '@mpm/shared-types';
-import { daysLeftKey, matchedBadge, requestStatusKey, requestStatusTone, sideAcceptKeys } from './part-request-display';
+import { daysLeftKey, matchedBadge, requestStatusKey, requestStatusTone, shouldMarkRequestRead, sideAcceptKeys } from './part-request-display';
 
 describe('part request display (F8 §13.3)', () => {
   it.each(PART_REQUEST_STATUSES)('%s has a tone and a key', (status) => {
@@ -30,5 +30,17 @@ describe('part request display (F8 §13.3)', () => {
     expect(sideAcceptKeys('pair')).toEqual(['listing.side.pair']);
     expect(sideAcceptKeys(null)).toEqual([]);
     expect(sideAcceptKeys('not_applicable')).toEqual([]);
+  });
+
+  it('reads on open and on every later new count once read has zeroed the cache', () => {
+    // open with 2 new → read; read zeroes the cache (2 → 0) → no read; a live update brings 2 again → read.
+    const seen: boolean[] = [];
+    let prev: number | null = null;
+    for (const total of [2, 0, 2, 0, 1]) {
+      seen.push(shouldMarkRequestRead(prev, total));
+      prev = total;
+    }
+    expect(seen).toEqual([true, false, true, false, true]);
+    expect(shouldMarkRequestRead(null, 0)).toBe(true);
   });
 });

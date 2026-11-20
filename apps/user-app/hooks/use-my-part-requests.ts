@@ -5,6 +5,7 @@ import type {
   PartRequestCloseReason,
   PartRequestInput,
   PartRequestPatch,
+  PartRequestView,
 } from '@mpm/shared-types';
 import { useMemo, useRef } from 'react';
 import { keepIdempotencyKey, newIdempotencyKey } from '@/lib/offers-api';
@@ -138,10 +139,17 @@ export function useMarkRequestRead() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => markPartRequestRead(id),
-    onSuccess: () => {
-      // My requirements' new counts and Home's strip (`allPartRequests` covers every tab and `home`).
+    onSuccess: (_data, id) => {
+      // The server's new counts restart from 0: zero them in the cached view too, so the next live update with
+      // something new reads again (`shouldMarkRequestRead`).
+      qc.setQueryData<PartRequestView>(qk.partRequest(id), (v) =>
+        v?.role === 'buyer' ? { ...v, counts: { ...v.counts, newReplies: 0, newMatches: 0 } } : v,
+      );
+      // My requirements' new counts and Home's strip (`allPartRequests` covers every tab and `home`); the request's
+      // notifications are read too (as a chat thread's read does).
       void qc.invalidateQueries({ queryKey: qk.allPartRequests });
       void qc.invalidateQueries({ queryKey: qk.badges() });
+      void qc.invalidateQueries({ queryKey: qk.notifications() });
     },
   });
 }

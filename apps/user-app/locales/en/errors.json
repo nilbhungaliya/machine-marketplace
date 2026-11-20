@@ -87,6 +87,7 @@
     "replyNotFound": "That reply is no longer there.",
     "replyNotOpen": "That reply can no longer be withdrawn.",
     "ownPartRequest": "This is your own requirement.",
-    "dealInvalid": "That deal isn't one of yours for this requirement."
+    "dealInvalid": "That deal isn't one of yours for this requirement.",
+    "reportExists": "You have already reported this requirement. Our team is looking at it."
   }
 }

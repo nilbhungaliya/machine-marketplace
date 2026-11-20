@@ -220,7 +220,11 @@ sequence): `part_requests`, `part_request_fitments`, `part_request_targets`, `pa
   can run `part-request-work` at once, and then a targeting pass's at-post backfill (request locked, then match inserts)
   and a `listing_changed` row (match inserts, then request locks) can deadlock. Postgres aborts one, the job releases
   its row with a backoff and the next run does it (pinned in `f8-core-loop.test.ts`): no work lost, a match push late by
-  ≥ 30 s. Before more than one instance, run the job on one instance only or serialise it (an advisory lock).
+  ≥ 30 s. Before more than one instance, run the job on one instance only or serialise it (an advisory lock). One loss
+  remains when the `listing_changed` side is the victim: the backfill has already stored that (request, listing) as a
+  silent `at_post` match, so the retried row finds it matched and the buyer never gets a push for a listing that went
+  live after they posted. The fix when going multi-instance: lock the candidate requests before `insertNewMatches`, or
+  have the backfill skip listings with a queued `listing_changed` row.
 - **Orphan `verification/` copies**: if the process crashes between staging the documents and the transaction, the
   copies stay in R2 with no proof row (the `incoming-verification/` lifecycle rule doesn't cover them). A periodic sweep
   of `verification/` keys with no proof would clean them.
@@ -450,3 +454,16 @@ is settled** by F6 + F7 ruling R6: hidden until there is a deal and both sides t
   (+9 rows over three runs, kept). Docs: PROJECT_STATUS, the three CLAUDE.md files, `product-scope.md` (M2, M6, M8, M11,
   M12, M16, M17, AD3, AD6, D5), the F2 spec's R22 note; spec and plan marked built. Still the owner's: the device pass,
   the hi / gu copy check, the admin click-through and the client's answers (Open items).
+- 2026-11-20 — **F8 final branch review** (two reviewers; API: ship, app+admin: ship after fixes) and fix wave: app —
+  the buyer's `read` zeroes the cached view's new counts so every later live update reads again
+  (`shouldMarkRequestRead` in `lib/part-request-display.ts`, tested) and also refetches notifications; a seller view
+  refetches the badges and Home's strip once per request (the GET sets `opened_at`); `Requirement` keys the buyer /
+  seller screen by the request id (A → B remounts); a second report of a requirement says "requirement"
+  (`errors.requests.reportExists` en / hi / gu, `REPORT_EXISTS` override in `F8_ERROR_KEYS`); the sell wizard shows the
+  full picker when the request's machine type has no part groups (`requestScopeTypeId`, tested). API — a `viewer` member
+  can no longer create a pending reply through `POST /listings { partRequestId }` (`403 VIEWER_READ_ONLY`, tested); the
+  `part_request_expired` text's "renew until" is the last moment a renew can succeed (`first_posted_at +
+  part_request_max_days − the shortest validity`, matching `renewPartRequest`'s rule); `f8-core-loop`'s `drain()` makes
+  rows due within a second due now (clock-skew flake). Docs: the multi-instance note gains the lost-push case and its
+  fix. Verified: typecheck and lint clean; tests API 1806 + 3 skipped, admin 409, app 773; `mpm_test` left with no F8
+  rows.

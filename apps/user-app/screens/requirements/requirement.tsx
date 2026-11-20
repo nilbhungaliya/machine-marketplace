@@ -16,7 +16,8 @@ import RequirementSeller from './requirement-seller';
 /**
  * One part request (F8 spec §13.1): `GET /part-requests/:id` answers the buyer's view or an eligible seller's, and this
  * screen renders `RequirementBuyer` or `RequirementSeller` by its `role`. A request that is gone, or that this business
- * may not see, is a 404: "no longer open" (never a hint that it exists).
+ * may not see, is a 404: "no longer open" (never a hint that it exists). Each is keyed by the request's id, so
+ * moving from one requirement to another remounts it instead of keeping the first one's state.
  */
 export default function RequirementScreen({ route }: RootStackScreenProps<'Requirement'>) {
   const { t } = useTranslation();
@@ -29,8 +30,8 @@ export default function RequirementScreen({ route }: RootStackScreenProps<'Requi
   }), []);
 
   const request = query.data;
-  if (request?.role === 'buyer') return <ScreenWrapper><RequirementBuyer request={request} tab={tab} /></ScreenWrapper>;
-  if (request?.role === 'seller') return <ScreenWrapper><RequirementSeller request={request} /></ScreenWrapper>;
+  if (request?.role === 'buyer') return <ScreenWrapper><RequirementBuyer key={request.id} request={request} tab={tab} /></ScreenWrapper>;
+  if (request?.role === 'seller') return <ScreenWrapper><RequirementSeller key={request.id} request={request} /></ScreenWrapper>;
 
   const gone = query.isError && errorCode(query.error) === 'PART_REQUEST_NOT_FOUND';
   return (
