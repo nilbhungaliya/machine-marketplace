@@ -97,11 +97,11 @@ rollup tables, IP-based signals.
 | R7 | **Reports & flags** gets tabs **Fraud signals, Businesses, Listings, Conversations, Reviews, Part requests**. Listings is read-only and each row opens the listing's moderation review, where resolve stays (§3 E). The nav item gets a badge: open reports (all targets) + open signals. |
 | R8 | **Fraud signals are advisory** (textile §4.5): one open signal per business and kind (partial unique index), new evidence appended (≤ 50 items, oldest dropped), statuses `open` → `dismissed` or `actioned` with a note (audit-logged). They never change what users see. Acting (suspend, remove a listing, hide a review) uses the existing tools, linked from the signal. **Closing consumes the evidence (quiet reading):** once a signal is dismissed or actioned, everything seen up to its `reviewed_at` is spent; a new signal of the same business and kind needs the **full threshold again** from evidence seen after that close. **(my call)** |
 | R9 | **Signal kinds (§8):** `shared_device` (≥ 3 **distinct businesses** signed in on one install in 30 days; two staff of one business on one phone are fine), `repeated_phone` (one phone number posted in chat by ≥ 2 businesses, or by one business in ≥ 10 threads, in 30 days; **the sender's own phones never count**: their login phone, their business's contact phone and every member's login phone), `payment_details` (≥ 2 chat messages from the business with a UPI link / handle, payment link, advance ask or bank details in 30 days), `new_account_burst` (a business ≤ 7 days old that contacted ≥ 8 distinct businesses in any 24 h), `reports_against` (≥ 3 reports with status `open`, `reviewing` or `actioned`, never `dismissed`, from distinct businesses in 30 days against the business or anything it owns; a conversation report counts against **the other business in the thread**, never the reporter). Thresholds are settings (§12). |
-| R9a | **Scan windows:** every rule reads only rows created before `now() − 2 minutes` (commit-lag margin) from a per-rule watermark in `fraud_scan_state` (`last_seq` for chat messages, `last_at` for the others); a watermark advances only to the highest row actually taken, so a transaction committing late within the margin is still seen, once. The first run starts **30 days back** (bounded backfill), not at the beginning of history. **(my call)** |
+| R9a | **Scan windows:** every rule reads only rows created before `now() − 2 minutes` (commit-lag margin) from a per-rule watermark in `fraud_scan_state` (`last_seq` for chat messages, `last_at` for the others). The chat scan takes only the **unbroken `seq` run below the first row still inside the margin** (it stops there, never jumps past it); a `last_at` scan's mark is the **latest timestamp actually taken**, not the window's end. Watermarks advance **only after the run's evaluation succeeded**; a failed run leaves them, the next run re-reads the same window, and re-reading is idempotent (sightings unique per message and phone, evidence keys dedupe). So a transaction committing late within the margin is still seen, once. The first run starts **30 days back** (bounded backfill), not at the beginning of history. **(my call; plan review 2026-11-21)** |
 | R10 | **No raw identifiers are stored for signals:** phone numbers as HMAC-SHA-256 with `SIGNAL_HASH_KEY` (a plain hash is reversible over 10-digit numbers, textile §8.2), install ids as SHA-256 (random UUIDs, not personal). Without `SIGNAL_HASH_KEY` the phone rule is off and the job logs it once (opt-in like Sentry / push) **(my call: not a start-up requirement)**. Evidence never holds message text: it holds kind of match, time, thread / message refs and counts. |
 | R11 | **Reading an evidence thread:** the F6 conversation reader's gate gains one source: an **open fraud signal whose evidence cites the thread** (moderator, support; reason required; the `thread.read` audit row names the signal). Nothing else in the gate changes. |
-| R12 | **Exports:** you can export what you can list (same role as the list route), with the list's filters; ≤ 10 000 rows, else `400 EXPORT_TOO_LARGE` with the count (never silent truncation); streamed CSV (`lib/csv.ts` cell rules: BOM, formula neutralised); 10 exports per 10 min per admin; every export writes `export.create` (sheet, filters, row count, contacts flag; never data). **Contact details** (owner phone, email) only in the businesses sheet, only for `super_admin`, only with `includeContacts=1`; PAN, street addresses, notes, messages, private budgets and site addresses never **(my call)**. |
-| R13 | **Admin sessions (AD7):** the admin JWT carries `tv`; `requireAdmin` / `requireAdminRole` and the `/admin` socket handshake load the row on every request: missing, inactive or `token_version ≠ tv` → `401 ADMIN_SESSION_ENDED`; the **role comes from the row**, not the token. Deactivate, reset password, password change, role change and "sign out" bump `token_version` and drop the admin's sockets (same-process limit as users, open item). |
+| R12 | **Exports:** you can export what you can list (same role as the list route), with the list's filters; ≤ 10 000 rows, else `400 EXPORT_TOO_LARGE` with the count (never silent truncation); streamed CSV (`lib/csv.ts` cell rules: BOM, formula neutralised); 10 exports per 10 min per admin; every export writes `export.create` (sheet, filters with their text through `maskContact`, row count, contacts flag; never data). **Contact details** (owner phone, email) only in the businesses sheet, only for `super_admin`, only with `includeContacts=1`; PAN, street addresses, notes, messages, private budgets and site addresses never **(my call)**. |
+| R13 | **Admin sessions (AD7):** the admin JWT carries `tv`; `requireAdmin` / `requireAdminRole` and the `/admin` socket handshake load the row on every request: missing, inactive or `token_version ≠ tv` → `401 ADMIN_SESSION_ENDED`; the **role comes from the row**, not the token. Deactivate, reset password, password change, role change and "sign out" bump `token_version`, send `admin:session_ended { tv }` with the new version and drop the admin's sockets (same-process limit as users, open item). A panel signs out only when the event's `tv` is greater than its own token's, so the tab that changed its own password stores the fresh token, reconnects and keeps working. |
 | R14 | **Admin users (super_admin only):** invite (name, email, role) → a set-password link valid 48 h; change name / role; deactivate / reactivate (reason); reset password (clears the password, bumps the version, new link); sign out everywhere. **Never** on yourself (role, deactivate, reset: `409 ADMIN_SELF_ACTION`), and never leaving zero active super admins (`409 ADMIN_LAST_SUPER_ADMIN`, serialised by an advisory lock). Admin rows are never deleted (audit references). |
 | R15 | **Passwords:** 12–128 characters, not the email; bcrypt cost 12 for new hashes; links are 32 random bytes, stored as SHA-256, single-use, the newest one per admin wins; the token travels in the URL fragment (`/set-password#t=…`) and a POST body, never a query string or a log line. Login: after 5 failures for one email in 15 min, `429 TOO_MANY_ATTEMPTS` for 15 min (also for unknown emails, so nothing is probed) **(my call)**. |
 | R16 | **Audit log viewer: super_admin only** (textile: the one account), read-only, no route edits or deletes. Snapshot values are masked in the detail by default (`maskContact` on strings + whole-value masking of sensitive keys: phone, email, PAN, address, GST address, site address); "Show hidden values" returns the entry unmasked and writes `audit.reveal` (entry id, action; no values). CSV export of the filtered list carries **no snapshots**. |
@@ -145,7 +145,9 @@ the phone HMAC or install hash so an admin can see two signals are about the sam
   nothing. Needed because `user_devices.install_id` is unique and **moves** to the latest user (F6 §11.6), so it can't
   show history.
 - `contact_sightings`: `id bigserial`, `phone_hmac text`, `business_id → businesses` (the sender's), `thread_id →
-  chat_threads`, `message_id → chat_messages`, `seen_at`. Index `(phone_hmac, seen_at)`, `(business_id, seen_at)`.
+  chat_threads`, `message_id → chat_messages`, `seen_at`. Index `(phone_hmac, seen_at)`, `(business_id, seen_at)`;
+  unique `(message_id, phone_hmac)` (a re-scan inserts with `ON CONFLICT DO NOTHING`). `chat_messages(seq)` gets an
+  index for the scan.
 - `fraud_scan_state`: one row per rule source (`rule text PK`: `chat_messages`, `install_sightings`,
   `new_account_burst`, `reports_against`), `last_seq bigint` (chat messages, over `chat_messages.seq`) or `last_at
   timestamptz` (the others; CHECK exactly one set, 0019), `updated_at`. A missing row means "start 30 days back"
@@ -274,20 +276,24 @@ messages are later (§22).
 ### 8.2 The `fraud-signals` job (every 10 min)
 1. Takes a session advisory lock (`pg_try_advisory_lock(hashtext('fraud-signals'))`); if held elsewhere, skips the
    run, so two API instances never run it at once **(my call; this job is multi-instance safe from day one)**.
-2. **Scan (R9a):** chat messages with `seq > last_seq` **and** `created_at <= now() − 2 min`, up to 5 000 in `seq`
-   order; inserts `contact_sightings` (own phones skipped) and collects payment matches; advances `last_seq` to the
-   highest `seq` taken, in the same transaction as the inserts. A message from a transaction that committed late
-   (a lower `seq` than one already visible) is still above the watermark if it lands within the 2-minute margin, so it
-   is scanned once; nothing is scanned twice. The other sources (`install_sightings` by `last_seen_at`, threads and
-   replies of young businesses by `created_at`, `reports` by `created_at`) use their own `last_at` watermark with the
-   same margin. A missing watermark row starts 30 days back.
+2. **Scan (R9a):** chat messages with `seq > last_seq`, up to 5 000 in `seq` order, taking only the unbroken run
+   below the first message whose `created_at` is inside the 2-minute margin (the scan stops there); inserts
+   `contact_sightings` (own phones skipped, `ON CONFLICT (message_id, phone_hmac) DO NOTHING`) and notes the senders
+   with a sighting or a payment match. A message from a transaction that committed late (a lower `seq` than one
+   already visible) is still above the watermark if it lands within the margin, so it is scanned once. The other
+   sources (`install_sightings` by `last_seen_at`, threads and replies of young businesses by `created_at`, `reports`
+   by `created_at`) use their own `last_at` watermark with the same margin; their mark is the latest timestamp taken.
+   A missing watermark row starts 30 days back.
 3. **Evaluate** each rule for the businesses touched since the last run (new sightings, new payment matches, new
-   threads / replies by young businesses, new reports); one short transaction per business and kind. The rule counts
+   threads / replies by young businesses, new reports); one short transaction per business and kind. The payment rule
+   re-reads the business's own messages in the window and runs the payment detector on them (no stored matches). The rule counts
    only evidence seen **after the latest close** (`reviewed_at`) of a signal of that business and kind (R8, quiet
    reading), so a new signal needs the full threshold again; then `INSERT … ON CONFLICT (business_id, kind) WHERE
    status = 'open' DO UPDATE` appends evidence whose `key` is not already on the open signal. No business row lock
    (signals are their own rows; no lock-order interaction with F6 / F8 / M14).
-4. A failed business is logged and retried on the next run (evaluation is idempotent).
+4. **Advance:** only when every evaluation succeeded, one transaction moves each watermark to its mark. A failed
+   business is logged and the run ends without advancing, so the next run re-reads the same window (scanning and
+   evaluation are idempotent).
 
 ### 8.3 Admin (`moderator`, `support`; Reports & flags → Fraud signals)
 - `GET /admin/fraud-signals?status&kind&businessId&page&pageSize` (default open, newest evidence first; server-paged
@@ -424,8 +430,9 @@ error keys for the business report in the existing report locale namespace.
 
 ## 15. Sockets
 
-`admin:session_ended` to `adminUserRoom(id)` just before its sockets are dropped (the panel shows "You were signed
-out" and goes to login). No new user events. Signals and reports use the 60 s badge poll.
+`admin:session_ended { tv }` (the new token version) to `adminUserRoom(id)` just before its sockets are dropped (a
+panel whose token is older shows "You were signed out" and goes to login; the tab that changed its own password holds
+the newer token and reconnects). No new user events. Signals and reports use the 60 s badge poll.
 
 ## 16. Privacy and security (DPDP Act 2023)
 
@@ -474,7 +481,7 @@ scans ≤ 5 000 messages a run (= 720 000 a day; raise if a backlog appears).
    (lower `seq` than one already visible) is scanned exactly once; a row younger than the margin waits for the next
    run; the first run ignores rows older than 30 days; the sender's own login, contact and member phones create no
    sighting; two members of one business on one install don't count as two for `shared_device`; a dismissed report
-   and a conversation report filed *by* the business don't count for `reports_against`; a Devanagari-digit number and a spaced number give the same HMAC; no 10-digit run in `contact_sightings` or
+   and a conversation report filed *by* the business don't count for `reports_against`; a Devanagari-digit number and a spaced number give the same HMAC; a planted number (ASCII or Devanagari) absent from `contact_sightings` and
    `fraud_signals`; the advisory lock skips a concurrent run; without `SIGNAL_HASH_KEY` the phone rule is off and the
    others run.
 6. **Exports:** each sheet's role gate; filters equal the list's (same ids); cap refusal with the count; no phone /
