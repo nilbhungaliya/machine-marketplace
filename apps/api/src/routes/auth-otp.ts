@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { INDIAN_MOBILE_REGEX, OTP_LENGTH } from '@mpm/shared-types';
 import { sendOtp, verifyOtp } from '../services/otp.service.js';
 import { signInWithPhone } from '../services/user.service.js';
+import { recordInstallSighting } from '../services/fraud/sightings.js';
 
 const phoneSchema = z.string().regex(INDIAN_MOBILE_REGEX, 'Enter a valid 10-digit mobile number');
 const sendBody = z.object({ phone: phoneSchema });
@@ -26,7 +27,14 @@ const authOtpRoutes: FastifyPluginAsync = async (fastify) => {
     async (request) => {
       const { phone, code } = verifyBody.parse(request.body);
       await verifyOtp(fastify.redis, toE164(phone), code);
-      return { data: await signInWithPhone(fastify.db, toE164(phone)) };
+      const result = await signInWithPhone(fastify.db, toE164(phone));
+      // Admin close-out §5.4: the install's sighting for the shared-device rule; never fails the sign-in.
+      try {
+        await recordInstallSighting(fastify.db, result.user.id, request.headers['x-install-id']);
+      } catch (err) {
+        request.log.warn({ err }, 'install sighting failed');
+      }
+      return { data: result };
     },
   );
 };

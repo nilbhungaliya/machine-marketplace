@@ -9,6 +9,7 @@ import { signInWithPhone } from '../../src/services/user.service.js';
 import { grantGst } from '../../src/services/verification/gst-grant.service.js';
 import { DECLARATION_VERSION } from '../../src/services/verification/gst-instant.service.js';
 import { gstStub } from '../../src/services/verification/gst-stub.js';
+import { deleteCloseOutRows } from './test-fraud.js';
 import { deleteListingsOf, uniqueTestPhone } from './test-users.js';
 
 let seq = 0;
@@ -43,9 +44,10 @@ export async function createTestBusinessUser(
 }
 
 /**
- * Deletes the businesses and everything that hangs off them, deepest foreign key first: their listings and every
- * listing child, reports on those listings or made by the businesses and their users, F8 rows (`deleteF8Rows`) and
- * F6 + F7 rows (`deleteF6Rows`), all through `deleteListingsOf`, then
+ * Deletes the businesses and everything that hangs off them, deepest foreign key first: admin close-out rows
+ * (`deleteCloseOutRows`: signals and sightings), their listings and every listing child, reports on those listings or
+ * made by the businesses and their users, F8 rows (`deleteF8Rows`) and F6 + F7 rows (`deleteF6Rows`), all through
+ * `deleteListingsOf`, then
  * verifications (they reference proofs), representative proofs (they reference checks), GST checks, then the
  * businesses' users, then the businesses. Extend as tables that reference businesses are added. No-op for an empty list.
  */
@@ -53,6 +55,8 @@ export async function deleteTestBusinesses(businessIds: string[]): Promise<void>
   if (businessIds.length === 0) return;
   await db.transaction(async (tx) => {
     const userIds = (await tx.select({ id: users.id }).from(users).where(inArray(users.businessId, businessIds))).map((u) => u.id);
+    // Admin close-out rows first: contact sightings reference the threads and messages F6's cleanup deletes.
+    await deleteCloseOutRows(tx, { businessIds, userIds });
     await deleteListingsOf(tx, { businessIds, userIds });
     await tx.delete(businessVerifications).where(inArray(businessVerifications.businessId, businessIds));
     await tx.delete(gstRepresentativeProofs).where(inArray(gstRepresentativeProofs.businessId, businessIds));

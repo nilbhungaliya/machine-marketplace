@@ -1,5 +1,7 @@
 import { and, eq, inArray, sql, type SQL } from 'drizzle-orm';
-import { REVIEW_FACETS, type AdminReportRow, type PartySide, type ReportStatus, type ReviewRatings } from '@mpm/shared-types';
+import {
+  REVIEW_FACETS, type AdminReportRow, type AdminReportTarget, type PartySide, type ReportStatus, type ReviewRatings,
+} from '@mpm/shared-types';
 import type { Db, Tx } from '../../db/index.js';
 import { reports } from '../../db/schema.js';
 import { adminText } from '../../lib/admin-text.js';
@@ -17,7 +19,8 @@ import { maskedRequestName } from '../part-requests/reply-views.js';
 
 type Conn = Db | Tx;
 
-export type AdminReportTarget = 'conversation' | 'review' | 'part_request';
+/** Admin close-out C0-1: the shared type (five targets); this queue still lists the three below until lane A4. */
+export type { AdminReportTarget };
 
 /** The targets this queue handles (listing reports keep F2's queue). */
 export const ADMIN_REPORT_TARGETS = ['conversation', 'review', 'part_request'] as const;

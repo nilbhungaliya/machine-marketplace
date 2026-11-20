@@ -3,11 +3,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import { fetchOpenDisputeCount } from './disputes-api';
 import { fetchModerationWaiting } from './listings-api';
+import { fetchReportsOpenCount } from './reports-api';
 import { getAdminSocket } from './socket';
 import { fetchWaitingCount } from './verification-api';
 
 /** Counts a menu item can show beside its label (`NavItem.badgeKey`). */
-export type NavBadgeKey = 'verificationWaiting' | 'moderationWaiting' | 'disputesOpen';
+export type NavBadgeKey = 'verificationWaiting' | 'moderationWaiting' | 'disputesOpen' | 'reportsOpen';
 
 const FETCHERS: Record<NavBadgeKey, () => Promise<number>> = {
   verificationWaiting: fetchWaitingCount,
@@ -15,6 +16,8 @@ const FETCHERS: Record<NavBadgeKey, () => Promise<number>> = {
   moderationWaiting: fetchModerationWaiting,
   /** Open disputes (F6 + F7 §16.1), support's queue. */
   disputesOpen: fetchOpenDisputeCount,
+  /** Open reports (every target) + open fraud signals (admin close-out R7, D5); no socket event, the poll (§15). */
+  reportsOpen: fetchReportsOpenCount,
 };
 
 /**

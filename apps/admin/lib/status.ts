@@ -1,4 +1,6 @@
-import type { ListingStatus, PartRequestStatus, RentalBookingStatus } from '@mpm/shared-types';
+import type {
+  AdminUserStatus, FraudSignalStatus, ListingStatus, PartRequestStatus, RentalBookingStatus,
+} from '@mpm/shared-types';
 
 export type StatusTone = 'green' | 'blue' | 'amber' | 'red' | 'gray';
 
@@ -61,6 +63,24 @@ export function rentalBookingStatusTone(status: RentalBookingStatus): StatusTone
   return RENTAL_BOOKING_STATUS_TONES[status];
 }
 
+/** Fraud signal statuses (admin close-out §13): an open signal waits on staff (amber); reviewed ones settle. */
+export const FRAUD_SIGNAL_STATUS_TONES: Record<FraudSignalStatus, StatusTone> = {
+  open: 'amber', dismissed: 'gray', actioned: 'green',
+};
+
+export const FRAUD_SIGNAL_STATUS_LABELS: Record<FraudSignalStatus, string> = {
+  open: 'Open', dismissed: 'Dismissed', actioned: 'Actioned',
+};
+
+/** Admin user statuses (admin close-out §5.1, §13): a link out is amber; deactivated grey. */
+export const ADMIN_USER_STATUS_TONES: Record<AdminUserStatus, StatusTone> = {
+  active: 'green', invited: 'amber', reset_pending: 'amber', deactivated: 'gray',
+};
+
+export const ADMIN_USER_STATUS_LABELS: Record<AdminUserStatus, string> = {
+  active: 'Active', invited: 'Invited', reset_pending: 'Reset pending', deactivated: 'Deactivated',
+};
+
 // Listing statuses (above), enquiry and offer (F6), deal and rental booking (F7), part request (F8), verification and GST
 // review (A2), account (A2) and report (A6) statuses. A word several domains share (rejected, expired…) keeps one tone.
 const TONE_BY_STATUS: Record<string, StatusTone> = {
@@ -76,6 +96,8 @@ const TONE_BY_STATUS: Record<string, StatusTone> = {
   needs_more: 'amber',
   cancelled: 'red', suspended: 'red', banned: 'red', failed: 'red', blocked: 'red', revoked: 'red',
   withdrawn: 'gray', closed: 'gray', dismissed: 'gray', not_submitted: 'gray',
+  // Admin close-out: admin user statuses (`active` green above, `deactivated` grey).
+  invited: 'amber', reset_pending: 'amber', deactivated: 'gray',
 };
 
 /** Wording an admin reads; anything not listed is the status with underscores as spaces, first letter capital. */

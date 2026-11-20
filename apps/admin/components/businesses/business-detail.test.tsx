@@ -78,6 +78,8 @@ function business({ userStatus = 'active', verified = true, reviewOpen = false, 
     sellerScore: null,
     partRequestCount: 0,
     rentalBookingCount: { asOwner: 0, asRenter: 0 },
+    reports: { open: 0, byTarget: {} },
+    fraudSignals: [],
   };
 }
 

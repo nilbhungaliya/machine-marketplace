@@ -340,10 +340,11 @@ describe('APP_SETTINGS / validateSettings (§12)', () => {
       unverified_listing_cap: 3,
     });
     // + the 15 F6 + F7 settings (spec §17) + the 14 F8 part-request settings (F8 spec §16) + the 7 M14 rental
-    // settings (M14 spec §16).
-    expect(APP_SETTINGS.map((s) => s.key)).toHaveLength(40);
+    // settings (M14 spec §16) + the 8 fraud-signal settings (admin close-out spec §12).
+    expect(APP_SETTINGS.map((s) => s.key)).toHaveLength(48);
     expect(APP_SETTINGS.filter((s) => s.key.startsWith('part_request_'))).toHaveLength(14);
     expect(APP_SETTINGS.filter((s) => s.key.startsWith('rental_'))).toHaveLength(7);
+    expect(APP_SETTINGS.filter((s) => s.key.startsWith('fraud_'))).toHaveLength(8);
   });
 
   it('accepts the defaults', () => {

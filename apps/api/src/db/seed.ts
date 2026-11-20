@@ -19,7 +19,9 @@ async function main() {
   await db.insert(adminUsers).values({
     name: 'Super Admin',
     email,
-    passwordHash: await bcrypt.hash(password, 10),
+    // Admin close-out §11.2: bcrypt cost 12, as every password the panel sets.
+    passwordHash: await bcrypt.hash(password, 12),
+    passwordSetAt: new Date(),
     role: 'super_admin',
   });
   console.log(`Seeded super admin ${email}`);

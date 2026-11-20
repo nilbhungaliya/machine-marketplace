@@ -8,6 +8,7 @@ import {
   chatThreadUserState,
   chatThreads,
   contactShareConsents,
+  contactSightings,
   dealDisputes,
   dealEvents,
   dealReviews,
@@ -348,6 +349,13 @@ export async function deleteF6Rows(
   if (reviewIds.length) reportWhere.push(and(sql`${reports.targetType} = 'review'`, inArray(reports.targetId, reviewIds))!);
   if (reportWhere.length) await conn.delete(reports).where(or(...reportWhere));
 
+  // Admin close-out: the fraud scan's contact sightings reference threads and messages; they go first.
+  if (threadIds.length) await conn.delete(contactSightings).where(inArray(contactSightings.threadId, threadIds));
+  if (userIds.length) {
+    await conn
+      .delete(contactSightings)
+      .where(inArray(contactSightings.messageId, conn.select({ id: chatMessages.id }).from(chatMessages).where(inArray(chatMessages.senderUserId, userIds))));
+  }
   if (threadIds.length) await conn.delete(chatMessages).where(inArray(chatMessages.threadId, threadIds));
   if (userIds.length) await conn.delete(chatMessages).where(inArray(chatMessages.senderUserId, userIds));
   if (reviewIds.length) await conn.delete(dealReviews).where(inArray(dealReviews.id, reviewIds));

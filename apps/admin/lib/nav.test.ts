@@ -124,3 +124,32 @@ describe('F6 + F7 menu entries (spec §16.1, the API roles)', () => {
     expect(findActiveNav('/rentals/abc/')?.item.href).toBe('/rentals');
   });
 });
+
+describe('Admin close-out menu (spec §13, R5, R7)', () => {
+  const all = () => NAV_GROUPS.flatMap((g) => g.items);
+  const item = (href: string) => all().find((i) => i.href === href);
+
+  it('Activity & KPIs is gone: the dashboard is AD1 and /analytics redirects', () => {
+    expect(item('/analytics')).toBeUndefined();
+    expect(findActiveNav('/analytics')).toBeNull();
+  });
+
+  it('System holds Settings, Admin users and Audit log, for super admins only', () => {
+    const system = NAV_GROUPS.find((g) => g.id === 'system')!;
+    expect(system.items.map((i) => [i.href, i.label])).toEqual([
+      ['/settings', 'Settings'], ['/admin-users', 'Admin users'], ['/audit-log', 'Audit log'],
+    ]);
+    const adminUsers = item('/admin-users')!;
+    expect(canSee(adminUsers, 'super_admin')).toBe(true);
+    expect(canSee(adminUsers, 'support')).toBe(false);
+    for (const entry of system.items) {
+      for (const role of ['moderator', 'verification_officer', 'category_manager', 'operations', 'support'] as const) {
+        expect(canSee(entry, role), `${entry.href} ${role}`).toBe(false);
+      }
+    }
+  });
+
+  it('Reports & flags shows the open reports + signals count', () => {
+    expect(item('/reports')!.badgeKey).toBe('reportsOpen');
+  });
+});

@@ -2,8 +2,8 @@ import type { LucideIcon } from 'lucide-react';
 import type { AdminRole } from '@mpm/shared-types';
 import {
   LayoutDashboard, ShieldCheck, ClipboardCheck, Building2, Package, Handshake, MessagesSquare, FolderTree,
-  ListChecks, Megaphone, Flag, Bell, UserCog, ScrollText, BarChart3, BellRing, MessageSquareQuote, CalendarClock,
-  Factory, SlidersHorizontal, MapPin, Replace, TrendingUp, Scale,
+  ListChecks, Megaphone, Flag, Bell, UserCog, ScrollText, BellRing, MessageSquareQuote, CalendarClock,
+  Factory, SlidersHorizontal, MapPin, Replace, TrendingUp, Scale, Settings,
 } from 'lucide-react';
 import type { NavBadgeKey } from './nav-badges';
 
@@ -34,7 +34,8 @@ export const NAV_GROUPS: NavGroup[] = [
     { href: '/verification', label: 'Business verification', icon: ShieldCheck, roles: ['verification_officer'], badgeKey: 'verificationWaiting' },
     // F6 + F7 §16.1: the API's `requireAdminRole('support')` (super_admin passes); the badge counts open disputes.
     { href: '/disputes', label: 'Disputes', icon: Scale, roles: ['support'], badgeKey: 'disputesOpen' },
-    { href: '/reports', label: 'Reports & flags', icon: Flag, roles: ['moderator', 'support'] },
+    // Admin close-out R7: the badge is open reports (every target) + open fraud signals (`GET /admin/reports/count`).
+    { href: '/reports', label: 'Reports & flags', icon: Flag, roles: ['moderator', 'support'], badgeKey: 'reportsOpen' },
   ] },
   { id: 'marketplace', label: 'Marketplace', items: [
     { href: '/businesses', label: 'Users & businesses', icon: Building2, roles: ['support', 'verification_officer', 'moderator'] },
@@ -57,12 +58,14 @@ export const NAV_GROUPS: NavGroup[] = [
     { href: '/search-insights', label: 'Search insights', icon: TrendingUp, roles: ['category_manager'] },
   ] },
   { id: 'growth', label: 'Insights & growth', items: [
-    { href: '/analytics', label: 'Activity & KPIs', icon: BarChart3, roles: ['operations'] },
+    // Admin close-out R5: "Activity & KPIs" is gone (the dashboard is AD1; `/analytics` redirects to `/`).
     { href: '/promotions', label: 'Featured & promotions', icon: Megaphone, roles: ['operations'] },
     { href: '/notifications', label: 'Notifications', icon: Bell, roles: ['operations'] },
   ] },
   { id: 'system', label: 'System', items: [
-    { href: '/settings', label: 'Settings & roles', icon: UserCog, roles: [] },
+    // Admin close-out §13: super_admin only (`roles: []`), as the API's `requireAdminRole()`.
+    { href: '/settings', label: 'Settings', icon: Settings, roles: [] },
+    { href: '/admin-users', label: 'Admin users', icon: UserCog, roles: [] },
     { href: '/audit-log', label: 'Audit log', icon: ScrollText, roles: [] },
   ] },
 ];

@@ -1,5 +1,5 @@
 import type {
-  AdminReportRow, AdminThreadRead, ConversationReportReason, QuickEnquiry, ReportStatus, SystemLineCode,
+  AdminReportRow, AdminReportTarget, AdminThreadRead, ConversationReportReason, QuickEnquiry, ReportStatus, SystemLineCode,
 } from '@mpm/shared-types';
 import { api, ApiError } from './api';
 
@@ -15,8 +15,8 @@ import { api, ApiError } from './api';
 export const readThread = (threadId: string, reason: string) =>
   api.post<AdminThreadRead>(`/admin/threads/${threadId}/read`, { reason });
 
-/** The targets of Reports & flags: conversations, reviews and (F8 §14) part requests. */
-export type AdminReportTarget = 'conversation' | 'review' | 'part_request';
+/** The targets of Reports & flags (admin close-out R7): the shared type. */
+export type { AdminReportTarget };
 
 export interface AdminReportPage {
   items: AdminReportRow[];

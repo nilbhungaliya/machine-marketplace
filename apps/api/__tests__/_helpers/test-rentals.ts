@@ -12,6 +12,7 @@ import {
 import { db, type Db, type Tx } from '../../src/db/index.js';
 import {
   chatMessages,
+  contactSightings,
   chatThreads,
   dealDisputes,
   dealReviews,
@@ -314,6 +315,10 @@ export async function deleteM14Rows(
       await conn.delete(dealReviews).where(inArray(dealReviews.id, reviewIds));
     }
     await conn.delete(dealDisputes).where(inArray(dealDisputes.rentalBookingId, bookingIds));
+    // Admin close-out: contact sightings of these booking messages first (they reference the messages).
+    await conn
+      .delete(contactSightings)
+      .where(inArray(contactSightings.messageId, conn.select({ id: chatMessages.id }).from(chatMessages).where(inArray(chatMessages.rentalBookingId, bookingIds))));
     await conn.delete(chatMessages).where(inArray(chatMessages.rentalBookingId, bookingIds));
     await conn.delete(rentalBookingEvents).where(inArray(rentalBookingEvents.bookingId, bookingIds));
     await conn.update(rentalBookings).set({ currentVersionId: null }).where(inArray(rentalBookings.id, bookingIds));

@@ -1,6 +1,6 @@
 import { Server as SocketIOServer } from 'socket.io';
 import type { FastifyInstance } from 'fastify';
-import { loadActiveUser, verifyAdminToken, verifyUserToken } from '../plugins/auth.js';
+import { loadActiveAdmin, loadActiveUser, verifyAdminToken, verifyUserToken } from '../plugins/auth.js';
 import { AppError } from '../lib/errors.js';
 import { ADMIN_ALL_ROOM, adminRoleRoom, adminUserRoom, businessRoom, userRoom } from './rooms.js';
 import { and, eq, or } from 'drizzle-orm';
@@ -45,7 +45,8 @@ declare module 'fastify' {
  * `io(url + '/user', { auth: { token } })`:
  * - `/user`  — app users; joined to their user room and business room (needs the db plugin: the handshake reads the
  *   user's status and business id)
- * - `/admin` — admin panel; joined to all-admins, their role room and own room
+ * - `/admin` — admin panel; joined to all-admins, their role room (the admin row's role) and own room; the handshake
+ *   reads the admin row like requireAdmin (admin close-out R13)
  *
  * Call after `app.ready()`, since it needs the HTTP server.
  */
@@ -98,16 +99,27 @@ export function setupSocketIO(fastify: FastifyInstance): SocketIOServer {
   });
 
   const admins = io.of('/admin');
-  admins.use((socket, next) => {
+  // As requireAdmin (admin close-out R13): the token names the admin and its token version; the row decides whether the
+  // session still stands and which role room to join. An ended session is refused with `ADMIN_SESSION_ENDED`.
+  admins.use(async (socket, next) => {
     const token = socket.handshake.auth?.token;
     if (!token) return next(new Error('Authentication required'));
+    let claims: { adminId: string; tv: number };
     try {
-      const payload = verifyAdminToken(token);
-      socket.data.adminId = payload.adminId;
-      socket.data.role = payload.role;
-      next();
+      claims = verifyAdminToken(token);
     } catch {
-      next(new Error('Invalid token'));
+      return next(new Error('Invalid token'));
+    }
+    try {
+      const admin = await loadActiveAdmin(fastify.db, claims.adminId, claims.tv);
+      socket.data.adminId = admin.adminId;
+      socket.data.role = admin.role;
+      socket.data.tv = admin.tv;
+      next();
+    } catch (err) {
+      if (err instanceof AppError && err.code === 'ADMIN_SESSION_ENDED') return next(new Error('ADMIN_SESSION_ENDED'));
+      fastify.log.error({ err }, 'admin socket handshake lookup failed');
+      next(new Error('Server error'));
     }
   });
   admins.on('connection', (socket) => {

@@ -55,6 +55,12 @@ import adminPartRequestRoutes from './routes/admin/part-requests.js';
 import rentalRoutes from './routes/rentals.js';
 import rentalCalendarRoutes from './routes/rental-calendar.js';
 import adminRentalRoutes from './routes/admin/rentals.js';
+// Admin close-out (AD1, AD6, AD7; plan C0-4 D4: route files per lane)
+import adminDashboardRoutes from './routes/admin/dashboard.js';
+import adminUsersRoutes from './routes/admin/admin-users.js';
+import adminAuditLogRoutes from './routes/admin/audit-log.js';
+import adminFraudSignalRoutes from './routes/admin/fraud-signals.js';
+import adminExportRoutes from './routes/admin/exports.js';
 
 export interface BuildAppOptions {
   /** false in unit tests that must not touch Postgres/Redis. */
@@ -149,6 +155,12 @@ export async function buildApp({ infra = true, logger = true }: BuildAppOptions 
     await app.register(rentalRoutes);
     await app.register(rentalCalendarRoutes);
     await app.register(adminRentalRoutes);
+    // Admin close-out (lanes A1–A4).
+    await app.register(adminDashboardRoutes);
+    await app.register(adminUsersRoutes);
+    await app.register(adminAuditLogRoutes);
+    await app.register(adminFraudSignalRoutes);
+    await app.register(adminExportRoutes);
   }
 
   return app;

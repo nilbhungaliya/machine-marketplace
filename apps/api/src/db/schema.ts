@@ -9,6 +9,7 @@ import {
   LISTING_KINDS, LISTING_LOCATION_SOURCES, LISTING_STATUSES, MEDIA_TYPES, MEMBER_ROLES, MODERATION_OUTCOMES, PART_SIDES,
   PRICE_MODELS, RENTAL_FUEL_OPTIONS, RENTAL_OPERATOR_OPTIONS, RENTAL_PERIODS, RENTAL_TRANSPORT_OPTIONS, REPORT_STATUSES,
   REPORT_TARGETS, SEARCH_REFRESH_SCOPES, SEARCH_SCRIPTS, SYNONYM_TARGETS, VERIFICATION_LEVELS, VERIFICATION_STATUSES,
+  FRAUD_SIGNAL_KINDS, FRAUD_SIGNAL_STATUSES, type FraudEvidence,
   CONSENT_KINDS, DEAL_ACTOR_SIDES, DEAL_CANCELLED_BY, DEAL_COMPLETED_HOW, DEAL_FULFILMENT, DEAL_PAYMENT_METHODS, DEAL_STATUSES,
   DELIVERY_STATES, DEVICE_PLATFORMS, DISPUTE_OUTCOMES, DISPUTE_STATUSES, HOLD_STATUSES, MESSAGE_KINDS, NOTIFICATION_CATEGORIES,
   OFFER_KINDS, OFFER_STATUSES, PARTY_SIDES,
@@ -54,10 +55,19 @@ export const revocationSource = pgEnum('revocation_source', ['officer']);
 export const adminUsers = pgTable('admin_users', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: text('name').notNull(),
+  /** Lowercase (CHECK `admin_users_email_lower`, 0019). */
   email: text('email').notNull().unique(),
-  passwordHash: text('password_hash').notNull(),
+  /** Null while an invite or reset link is out (admin close-out §5.1): login refuses it with the generic error. */
+  passwordHash: text('password_hash'),
   role: adminRole('role').notNull(),
   isActive: boolean('is_active').notNull().default(true),
+  /** Admin close-out R13: a token carries it as `tv`; +1 ends every session of the admin. */
+  tokenVersion: integer('token_version').notNull().default(0),
+  passwordSetAt: timestamp('password_set_at', { withTimezone: true }),
+  lastLoginAt: timestamp('last_login_at', { withTimezone: true }),
+  deactivatedAt: timestamp('deactivated_at', { withTimezone: true }),
+  deactivatedByAdminId: uuid('deactivated_by_admin_id').references((): AnyPgColumn => adminUsers.id),
+  createdByAdminId: uuid('created_by_admin_id').references((): AnyPgColumn => adminUsers.id),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
@@ -129,6 +139,8 @@ export const businesses = pgTable(
     locationIdx: index('businesses_location_idx').using('gist', t.location),
     cityIdx: index('businesses_city_idx').on(t.city),
     cityAreaIdx: index('businesses_city_industrial_area_idx').on(t.city, t.industrialAreaId),
+    // Admin close-out §5.6: the dashboard's new businesses.
+    createdIdx: index('businesses_created_idx').on(t.createdAt),
   }),
 );
 
@@ -153,16 +165,26 @@ export const users = pgTable(
 );
 
 /** Every admin action: who, what, when, before/after. */
-export const auditLog = pgTable('audit_log', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  adminId: uuid('admin_id').references(() => adminUsers.id),
-  action: text('action').notNull(),
-  entityType: text('entity_type').notNull(),
-  entityId: text('entity_id'),
-  before: jsonb('before'),
-  after: jsonb('after'),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-});
+export const auditLog = pgTable(
+  'audit_log',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    /** Null means System (admin close-out §5.5). */
+    adminId: uuid('admin_id').references(() => adminUsers.id),
+    action: text('action').notNull(),
+    entityType: text('entity_type').notNull(),
+    entityId: text('entity_id'),
+    before: jsonb('before'),
+    after: jsonb('after'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  // Admin close-out §5.5: the audit log viewer's order and filters.
+  (t) => ({
+    createdIdx: index('audit_log_created_idx').on(t.createdAt.desc(), t.id.desc()),
+    entityIdx: index('audit_log_entity_idx').on(t.entityType, t.entityId),
+    adminCreatedIdx: index('audit_log_admin_created_idx').on(t.adminId, t.createdAt.desc()),
+  }),
+);
 
 // ─── A4 machine catalogue ───
 // No ON DELETE CASCADE anywhere: deletes are guarded in services.
@@ -668,7 +690,11 @@ export const listingStatusHistory = pgTable(
     reason: text('reason'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => ({ listingCreatedIdx: index('listing_status_history_listing_created_idx').on(t.listingId, t.createdAt) }),
+  (t) => ({
+    listingCreatedIdx: index('listing_status_history_listing_created_idx').on(t.listingId, t.createdAt),
+    // Admin close-out §5.6: the dashboard's sold / closed listings.
+    toStatusCreatedIdx: index('listing_status_history_to_status_created_idx').on(t.toStatus, t.createdAt),
+  }),
 );
 
 /** Generic reports (A6-ready); listings are the only target in F2 (§8.4). One open report per business and target. */
@@ -861,6 +887,8 @@ export const chatThreads = pgTable(
     sellerInboxIdx: index('chat_threads_seller_inbox_idx').on(t.sellerBusinessId, t.lastMessageAt.desc(), t.id),
     buyerTurnIdx: index('chat_threads_buyer_turn_idx').on(t.buyerBusinessId).where(sql`${t.buyerTurn}`),
     sellerTurnIdx: index('chat_threads_seller_turn_idx').on(t.sellerBusinessId).where(sql`${t.sellerTurn}`),
+    // Admin close-out §5.6: the dashboard's enquiries.
+    createdIdx: index('chat_threads_created_idx').on(t.createdAt),
   }),
 );
 
@@ -931,6 +959,8 @@ export const offers = pgTable(
     buyerStatusIdx: index('offers_buyer_status_idx').on(t.buyerBusinessId, t.status),
     negotiationIdx: index('offers_negotiation_idx').on(t.negotiationId, t.round),
     threadIdx: index('offers_thread_idx').on(t.threadId, t.createdAt),
+    // Admin close-out §5.6: the dashboard's offers (opening rows only).
+    openingCreatedIdx: index('offers_opening_created_idx').on(t.createdAt).where(sql`${t.round} = 0`),
   }),
 );
 
@@ -1019,6 +1049,8 @@ export const deals = pgTable(
       .on(t.listingId)
       .where(sql`${t.status} IN ('agreed', 'handed_over', 'disputed')`),
     threadIdx: index('deals_thread_idx').on(t.threadId),
+    // Admin close-out §5.6: the dashboard's deals and their value.
+    acceptedIdx: index('deals_accepted_idx').on(t.acceptedAt),
   }),
 );
 
@@ -1062,6 +1094,8 @@ export const chatMessages = pgTable(
   (t) => ({
     threadSeqIdx: index('chat_messages_thread_seq_idx').on(t.threadId, t.seq.desc()),
     clientIdUq: uniqueIndex('chat_messages_client_id_uq').on(t.senderUserId, t.clientMessageId),
+    // Admin close-out §5.4: the fraud scan reads messages past its `seq` watermark.
+    seqIdx: index('chat_messages_seq_idx').on(t.seq),
   }),
 );
 
@@ -1502,6 +1536,8 @@ export const partRequests = pgTable(
     activeExpiresIdx: index('part_requests_active_expires_idx').on(t.expiresAt).where(sql`${t.status} = 'active'`),
     activePointIdx: index('part_requests_active_point_idx').using('gist', t.point).where(sql`${t.status} = 'active'`),
     statusCreatedIdx: index('part_requests_status_created_idx').on(t.status, t.createdAt.desc()),
+    // Admin close-out §5.6: the dashboard's requirements posted.
+    firstPostedIdx: index('part_requests_first_posted_idx').on(t.firstPostedAt),
   }),
 );
 
@@ -1808,6 +1844,8 @@ export const rentalBookings = pgTable(
       .where(sql`${t.status} = 'returned'`),
     threadIdx: index('rental_bookings_thread_idx').on(t.threadId),
     listingIdx: index('rental_bookings_listing_idx').on(t.listingId),
+    // Admin close-out §5.6: the dashboard's rental bookings and their value.
+    confirmedIdx: index('rental_bookings_confirmed_idx').on(t.confirmedAt),
   }),
 );
 
@@ -1884,3 +1922,125 @@ export const rentalBlocks = pgTable(
   },
   (t) => ({ listingRangeIdx: index('rental_blocks_listing_range_idx').on(t.listingId, t.startDate, t.endDate) }),
 );
+
+// ─── Admin close-out (spec 2026-11-21-admin-close-out §5) ───
+// CHECKs in the custom migration 0019 (drizzle-kit 0.22 cannot emit them).
+
+/**
+ * An invite or reset link (§5.2): only the SHA-256 hex of the token is stored. Issuing one sets `used_at` on the admin's
+ * other unused links (newest wins). `purpose` is `invite` | `reset` (CHECK `admin_password_tokens_purpose`). Deleted 7
+ * days after use or expiry.
+ */
+export const adminPasswordTokens = pgTable(
+  'admin_password_tokens',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    adminId: uuid('admin_id')
+      .notNull()
+      .references(() => adminUsers.id),
+    tokenHash: text('token_hash').notNull().unique(),
+    purpose: text('purpose').$type<'invite' | 'reset'>().notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    usedAt: timestamp('used_at', { withTimezone: true }),
+    createdByAdminId: uuid('created_by_admin_id').references(() => adminUsers.id),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({ adminCreatedIdx: index('admin_password_tokens_admin_created_idx').on(t.adminId, t.createdAt) }),
+);
+
+export const fraudSignalKind = pgEnum('fraud_signal_kind', FRAUD_SIGNAL_KINDS);
+export const fraudSignalStatus = pgEnum('fraud_signal_status', FRAUD_SIGNAL_STATUSES);
+
+/**
+ * An advisory fraud signal on a business (§5.3, §8): one open per business and kind; evidence ≤ 50 items (CHECK
+ * `fraud_signals_evidence_shape`), `evidence_count` counts every item ever appended; `reviewed_at` set exactly when
+ * closed (CHECK `fraud_signals_review_shape`). Never a raw phone, message text or install id.
+ */
+export const fraudSignals = pgTable(
+  'fraud_signals',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    businessId: uuid('business_id')
+      .notNull()
+      .references(() => businesses.id),
+    kind: fraudSignalKind('kind').notNull(),
+    status: fraudSignalStatus('status').notNull().default('open'),
+    evidence: jsonb('evidence').$type<FraudEvidence[]>().notNull().default([]),
+    evidenceCount: integer('evidence_count').notNull().default(0),
+    firstSeenAt: timestamp('first_seen_at', { withTimezone: true }).notNull(),
+    lastSeenAt: timestamp('last_seen_at', { withTimezone: true }).notNull(),
+    reviewedByAdminId: uuid('reviewed_by_admin_id').references(() => adminUsers.id),
+    reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
+    note: text('note'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    oneOpen: uniqueIndex('fraud_signals_one_open').on(t.businessId, t.kind).where(sql`${t.status} = 'open'`),
+    statusLastSeenIdx: index('fraud_signals_status_last_seen_idx').on(t.status, t.lastSeenAt.desc()),
+    // A business's signals in any status (business detail, the rules' "after the latest close").
+    businessKindIdx: index('fraud_signals_business_kind_idx').on(t.businessId, t.kind),
+  }),
+);
+
+/**
+ * Which accounts signed in on which app install (§5.4): `user_devices.install_id` moves to the latest user, so it can't
+ * show history. `install_hash` is the SHA-256 hex of the `X-Install-Id`, never the value. Deleted after 90 days.
+ */
+export const installSightings = pgTable(
+  'install_sightings',
+  {
+    installHash: text('install_hash').notNull(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id),
+    firstSeenAt: timestamp('first_seen_at', { withTimezone: true }).notNull().defaultNow(),
+    lastSeenAt: timestamp('last_seen_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.installHash, t.userId] }),
+    // The scan's watermark and the 90-day retention.
+    lastSeenIdx: index('install_sightings_last_seen_idx').on(t.lastSeenAt),
+    userIdx: index('install_sightings_user_idx').on(t.userId),
+  }),
+);
+
+/**
+ * A phone number seen in a chat message (§5.4), as HMAC-SHA-256 with `SIGNAL_HASH_KEY`, never the number. One row per
+ * message and number (a re-scan inserts `ON CONFLICT DO NOTHING`). Deleted after 90 days.
+ */
+export const contactSightings = pgTable(
+  'contact_sightings',
+  {
+    id: bigserial('id', { mode: 'number' }).primaryKey(),
+    phoneHmac: text('phone_hmac').notNull(),
+    /** The sender's business. */
+    businessId: uuid('business_id')
+      .notNull()
+      .references(() => businesses.id),
+    threadId: uuid('thread_id')
+      .notNull()
+      .references(() => chatThreads.id),
+    messageId: uuid('message_id')
+      .notNull()
+      .references(() => chatMessages.id),
+    seenAt: timestamp('seen_at', { withTimezone: true }).notNull(),
+  },
+  (t) => ({
+    phoneSeenIdx: index('contact_sightings_phone_seen_idx').on(t.phoneHmac, t.seenAt),
+    businessSeenIdx: index('contact_sightings_business_seen_idx').on(t.businessId, t.seenAt),
+    messagePhoneUq: uniqueIndex('contact_sightings_message_phone_uq').on(t.messageId, t.phoneHmac),
+  }),
+);
+
+/**
+ * The fraud scan's watermark per rule source (§5.4, R9a): `chat_messages` over `chat_messages.seq` (`last_seq`), the
+ * others by time (`last_at`); exactly one set (CHECK `fraud_scan_state_one_mark`). A missing row means "start 30 days
+ * back".
+ */
+export const fraudScanState = pgTable('fraud_scan_state', {
+  rule: text('rule').primaryKey(),
+  lastSeq: bigint('last_seq', { mode: 'number' }),
+  lastAt: timestamp('last_at', { withTimezone: true }),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});

@@ -4,12 +4,17 @@ import { eq } from 'drizzle-orm';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import type { AdminRole } from '@mpm/shared-types';
 import type { Db } from '../db/index.js';
-import { users } from '../db/schema.js';
+import { adminUsers, users } from '../db/schema.js';
 import { AppError, ForbiddenError, UnauthorizedError } from '../lib/errors.js';
 
+/**
+ * An admin session (admin close-out R13, §11.1). `tv` is the admin row's `token_version` when the token was signed;
+ * the role in a token is never trusted: `requireAdmin` / `requireAdminRole` replace it with the row's.
+ */
 export interface AdminTokenPayload {
   adminId: string;
   role: AdminRole;
+  tv: number;
 }
 
 export interface UserTokenPayload {
@@ -55,11 +60,15 @@ export function signUserToken(payload: UserTokenPayload): string {
   return jwt.sign({ ...payload, typ: 'user' }, secret('JWT_SECRET'), { expiresIn: '30d' });
 }
 
-/** Verifies an admin token (signature, expiry and `typ`). Throws on anything else. */
-export function verifyAdminToken(token: string): AdminTokenPayload {
-  const p = jwt.verify(token, secret('ADMIN_JWT_SECRET')) as AdminTokenPayload & { typ?: string };
-  if (p.typ !== 'admin') throw new Error('Not an admin token');
-  return { adminId: p.adminId, role: p.role };
+/**
+ * Verifies an admin token (signature, expiry and `typ`). Throws on anything else. A token signed before token versions
+ * existed has no `tv` and reads as `-1`, which no row has, so every such session ends (plan D2). The token's role is
+ * not returned: only `loadActiveAdmin` (the row) says what the admin may do (R13).
+ */
+export function verifyAdminToken(token: string): { adminId: string; tv: number } {
+  const p = jwt.verify(token, secret('ADMIN_JWT_SECRET')) as Partial<AdminTokenPayload> & { typ?: string };
+  if (p.typ !== 'admin' || typeof p.adminId !== 'string') throw new Error('Not an admin token');
+  return { adminId: p.adminId, tv: Number.isInteger(p.tv) ? (p.tv as number) : -1 };
 }
 
 /** Verifies a user token (signature, expiry and `typ`). Throws on anything else. */
@@ -88,22 +97,54 @@ export async function loadActiveUser(db: Db, userId: string): Promise<UserTokenP
   return { userId, businessId: row.businessId };
 }
 
+/** `401 ADMIN_SESSION_ENDED`: the admin must sign in again (R13). */
+export class AdminSessionEndedError extends AppError {
+  constructor() {
+    super('Your admin session has ended. Sign in again.', 401, 'ADMIN_SESSION_ENDED');
+  }
+}
+
+/**
+ * The signed-in admin as the database says right now (admin close-out R13, §11.1, plan D2): one primary-key lookup per
+ * request and per `/admin` socket handshake. A non-UUID id, a missing row, a deactivated admin, an admin with no
+ * password (invited, or a reset link out) or a token version other than `tv` is `401 ADMIN_SESSION_ENDED`. The role
+ * comes from the row, so a role change applies on the next request.
+ */
+export async function loadActiveAdmin(db: Db, adminId: string, tv: number): Promise<AdminTokenPayload> {
+  if (!UUID.test(adminId)) throw new AdminSessionEndedError();
+  const [row] = await db
+    .select({
+      role: adminUsers.role,
+      isActive: adminUsers.isActive,
+      passwordHash: adminUsers.passwordHash,
+      tokenVersion: adminUsers.tokenVersion,
+    })
+    .from(adminUsers)
+    .where(eq(adminUsers.id, adminId));
+  if (!row || !row.isActive || row.passwordHash === null || row.tokenVersion !== tv) throw new AdminSessionEndedError();
+  return { adminId, role: row.role, tv: row.tokenVersion };
+}
+
 export default fp(async (fastify) => {
-  const verifyAdmin = (request: FastifyRequest) => {
+  // A bad signature, expiry or `typ` stays `401 UNAUTHORIZED`; a valid token whose session ended is
+  // `401 ADMIN_SESSION_ENDED`. Needs the db plugin (registered later in buildApp, so read at request time).
+  const verifyAdmin = async (request: FastifyRequest) => {
+    let claims: { adminId: string; tv: number };
     try {
-      request.admin = verifyAdminToken(bearer(request));
+      claims = verifyAdminToken(bearer(request));
     } catch {
       throw new UnauthorizedError();
     }
+    request.admin = await loadActiveAdmin(fastify.db, claims.adminId, claims.tv);
   };
 
   fastify.decorate('requireAdmin', async (request: FastifyRequest) => {
-    verifyAdmin(request);
+    await verifyAdmin(request);
   });
 
-  // super_admin passes every role check.
+  // super_admin passes every role check. The role is the row's (R13).
   fastify.decorate('requireAdminRole', (...roles: AdminRole[]) => async (request: FastifyRequest) => {
-    verifyAdmin(request);
+    await verifyAdmin(request);
     const role = request.admin!.role;
     if (role !== 'super_admin' && !roles.includes(role)) throw new ForbiddenError();
   });

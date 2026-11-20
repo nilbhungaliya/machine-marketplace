@@ -892,6 +892,10 @@ export interface AdminBusinessDetail {
   partRequestCount: number;
   /** M14 §15: the business's rental bookings in any status, as the owner and as the renter. */
   rentalBookingCount: { asOwner: number; asRenter: number };
+  /** Admin close-out §7.3: reports about the business (open = `open` or `reviewing`), open ones by target. */
+  reports: { open: number; byTarget: Partial<Record<AdminReportTarget, number>> };
+  /** Admin close-out §7.3: the business's fraud signals, open first. */
+  fraudSignals: FraudSignalRow[];
 }
 
 // ─── Listings (F2 + F3 + A3; spec 2026-11-18-f2-f3-listings-design) ───
@@ -1559,6 +1563,47 @@ export const APP_SETTINGS = [
     key: 'rental_advance_days', type: 'int', default: 180, min: 7, max: 365,
     label: 'Book ahead at most (days)',
     help: 'How far ahead a booking may start.',
+  },
+  // ─── Fraud signals (admin close-out spec §12): a change applies from the next job run ───
+  {
+    key: 'fraud_window_days', type: 'int', default: 30, min: 7, max: 90,
+    label: 'Look-back (days)',
+    help: 'How far back every rule but the new-account burst looks.',
+  },
+  {
+    key: 'fraud_device_accounts', type: 'int', default: 3, min: 2, max: 20,
+    label: 'Accounts on one install',
+    help: 'Accounts signed in on one app install before their businesses get a "shared device" signal.',
+  },
+  {
+    key: 'fraud_phone_businesses', type: 'int', default: 2, min: 2, max: 20,
+    label: 'Businesses posting one number',
+    help: 'Businesses posting the same phone number in chat before each gets a "repeated phone" signal.',
+  },
+  {
+    key: 'fraud_phone_threads', type: 'int', default: 10, min: 3, max: 200,
+    label: 'Threads with one number',
+    help: 'Conversations one business posts the same phone number in before it gets a "repeated phone" signal.',
+  },
+  {
+    key: 'fraud_payment_messages', type: 'int', default: 2, min: 1, max: 50,
+    label: 'Payment-detail messages',
+    help: 'Messages with payment or bank details from one business before it gets a "payment details" signal.',
+  },
+  {
+    key: 'fraud_new_account_days', type: 'int', default: 7, min: 1, max: 30,
+    label: 'New account (days)',
+    help: 'How long an account counts as new for the burst rule.',
+  },
+  {
+    key: 'fraud_burst_contacts', type: 'int', default: 8, min: 3, max: 100,
+    label: 'Burst contacts in 24 h',
+    help: 'Distinct businesses a new account contacts in 24 hours before it gets a "new account burst" signal.',
+  },
+  {
+    key: 'fraud_reports_against', type: 'int', default: 3, min: 2, max: 50,
+    label: 'Reports against a business',
+    help: 'Reports from distinct businesses against one business before it gets a "reports against" signal.',
   },
 ] as const satisfies readonly AppSettingDef[];
 
@@ -3428,11 +3473,15 @@ export interface AdminThreadRead {
   messages: AdminThreadMessage[];
 }
 
-/** `GET /admin/reports?target=conversation|review|part_request`. */
+/** `GET /admin/reports?target=business|listing|conversation|review|part_request` (admin close-out §7.2). */
 export interface AdminReportRow {
   id: string;
-  target: 'conversation' | 'review' | 'part_request';
+  target: AdminReportTarget;
   targetId: string;
+  /** Admin close-out §7.2: business reports, the business reported. */
+  business?: { id: string; name: string };
+  /** Admin close-out §7.2: listing reports (read-only here; F2's queue resolves them), the listing and its seller. */
+  listing?: { id: string; ref: number; title: string; seller: AdminPartyRef };
   /** F8 §14: part-request reports, the request and its name (masked), linking to its admin page. */
   partRequestId?: string;
   partRequestName?: string;
@@ -4699,3 +4748,339 @@ export interface RequestBookingParams {
   prefill?: Partial<RentalRequestInput>;
   change?: { bookingId: string; versionSeq: number };
 }
+
+// ─── Admin close-out (AD1 dashboard, AD6 reports / fraud signals / exports, AD7 admin users + audit log; spec
+// 2026-11-21-admin-close-out-design §5.7). Key names fixed by plan C0-1. ───
+
+// Dashboard (§6)
+
+export const DASHBOARD_RANGES = ['7d', '30d', '90d', 'custom'] as const;
+export type DashboardRange = (typeof DASHBOARD_RANGES)[number];
+/** A custom range spans at most this many days (`400 DASHBOARD_RANGE_INVALID`). */
+export const DASHBOARD_CUSTOM_MAX_DAYS = 366;
+export const DASHBOARD_BREAKDOWNS = ['city', 'industrial_area', 'category'] as const;
+export type DashboardBreakdown = (typeof DASHBOARD_BREAKDOWNS)[number];
+
+/** `GET /admin/dashboard` query (§6.3, plan D6): `from` / `to` are IST dates (`YYYY-MM-DD`) for `custom`. */
+export interface AdminDashboardQuery {
+  range: DashboardRange;
+  from?: string;
+  to?: string;
+  city?: string;
+  industrialAreaId?: string;
+  categoryId?: string;
+  breakdown?: DashboardBreakdown;
+}
+
+/** A count over the period and over the period before it. */
+export interface PeriodCount {
+  value: number;
+  previous: number;
+}
+
+/** A rate (0–1) or a median (hours) over the period and the one before; null when there is nothing to measure. */
+export interface PeriodRate {
+  value: number | null;
+  previous: number | null;
+}
+
+/** `GET /admin/dashboard` (§6.1–§6.2). Money in paise. */
+export interface AdminDashboard {
+  generatedAt: string;
+  period: { from: string; to: string; prevFrom: string; prevTo: string; granularity: 'day' | 'week' };
+  snapshot: {
+    businesses: number;
+    verifiedBusinesses: number;
+    activeUsers: number;
+    activeListings: number;
+    partsAvailable: number;
+    machinesForRent: number;
+    machinesOutToday: number;
+    openRequirements: number;
+  };
+  metrics: {
+    newBusinesses: PeriodCount;
+    enquiries: PeriodCount;
+    offers: PeriodCount;
+    deals: PeriodCount;
+    dealValuePaise: PeriodCount;
+    dealsCompleted: PeriodCount;
+    rentalBookings: PeriodCount;
+    rentalValuePaise: PeriodCount;
+    soldListings: PeriodCount;
+    closedListings: PeriodCount;
+    requirementsPosted: PeriodCount;
+    requirementMatchRate: PeriodRate;
+    fulfilmentMedianHours: PeriodRate;
+    replyRate24h: PeriodRate;
+    firstReplyMedianHours: PeriodRate;
+  };
+  trend: {
+    bucket: string;
+    enquiries: number;
+    offers: number;
+    deals: number;
+    dealValuePaise: number;
+    rentalBookings: number;
+  }[];
+  breakdown: {
+    by: DashboardBreakdown;
+    rows: {
+      key: string;
+      label: string;
+      activeListings: number;
+      newListings: number;
+      enquiries: number;
+      deals: number;
+      dealValuePaise: number;
+      dealsPrevious: number;
+    }[];
+  };
+}
+
+/** `GET /admin/dashboard/work` (§6.1): only the counts the admin's role may act on. */
+export type AdminWorkCounts = Partial<{
+  listingsToReview: number;
+  listingsReported: number;
+  verificationWaiting: number;
+  disputesOpen: number;
+  reportsOpen: number;
+  signalsOpen: number;
+}>;
+
+/** `GET /admin/dashboard/options`: the filter choices. */
+export interface DashboardOptions {
+  cities: string[];
+  industrialAreas: { id: string; name: string; city: string }[];
+  categories: { id: string; name: string }[];
+}
+
+// Admin users (§5.1, §11)
+
+export const ADMIN_USER_STATUSES = ['active', 'invited', 'reset_pending', 'deactivated'] as const;
+export type AdminUserStatus = (typeof ADMIN_USER_STATUSES)[number];
+
+/**
+ * An admin's status, derived (§5.1): `deactivated` when not active; with no password `invited` (never signed in) or
+ * `reset_pending` (a reset link is out); else `active`.
+ */
+export function adminUserStatus(r: { isActive: boolean; hasPassword: boolean; lastLoginAt: string | Date | null }): AdminUserStatus {
+  if (!r.isActive) return 'deactivated';
+  if (!r.hasPassword) return r.lastLoginAt == null ? 'invited' : 'reset_pending';
+  return 'active';
+}
+
+export const ADMIN_PASSWORD_MIN = 12;
+export const ADMIN_PASSWORD_MAX = 128;
+/** A password link works once, for this many hours; the newest link wins. */
+export const ADMIN_LINK_HOURS = 48;
+
+export type AdminPasswordProblem = 'too_short' | 'too_long' | 'is_email';
+
+/** What is wrong with a new admin password (`400 PASSWORD_TOO_WEAK`), or null. `is_email` compares trimmed, any case. */
+export function adminPasswordProblem(password: string, email: string): AdminPasswordProblem | null {
+  if (password.length < ADMIN_PASSWORD_MIN) return 'too_short';
+  if (password.length > ADMIN_PASSWORD_MAX) return 'too_long';
+  if (password.trim().toLowerCase() === email.trim().toLowerCase()) return 'is_email';
+  return null;
+}
+
+/** `GET /admin/admin-users` row (newest first, unpaged; plan D11). */
+export interface AdminUserRow {
+  id: string;
+  name: string;
+  email: string;
+  role: AdminRole;
+  status: AdminUserStatus;
+  lastLoginAt: string | null;
+  createdAt: string;
+  createdBy: { id: string; name: string } | null;
+  deactivatedAt: string | null;
+}
+
+/** An invite or reset link's token (shown once; the panel builds `/set-password#t=<token>`, plan D13). */
+export interface AdminPasswordLink {
+  token: string;
+  expiresAt: string;
+}
+
+export interface AdminUserCreateResult {
+  admin: AdminUserRow;
+  link: AdminPasswordLink;
+}
+
+/** Who a password link is for (inspect before setting the password). */
+export interface PasswordLinkInfo {
+  name: string;
+  email: string;
+  purpose: 'invite' | 'reset';
+}
+
+// Audit log (§11.3)
+
+export const AUDIT_PAGE_SIZES = [25, 50, 100] as const;
+export type AuditPageSize = (typeof AUDIT_PAGE_SIZES)[number];
+
+/** `admin` null means System. */
+export interface AuditLogRow {
+  id: string;
+  at: string;
+  admin: { id: string; name: string } | null;
+  action: string;
+  label: string;
+  entityType: string;
+  entityId: string | null;
+  entityLabel: string | null;
+  href: string | null;
+}
+
+/** Before / after are masked unless revealed (`masked: false` after `audit.reveal`). */
+export type AuditLogDetail = AuditLogRow & {
+  before: unknown;
+  after: unknown;
+  changedKeys: string[];
+  masked: boolean;
+};
+
+export interface AuditLogPage {
+  rows: AuditLogRow[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface AuditLogFacets {
+  actions: { action: string; label: string }[];
+  entityTypes: string[];
+  admins: { id: string; name: string }[];
+}
+
+// Fraud signals (§5.3, §8): advisory only, never an automatic action
+
+export const FRAUD_SIGNAL_KINDS = [
+  'shared_device', 'repeated_phone', 'payment_details', 'new_account_burst', 'reports_against',
+] as const;
+export type FraudSignalKind = (typeof FRAUD_SIGNAL_KINDS)[number];
+
+export const FRAUD_SIGNAL_STATUSES = ['open', 'dismissed', 'actioned'] as const;
+export type FraudSignalStatus = (typeof FRAUD_SIGNAL_STATUSES)[number];
+
+export const PAYMENT_MATCH_KINDS = ['upi_link', 'upi_handle', 'pay_host', 'advance_ask', 'bank_details'] as const;
+export type PaymentMatchKind = (typeof PAYMENT_MATCH_KINDS)[number];
+
+/** A signal keeps at most this many evidence items (CHECK in migration 0019); `evidence_count` counts them all. */
+export const FRAUD_EVIDENCE_MAX = 50;
+
+/**
+ * One piece of evidence as stored (§5.3): `key` dedupes (plan D16); `groupId` is the first 8 hex characters of the
+ * phone HMAC or install hash, never the value. No raw phone, message text or install id.
+ */
+export interface FraudEvidence {
+  key: string;
+  at: string;
+  summary: string;
+  refs: {
+    threadId?: string;
+    messageId?: string;
+    businessIds?: string[];
+    userIds?: string[];
+    reportIds?: string[];
+    groupId?: string;
+  };
+}
+
+export interface FraudSignalRow {
+  id: string;
+  business: { id: string; name: string };
+  kind: FraudSignalKind;
+  status: FraudSignalStatus;
+  evidenceCount: number;
+  firstSeenAt: string;
+  lastSeenAt: string;
+  reviewedAt: string | null;
+  reviewedBy: { id: string; name: string } | null;
+  note: string | null;
+}
+
+/** Evidence as an admin reads it: refs resolved to names and links. */
+export interface FraudEvidenceView {
+  key: string;
+  at: string;
+  summary: string;
+  groupId: string | null;
+  threadId: string | null;
+  messageId: string | null;
+  businesses: { id: string; name: string }[];
+  users: { id: string; name: string; businessId: string }[];
+  reportIds: string[];
+}
+
+export type FraudSignalDetail = FraudSignalRow & { evidence: FraudEvidenceView[] };
+
+export interface FraudSignalPage {
+  rows: FraudSignalRow[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+// Reports (§7)
+
+export const BUSINESS_REPORT_REASONS = [
+  'fake_business', 'scam_or_advance_payment', 'abusive', 'impersonation', 'other',
+] as const;
+export type BusinessReportReason = (typeof BUSINESS_REPORT_REASONS)[number];
+export const BUSINESS_REPORT_DETAILS_MAX = 500;
+
+/** `POST /businesses/:id/reports`; `other` requires details (plan D8). */
+export interface BusinessReportRequest {
+  reason: BusinessReportReason;
+  details?: string | null;
+}
+
+/** The targets of Reports & flags (R7): listing reports are shown read-only (F2's queue resolves them). */
+export const ADMIN_REPORT_TARGETS = ['business', 'listing', 'conversation', 'review', 'part_request'] as const;
+export type AdminReportTarget = (typeof ADMIN_REPORT_TARGETS)[number];
+
+/** `GET /admin/reports/count` (plan D5): open reports (`open` or `reviewing`, any target) and open signals. */
+export interface AdminReportCounts {
+  reports: number;
+  signals: number;
+}
+
+// Exports (§10)
+
+export const EXPORT_SHEETS = ['businesses', 'listings', 'deals', 'rental_bookings', 'part_requests'] as const;
+export type ExportSheet = (typeof EXPORT_SHEETS)[number];
+/** An export over this many rows is refused (`400 EXPORT_TOO_LARGE`): narrow the filters. */
+export const EXPORT_ROW_CAP = 10_000;
+export const EXPORT_PAGE_SIZE = 1_000;
+
+/** Who may export each sheet (`super_admin` passes every check). */
+export const EXPORT_SHEET_ROLES: Record<ExportSheet, AdminRole[]> = {
+  businesses: ['support', 'verification_officer', 'moderator'],
+  listings: ['moderator', 'support'],
+  deals: ['support', 'operations'],
+  rental_bookings: ['operations', 'support'],
+  part_requests: ['moderator', 'support'],
+};
+
+/** §14 + plan D11 (`ADMIN_DEACTIVATED`); `REPORT_EXISTS` is reused. */
+export const ADMIN_CLOSE_OUT_ERROR_CODES = [
+  'ADMIN_SESSION_ENDED',
+  'ADMIN_SELF_ACTION',
+  'ADMIN_LAST_SUPER_ADMIN',
+  'ADMIN_EMAIL_TAKEN',
+  'ADMIN_DEACTIVATED',
+  'PASSWORD_LINK_INVALID',
+  'PASSWORD_TOO_WEAK',
+  'PASSWORD_WRONG',
+  'TOO_MANY_ATTEMPTS',
+  'DASHBOARD_RANGE_INVALID',
+  'EXPORT_TOO_LARGE',
+  'CANNOT_REPORT_SELF',
+  'BUSINESS_NOT_FOUND',
+  'REPORT_RESOLVE_ELSEWHERE',
+  'FRAUD_SIGNAL_NOT_OPEN',
+] as const;
+export type AdminCloseOutErrorCode = (typeof ADMIN_CLOSE_OUT_ERROR_CODES)[number];

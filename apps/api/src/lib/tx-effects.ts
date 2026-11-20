@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import type { AdminRole } from '@mpm/shared-types';
 import type { Tx } from '../db/index.js';
-import { adminRoleRoom, businessRoom, userRoom } from '../socket/rooms.js';
+import { adminRoleRoom, adminUserRoom, businessRoom, userRoom } from '../socket/rooms.js';
 
 /**
  * After-commit effects (F6 + F7 plan P2). `runTx` opens a transaction and gives it a queue; services queue socket
@@ -26,6 +26,8 @@ export interface QueuedEmit {
   room: string;
   event: string;
   payload: unknown;
+  /** After the emit, disconnect every socket in the room (closing the connection), as for an ended admin session. */
+  disconnect?: boolean;
 }
 
 const queues = new WeakMap<object, QueuedEmit[]>();
@@ -55,6 +57,8 @@ function flush(app: TxApp, queue: QueuedEmit[]): void {
   for (const e of queue) {
     try {
       io.of(e.namespace).to(e.room).emit(e.event, e.payload);
+      // Engine.IO drains the write buffer before closing, so the event above still reaches the client.
+      if (e.disconnect) io.of(e.namespace).in(e.room).disconnectSockets(true);
     } catch (err) {
       app.log.warn({ err, event: e.event }, 'after-commit emit failed');
     }
@@ -109,4 +113,14 @@ export function queueBusinessEmit(tx: Tx, businessId: string, event: string, pay
 /** An id-only event to one admin role's sockets (`adminRoleRoom`, /admin). */
 export function queueAdminEmit(tx: Tx, role: AdminRole, event: string, payload: unknown): void {
   queueEmit(tx, { namespace: '/admin', room: adminRoleRoom(role), event, payload });
+}
+
+/**
+ * Ends one admin's live sessions after commit (admin close-out R13, §15, plan D2): emits `admin:session_ended { tv }`
+ * with the new token version to the admin's own room, then drops those sockets. A panel signs out only when `tv` is
+ * greater than its own token's, so the tab that just changed its own password keeps its fresh session. Same-process
+ * limit as the user sockets (open item).
+ */
+export function queueAdminSessionEnd(tx: Tx, adminId: string, tv: number): void {
+  queueEmit(tx, { namespace: '/admin', room: adminUserRoom(adminId), event: 'admin:session_ended', payload: { tv }, disconnect: true });
 }

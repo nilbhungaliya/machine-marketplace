@@ -10,6 +10,15 @@ const optionCls =
 
 /** Per target: the title's noun and what an admin does first, on its own, before closing the report. */
 const COPY: Record<AdminReportTarget, { what: string; first: string }> = {
+  // Admin close-out C0-1 placeholders: lane B3 writes this copy.
+  business: {
+    what: 'business',
+    first: 'Suspending or blocking an account is done first, on its own; this closes the report.',
+  },
+  listing: {
+    what: 'listing',
+    first: 'Listing reports are resolved in Listing moderation.',
+  },
   conversation: {
     what: 'conversation',
     first: 'Suspending or blocking an account is done first, on its own; this closes the report.',

@@ -18,6 +18,7 @@ import { bumpReaderVersion, readReaderVersion, readerVersionKey } from '../src/s
 import { discoveryRateKey, discoveryRateLimits } from '../src/services/discovery/rate-key.js';
 import { createTestCatalog, deleteTestCatalog, type TestCatalog } from './_helpers/test-catalog.js';
 import { deleteTestBusinesses } from './_helpers/test-businesses.js';
+import { createTestAdmin, deleteTestAdmins } from './_helpers/test-admins.js';
 import { createTestSeller, deleteTestSellerExtras, insertTestListing, type TestSeller } from './_helpers/test-listings.js';
 import {
   deleteTestDiscovery,
@@ -41,6 +42,7 @@ let viewer: TestSeller;
 let areaId = '';
 const officeIds: string[] = [];
 const sellers: TestSeller[] = [];
+const adminIds: string[] = [];
 
 const ENV_KEYS = ['DISCOVERY_RATE_LIMIT_MAX', 'DISCOVERY_IP_RATE_MAX'] as const;
 const savedEnv = Object.fromEntries(ENV_KEYS.map((k) => [k, process.env[k]]));
@@ -86,6 +88,7 @@ afterAll(async () => {
   await deleteTestDiscovery(runId, { userIds: sellers.map((s) => s.userId) });
   await deleteTestBusinesses(sellers.map((s) => s.businessId));
   await deleteTestSellerExtras(sellers);
+  await deleteTestAdmins(adminIds);
   await deleteTestPincodeOffices(officeIds);
   if (areaId) await db.delete(industrialAreas).where(eq(industrialAreas.id, areaId));
   await deleteTestCatalog(catalog.categoryId);
@@ -370,7 +373,7 @@ describe('rate limits (R17, §7)', () => {
     expect(discoveryRateKey(fake({ 'x-install-id': install }))).toBe(`i:${install.toLowerCase()}`);
     expect(discoveryRateKey(fake({ 'x-install-id': 'not-a-uuid' }))).toBe('ip:10.1.2.3');
     expect(discoveryRateKey(fake({ authorization: 'Bearer junk' }))).toBe('ip:10.1.2.3');
-    expect(discoveryRateKey(fake({ authorization: `Bearer ${signAdminToken({ adminId: randomUUID(), role: 'super_admin' })}` }))).toBe('ip:10.1.2.3');
+    expect(discoveryRateKey(fake({ authorization: `Bearer ${signAdminToken({ adminId: randomUUID(), role: 'super_admin', tv: 0 })}` }))).toBe('ip:10.1.2.3');
   });
 
   it('has the spec numbers unless overridden', () => {
@@ -471,7 +474,10 @@ describe('rate limits (R17, §7)', () => {
       const url = method === 'GET' ? '/users/me/saved-listings' : `/users/me/saved-listings/${id}`;
       expect((await app.inject({ method, url })).statusCode, `${method} ${url}`).toBe(401);
     }
-    const support = { authorization: `Bearer ${signAdminToken({ adminId: randomUUID(), role: 'support' })}` };
+    // Admin close-out R13: an admin token needs a real admin row, or the guard answers 401 before the role check.
+    const supportAdmin = await createTestAdmin('support');
+    adminIds.push(supportAdmin.id);
+    const support = { authorization: `Bearer ${supportAdmin.token}` };
     for (const [method, url] of [
       ['GET', '/admin/search/synonyms'],
       ['POST', '/admin/search/synonyms'],

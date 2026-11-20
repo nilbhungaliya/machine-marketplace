@@ -17,6 +17,8 @@ import {
   runRentalReminders,
   runRentalStatusSync,
 } from '../services/rentals/rental-jobs.js';
+import { runFraudSignals } from '../services/fraud/job.js';
+import { runAdminRetention } from '../services/fraud/retention.js';
 import type { JobSpec } from './runner.js';
 
 /**
@@ -100,5 +102,9 @@ export function allJobs(app: FastifyInstance): JobSpec[] {
     { name: 'rental-booking-auto-complete', everyMs: 300_000, run: () => runRentalAutoComplete(app) },
     { name: 'rental-booking-reminders', everyMs: 3_600_000, firstRunMs: 300_000, run: () => runRentalReminders(app) },
     { name: 'rental-status-sync', everyMs: 900_000, run: () => runRentalStatusSync(app) },
+    // Admin close-out (spec §8.2, §9): fraud signals every 10 min (one run at a time across instances: the job holds an
+    // advisory lock), retention daily, first run 15 min after start.
+    { name: 'fraud-signals', everyMs: 600_000, run: () => runFraudSignals(app).then(() => undefined) },
+    { name: 'admin-retention', everyMs: 86_400_000, firstRunMs: 900_000, run: () => runAdminRetention(app) },
   ];
 }

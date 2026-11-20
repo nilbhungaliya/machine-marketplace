@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { BUSINESS_ACTIVITIES, EMPLOYEE_RANGES } from '@mpm/shared-types';
 import { getMyBusiness, setMyLocation, updateMyProfile } from '../services/business/profile.service.js';
 import { listSellerListings, SELLER_LISTINGS_MAX } from '../services/listings/listing-read.service.js';
+import { AppError } from '../lib/errors.js';
 
 const profileBody = z
   .object({
@@ -64,6 +65,12 @@ const businessRoutes: FastifyPluginAsync = async (fastify) => {
     const { id } = z.object({ id: z.string().uuid() }).parse(request.params);
     const { limit, exclude } = sellerListingsQuery.parse(request.query);
     return { data: await listSellerListings(fastify.db, id, { limit, exclude, viewer: request.user }) };
+  });
+
+  // Report a business (admin close-out §7.1, R6, plan D8; lane A4): `BusinessReportRequest` → `{ reportId }`.
+  fastify.post('/businesses/:id/reports', { schema: { tags }, preHandler: fastify.requireUser }, async () => {
+    // AC-STUB(A4): answers 501 until lane A4 builds it.
+    throw new AppError('Not implemented yet', 501, 'NOT_IMPLEMENTED');
   });
 };
 

@@ -230,6 +230,9 @@ export async function getBusinessDetail(conn: Db | Tx, id: string): Promise<Admi
     partRequestCount: Number(requestTotal?.n ?? 0),
     // M14 §15: every booking of the business, any status, as owner and as renter (the admin list's `businessId` filter).
     rentalBookingCount: await rentalBookingCount(conn, id),
+    // Admin close-out §7.3: lane A4 fills these (reports about the business, its fraud signals).
+    reports: { open: 0, byTarget: {} },
+    fraudSignals: [],
   };
 }
 

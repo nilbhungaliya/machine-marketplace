@@ -13,6 +13,7 @@ import {
   users,
 } from '../../src/db/schema.js';
 import { deleteF6Rows } from './test-deals.js';
+import { deleteCloseOutRows } from './test-fraud.js';
 import { deleteF8Rows } from './test-part-requests.js';
 import { deleteM14Rows } from './test-rentals.js';
 
@@ -85,7 +86,11 @@ export async function deleteTestUsers(userIds: string[]): Promise<void> {
   if (userIds.length === 0) return;
   const rows = await db.select({ businessId: users.businessId }).from(users).where(inArray(users.id, userIds));
   const businessIds = rows.flatMap((r) => (r.businessId ? [r.businessId] : []));
-  await db.transaction((tx) => deleteListingsOf(tx, { businessIds, userIds }));
+  await db.transaction(async (tx) => {
+    // Admin close-out rows first: contact sightings reference the threads and messages F6's cleanup deletes.
+    await deleteCloseOutRows(tx, { businessIds, userIds });
+    await deleteListingsOf(tx, { businessIds, userIds });
+  });
   await db.delete(users).where(inArray(users.id, userIds));
   for (const businessId of businessIds) await db.delete(businesses).where(eq(businesses.id, businessId));
 }

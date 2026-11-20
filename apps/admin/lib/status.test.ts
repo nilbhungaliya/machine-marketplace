@@ -49,3 +49,20 @@ describe('rental booking statuses (M14 §6.1)', () => {
     expect(statusTone('cancelled')).toBe('red');
   });
 });
+
+describe('fraud signal and admin user statuses (admin close-out §13)', () => {
+  it('every status has its tone and label', async () => {
+    const { ADMIN_USER_STATUSES, FRAUD_SIGNAL_STATUSES } = await import('@mpm/shared-types');
+    const {
+      ADMIN_USER_STATUS_LABELS, ADMIN_USER_STATUS_TONES, FRAUD_SIGNAL_STATUS_LABELS, FRAUD_SIGNAL_STATUS_TONES,
+    } = await import('./status');
+    for (const s of FRAUD_SIGNAL_STATUSES) expect(FRAUD_SIGNAL_STATUS_LABELS[s], s).toBeTruthy();
+    for (const s of ADMIN_USER_STATUSES) expect(ADMIN_USER_STATUS_LABELS[s], s).toBeTruthy();
+    expect(FRAUD_SIGNAL_STATUS_TONES).toEqual({ open: 'amber', dismissed: 'gray', actioned: 'green' });
+    expect(ADMIN_USER_STATUS_TONES).toEqual({ active: 'green', invited: 'amber', reset_pending: 'amber', deactivated: 'gray' });
+    expect(ADMIN_USER_STATUS_LABELS.reset_pending).toBe('Reset pending');
+    // The shared map agrees for these words.
+    expect(statusTone('reset_pending')).toBe('amber');
+    expect(statusTone('actioned')).toBe('green');
+  });
+});

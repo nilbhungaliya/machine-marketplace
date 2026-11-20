@@ -127,6 +127,20 @@
       "when": 1795188234264,
       "tag": "0017_m14_checks",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1795207503513,
+      "tag": "0018_admin_close_out",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1795207512674,
+      "tag": "0019_admin_close_out_checks",
+      "breakpoints": true
     }
   ]
 }

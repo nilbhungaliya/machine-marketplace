@@ -68,7 +68,7 @@ describe('fastify.optionalUser', () => {
   });
 
   it('treats an admin token as a guest', async () => {
-    const admin = signAdminToken({ adminId: randomUUID(), role: 'super_admin' });
+    const admin = signAdminToken({ adminId: randomUUID(), role: 'super_admin', tv: 0 });
     expect((await whoAmI(`Bearer ${admin}`)).user).toBeNull();
   });
 

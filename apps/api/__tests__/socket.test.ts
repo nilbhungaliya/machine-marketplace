@@ -4,9 +4,10 @@ import type { AddressInfo } from 'node:net';
 import { io as connect, type Socket } from 'socket.io-client';
 import { buildApp } from '../src/app.js';
 import { setupSocketIO } from '../src/socket/setup.js';
-import { signAdminToken, signUserToken } from '../src/plugins/auth.js';
+import { signUserToken } from '../src/plugins/auth.js';
 import { adminRoleRoom, businessRoom, userRoom } from '../src/socket/rooms.js';
 import { createTestBusinessUser, deleteTestBusinesses, type TestBusinessUser } from './_helpers/test-businesses.js';
+import { createTestAdmin, deleteTestAdmins } from './_helpers/test-admins.js';
 
 process.env.JWT_SECRET ??= 'test-user-secret';
 process.env.ADMIN_JWT_SECRET ??= 'test-admin-secret';
@@ -17,6 +18,8 @@ const open: Socket[] = [];
 // The /user handshake reads the user's row (status, business id), so these are real users in the test database.
 let u1: TestBusinessUser;
 let u2: TestBusinessUser;
+// The /admin handshake reads the admin's row too (admin close-out R13).
+let moderator: { id: string; token: string };
 
 function client(nsp: string, token?: string): Promise<Socket> {
   const socket = connect(`${url}${nsp}`, { auth: token ? { token } : {}, transports: ['websocket'], reconnection: false });
@@ -32,6 +35,7 @@ beforeAll(async () => {
   setupSocketIO(app);
   u1 = await createTestBusinessUser();
   u2 = await createTestBusinessUser();
+  moderator = await createTestAdmin('moderator');
   await app.listen({ port: 0, host: '127.0.0.1' });
   url = `http://127.0.0.1:${(app.server.address() as AddressInfo).port}`;
 });
@@ -39,6 +43,7 @@ beforeAll(async () => {
 afterAll(async () => {
   open.forEach((s) => s.disconnect());
   await deleteTestBusinesses([u1.businessId, u2.businessId]);
+  await deleteTestAdmins([moderator.id]);
   await app.close();
 });
 
@@ -62,7 +67,7 @@ describe('socket auth', () => {
   });
 
   it('rejects an admin token on the user namespace', async () => {
-    await expect(client('/user', signAdminToken({ adminId: 'a1', role: 'moderator' }))).rejects.toThrow('Invalid token');
+    await expect(client('/user', moderator.token)).rejects.toThrow('Invalid token');
   });
 });
 
@@ -92,7 +97,7 @@ describe('room delivery', () => {
   });
 
   it('puts admins in their role room', async () => {
-    const mod = await client('/admin', signAdminToken({ adminId: 'a1', role: 'moderator' }));
+    const mod = await client('/admin', moderator.token);
     const got = new Promise((resolve) => mod.on('admin:pending_changed', resolve));
     app.io.of('/admin').to(adminRoleRoom('moderator')).emit('admin:pending_changed', { section: 'moderation' });
     expect(await got).toEqual({ section: 'moderation' });
