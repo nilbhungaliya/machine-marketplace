@@ -15,9 +15,13 @@ const data = <T>(p: Promise<{ data: ApiSuccess<T> }>): Promise<T> => p.then((r) 
 
 // ─── Seller ───
 
-/** POST /listings → the new draft (201). `403 RENTAL_NEEDS_GST`, `409 DRAFT_LIMIT` / `ONBOARDING_INCOMPLETE` / `NO_MACHINE_UNIT`. */
-export function createListing(kind: ListingKind): Promise<ListingOwnerView> {
-  const body: CreateListingRequest = { kind };
+/**
+ * POST /listings → the new draft (201). `403 RENTAL_NEEDS_GST`, `409 DRAFT_LIMIT` / `ONBOARDING_INCOMPLETE` / `NO_MACHINE_UNIT`.
+ * F8 §9.3: with `partRequestId` ("List a matching part"), the draft is prefilled from the request and carries a
+ * pending reply, delivered when it goes live.
+ */
+export function createListing(kind: ListingKind, partRequestId?: string): Promise<ListingOwnerView> {
+  const body: CreateListingRequest = partRequestId ? { kind, partRequestId } : { kind };
   return data(api.post<ApiSuccess<ListingOwnerView>>('/listings', body));
 }
 

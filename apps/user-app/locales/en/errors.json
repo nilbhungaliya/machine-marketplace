@@ -68,5 +68,25 @@
     "invalidCursor": "This list changed. Pull down to refresh.",
     "contactPhoneMissing": "Add your business's contact number first.",
     "notificationNotFound": "This notification is no longer available."
+  },
+  "requests": {
+    "partRequestNotFound": "This requirement is no longer open.",
+    "partRequestStale": "This requirement changed while you were editing. Check it and try again.",
+    "partRequestTransitionNotAllowed": "This requirement can't be changed that way any more.",
+    "partRequestNotActive": "This requirement is no longer active.",
+    "partRequestOpenLimit": "You have reached the limit of open requirements. Close one to post another.",
+    "partRequestDailyLimit": "You've posted the most requirements for today. Try again tomorrow.",
+    "partRequestMaxDays": "A requirement can't stay open that long. Choose fewer days.",
+    "validityInvalid": "Choose how long the requirement stays open.",
+    "unitInvalid": "Choose a unit for the quantity.",
+    "conditionInvalid": "Choose a valid condition.",
+    "replyExists": "You've already replied with that listing.",
+    "replyLimit": "You've replied with the most listings for this requirement.",
+    "replyDailyLimit": "You've sent the most replies for today. Try again tomorrow.",
+    "replyListingInvalid": "That listing can't be sent for this requirement.",
+    "replyNotFound": "That reply is no longer there.",
+    "replyNotOpen": "That reply can no longer be withdrawn.",
+    "ownPartRequest": "This is your own requirement.",
+    "dealInvalid": "That deal isn't one of yours for this requirement."
   }
 }

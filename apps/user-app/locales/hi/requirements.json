@@ -1,0 +1,18 @@
+{
+  "title": "ज़रूरत",
+  "goneTitle": "यह ज़रूरत अब खुली नहीं है",
+  "goneBody": "इसे बंद, पूरा या हटा दिया गया है, या यह आपके बिज़नेस के साथ शेयर नहीं की गई है।",
+  "loadErrorTitle": "यह ज़रूरत लोड नहीं हो सकी",
+  "loadErrorBody": "अपना कनेक्शन देखें और फिर से कोशिश करें।",
+  "status": {
+    "active": "चालू",
+    "fulfilled": "पूरी हुई",
+    "closed": "बंद",
+    "expired": "समय खत्म",
+    "removed": "हटाई गई"
+  },
+  "matched": "मैच मिला",
+  "daysLeft_one": "{{count}} दिन बाकी",
+  "daysLeft_other": "{{count}} दिन बाकी",
+  "expiresToday": "आज खत्म होगी"
+}

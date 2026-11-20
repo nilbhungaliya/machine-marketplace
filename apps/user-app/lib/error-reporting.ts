@@ -22,6 +22,9 @@ const SECRET_KEYS = new RegExp(
       // F6 + F7 (spec §19): chat and deal text, numbers, push tokens, private photo keys.
       'text', 'note', 'notestext', 'description', 'replytext', 'messagetoparties', 'contactphone', 'number', 'fcmtoken',
       'photokeys',
+      // F8 (spec §17): a reply's message. A request's `name` and `note` travel only in request bodies (dropped whole by
+      // scrubEvent) and `note` is above; plain `name` stays allowed for Sentry's own contexts.
+      'message',
     ].join('|') +
     ')$',
   'i',

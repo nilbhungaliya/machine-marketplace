@@ -25,7 +25,8 @@ type Area = 'sellPart' | 'sellMachine' | 'rentMachine' | 'partRequest';
 /**
  * What are you listing? (F2 spec §5.1, §15.1; mockup "What are you listing?"): a spare part or a machine for sale
  * creates a draft and opens the wizard's first step; a machine for rent needs GST verification (disabled with "Verify
- * GST" otherwise); a requirement is coming soon. "Drafts (n)" resumes unpublished listings; "My listings" opens them all.
+ * GST" otherwise); "Request a part" opens the requirement form (F8 §13.1). "Drafts (n)" resumes unpublished listings;
+ * "My listings" opens them all; "My requirements" the business's part requests.
  */
 export default function PostScreen({ navigation }: TabScreenProps<'Post'>) {
   const { t } = useTranslation();
@@ -117,7 +118,7 @@ export default function PostScreen({ navigation }: TabScreenProps<'Post'>) {
           </View>
         ),
       })}
-      {card(BellRing, 'partRequest', () => Toast.show({ type: 'info', text1: t('common.comingSoon') }))}
+      {card(BellRing, 'partRequest', () => navigation.navigate('PostRequirement', { prefill: { source: 'post_tab' } }))}
       <Card flush>
         {draftCount > 0 ? (
           <ListRow
@@ -132,9 +133,16 @@ export default function PostScreen({ navigation }: TabScreenProps<'Post'>) {
           icon={Package}
           label={t('profile.rows.listings')}
           chevron
-          last
           onPress={() => navigation.navigate('MyListings')}
           testID="Post-my-listings"
+        />
+        <ListRow
+          icon={BellRing}
+          label={t('post.myRequirements')}
+          chevron
+          last
+          onPress={() => navigation.navigate('MyRequirements')}
+          testID="Post-my-requirements"
         />
       </Card>
     </ScreenWrapper>

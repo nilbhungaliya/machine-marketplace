@@ -8,9 +8,23 @@ export type NotificationRoute =
   | { name: 'DealRecord'; params: { dealId: string } }
   | { name: 'ReviewDeal'; params: { dealId: string } }
   | { name: 'MyReviews'; params: undefined }
-  | { name: 'MyListings'; params: undefined };
+  | { name: 'MyListings'; params: undefined }
+  | { name: 'Requirement'; params: { partRequestId: string; tab?: 'replies' | 'matches' } };
 
-export type NotificationTarget = Pick<NotificationRow, 'type' | 'threadId' | 'dealId' | 'reviewId' | 'offerId'>;
+export type NotificationTarget = Pick<NotificationRow, 'type' | 'threadId' | 'dealId' | 'reviewId' | 'offerId' | 'partRequestId'>;
+
+/** F8 §10: every `part_*` type opens the request (its page picks the buyer or the seller view). */
+const REQUEST_TYPES: readonly NotificationType[] = [
+  'part_match', 'part_request_new', 'part_request_reply', 'part_request_expiring', 'part_request_expired',
+  'part_request_fulfil_prompt', 'part_request_removed', 'part_request_reply_dropped',
+];
+
+function requirement(type: NotificationType, id: string | null): NotificationRoute | null {
+  if (!id) return null;
+  if (type === 'part_request_reply') return { name: 'Requirement', params: { partRequestId: id, tab: 'replies' } };
+  if (type === 'part_match') return { name: 'Requirement', params: { partRequestId: id, tab: 'matches' } };
+  return { name: 'Requirement', params: { partRequestId: id } };
+}
 
 const THREAD_TYPES: readonly NotificationType[] = [
   'enquiry_new', 'message_new', 'offer_new', 'offer_quote', 'offer_countered', 'offer_rejected', 'offer_expiring',
@@ -35,7 +49,8 @@ export function notificationLink(n: NotificationTarget): NotificationRoute | nul
   if (n.type === 'review_received') return { name: 'MyReviews', params: undefined };
   if (n.type === 'review_waiting') return n.dealId ? { name: 'ReviewDeal', params: { dealId: n.dealId } } : null;
   if (n.type === 'listing_status') return { name: 'MyListings', params: undefined };
-  // `part_match`, `booking_update`: later modules (F8, M14).
+  if (REQUEST_TYPES.includes(n.type)) return requirement(n.type, n.partRequestId) ?? deal(n.dealId) ?? thread(n.threadId);
+  // `booking_update`: a later module (M14).
   return deal(n.dealId) ?? thread(n.threadId);
 }
 
@@ -63,6 +78,7 @@ export function parsePushData(data: unknown): PushData | null {
     offerId: str(d.offerId),
     dealId: str(d.dealId),
     reviewId: str(d.reviewId),
+    partRequestId: str(d.partRequestId),
   };
 }
 

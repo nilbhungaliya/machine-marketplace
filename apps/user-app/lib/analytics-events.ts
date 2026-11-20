@@ -172,6 +172,29 @@ export const NOTIFICATION_EVENTS = {
 } as const;
 
 /**
+ * Part requests (F8 spec §13.3). Ids and codes only. `requestPostStarted` (`source`), `requestPosted` (`kind`,
+ * `hasPartNumber`, `hasFit`, `photos`, `reach`, `audience`, `validityDays`, `urgent`), `requestPostFailed` (`reason`),
+ * `requestRenewed` (`days`), `requestClosed` (`reason`), `requestFulfilled` (`fromPrompt`), `requestCompareOpened`
+ * (`columns`), `requestResponseOpened` (`source`), `requestReplySent` (`listings`, `created`), `requestNotRelevant`
+ * (`reason`), `requestReported` (`reason`).
+ */
+export const REQUEST_EVENTS = {
+  requestPostStarted: 'request_post_started',
+  requestPosted: 'request_posted',
+  requestPostFailed: 'request_post_failed',
+  requestEdited: 'request_edited',
+  requestRenewed: 'request_renewed',
+  requestClosed: 'request_closed',
+  requestFulfilled: 'request_fulfilled',
+  requestCompareOpened: 'request_compare_opened',
+  requestResponseOpened: 'request_response_opened',
+  requestReplySent: 'request_reply_sent',
+  requestReplyWithdrawn: 'request_reply_withdrawn',
+  requestNotRelevant: 'request_not_relevant',
+  requestReported: 'request_reported',
+} as const;
+
+/**
  * Route params allowed onto screen events. Everything else is dropped, so a param
  * carrying a phone or a price never reaches analytics by accident. Ids only (plus `mode` and `category`): never the
  * listing routes' `step`, `group`, `from`, `outcome` or `index`.

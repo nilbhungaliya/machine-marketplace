@@ -1,0 +1,18 @@
+{
+  "title": "Requirement",
+  "goneTitle": "This requirement is no longer open",
+  "goneBody": "It was closed, fulfilled or removed, or it is not shared with your business.",
+  "loadErrorTitle": "Couldn't load this requirement",
+  "loadErrorBody": "Check your connection and try again.",
+  "status": {
+    "active": "Active",
+    "fulfilled": "Fulfilled",
+    "closed": "Closed",
+    "expired": "Expired",
+    "removed": "Removed"
+  },
+  "matched": "Matched",
+  "daysLeft_one": "{{count}} day left",
+  "daysLeft_other": "{{count}} days left",
+  "expiresToday": "Expires today"
+}

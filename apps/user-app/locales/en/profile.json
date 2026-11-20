@@ -16,7 +16,13 @@
     "reviewsScore_other": "{{stars}}, {{count}} reviews",
     "contactNumber": "Contact number",
     "blocked": "Blocked businesses",
-    "notifications": "Notification settings"
+    "notifications": "Notification settings",
+    "requirements": "My requirements",
+    "requirementsOpen_one": "{{count}} open",
+    "requirementsOpen_other": "{{count}} open",
+    "buyersLooking": "Buyers looking",
+    "buyersLookingNew_one": "{{count}} new",
+    "buyersLookingNew_other": "{{count}} new"
   },
   "completion": {
     "title": "Profile {{done}} of {{total}} complete",

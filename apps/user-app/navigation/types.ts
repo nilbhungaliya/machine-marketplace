@@ -1,7 +1,9 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { CompositeScreenProps, NavigatorScreenParams } from '@react-navigation/native';
-import type { DiscoveryOrigin, DiscoveryRadiusKm, ListingKind, ListingStatus, MyListingsGroup, SearchFacets } from '@mpm/shared-types';
+import type {
+  DiscoveryOrigin, DiscoveryRadiusKm, ListingKind, ListingStatus, MyListingsGroup, PartRequestPrefill, SearchFacets,
+} from '@mpm/shared-types';
 import type { FormMode } from '@/lib/onboarding-step';
 import type { SellStep } from '@/lib/sell-steps';
 import type { ResultsRequest } from '@/lib/search-request';
@@ -106,6 +108,23 @@ export type RootStackParamList = {
   NotificationSettings: undefined;
   /** The push permission explainer shown before the system prompt (L8). */
   PermissionExplainer: { trigger: PushAskTrigger };
+
+  // F8 part requests (spec §13.1). Signed-in only. C0-5 registers placeholders (B2 buyer, B3 seller); `Requirement`
+  // is real and picks the buyer or seller view by the API's `role`.
+  /** Post (or edit, or copy) a requirement (B2). */
+  PostRequirement: { prefill?: PartRequestPrefill; editId?: string; copyFromId?: string };
+  /** "Requirement posted": how many live listings already matched (B2). */
+  RequirementPosted: { partRequestId: string; backfill: number };
+  /** Profile / Post › My requirements (B2). */
+  MyRequirements: undefined;
+  /** One request: the buyer's page (replies, matches) or the seller's (reply with a listing). */
+  Requirement: { partRequestId: string; tab?: 'replies' | 'matches' };
+  /** Compare responses side by side (B2). */
+  CompareResponses: { partRequestId: string };
+  /** The seller's reply picker (B3). */
+  ReplyWithListing: { partRequestId: string };
+  /** Buyers looking: requests for this seller, optionally for one listing (B3). */
+  BuyersLooking: { forListing?: string };
 };
 
 export type AuthStackParamList = {

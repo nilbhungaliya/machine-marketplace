@@ -62,6 +62,13 @@ import guNotifications from './gu/notifications.json';
 import enHolds from './en/holds.json';
 import hiHolds from './hi/holds.json';
 import guHolds from './gu/holds.json';
+// F8 (C0-5)
+import enRequirements from './en/requirements.json';
+import hiRequirements from './hi/requirements.json';
+import guRequirements from './gu/requirements.json';
+import enBuyers from './en/buyers.json';
+import hiBuyers from './hi/buyers.json';
+import guBuyers from './gu/buyers.json';
 
 // One import per language per area. A new area: add its JSON in en/, hi/ and gu/, then register it here.
 export const resources = {
@@ -88,6 +95,8 @@ export const resources = {
       reviews: enReviews,
       notifications: enNotifications,
       holds: enHolds,
+      requirements: enRequirements,
+      buyers: enBuyers,
     },
   },
   hi: {
@@ -113,6 +122,8 @@ export const resources = {
       reviews: hiReviews,
       notifications: hiNotifications,
       holds: hiHolds,
+      requirements: hiRequirements,
+      buyers: hiBuyers,
     },
   },
   gu: {
@@ -138,6 +149,8 @@ export const resources = {
       reviews: guReviews,
       notifications: guNotifications,
       holds: guHolds,
+      requirements: guRequirements,
+      buyers: guBuyers,
     },
   },
 } as const;

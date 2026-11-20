@@ -44,6 +44,13 @@ import MyReviewsScreen from '@/screens/reviews/my-reviews';
 import NotificationsScreen from '@/screens/notifications/notifications';
 import NotificationSettingsScreen from '@/screens/notifications/notification-settings';
 import PermissionExplainerScreen from '@/screens/notifications/permission-explainer';
+import PostRequirementScreen from '@/screens/requirements/post-requirement';
+import RequirementPostedScreen from '@/screens/requirements/requirement-posted';
+import MyRequirementsScreen from '@/screens/requirements/my-requirements';
+import RequirementScreen from '@/screens/requirements/requirement';
+import CompareResponsesScreen from '@/screens/requirements/compare-responses';
+import ReplyWithListingScreen from '@/screens/requirements/reply-with-listing';
+import BuyersLookingScreen from '@/screens/requirements/buyers-looking';
 import SocketProvider from '@/components/SocketProvider';
 import { usePendingActionRunner } from '@/hooks/use-saved';
 import AuthStack from './auth-stack';
@@ -188,6 +195,14 @@ export default function RootNavigator() {
           <Stack.Screen name="Notifications" component={NotificationsScreen} />
           <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} />
           <Stack.Screen name="PermissionExplainer" component={PermissionExplainerScreen} options={{ presentation: 'modal' }} />
+          {/* F8 part requests (spec §13.1). */}
+          <Stack.Screen name="PostRequirement" component={PostRequirementScreen} />
+          <Stack.Screen name="RequirementPosted" component={RequirementPostedScreen} />
+          <Stack.Screen name="MyRequirements" component={MyRequirementsScreen} />
+          <Stack.Screen name="Requirement" component={RequirementScreen} />
+          <Stack.Screen name="CompareResponses" component={CompareResponsesScreen} />
+          <Stack.Screen name="ReplyWithListing" component={ReplyWithListingScreen} />
+          <Stack.Screen name="BuyersLooking" component={BuyersLookingScreen} />
         </Stack.Group>
       )}
     </Stack.Navigator>

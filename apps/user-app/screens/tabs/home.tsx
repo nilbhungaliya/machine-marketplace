@@ -25,6 +25,9 @@ import { loadRecentlyViewed } from '@/lib/recently-viewed';
 import { radius, spacing, useTheme } from '@/lib/theme';
 import type { TabScreenProps } from '@/navigation/types';
 import ListingCardItem from '@/screens/listing/listing-card-item';
+import HomeBuyerStrip from '@/components/part-requests/HomeBuyerStrip';
+import HomeSellerStrip from '@/components/part-requests/HomeSellerStrip';
+import { usePartRequestHome } from '@/hooks/use-part-request-home';
 
 const KIND_ICONS: Record<string, LucideIcon> = {
   part: CATEGORY_ICON_COMPONENTS.cog,
@@ -56,6 +59,8 @@ export default function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
 
   const member = useMember();
   const badges = useBadges();
+  // F8 §13.4: the buyer's newest-response strip and the seller's "Buyers looking" strip (members only).
+  const requestHome = usePartRequestHome();
   const unreadText = badgeText(badges?.notificationsUnread);
   const home = useHome(origin.origin, origin.radiusKm, origin.ready);
   const recent = useCards(recentIds, origin.origin, origin.ready);
@@ -237,6 +242,7 @@ export default function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
             onRefresh={() => {
               void home.refetch();
               if (recentIds.length > 0) void recent.refetch();
+              if (member) void requestHome.refetch();
             }}
             colors={[colors.primary]}
             tintColor={colors.primary}
@@ -300,6 +306,9 @@ export default function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
             );
           })}
         </ScrollView>
+
+        {requestHome.data?.buyer ? <HomeBuyerStrip data={requestHome.data.buyer} /> : null}
+        {requestHome.data?.seller ? <HomeSellerStrip data={requestHome.data.seller} /> : null}
 
         {body}
 

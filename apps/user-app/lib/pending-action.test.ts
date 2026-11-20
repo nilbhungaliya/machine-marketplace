@@ -27,6 +27,22 @@ describe('pending action (spec §8.1, R12)', () => {
     expect(pendingRoute(action)).toBe('contact');
   });
 
+  // F8 §13.3 (plan C0-5): "Post a requirement" from a guest waits the same way, then routes to the request path.
+  it('post_request waits for sign-in and onboarding, then routes to the request path', () => {
+    const action = { type: 'post_request', prefill: { source: 'no_results', name: 'Roller', kind: 'part' } } as const;
+    expect(isPendingAction(action)).toBe(true);
+    expect(isPendingAction({ type: 'post_request', prefill: { source: 'elsewhere' } })).toBe(false);
+    expect(isPendingAction({ type: 'post_request' })).toBe(false);
+    let s = reducer(undefined, browseAsGuest());
+    s = reducer(s, setPending(action));
+    expect(pendingToRun(s)).toBeNull();
+    s = reducer(s, setAuth({ token: 't', userId: 'u1', onboarding: 'profile' }));
+    expect(pendingToRun(s)).toBeNull();
+    s = reducer(s, setOnboarding({ step: 'done', gstIntro: true }));
+    expect(pendingToRun(s)).toEqual(action);
+    expect(pendingRoute(action)).toBe('request');
+  });
+
   it('routes save to the save path', () => {
     expect(pendingRoute(save)).toBe('save');
   });
@@ -66,7 +82,7 @@ describe('pending action (spec §8.1, R12)', () => {
     expect(s.pending).toBeNull();
     s = reducer(s, setPending(save));
     s = reducer(s, setPending({ type: 'save', listingId: '6f1c2b1e-1111-4a4a-8a8a-000000000002' }));
-    expect(s.pending?.listingId).toBe('6f1c2b1e-1111-4a4a-8a8a-000000000002');
+    expect(s.pending).toEqual({ type: 'save', listingId: '6f1c2b1e-1111-4a4a-8a8a-000000000002' });
   });
 
   it('is dropped on logout', () => {

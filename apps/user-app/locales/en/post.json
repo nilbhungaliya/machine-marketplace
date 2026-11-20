@@ -15,5 +15,6 @@
   "partRequest": {
     "title": "Request a part",
     "subtitle": "Get an alert when the part you need becomes available"
-  }
+  },
+  "myRequirements": "My requirements"
 }

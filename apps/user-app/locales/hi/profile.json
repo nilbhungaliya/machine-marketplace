@@ -16,7 +16,13 @@
     "reviewsScore_other": "{{stars}}, {{count}} रिव्यू",
     "contactNumber": "संपर्क नंबर",
     "blocked": "ब्लॉक किए गए बिज़नेस",
-    "notifications": "सूचना सेटिंग"
+    "notifications": "सूचना सेटिंग",
+    "requirements": "मेरी ज़रूरतें",
+    "requirementsOpen_one": "{{count}} खुली",
+    "requirementsOpen_other": "{{count}} खुली",
+    "buyersLooking": "खरीदार ढूँढ रहे हैं",
+    "buyersLookingNew_one": "{{count}} नई",
+    "buyersLookingNew_other": "{{count}} नई"
   },
   "completion": {
     "title": "प्रोफ़ाइल {{total}} में से {{done}} पूरी",

@@ -15,6 +15,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { useRequireSignIn } from '@/hooks/use-require-sign-in';
 import { gstStateQuery, useBusiness, useGstState } from '@/hooks/use-business';
 import { useMyListings } from '@/hooks/use-my-listings';
+import { useBadges } from '@/hooks/use-badges';
+import { usePartRequestOptions } from '@/hooks/use-part-request';
 import { useType } from '@/hooks/use-type';
 import { track } from '@/lib/analytics';
 import { SETTINGS_EVENTS } from '@/lib/analytics-events';
@@ -22,7 +24,7 @@ import { completionSegments, gstChip, profileRowTarget, type ProfileRow } from '
 import { setLanguage, useLanguage } from '@/lib/i18n/language';
 import { LANGUAGE_OPTIONS } from '@/lib/i18n/language-names';
 import {
-  Ban, BellRing, Building2, ChevronRight, ClipboardList, Globe, Heart, MapPin, ShieldCheck, Star, User, type LucideIcon,
+  Ban, BellRing, Building2, ChevronRight, ClipboardList, Globe, Heart, MapPin, Search, ShieldCheck, Star, User, type LucideIcon,
 } from '@/lib/icons';
 import { qk } from '@/lib/query-keys';
 import { scoreDisplay } from '@/lib/review-form';
@@ -73,6 +75,10 @@ export default function ProfileScreen({ navigation }: RootStackScreenProps<'Prof
     staleTime: 5 * 60 * 1000,
   });
   const score = scoreDisplay(myScore.data);
+  // F8 §13.1: My requirements (open count) and Buyers looking (requests targeted at this business, unopened).
+  const requestOptions = usePartRequestOptions();
+  const openRequests = requestOptions.data?.openCount ?? null;
+  const requestsForYou = useBadges()?.requestsForYou ?? 0;
 
   const confirmLogout = async () => {
     const ok = await confirm({
@@ -244,6 +250,24 @@ export default function ProfileScreen({ navigation }: RootStackScreenProps<'Prof
                 chevron
                 onPress={() => navigation.navigate('MyReviews')}
                 testID="Profile-row-reviews"
+                accessibilityRole="button"
+              />
+              <ListRow
+                icon={BellRing}
+                label={t('profile.rows.requirements')}
+                hint={openRequests !== null ? t('profile.rows.requirementsOpen', { count: openRequests }) : undefined}
+                chevron
+                onPress={() => navigation.navigate('MyRequirements')}
+                testID="Profile-row-requirements"
+                accessibilityRole="button"
+              />
+              <ListRow
+                icon={Search}
+                label={t('profile.rows.buyersLooking')}
+                hint={requestsForYou > 0 ? t('profile.rows.buyersLookingNew', { count: requestsForYou }) : undefined}
+                chevron
+                onPress={() => navigation.navigate('BuyersLooking', {})}
+                testID="Profile-row-buyers-looking"
                 accessibilityRole="button"
               />
               {rows.map((r, i) => (

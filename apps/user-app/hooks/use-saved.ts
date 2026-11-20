@@ -7,6 +7,7 @@ import { useBusiness } from '@/hooks/use-business';
 import { discoverKeys } from '@/hooks/use-discover';
 import { listingKeys } from '@/hooks/use-listing';
 import { openPendingContact } from '@/hooks/use-pending-contact';
+import { openPendingRequest } from '@/hooks/use-pending-request';
 import { useRequireSignIn } from '@/hooks/use-require-sign-in';
 import { track } from '@/lib/analytics';
 import { AUTH_EVENTS, SAVED_EVENTS } from '@/lib/analytics-events';
@@ -116,6 +117,12 @@ export async function runPendingAction(
   const pending = pendingToRun(store.getState().auth);
   if (!pending) return;
   store.dispatch(takePending());
+  // F8 §13.2: a pending "Post a requirement" opens the form prefilled; it is never posted.
+  if (pending.type === 'post_request') {
+    track(AUTH_EVENTS.pendingActionCompleted, { type: pending.type });
+    openPendingRequest(pending.prefill);
+    return;
+  }
   // F6 + F7 §15.2: a pending Enquire / Offer / Buy / Ask price reopens its sheet; it is never saved.
   if (pending.type !== 'save') {
     track(AUTH_EVENTS.pendingActionCompleted, { type: pending.type });
@@ -147,5 +154,5 @@ export function usePendingActionRunner(): void {
 
   useEffect(() => {
     if (pending) void runPendingAction(store as PendingStore, qc);
-  }, [pending?.type, pending?.listingId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [pending?.type, pending && 'listingId' in pending ? pending.listingId : null]); // eslint-disable-line react-hooks/exhaustive-deps
 }
