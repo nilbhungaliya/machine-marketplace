@@ -143,6 +143,8 @@ export interface RequestSchemaContext {
   unitDecimals: number | null;
   /** Today in India (`istDateKey()`), for "needed by". */
   today: string;
+  /** Edit: the stored "needed by"; kept as is, it isn't refused for being in the past now. */
+  baselineNeededBy?: string | null;
 }
 
 /** `YYYY-MM-DD` + `days` (calendar arithmetic on the date string). */
@@ -205,7 +207,7 @@ export function requestFormSchema(t: Translate, ctx: RequestSchemaContext) {
     }),
     neededBy: Yup.string()
       .nullable()
-      .test('neededBy', t('requirements.form.errors.neededBy'), (d) => d == null || (d >= ctx.today && d <= addDays(ctx.today, MAX_DAYS_AHEAD))),
+      .test('neededBy', t('requirements.form.errors.neededBy'), (d) => d == null || (!!ctx.baselineNeededBy && d === ctx.baselineNeededBy) || (d >= ctx.today && d <= addDays(ctx.today, MAX_DAYS_AHEAD))),
     photos: Yup.array().max(L.photosMax, t('requirements.form.errors.photosMax', { max: L.photosMax })),
     note: Yup.string().max(L.noteMax, t('requirements.form.errors.noteMax', { max: L.noteMax })),
   });
@@ -257,7 +259,11 @@ const cleanSpecs = (specs: Specs): Specs =>
   Object.fromEntries(Object.entries(specs).filter(([, v]) => !(v === null || v === '' || (Array.isArray(v) && v.length === 0)))) as Specs;
 
 /** `POST /part-requests` body, empty optionals left out. Call once `validateRequestForm` is empty. */
-export function toPartRequestInput(v: RequestFormValues): PartRequestInput {
+/**
+ * `hasSides`: the picked node's effective sides. A side is sent only for a part on a node with sides — a prefill's side
+ * word on a node without them would otherwise be refused (`400 SIDE_NOT_ALLOWED`) on every post.
+ */
+export function toPartRequestInput(v: RequestFormValues, { hasSides = true }: { hasSides?: boolean } = {}): PartRequestInput {
   const part = v.kind === 'part';
   const partNumber = part ? trimmed(v.partNumber) : null;
   const budget = v.budget.trim() ? parseRupees(v.budget) : null;
@@ -273,7 +279,7 @@ export function toPartRequestInput(v: RequestFormValues): PartRequestInput {
     validityDays: v.validityDays,
   };
   if (partNumber) input.partNumber = partNumber;
-  if (part && v.side && v.side !== 'not_applicable') input.side = v.side;
+  if (part && hasSides && v.side && v.side !== 'not_applicable') input.side = v.side;
   if (v.fits.length > 0) input.fits = v.fits.map(fitInput);
   if (Object.keys(specs).length > 0) input.specs = specs;
   if (part && v.unitId) input.unitId = v.unitId;
@@ -296,8 +302,14 @@ const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b)
  * (name, note) is never sent back unless the buyer edited it; cleared optionals go as null. `photoKeys` is the full
  * final list when the photos changed (§12.2).
  */
-export function toPartRequestPatch(v: RequestFormValues, baseline: RequestFormValues, version: number): PartRequestPatch {
-  const now = toPartRequestInput(v);
+export function toPartRequestPatch(
+  v: RequestFormValues,
+  baseline: RequestFormValues,
+  version: number,
+  { hasSides = true }: { hasSides?: boolean } = {},
+): PartRequestPatch {
+  // The baseline is what is stored (its side included), so a node without sides clears a stored side.
+  const now = toPartRequestInput(v, { hasSides });
   const before = toPartRequestInput(baseline);
   const patch: PartRequestPatch = { version };
   const set = <K extends keyof PartRequestPatch>(k: K, value: PartRequestPatch[K]) => {
@@ -382,7 +394,12 @@ export function copyOf(view: PartRequestBuyerView): PartRequestPrefill {
  * machine category only seeds the picker; the first part number; the side; brand (+ model) → one fit; the name is the
  * reading's words, else the raw query.
  */
-export function prefillFromReading(reading: QueryReading | null | undefined, rawQuery: string): PartRequestPrefill {
+export function prefillFromReading(
+  reading: QueryReading | null | undefined,
+  rawQuery: string,
+  /** Brands that make machines (master data); a brand chip becomes a fit only for one of them. Null: none yet. */
+  machineBrandIds: ReadonlySet<string> | null = null,
+): PartRequestPrefill {
   const prefill: PartRequestPrefill = { source: 'no_results' };
   const raw = rawQuery.trim().replace(/\s+/g, ' ');
   if (!reading) {
@@ -398,7 +415,7 @@ export function prefillFromReading(reading: QueryReading | null | undefined, raw
   if (pn) prefill.partNumber = pn;
   if (reading.side) prefill.side = reading.side;
   const brandId = reading.brand?.id ?? reading.model?.brandId ?? null;
-  if (brandId) {
+  if (brandId && machineBrandIds?.has(brandId)) {
     const modelId = reading.model && reading.model.brandId === brandId ? reading.model.id : null;
     prefill.fits = [{ brandId, modelId, yearFrom: null, yearTo: null }];
   }

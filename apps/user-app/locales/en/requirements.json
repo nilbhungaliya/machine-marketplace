@@ -94,7 +94,8 @@
       "prepareFailed": "Couldn't upload the photo. Try again.",
       "remove": "Remove photo {{n}}",
       "camera": "Take a photo",
-      "library": "Choose from gallery"
+      "library": "Choose from gallery",
+      "addAgain": "Add your photos again: the earlier upload has expired."
     },
     "note": "Note for sellers",
     "notePlaceholder": "Anything else sellers should know",

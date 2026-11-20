@@ -6,7 +6,8 @@ import type {
   PartRequestInput,
   PartRequestPatch,
 } from '@mpm/shared-types';
-import { useIdempotencyKey } from '@/hooks/use-offers';
+import { useMemo, useRef } from 'react';
+import { keepIdempotencyKey, newIdempotencyKey } from '@/lib/offers-api';
 import {
   closePartRequest,
   createPartRequest,
@@ -91,13 +92,31 @@ type BuyerAction =
   | { type: 'close'; reason: PartRequestCloseReason }
   | { type: 'fulfil'; dealId: string | null };
 
-/** Renew, close and mark fulfilled: one idempotency key per action, kept while the outcome is unknown. */
+/**
+ * One `Idempotency-Key` per action and body: the same action with the same body (a retry after a lost answer) reuses
+ * it; a different action or body takes a new one, and an answer from the server drops it.
+ */
+export function useBodyIdempotencyKey() {
+  const ref = useRef<{ id: string; key: string } | null>(null);
+  return useMemo(() => ({
+    take(action: string, body: unknown): string {
+      const id = `${action}:${JSON.stringify(body)}`;
+      if (ref.current?.id !== id) ref.current = { id, key: newIdempotencyKey() };
+      return ref.current.key;
+    },
+    settle(err?: unknown): void {
+      if (err === undefined || !keepIdempotencyKey(err)) ref.current = null;
+    },
+  }), []);
+}
+
+/** Renew, close and mark fulfilled: one idempotency key per action and body, kept while the outcome is unknown. */
 export function useRequestAction(id: string) {
   const qc = useQueryClient();
-  const key = useIdempotencyKey();
+  const key = useBodyIdempotencyKey();
   return useMutation({
     mutationFn: (a: BuyerAction): Promise<PartRequestBuyerView> => {
-      const k = key.take();
+      const k = key.take(a.type, a);
       if (a.type === 'renew') return renewPartRequest(id, a.days, k);
       if (a.type === 'close') return closePartRequest(id, a.reason, k);
       return fulfilPartRequest(id, a.dealId, k);
@@ -120,7 +139,8 @@ export function useMarkRequestRead() {
   return useMutation({
     mutationFn: (id: string) => markPartRequestRead(id),
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: qk.partRequestHome() });
+      // My requirements' new counts and Home's strip (`allPartRequests` covers every tab and `home`).
+      void qc.invalidateQueries({ queryKey: qk.allPartRequests });
       void qc.invalidateQueries({ queryKey: qk.badges() });
     },
   });

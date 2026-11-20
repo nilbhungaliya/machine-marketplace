@@ -27,6 +27,7 @@ const dateMs = (d: string) => Date.parse(`${d}T06:30:00Z`);
  */
 export default function StepDetails({
   values, errors, onChange, options, conditions, place, state, editing, specFields, specValues, specErrors, onSpecChange, photoUrls,
+  onPhotoUrlError,
 }: {
   values: RequestFormValues;
   errors: RequestFormErrors;
@@ -43,6 +44,7 @@ export default function StepDetails({
   specErrors: Partial<Record<string, string>>;
   onSpecChange: (key: string, value: string | string[]) => void;
   photoUrls?: Record<string, string>;
+  onPhotoUrlError?: () => void;
 }) {
   const { t } = useTranslation();
   const { colors } = useTheme();
@@ -195,7 +197,13 @@ export default function StepDetails({
         </View>
       ) : null}
 
-      <PhotoPicker photos={values.photos} urls={photoUrls} onChange={(photos) => onChange({ photos })} error={errors.photos} />
+      <PhotoPicker
+        photos={values.photos}
+        urls={photoUrls}
+        onUrlError={onPhotoUrlError}
+        onChange={(photos) => onChange({ photos })}
+        error={errors.photos}
+      />
 
       <Input
         label={t('requirements.form.note')}

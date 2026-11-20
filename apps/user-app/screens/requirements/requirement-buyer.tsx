@@ -70,9 +70,11 @@ export default function RequirementBuyer({ request, tab: initialTab }: Requireme
   const newTotal = request.counts.newReplies + request.counts.newMatches;
   const lastRead = useRef<number | null>(null);
   useEffect(() => {
+    // The view isn't refetched by `read`, so after it the server's count restarts from 0 while ours still shows the
+    // opening count: any change to a non-zero count is something new.
     const prev = lastRead.current;
     lastRead.current = newTotal;
-    if (prev === null || newTotal > prev) read.mutate(request.id);
+    if (prev === null || (newTotal > 0 && newTotal !== prev)) read.mutate(request.id);
   }, [request.id, newTotal]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const active = request.status === 'active';

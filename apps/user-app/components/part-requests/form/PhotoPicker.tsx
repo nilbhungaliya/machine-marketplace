@@ -30,10 +30,12 @@ async function uploadRequestPhoto(uri: string, size?: { width: number; height: n
  * (presign → PUT to `incoming-chat/`; the server re-encodes them when the request is saved). Stored photos of an edit
  * show their signed URLs (`urls`, by key) or a placeholder while they load.
  */
-export default function PhotoPicker({ photos, urls, onChange, error, style }: {
+export default function PhotoPicker({ photos, urls, onChange, onUrlError, error, style }: {
   photos: FormPhoto[];
   /** Signed URLs of the request's stored photos, by key (edit). */
   urls?: Record<string, string>;
+  /** A stored photo's signed URL failed (expired): the owner refetches the URLs (throttled there). */
+  onUrlError?: () => void;
   onChange: (next: FormPhoto[]) => void;
   error?: string;
   style?: StyleProp<ViewStyle>;
@@ -105,7 +107,15 @@ export default function PhotoPicker({ photos, urls, onChange, error, style }: {
             <View key={p.key}>
               <View style={s.tile}>
                 {uri ? (
-                  <Image source={{ uri }} style={s.image} contentFit="cover" accessibilityIgnoresInvertColors />
+                  <Image
+                    source={{ uri }}
+                    style={s.image}
+                    contentFit="cover"
+                    // Signed URLs change on every fetch: keep them out of the disk cache.
+                    cachePolicy="memory"
+                    onError={p.uri ? undefined : onUrlError}
+                    accessibilityIgnoresInvertColors
+                  />
                 ) : (
                   <Package size={24} color={colors.textMuted} />
                 )}

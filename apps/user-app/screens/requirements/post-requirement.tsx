@@ -18,8 +18,7 @@ import StepDetails from '@/components/part-requests/form/StepDetails';
 import StepNeed from '@/components/part-requests/form/StepNeed';
 import { useBusiness } from '@/hooks/use-business';
 import { useCategoryTree, useMasterData, useTemplate } from '@/hooks/use-listing';
-import { useCreatePartRequest, usePartRequestPhotos, useUpdatePartRequest } from '@/hooks/use-my-part-requests';
-import { useIdempotencyKey } from '@/hooks/use-offers';
+import { useBodyIdempotencyKey, useCreatePartRequest, usePartRequestPhotos, useUpdatePartRequest } from '@/hooks/use-my-part-requests';
 import { usePartRequestOptions } from '@/hooks/use-part-request';
 import { track } from '@/lib/analytics';
 import { REQUEST_EVENTS } from '@/lib/analytics-events';
@@ -27,7 +26,6 @@ import { errorCode } from '@/lib/api-error';
 import { f8ErrorMessage } from '@/lib/f8-errors';
 import { ClipboardList, TriangleAlert } from '@/lib/icons';
 import { istDateKey } from '@/lib/ist-date';
-import { keepIdempotencyKey, newIdempotencyKey } from '@/lib/offers-api';
 import {
   copyOf, fromBuyerView, patchChanges, requestFormSchema, STEP_ONE_FIELDS, toPartRequestInput, toPartRequestPatch,
   validateRequestForm, valuesFromPrefill, type RequestFormErrors, type RequestFormValues,
@@ -144,9 +142,12 @@ export default function PostRequirementScreen({ navigation, route }: RootStackSc
   }, [specFields]); // eslint-disable-line react-hooks/exhaustive-deps
   const specSchema = useMemo(() => buildSpecSchema(specFields, t, { enforceRequired: false }), [specFields, t]);
 
+  // A side only on a part whose node has sides; a prefill's side word on any other node is never sent.
+  const hasSides = values.kind === 'part' && !!node?.effectiveHasSides;
+  const baselineNeededBy = editing ? (baseline?.neededBy ?? null) : null;
   const schema = useMemo(
-    () => requestFormSchema(t, { hasSides: values.kind === 'part' && !!node?.effectiveHasSides, unitDecimals: unit?.decimals ?? null, today: istDateKey() }),
-    [t, values.kind, node?.effectiveHasSides, unit?.decimals],
+    () => requestFormSchema(t, { hasSides, unitDecimals: unit?.decimals ?? null, today: istDateKey(), baselineNeededBy }),
+    [t, hasSides, unit?.decimals, baselineNeededBy],
   );
   const allErrors = validateRequestForm(schema, values);
   const specErrors = specErrorsOf(specSchema, specValues);
@@ -157,6 +158,14 @@ export default function PostRequirementScreen({ navigation, route }: RootStackSc
   const shownErrors: RequestFormErrors = tried[step] ? stepErrors(step) : {};
 
   const photos = usePartRequestPhotos(editing ? editId! : null, editing && values.photos.some((p) => p.uri === null));
+  // A stored photo's signed URL failed (expired): fetch fresh ones, at most every 10 s.
+  const lastPhotoRefetch = useRef(0);
+  const refetchPhotos = useCallback(() => {
+    const now = Date.now();
+    if (now - lastPhotoRefetch.current < 10_000) return;
+    lastPhotoRefetch.current = now;
+    void photos.refetch();
+  }, [photos]);
   const photoUrls = useMemo(() => {
     const out: Record<string, string> = {};
     if (!sourceView) return out;
@@ -205,9 +214,18 @@ export default function PostRequirementScreen({ navigation, route }: RootStackSc
   // ─── Submit ───
   const create = useCreatePartRequest();
   const update = useUpdatePartRequest(editId ?? '');
-  const editKey = useIdempotencyKey();
-  const keyFor = useRef<{ body: string; key: string } | null>(null);
+  const writeKey = useBodyIdempotencyKey();
   const busy = create.isPending || update.isPending;
+
+  // A retried post whose first try already stored the photos answers `PHOTO_KEY_INVALID`: the uploads this form made
+  // are gone, so they leave the form and the buyer adds them again (stored photos, `uri: null`, stay).
+  const photosRefused = (err: unknown): boolean => {
+    if (errorCode(err) !== 'PHOTO_KEY_INVALID') return false;
+    setValues((v) => ({ ...v, photos: v.photos.filter((p) => p.uri === null) }));
+    setStep('details');
+    Toast.show({ type: 'error', text1: t('requirements.form.photos.addAgain') });
+    return true;
+  };
 
   const next = () => {
     const errs = stepErrors(step);
@@ -223,11 +241,10 @@ export default function PostRequirementScreen({ navigation, route }: RootStackSc
       setTried({ need: true, details: true, preview: false });
       return;
     }
-    const input = toPartRequestInput(values);
-    const body = JSON.stringify(input);
-    if (keyFor.current?.body !== body) keyFor.current = { body, key: newIdempotencyKey() };
-    create.mutate({ input, key: keyFor.current.key }, {
+    const input = toPartRequestInput(values, { hasSides });
+    create.mutate({ input, key: writeKey.take('post', input) }, {
       onSuccess: (view) => {
+        writeKey.settle();
         done.current = true;
         track(REQUEST_EVENTS.requestPosted, {
           kind: input.kind,
@@ -242,8 +259,9 @@ export default function PostRequirementScreen({ navigation, route }: RootStackSc
         navigation.replace('RequirementPosted', { partRequestId: view.id, backfill: view.counts.matches });
       },
       onError: (err) => {
-        if (!keepIdempotencyKey(err)) keyFor.current = null;
+        writeKey.settle(err);
         track(REQUEST_EVENTS.requestPostFailed, { reason: errorCode(err) || 'network' });
+        if (photosRefused(err)) return;
         Toast.show({ type: 'error', text1: f8ErrorMessage(err) });
       },
     });
@@ -256,22 +274,23 @@ export default function PostRequirementScreen({ navigation, route }: RootStackSc
       setTried({ need: true, details: true, preview: false });
       return;
     }
-    const patch = toPartRequestPatch(values, baseline, version);
+    const patch = toPartRequestPatch(values, baseline, version, { hasSides });
     if (!patchChanges(patch)) {
       done.current = true;
       navigation.goBack();
       return;
     }
-    update.mutate({ patch, key: editKey.take() }, {
+    update.mutate({ patch, key: writeKey.take('save', patch) }, {
       onSuccess: () => {
-        editKey.settle();
+        writeKey.settle();
         done.current = true;
         track(REQUEST_EVENTS.requestEdited, {});
         Toast.show({ type: 'success', text1: t('requirements.toast.saved') });
         navigation.goBack();
       },
       onError: (err) => {
-        editKey.settle(err);
+        writeKey.settle(err);
+        if (photosRefused(err)) return;
         if (errorCode(err) === 'PART_REQUEST_STALE') {
           void confirm({
             title: t('requirements.form.staleTitle'),
@@ -370,11 +389,12 @@ export default function PostRequirementScreen({ navigation, route }: RootStackSc
             specErrors={tried.details ? specErrors : {}}
             onSpecChange={changeSpec}
             photoUrls={photoUrls}
+            onPhotoUrlError={refetchPhotos}
           />
         ) : (
           <>
             <RequestPreview
-              values={values}
+              values={hasSides ? values : { ...values, side: null }}
               categoryPath={path.map((n) => n.name).join(' › ')}
               unitLabel={unit?.label ?? null}
               conditions={conditions}

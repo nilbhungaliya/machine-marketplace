@@ -79,7 +79,9 @@ export default function StepNeed({ values, errors, editing, units, onChange }: {
   const pickCategory = (n: CategoryNode) => {
     if (n.id === values.categoryId) return;
     const sides = values.kind === 'part' && n.effectiveHasSides;
-    onChange({ categoryId: n.id, categorySeedId: null, specs: {}, side: sides ? values.side : null });
+    // A machine's models belong to its machine type: a new type drops the model fits (the brands stay).
+    const fits = values.kind === 'machine' ? values.fits.filter((f) => !f.modelId) : values.fits;
+    onChange({ categoryId: n.id, categorySeedId: null, specs: {}, side: sides ? values.side : null, fits });
   };
 
   const fitsLabel = part ? t('requirements.form.fits') : t('requirements.form.makeModel');

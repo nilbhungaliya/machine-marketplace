@@ -58,6 +58,7 @@ describe('prefillFromReading (§13.2)', () => {
         words: ['tie', 'rod', 'end'],
       }),
       'left tie rod end toyota lwt710',
+      new Set([BRAND]),
     );
     expect(p).toEqual({
       source: 'no_results',
@@ -99,6 +100,28 @@ describe('prefillFromOtherSide (§13.2)', () => {
 
   it('leaves the side to the buyer for a Pair', () => {
     expect(prefillFromOtherSide({ ...listing, side: 'pair' }).side).toBeUndefined();
+  });
+});
+
+describe('review fixes', () => {
+  it('drops a side the node has no sides for, on post and on save (400 SIDE_NOT_ALLOWED otherwise)', () => {
+    expect(toPartRequestInput(filled({ side: 'left' }), { hasSides: false }).side).toBeUndefined();
+    expect(toPartRequestInput(filled({ side: 'left' }), { hasSides: true }).side).toBe('left');
+    const base = filled({ side: 'left' });
+    expect(toPartRequestPatch(base, base, 2, { hasSides: false }).side).toBeNull();
+  });
+
+  it('makes a brand chip a fit only for a brand that makes machines', () => {
+    const r = reading({ brand: { id: BRAND, name: 'SKF' }, words: ['bearing'] });
+    expect(prefillFromReading(r, 'skf bearing', new Set()).fits).toBeUndefined();
+    expect(prefillFromReading(r, 'skf bearing', null).fits).toBeUndefined();
+  });
+
+  it('keeps the stored past "needed by" of an edited request', () => {
+    const past = '2026-01-01';
+    const sc = requestFormSchema(t, { hasSides: true, unitDecimals: 0, today: TODAY, baselineNeededBy: past });
+    expect(validateRequestForm(sc, filled({ neededBy: past })).neededBy).toBeUndefined();
+    expect(validateRequestForm(sc, filled({ neededBy: '2026-01-02' })).neededBy).toBeDefined();
   });
 });
 
