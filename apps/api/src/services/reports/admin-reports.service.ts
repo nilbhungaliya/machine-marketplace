@@ -72,6 +72,10 @@ type RawReport = {
   r_on_time: number | null;
   r_payment: number | null;
   r_pickup: number | null;
+  /** M14 R11: a rental owner's `care` facet. */
+  r_care: number | null;
+  /** M14: the review is about a rental booking (its facets are `REVIEW_FACETS.rental`). */
+  r_rental: boolean | null;
   r_text: string | null;
   r_reply_text: string | null;
   r_hidden: boolean | null;
@@ -86,11 +90,12 @@ const COLUMN_OF: Record<string, keyof RawReport> = {
   on_time: 'r_on_time',
   payment: 'r_payment',
   pickup: 'r_pickup',
+  care: 'r_care',
 };
 
 function ratingsOf(r: RawReport): ReviewRatings {
   const out: ReviewRatings = {};
-  for (const facet of REVIEW_FACETS.deal[r.r_side ?? 'buyer']) {
+  for (const facet of REVIEW_FACETS[r.r_rental ? 'rental' : 'deal'][r.r_side ?? 'buyer']) {
     const v = r[COLUMN_OF[facet]!] as number | null;
     if (v !== null) out[facet] = Number(v);
   }
@@ -147,7 +152,8 @@ async function queryReports(conn: Conn, where: SQL, limit: number): Promise<Arra
            t.seller_business_id AS t_seller_id, ts.trade_name AS t_seller_name,
            v.reviewer_side AS r_side, v.reviewer_business_id AS r_reviewer_id, vr.trade_name AS r_reviewer_name,
            v.reviewed_business_id AS r_reviewed_id, vd.trade_name AS r_reviewed_name,
-           v.r_matched_listing, v.r_communication, v.r_on_time, v.r_payment, v.r_pickup,
+           v.r_matched_listing, v.r_communication, v.r_on_time, v.r_payment, v.r_pickup, v.r_care,
+           (v.rental_booking_id IS NOT NULL) AS r_rental,
            v.text AS r_text, v.reply_text AS r_reply_text,
            (v.hidden_at IS NOT NULL) AS r_hidden, (v.reply_hidden_at IS NOT NULL) AS r_reply_hidden,
            pr.id AS p_id, pr.name AS p_name

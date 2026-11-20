@@ -8,15 +8,15 @@ import { isUniqueViolation } from '../../lib/pg-errors.js';
 import { queueAdminEmit } from '../../lib/tx-effects.js';
 import type { UserTokenPayload } from '../../plugins/auth.js';
 import { writeAudit } from '../audit.service.js';
-import { lockDeal } from '../deals/locks.js';
 import { ratingsOf, reviewNotFound, type ReviewRow } from './review-state.js';
+import { lockSubject, subjectOf } from './subject.js';
 
 /**
  * Review reports and moderation (F6 + F7 spec §10.6, P9; ported from textile `services/reviews/review-reports.service.ts`
  * `reportReview` / `hideReviewContent`, without photos or legal preservation). Any signed-in user reports a published
  * review into the shared `reports` table (`target_type = review`; listed and resolved by L1's admin reports routes).
  * A moderator hides the review or only its reply, or unhides it, with a reason and an `audit_log` row; a hidden review
- * leaves the scores at once (they are computed on read). Lock order: the deal, then the review.
+ * leaves the scores at once (they are computed on read). Lock order: the subject (deal or rental booking), then the review.
  */
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -116,9 +116,12 @@ const AUDITED = (r: ReviewRow) => ({
  */
 export async function moderateReview(tx: Tx, adminId: string, reviewId: string, action: ReviewModeration, rawReason: string): Promise<AdminReviewView> {
   const reason = adminText(rawReason);
-  const [seen] = await tx.select({ dealId: dealReviews.dealId }).from(dealReviews).where(eq(dealReviews.id, reviewId));
+  const [seen] = await tx
+    .select({ dealId: dealReviews.dealId, rentalBookingId: dealReviews.rentalBookingId })
+    .from(dealReviews)
+    .where(eq(dealReviews.id, reviewId));
   if (!seen) throw reviewNotFound();
-  await lockDeal(tx, seen.dealId!); // M14: A3 generalises (the subject's lock)
+  await lockSubject(tx, subjectOf(seen));
   const [row] = await tx.select().from(dealReviews).where(eq(dealReviews.id, reviewId)).for('update');
   if (!row) throw reviewNotFound();
 

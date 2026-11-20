@@ -5,6 +5,7 @@ import { refuseViewer } from '../lib/member-guard.js';
 import { runTx } from '../lib/tx-effects.js';
 import { runIdempotent } from '../services/idempotency.service.js';
 import { reportReview } from '../services/reviews/review-moderation.service.js';
+import { getRentalReviewState, submitRentalReview } from '../services/reviews/rental-review.service.js';
 import { getReviewState } from '../services/reviews/review-state.js';
 import { listSellerReviews, myReceivedReviews, postReply, submitReview } from '../services/reviews/review.service.js';
 
@@ -40,16 +41,21 @@ const reviewRoutes: FastifyPluginAsync = async (fastify) => {
     }));
   });
 
-  // M14 (spec R11, plan C0-4): a rental booking's review, F6's rules with the rental facets. Lane A3 builds them
+  // M14 (spec R11): a rental booking's review, F6's rules with the rental facets
   // (`services/reviews/rental-review.service.ts`); reply / report / hide use the routes by review id below.
-  fastify.get('/rental-bookings/:id/review', read, async (_request, reply) =>
-    // M14-STUB(A3)
-    reply.code(501).send({ error: 'Not implemented yet', code: 'NOT_IMPLEMENTED' }),
-  );
-  fastify.post('/rental-bookings/:id/review', idempotentWrite, async (_request, reply) =>
-    // M14-STUB(A3)
-    reply.code(501).send({ error: 'Not implemented yet', code: 'NOT_IMPLEMENTED' }),
-  );
+  fastify.get('/rental-bookings/:id/review', read, async (request) => {
+    const { id } = idParams.parse(request.params);
+    return { data: await getRentalReviewState(fastify.db, request.user!, id) };
+  });
+
+  fastify.post('/rental-bookings/:id/review', idempotentWrite, async (request, reply) => {
+    const { id } = idParams.parse(request.params);
+    const body = reviewBody.parse(request.body ?? {});
+    return runIdempotent(request, reply, fastify, async (tx) => ({
+      status: 200,
+      body: { data: await submitRentalReview(tx, request.user!, id, body) },
+    }));
+  });
 
   fastify.post('/reviews/:id/reply', idempotentWrite, async (request, reply) => {
     const { id } = idParams.parse(request.params);

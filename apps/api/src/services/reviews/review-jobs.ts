@@ -1,8 +1,9 @@
 import { and, eq, isNull, sql } from 'drizzle-orm';
-import { dealReviews, deals } from '../../db/schema.js';
+import { dealReviews } from '../../db/schema.js';
 import { effectsTx, runJobTx, type TxApp } from '../../lib/tx-effects.js';
 import { notifyPublished } from './review.service.js';
 import type { ReviewRow } from './review-state.js';
+import { loadSubject, subjectOf } from './subject.js';
 
 /**
  * Review jobs (F6 + F7 spec §10.3, §14). L4-1 owns this file. Run from `jobs/index.ts`.
@@ -36,11 +37,9 @@ export async function publishDueReviews(app: TxApp): Promise<number> {
               .where(and(eq(dealReviews.id, id), isNull(dealReviews.publishedAt)))
               .returning()) as ReviewRow[];
             if (done.length === 0) return 0;
-            const [deal] = await sp
-              .select({ id: deals.id, ref: deals.ref, listingTitle: deals.listingTitle })
-              .from(deals)
-              .where(eq(deals.id, done[0]!.dealId!)); // M14: A3 generalises (no rental review is written before A3)
-            if (deal) await notifyPublished(sp, done, deal);
+            // The review's subject (a deal or a rental booking, M14 §5.5a): its title, ref and destination.
+            const subject = await loadSubject(sp, subjectOf(done[0]!));
+            if (subject) await notifyPublished(sp, done, subject);
             return done.length;
           });
         } catch (err) {

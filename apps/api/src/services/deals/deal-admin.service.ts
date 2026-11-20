@@ -16,7 +16,7 @@ import {
   type SignedPhoto,
 } from '@mpm/shared-types';
 import type { Db, Tx } from '../../db/index.js';
-import { adminUsers, businesses, dealDisputes, dealEvents, dealReviews, deals, listings, stockHolds } from '../../db/schema.js';
+import { adminUsers, businesses, dealDisputes, dealEvents, dealReviews, deals, listings, rentalBookings, stockHolds } from '../../db/schema.js';
 import { AppError } from '../../lib/errors.js';
 import { privatePhotoUrl } from '../chat/private-photo.js';
 
@@ -146,18 +146,27 @@ async function signedAll(keys: string[]): Promise<SignedPhoto[]> {
   return out;
 }
 
+// M14 R12, §5.5a: a dispute is about a deal or a rental booking (exactly one), so both are `LEFT JOIN`ed and the parties
+// read from whichever is set (a booking's renter is the buyer side, its owner the seller side).
+const disputeBuyerId = sql<string>`coalesce(${deals.buyerBusinessId}, ${rentalBookings.renterBusinessId})`;
+const disputeSellerId = sql<string>`coalesce(${deals.sellerBusinessId}, ${rentalBookings.ownerBusinessId})`;
+
 const disputeRowSelect = {
   dispute: dealDisputes,
   dealRef: deals.ref,
-  buyerId: deals.buyerBusinessId,
-  sellerId: deals.sellerBusinessId,
+  bookingRef: rentalBookings.ref,
+  threadId: sql<string>`coalesce(${deals.threadId}, ${rentalBookings.threadId})`,
+  buyerId: disputeBuyerId,
+  sellerId: disputeSellerId,
   buyerName: buyerBiz.tradeName,
   sellerName: sellerBiz.tradeName,
 };
 
 type DisputeRowSelect = {
   dispute: typeof dealDisputes.$inferSelect;
-  dealRef: number;
+  dealRef: number | null;
+  bookingRef: number | null;
+  threadId: string;
   buyerId: string;
   sellerId: string;
   buyerName: string;
@@ -168,11 +177,12 @@ function toAdminDisputeRow(r: DisputeRowSelect): AdminDisputeRow {
   const d = r.dispute;
   return {
     id: d.id,
-    subject: { kind: 'deal', dealId: d.dealId! }, // M14: A3 generalises (the queue joins deals: deal disputes only today)
+    subject: d.rentalBookingId ? { kind: 'rental', rentalBookingId: d.rentalBookingId } : { kind: 'deal', dealId: d.dealId! },
     dealId: d.dealId,
     dealRef: r.dealRef,
-    rentalBookingRef: null,
-    category: d.category as AdminDisputeRow['category'], // M14: A3 generalises
+    rentalBookingRef: r.bookingRef,
+    // A booking dispute's category is a `RentalDisputeCategory` (the row type names F6's categories only).
+    category: d.category as AdminDisputeRow['category'],
     status: d.status,
     outcome: d.outcome,
     openedBySide: d.openedBySide,
@@ -187,9 +197,10 @@ function disputesQuery(conn: Conn) {
   return conn
     .select(disputeRowSelect)
     .from(dealDisputes)
-    .innerJoin(deals, eq(deals.id, dealDisputes.dealId))
-    .innerJoin(buyerBiz, eq(buyerBiz.id, deals.buyerBusinessId))
-    .innerJoin(sellerBiz, eq(sellerBiz.id, deals.sellerBusinessId));
+    .leftJoin(deals, eq(deals.id, dealDisputes.dealId))
+    .leftJoin(rentalBookings, eq(rentalBookings.id, dealDisputes.rentalBookingId))
+    .innerJoin(buyerBiz, eq(buyerBiz.id, disputeBuyerId))
+    .innerJoin(sellerBiz, eq(sellerBiz.id, disputeSellerId));
 }
 
 /** `GET /admin/deals/:id`: terms, structured notes (no free text), timeline, hold, review state, disputes. */
@@ -271,7 +282,10 @@ export async function openDisputeCount(conn: Conn): Promise<{ open: number }> {
   return { open: t?.n ?? 0 };
 }
 
-/** `GET /admin/disputes/:id`: the problem as reported (photos signed for 300 s), the resolution, and the deal. */
+/**
+ * `GET /admin/disputes/:id`: the problem as reported (photos signed for 300 s), the resolution, and the deal (null for a
+ * rental booking's dispute: its booking is read from `/admin/rental-bookings/:id`, M14).
+ */
 export async function getDispute(conn: Conn, disputeId: string): Promise<AdminDisputeDetail> {
   const [r] = await disputesQuery(conn).where(eq(dealDisputes.id, disputeId));
   if (!r) throw notFound('Dispute');
@@ -281,7 +295,7 @@ export async function getDispute(conn: Conn, disputeId: string): Promise<AdminDi
     const [a] = await conn.select({ name: adminUsers.name }).from(adminUsers).where(eq(adminUsers.id, d.resolvedByAdminId));
     resolvedByAdminName = a?.name ?? null;
   }
-  const deal = await getAdminDeal(conn, d.dealId!); // M14: A3 generalises
+  const deal = d.dealId ? await getAdminDeal(conn, d.dealId) : null;
   return {
     ...toAdminDisputeRow(r),
     description: d.description,
@@ -291,6 +305,6 @@ export async function getDispute(conn: Conn, disputeId: string): Promise<AdminDi
     stockReturned: d.stockReturned,
     resolvedByAdminName,
     deal,
-    threadId: deal.threadId,
+    threadId: r.threadId,
   };
 }

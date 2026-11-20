@@ -11,7 +11,8 @@ import { signPhotos } from './message.service.js';
 /**
  * Reading a conversation as staff (F6 + F7 spec §16.3, R23): `POST /admin/threads/:id/read { reason }`. Allowed only
  * while the thread has a `conversation` report that is `open` / `reviewing` or was resolved within the last 30 days,
- * or (for `support` and `super_admin`) a deal in it has an `open` dispute or one resolved within the last 30 days;
+ * or (for `support` and `super_admin`) a deal or a rental booking in it (M14 R12) has an `open` dispute or one resolved
+ * within the last 30 days;
  * otherwise `403 ADMIN_READ_NOT_ALLOWED`. Every read writes `audit_log` `thread.read` (admin, thread, reason, the report
  * or dispute it rests on) in the same transaction. Messages as stored (the reader is staff), photos as 300 s signed
  * URLs, never the revealed contact numbers.
@@ -38,8 +39,10 @@ export async function adminReadThread(
   let disputeId: string | null = null;
   if (!reportId && (admin.role === 'support' || admin.role === 'super_admin')) {
     const { rows } = await tx.execute<{ id: string }>(sql`
-      SELECT dd.id FROM deal_disputes dd JOIN deals d ON d.id = dd.deal_id
-      WHERE d.thread_id = ${threadId}
+      SELECT dd.id FROM deal_disputes dd
+      LEFT JOIN deals d ON d.id = dd.deal_id
+      LEFT JOIN rental_bookings rb ON rb.id = dd.rental_booking_id
+      WHERE coalesce(d.thread_id, rb.thread_id) = ${threadId}
         AND (dd.status = 'open' OR (dd.resolved_at IS NOT NULL AND dd.resolved_at > ${WINDOW}))
       ORDER BY dd.created_at DESC LIMIT 1`);
     disputeId = rows[0]?.id ?? null;

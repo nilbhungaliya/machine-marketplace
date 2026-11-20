@@ -59,6 +59,7 @@ import { listingNotFound, lockBusinessThenListing, lockListingOnly, type Busines
 import { refreshListingSearch } from '../discovery/search-text.js';
 import { matchRelevantChange } from '../part-requests/listing-hooks.js';
 import { enqueuePartRequestWork } from '../part-requests/work-queue.js';
+import { adminListingRental } from '../rentals/admin-view.js';
 
 // Listing moderation and the admin's listing pages (F2 spec §11, R33, R34, R50–R53; plan Task 16): the moderation queue
 // and its counts, the review screen's detail, the moderator's status actions (through `applyAdminTransition`, which
@@ -279,8 +280,8 @@ export async function adminListingDetail(conn: Conn, id: string): Promise<AdminL
         createdAt: h.createdAt.toISOString(),
       }),
     ),
-    // M14 C0-3b / A3 fill a rental's bookings and blocks.
-    rental: null,
+    // M14 §15: a rental's bookings (newest start first) and its owner blocks.
+    rental: row.kind === 'machine_rental' ? await adminListingRental(conn, row.id) : null,
   };
 }
 
