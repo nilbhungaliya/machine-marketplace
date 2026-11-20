@@ -7,7 +7,7 @@ import BottomSheet from '@/components/BottomSheet';
 import Button from '@/components/Button';
 import Input from '@/components/Input';
 import StepPhotos, { photoUploadMessage, useStepPhotos } from '@/components/rentals/StepPhotos';
-import { isStaleBookingError, useRentalBookingWrite } from '@/hooks/use-rental-calendar';
+import { isStaleBookingError, useBookingWrite } from '@/hooks/use-rental-booking';
 import { useType } from '@/hooks/use-type';
 import { track } from '@/lib/analytics';
 import { RENTAL_EVENTS } from '@/lib/analytics-events';
@@ -37,7 +37,7 @@ export default function OnSiteSheet({ view, visible, onClose, onDone }: OnSiteSh
   const lang = useLanguage();
   const { colors } = useTheme();
   const type = useType();
-  const write = useRentalBookingWrite(view.id);
+  const write = useBookingWrite(view.id);
   const photos = useStepPhotos(view.id);
   const [meter, setMeter] = useState('');
   const [tried, setTried] = useState(false);

@@ -8,7 +8,7 @@ import { useConfirm } from '@/components/ConfirmSheet';
 import Notice from '@/components/Notice';
 import DeclineSheet from '@/components/rentals/DeclineSheet';
 import ProposeChangeSheet from '@/components/rentals/ProposeChangeSheet';
-import { useRentalBookingWrite } from '@/hooks/use-rental-calendar';
+import { useBookingWrite } from '@/hooks/use-rental-booking';
 import { useType } from '@/hooks/use-type';
 import { track } from '@/lib/analytics';
 import { RENTAL_EVENTS } from '@/lib/analytics-events';
@@ -42,7 +42,7 @@ export default function OwnerAnswerBar({ view, onDone, style }: OwnerAnswerBarPr
   const type = useType();
   const lang = useLanguage();
   const confirm = useConfirm();
-  const write = useRentalBookingWrite(view.id);
+  const write = useBookingWrite(view.id);
   const [sheet, setSheet] = useState<'change' | 'decline' | null>(null);
 
   const s = useMemo(() => StyleSheet.create({

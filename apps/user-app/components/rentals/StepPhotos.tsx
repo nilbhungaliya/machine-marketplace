@@ -7,7 +7,7 @@ import Toast from 'react-native-toast-message';
 import { RENTAL_LIMITS } from '@mpm/shared-types';
 import Button from '@/components/Button';
 import IconButton from '@/components/IconButton';
-import { uploadBookingPhoto } from '@/hooks/use-rental-calendar';
+import { uploadBookingPhoto } from '@/hooks/use-rental-booking';
 import { useType } from '@/hooks/use-type';
 import { errorCode } from '@/lib/api-error';
 import { i18n } from '@/lib/i18n';

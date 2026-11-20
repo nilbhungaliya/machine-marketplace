@@ -4685,7 +4685,7 @@ export interface AdminRentalBookingDetail
     at: string;
     values: Record<string, string | number | boolean | null>;
   }[];
-  /** Private keys; the admin page signs them on demand. */
+  /** On-site and return photos as signed URLs valid for 300 s (a photo is left out while storage is unavailable). */
   photos: { onSite: string[]; returned: string[] };
   reviews: { renterSubmitted: boolean; ownerSubmitted: boolean; published: boolean };
 }

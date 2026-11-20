@@ -11,7 +11,7 @@ import Input from '@/components/Input';
 import Notice from '@/components/Notice';
 import SegmentedControl from '@/components/SegmentedControl';
 import DateRangeSheet from '@/components/rentals/DateRangeSheet';
-import { isStaleBookingError, useRentalBookingWrite } from '@/hooks/use-rental-calendar';
+import { isStaleBookingError, useBookingWrite } from '@/hooks/use-rental-booking';
 import { useType } from '@/hooks/use-type';
 import { track } from '@/lib/analytics';
 import { RENTAL_EVENTS } from '@/lib/analytics-events';
@@ -46,7 +46,7 @@ export default function ProposeChangeSheet({ view, visible, onClose, onSent }: P
   const { colors } = useTheme();
   const type = useType();
   const lang = useLanguage();
-  const write = useRentalBookingWrite(view.id);
+  const write = useBookingWrite(view.id);
   const [values, setValues] = useState<ChangeFormValues>(() => changeFormFrom(view.current));
   const [totalEdited, setTotalEdited] = useState(false);
   const [tried, setTried] = useState(false);

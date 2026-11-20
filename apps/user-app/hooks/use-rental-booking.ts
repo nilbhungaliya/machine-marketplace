@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import type { RentalBookingView, RentalEstimateRequest } from '@mpm/shared-types';
-import { listingKeys } from '@/hooks/use-listing';
+import { invalidateListingLists, listingKeys } from '@/hooks/use-listing';
 import { useIdempotencyKey } from '@/hooks/use-offers';
+import { errorCode } from '@/lib/api-error';
 import { preparePhoto, putFile } from '@/lib/media-device';
 import { qk } from '@/lib/query-keys';
 import {
@@ -13,15 +14,27 @@ import {
 // strip, the Request booking estimate, and every booking write. A write stores the returned view at once and refetches
 // the Rentals lists, the badges, the thread (its booking card and contact banner) and the listing (availability, the
 // owner's booking summary). `rental:updated` (lib/socket-rentals.ts) refetches the same keys for the other side.
+// The owner's sheets (components/rentals/*) use the same write hook and photo upload.
 
-/** What a booking change makes stale, besides the booking itself. */
+/**
+ * What a booking change makes stale, besides the booking itself: the Rentals lists, the badges, the thread (its booking
+ * card and contact banner), the listing's calendar and availability (`qk.rentals.listing`), the owner's listing view,
+ * the listing page and My listings.
+ */
 export function invalidateAfterBooking(qc: QueryClient, view: Pick<RentalBookingView, 'threadId' | 'listing'> | null): void {
   void qc.invalidateQueries({ queryKey: qk.rentals.all });
   void qc.invalidateQueries({ queryKey: qk.badges() });
   if (!view) return;
   void qc.invalidateQueries({ queryKey: qk.thread(view.threadId) });
   void qc.invalidateQueries({ queryKey: qk.rentals.listing(view.listing.id) });
-  void qc.invalidateQueries({ queryKey: listingKeys.detail(view.listing.id) });
+  void qc.invalidateQueries({ queryKey: listingKeys.owner(view.listing.id) });
+  invalidateListingLists(qc, view.listing.id);
+}
+
+/** A refusal that means a sheet's copy is out of date: close it and let the record show what it is now. */
+export function isStaleBookingError(err: unknown): boolean {
+  const code = errorCode(err);
+  return code === 'RENTAL_BOOKING_STALE' || code === 'RENTAL_TRANSITION_NOT_ALLOWED' || code === 'RENTAL_BOOKING_NOT_FOUND';
 }
 
 /** The Booking record (`GET /rental-bookings/:id`). */
@@ -36,7 +49,8 @@ export function useRentalBookingPhotos(id: string, enabled: boolean) {
 
 /**
  * Every booking write: `run(key)` calls one `lib/rentals-api.ts` function with the tap's `Idempotency-Key` (kept when
- * no answer came back, so a retried tap replays it). A refusal refetches the record: the booking moved on.
+ * no answer came back, so a retried tap replays it). The fresh view is stored at once. A refusal refetches the record:
+ * the booking moved on (another member, a job), and `409 RENTAL_BOOKING_STALE` means a newer version came in.
  */
 export function useBookingWrite(bookingId: string) {
   const qc = useQueryClient();

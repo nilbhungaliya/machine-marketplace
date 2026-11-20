@@ -7,7 +7,7 @@ import { RENTAL_DECLINE_REASONS, type RentalBookingView, type RentalDeclineReaso
 import BottomSheet from '@/components/BottomSheet';
 import Button from '@/components/Button';
 import Chip from '@/components/Chip';
-import { isStaleBookingError, useRentalBookingWrite } from '@/hooks/use-rental-calendar';
+import { isStaleBookingError, useBookingWrite } from '@/hooks/use-rental-booking';
 import { useType } from '@/hooks/use-type';
 import { track } from '@/lib/analytics';
 import { RENTAL_EVENTS } from '@/lib/analytics-events';
@@ -36,7 +36,7 @@ export default function DeclineSheet({ bookingId, versionSeq, visible, onClose, 
   const { colors } = useTheme();
   const type = useType();
   const qc = useQueryClient();
-  const write = useRentalBookingWrite(bookingId);
+  const write = useBookingWrite(bookingId);
   const [reason, setReason] = useState<RentalDeclineReason | null>(null);
   const [tried, setTried] = useState(false);
 
